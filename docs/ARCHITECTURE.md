@@ -417,10 +417,14 @@ exit 0
 `tools/ci/affected.ts` selects from the diff against `origin/main`, one after another through their
 `test:<suite>` scripts; the browser suite and the e2e specs stay CI's, as `npm run check` never ran
 them either), prints `npm ci` if `node_modules` is missing, and runs the whole `npm run check`
-under `PRE_PUSH=full` or when there is no `origin/main` to diff against. `npm run hooks:verify`
-fails if `core.hooksPath` is not `.githooks`, `.git/hooks/pre-commit` is missing or the scripts the
-shim execs are gone from package.json, and runs in CI as a repo-local sanity check of the shim
-scripts themselves (`sh -n`).
+under `PRE_PUSH=full` or when there is no `origin/main` to diff against. Before that gate it
+refuses, naming the address, any commit the push adds whose author or committer email is not
+`@sweedler.com` (the refs come in on stdin; `git log --format='%ae%n%ce' <remote>..<local>`, or
+`<local> --not --remotes=origin` for a new branch; a deletion is skipped): this is the personal repo
+(docs/design/repo-migration.md D7, D17), and `Co-Authored-By` trailers are message text, not
+authorship, so they pass. `npm run hooks:verify` fails if `core.hooksPath` is not `.githooks`,
+`.git/hooks/pre-commit` is missing or the scripts the shim execs are gone from package.json, and
+runs in CI as a repo-local sanity check of the shim scripts themselves (`sh -n`).
 
 ### GitHub Actions
 
