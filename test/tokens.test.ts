@@ -106,7 +106,7 @@ test('gin theme.css redeclares no shared name: tokens.css is the single source o
   expect(gin.filter((name) => SHARED.includes(name))).toEqual([]);
   // The four card sizes, the column's gutter the shell's unframed rule reads (shell.css
   // `:where(body:not([data-frame])) #app`; 12px a side, 16 at the foot), and the head/foot the
-  // upright card budget reads: the gutter or the safe-area inset, whichever is more (PR #202).
+  // upright card budget reads: the gutter or the safe-area inset, whichever is more (old repo PR 202).
   expect(gin, 'the gin-only layout tokens stay').toEqual([
     '--card-w',
     '--mini-w',

@@ -4,7 +4,7 @@
 // kept that rule), and the curtain button's wiring. The copy itself is each game's `curtainText`
 // (gin: who takes the phone and who looks away; backgammon: the phase's verb and the last turn),
 // and what one tap does is the game's too: `onReveal` names the intents, so no App is needed
-// here. Until backgammon's roll modal (#79, docs/design/backgammon-board.md §4.7) the button also
+// here. Until backgammon's roll modal (old repo PR 79, docs/design/backgammon-board.md §4.7) the button also
 // carried a `data-rolls` promise, painted through an `attrs` field on `CurtainText` and read back
 // by `onReveal(btn)`; docs/design/dry-round-2.md §3 row E10 deleted both once no game passed or
 // read one. Not lint-pure: see shellPaint.ts.

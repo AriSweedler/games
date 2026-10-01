@@ -1,6 +1,6 @@
 # DRY round 2: what else hoists out of the per-game code, and how each piece is unit-tested
 
-Measured on main `5a19690` (plus the local `bg-table-ux` branch `eaf17d8`) by four audits: table UI, reducer/engine, styles/markup, fidice + tooling. Every line count below is `wc -l`; every "twin similarity" is python `difflib` over comment-stripped, whitespace-normalised lines (1.0 = identical). Nothing in this plan edits the repo; it sequences PRs after C2, C3 and bg-table-ux.
+Measured on main `fac9364` (plus the local `bg-table-ux` branch `eaf17d8`, a pre-move SHA) by four audits: table UI, reducer/engine, styles/markup, fidice + tooling. Every line count below is `wc -l`; every "twin similarity" is python `difflib` over comment-stripped, whitespace-normalised lines (1.0 = identical). Nothing in this plan edits the repo; it sequences PRs after C2, C3 and bg-table-ux.
 
 ## 1. The ask and the answer in ten lines
 
@@ -77,7 +77,7 @@ Verdicts: **hoist-now** (no in-flight file overlap), **hoist-after** (lands afte
 | Path | Lines | Twin and similarity | Verdict |
 |---|---|---|---|
 | gin `theme.css` shell rules | 77 (76 selectors / 336 decls) | bg shell rules 637 lines (113 selectors / 435 decls): 68 common selectors; inside them 201 declarations byte-identical, 96 same-property-different-value (58 token-shaped: palette 40, radius 14, font-family 4; 36 type-scale; 2 keyframes), 16 gin-only, 56 bg-only; 21/68 whole rules identical; mean per-selector 0.62, whole-set 0.47 (0.61 with colours/lengths masked) | hoist-after bg-table-ux (`shell.css`, token-only) |
-| bg `theme.css` shell rules | 637 | gin (above); bg-table-ux carries them unchanged but predates #75 (no `.btn-go`, no `--go`) | hoist-after bg-table-ux |
+| bg `theme.css` shell rules | 637 | gin (above); bg-table-ux carries them unchanged but predates old repo PR 75 (no `.btn-go`, no `--go`) | hoist-after bg-table-ux |
 | gin `theme.css` table + extensions + tokens | 177 + 34 + 6 | none | stays |
 | bg `theme.css` table + tokens | 1,111 (1,211 on branch) + 38 | none | stays |
 | gin `theme.css` `.divider*` | 2 | dead legacy rule (CONTRACT.md says so) | fold (delete) |
@@ -90,7 +90,7 @@ Verdicts: **hoist-now** (no in-flight file overlap), **hoist-after** (lands afte
 | fidice `index.html`, sheshbesh `index.html` | 25 / 19 | vdom mount; alias stub | stays |
 | `web/shared/ui/ids.ts` SHELL_IDS | 67 (53 ids) | design doc says 36: stale | shared (becomes the generator's id source) |
 | `tools/parity/computed-styles.ts` SELECTORS + drivers | 1,642 | gin 153 / bg 111 / fidice 179 selectors; gin∩bg = 43 (doc says 42); driveGin vs driveBackgammon 0.52, hosting block verbatim (17 lines) | hoist-after bg-table-ux (D2: -67) |
-| `test/fixtures/styles/*.json` 6 goldens | 9,348 | last re-recorded by #75 (all 6) and bg-table-ux (bg's 2) | shared (token-only move = 0 diffs, N notes) |
+| `test/fixtures/styles/*.json` 6 goldens | 9,348 | last re-recorded by old repo PR 75 (all 6) and bg-table-ux (bg's 2) | shared (token-only move = 0 diffs, N notes) |
 | `e2e/__screenshots__/gin-stories.spec.ts` | 120 PNGs (60/platform) | doc says 16x2/32: stale | shared (0 re-records for preserving moves) |
 | `test/dist/dist-parity.test.ts` + `class-contract.test.ts` stylesheet-count assertions | 3 | pin exactly [one shared css, own css] per page | hoist-now (widen for a shell-games-only sheet) |
 
@@ -267,7 +267,7 @@ Rules for every PR, the same as `docs/design/shared-shell.md` §5: a **code move
 
 - `dry-c2-shared-shell` (C2) sits at main's tip with nothing committed; it will rewrite `ui/state.ts` (kernel), `ui/home.ts` (both games + shared), and add `web/shared/ui/shell.ts`.
 - `dry-b3-boot-helpers` (C3) touches `main.ts` x2 and 3-4 lines of `state.ts`.
-- `bg-table-ux` (`eaf17d8`, local, 28 files) touches bg `render.ts` +174, `fly.ts` +94, `state.ts` +104/-14, `local.ts`, `board.ts` (4), `theme.css` (294, table-only; predates #75: rebase before landing), `index.html` (+20 inside #board), `fixtures/backgammon.ts`, adds `e2e/backgammon-table-ux.spec.ts` 313, re-records bg's two goldens, edits bg's computed-styles SELECTORS.
+- `bg-table-ux` (`eaf17d8`, a pre-move SHA, local, 28 files) touches bg `render.ts` +174, `fly.ts` +94, `state.ts` +104/-14, `local.ts`, `board.ts` (4), `theme.css` (294, table-only; predates old repo PR 75: rebase before landing), `index.html` (+20 inside #board), `fixtures/backgammon.ts`, adds `e2e/backgammon-table-ux.spec.ts` 313, re-records bg's two goldens, edits bg's computed-styles SELECTORS.
 - C2 and C3 touch 0 css/html files (measured), so Waves F runs beside them.
 
 ### Wave D: now, in parallel with C2/C3 and bg-table-ux (no in-flight file touched)
@@ -387,4 +387,4 @@ Ordered by how silently the failure would land.
 14. **Legacy pins bound the README-not-module decisions.** gin's `nextCue`/`statusFor` are pinned line-for-line against the legacy playCuesFor/render and `cardHtml` byte-pinned; a shared `once()/cuesFor()` or card/checker builder would re-pin the golden for ~10 lines. Keep the cue machines, selection reducers, dice and result painters as README shapes until a fourth game gives a second real consumer.
 15. **`tools/ci/suites.ts` is the one file three Wave-D PRs want** (D6's `test/shared/**` row, D7's fidice e2e row, D11's derived rows). Serialise D9 -> D11 -> D6/D7, or let D11 carry both rows; otherwise the parallel worktrees conflict on the same table.
 16. **Design-doc drift.** shared-shell.md is stale in five places this plan measured (16x2/32 story PNGs -> 60x2/120; 36 shell ids -> 53; 42 common selectors -> 43; shell CSS 84/58 vs 575/90 -> 77/76 vs 637/113; table slices 626/460 -> 540/470 + 90 on bg-table-ux); G4 fixes them so the next audit does not re-measure against wrong baselines.
-17. **bg-table-ux predates #75**: its theme.css lacks `.btn-go`, `.btn-go:hover`, `--go`, `--go-text`; its shell rules are otherwise identical to main's and its 294-line diff is table-only. The rebase is clean but must happen before F1 or the shell.css move, which assumes #75's rules on both sides.
+17. **bg-table-ux predates old repo PR 75**: its theme.css lacks `.btn-go`, `.btn-go:hover`, `--go`, `--go-text`; its shell rules are otherwise identical to main's and its 294-line diff is table-only. The rebase is clean but must happen before F1 or the shell.css move, which assumes old repo PR 75's rules on both sides.

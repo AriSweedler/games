@@ -4,7 +4,7 @@
 // Worker against the pages origin. Both serve dist/, the only build tree since docs/MIGRATION.md
 // step 13 cut the last page over. `E2E_TARGET=deployed` (the nightly, .github/workflows/nightly.yml)
 // aims `pages` at the deployed GitHub Pages origin instead and defines no `proxy` project
-// (games.sweedler.com is a Cloudflare Worker, and no test depends on Cloudflare: issue #19); every
+// (games.sweedler.com is a Cloudflare Worker, and no test depends on Cloudflare: old repo issue 19); every
 // server stays local, and the deployed page reaches them through its `?peer=` and `?ice=` hooks.
 // Everything the harness needs to know about URLs is here, so specs never spell out an absolute
 // site path themselves.

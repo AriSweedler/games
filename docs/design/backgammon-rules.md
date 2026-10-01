@@ -1,6 +1,6 @@
 # Sheshbesh: the rules the engine plays
 
-The settled rules of `web/games/backgammon/src/engine/` (PR #53), distilled from the design's
+The settled rules of `web/games/backgammon/src/engine/` (old repo PR 53), distilled from the design's
 section 3. Two rulesets ship: **portes** (the first game of the Greek tavli set, the default) and
 Western **backgammon**. Plakoto and fevga exist as `Variant` literals with `implemented: false`
 rows in `VARIANTS`; `ShippedVariant` excludes them, `createGame` is typed on it and every decoder

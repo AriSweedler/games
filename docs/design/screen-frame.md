@@ -32,7 +32,7 @@ variables say how far in the content must stay.
   what several secondary guides say (UNVERIFIED against Apple's own text).
 - The safe-area tutorials the search turns up (web.dev "Screen configurations", UNVERIFIED; the
   Flackr and 1440px demos, UNVERIFIED) all pad a rectangle. No mobile web game or installed page
-  drawing a corner-following bezel came up; this repo's own PRs #167 and #172 (VERIFIED) are the
+  drawing a corner-following bezel came up; this repo's own PRs (old repo PRs 167 and 172, VERIFIED) are the
   one example found, which is the point of writing the rule down.
 
 ## 2. What the platforms allow

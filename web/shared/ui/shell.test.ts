@@ -3749,7 +3749,7 @@ describe("the Android lock: fullscreen and the landscape lock behind a tap, once
       sideways,
     );
     expect(hints(turnedHeld.effects)).toBe(0);
-    // The same turn with the lock lost first: the hint, as #160 had it.
+    // The same turn with the lock lost first: the hint, as old repo PR 160 had it.
     const turnedLost = runIn(
       LOCKABLE,
       SIDEWAYS,

@@ -130,7 +130,7 @@ the emulator already checks the page against.
 
 ## 4. The first run
 
-2026-09-30, over dist/ built from 74fd551a (before #193 and #194 landed on main; a re-run after
+2026-09-30, over dist/ built from d4f0572a (before old repo PRs 193 and 194 landed on main; a re-run after
 the rebase is the per-game rows' first step), 14 phones x 8 cases x 2 screens per page:
 
 | page       | cases pass | screens pass | failures per column (of 224 screens)                        |
@@ -147,7 +147,7 @@ page does. No screen failed to be reached.
 
 ### 4.1 The second run
 
-2026-09-30, over dist/ built from 0b92447b (#193's tight tier and #194's sandbox in), with the
+2026-09-30, over dist/ built from 40ae17bd (old repo PR 193's tight tier and old repo PR 194's sandbox in), with the
 judge as §2 now describes it (the tiers, the gate, the Android lock), each page run with
 `--baseline` the first run's report. `tier` and `gate` are outcomes, not failures, and are counted
 apart; backgammon has a third screen upright (`kept`), so 280 screens.
@@ -164,7 +164,7 @@ apart; backgammon has a third screen upright (`kept`), so 280 screens.
 What moved against the first run: gin's and briscola's `scroll` columns are clean (every one of
 their scrolls is a theme's tier, read as `lifted`); backgammon's upright `table` rows are the gate's
 (and on the Android rows the lock's), its `kept` rows carry the §3.10 tier and the upright board's
-real findings; nothing else changed, the sandbox's `targets` after #194 included. The `--baseline`
+real findings; nothing else changed, the sandbox's `targets` after old repo PR 194 included. The `--baseline`
 diff printed exactly those rows and no other.
 
 ## 5. Findings per game
@@ -249,11 +249,11 @@ framed page, the one that plays sideways):
   at most 805px tall: every iPhone tab, the SE in every mode), the 4 Galaxy rows under the lock.
   Clean.
 - `clip` 24 → 20: `#oppName` on the kept board by 25px on the 375-wide phones upright (the X, the
-  mini, the SE: 12 cases) and by 10px on the 390-wide 12 (4 cases, new against 74fd551a: the tight
+  mini, the SE: 12 cases) and by 10px on the 390-wide 12 (4 cases, new against d4f0572a: the tight
   tier's narrower chrome), and `#statusLine` by 7px sideways on the mini in every mode (4 cases; 4px
   in a tab before). Real: the seat's name slot is short of "Ethan" at 375-390px, the status line a
   word over at the narrowest sideways viewport.
-- `targets` 9 → 4: #193's tight tier reaches 44px on the 12, the 14 Pro class and the Air; the X
+- `targets` 9 → 4: old repo PR 193's tight tier reaches 44px on the 12, the 14 Pro class and the Air; the X
   (41.8) and the mini (41.3) standalone and fullscreen are still short, the 375-wide room under the
   notch being 12px less than the tier's arithmetic assumes. Real.
 - `used`, `frame` and `gutter` pass on every case: the framed board fills its room both ways.
@@ -273,7 +273,7 @@ framed page, the one that plays sideways):
   (Real: sideways the top inset is 0 on a phone too, so the bar meets the glass; a 4px gutter).
 - Every control is 44px; nothing clips.
 
-**ui-sandbox** (0 of 112; one finding, unchanged after #194):
+**ui-sandbox** (0 of 112; one finding, unchanged after old repo PR 194):
 
 - The preview's controls (`#previewExampleSel`, `#previewNextBtn`, `#previewInfoBtn`) are 32px
   tall (`targets`, every case). Real, a tool's: 44px, or exempt tooling from the rule.
@@ -352,12 +352,12 @@ The backgammon `clip` items above (the 20 screens of the second run), 2026-09-30
   copy-budget.ts), the whole name in `title` and `aria-label`, so a 20-character name never
   overflows a slot (design §2.4 "The name slots").
 - `targets` 4 (the X and the mini standalone and fullscreen upright, 41.3-41.8px rows): the room's
-  limit, as #193 documented; left as is.
+  limit, as old repo PR 193 documented; left as is.
 
 ### Closed by space-audit-fidice
 
 The fidice items above (the shell path, `?shell=1`; 0 of 112 in the second run, 0 of 117 with the
-five desktop windows at c9dee516: `targets` 229, `gutter` 234, `used` 1), 2026-09-30. Every rule is
+five desktop windows at af6a733e: `targets` 229, `gutter` 234, `used` 1), 2026-09-30. Every rule is
 in `web/games/fidice/theme.css` under `body[data-layout]`: the shared boot writes the bucket, the
 old boot writes none, so the old page keeps its full-bleed header and its goldens
 (`test/fixtures/styles/fidice.*.json`, 0 differences) until M6 deletes it.
@@ -402,7 +402,7 @@ old boot writes none, so the old page keeps its full-bleed header and its golden
 ### Closed by space-audit-briscola
 
 The briscola items above and the third run's 39 `used` failures (78 of 117 cases, 195 of 234
-screens, over dist/ built from c9dee516 with the desktop windows in), 2026-09-30, all in
+screens, over dist/ built from af6a733e with the desktop windows in), 2026-09-30, all in
 web/games/briscola/theme.css on the bucket layer (docs/design/layout-buckets.md):
 
 - Table `used` 36 sideways (the shell's 480px column centred in 667-896px: 14.0% empty a side on
@@ -452,7 +452,7 @@ The fourth run, `--baseline` the third's report: 117 of 117 cases pass, 234 of 2
 
 ### Closed by space-audit-gin
 
-The gin-rummy items above (the second run: 0 of 112 cases, 0 of 224 screens; after #197 0 of 112,
+The gin-rummy items above (the second run: 0 of 112 cases, 0 of 224 screens; after old repo PR 197 0 of 112,
 101 of 224), 2026-09-30, on the bucket layer (docs/design/layout-buckets.md) in gin's theme alone;
 the third run (117 cases: the 112 phone cases and the five desktop windows) is 105 of 117 cases and
 222 of 234 screens (the 12 left are the home column, argued below):
@@ -482,7 +482,7 @@ the third run (117 cases: the 112 phone cases and the five desktop windows) is 1
   text, so the header's fixed 24px line and the pill's look stand); the `::after` hit area is gone,
   the box is the target. The 1280x800 and 390x844 goldens re-recorded for these two and for the
   `--card-w` token's new spelling.
-- The 390x844 tab with the bar shown (`gutter` 1 after #197: the actions row under the home
+- The 390x844 tab with the bar shown (`gutter` 1 after old repo PR 197: the actions row under the home
   indicator): the table's height budget reads the room, `100dvh - var(--head) - var(--foot)`
   (`--head`/`--foot`: the gutter or the inset, as shell.css pads #app), and the upright scroll tier
   is `(max-height: 680px)`, not 661: the foot's 34px indicator where the gutter is 16 lifts the
@@ -546,7 +546,7 @@ table talk, Finish, Leave) stacked in one column. What folded:
 
 - A whole hand played sideways in the emulator with real touch events at 844x390 and 667x375
   (2026-09-30: the finger's drag to the trick, the clash, the flights to the seat's strip and the
-  hand, the draw's tap, the result), over dist/ built from 734ece4e: the grid, the drag and the
+  hand, the draw's tap, the result), over dist/ built from 2c46c9a1: the grid, the drag and the
   beat held; the fan's card names printed in cream past the felt's edge (the band was a mid card
   and 26px, the captions hang 38px under a card), the score cells jumped 17px while a two-line
   "takes the trick" status showed, and the SE's 150px sidebar cut "Ann (you)" to "Ann (…". In
@@ -680,7 +680,7 @@ The gin home's band (the space-audit-gin section above: 12 phone cases and the 1
 the 30% below the last card; "the fix is content, not spacing"), 2026-09-30, by the owner's call: a
 fourth card. Run: `npm run audit:space -- --game gin-rummy --serve`, 141 cases (112 phones, 24
 iPads, 5 windows), 139 of 141 cases and 280 of 282 screens (was 105 of 117 and 222 of 234 on the
-third run's cases; the tablet run after #208 counted 14 more home cases over, below). The sheet:
+third run's cases; the tablet run after old repo PR 208 counted 14 more home cases over, below). The sheet:
 `live/gin-home/` beside `live/space-audit-4/`.
 
 - **The card.** Under Join, `#homeRecent` (gin's `page.ts`, the new `homeExtra` block of

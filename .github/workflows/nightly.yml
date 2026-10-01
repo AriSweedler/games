@@ -7,7 +7,7 @@
 # the PR harness uses, ?peer= naming a PeerServer on this runner, ?ice= naming an ICE list served
 # from this runner and the coturn started on it. Nothing Cloudflare is in the loop: not
 # games.sweedler.com (the `proxy` project does not exist here), not turn.sweedler.com, not the
-# public broker; the zone's bot protection challenged this runner once (issue #19) and the owner
+# public broker; the zone's bot protection challenged this runner once (old repo issue 19) and the owner
 # ruled that no test depends on Cloudflare. E2E_TARGET=deployed (e2e/fixtures/site.ts) is the
 # switch. On failure the Playwright report is uploaded and the open issue labelled `nightly` gets
 # a comment with the run URL (or the issue is created); a green run closes it. The second job,

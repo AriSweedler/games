@@ -1,7 +1,7 @@
 # Gin Rummy after the ghost slot: undo from the discard pile only, a hand that keeps its
 # picture, melds that never split a row, layoffs pinned and fixed, the discarded-cards sheet
 
-Base: main at d078a70 (PRs #20-#23 = parts A-C of docs/design/gin-draw-ghost-slot.md; the
+Base: main at cffa78b (old repo PRs 20-23 = parts A-C of docs/design/gin-draw-ghost-slot.md; the
 `wt-ghost-c` worktree is gone, every claim below was re-checked against main on 2026-09-21).
 Design #1 (the judges' winner) grafted with the judges' best ideas from the others that do not
 fight it: accept moves nothing (the new card stays in the ghost's own cell), a dense grid with one
@@ -361,7 +361,7 @@ lays 7♣ on the set and 8♣ stays (8 points); optimal lays 7♣ then 8♣ on t
 the engine on such a hand (31 vs 23 deadwood). The legacy engine shares the defect (gin.melds.test
 pins both legs equal). The comment at 50-55 ("L is unique") is false and goes.
 
-FIX (a rule change, per-leg split as PR #16): `layOff` becomes `layoffLeaves(p)`: for the first
+FIX (a rule change, per-leg split as old repo PR 16): `layOff` becomes `layoffLeaves(p)`: for the first
 remaining card that fits any meld, branch on every meld it fits (usually one), recurse, return
 the leaves; `maximalLayoff` returns the leaf laying off the most cards (ties: first, so single-fit
 hands are byte-identical to today); `bestMeldingWithLayoffs` enumerates subsets of the UNION of
@@ -472,7 +472,7 @@ height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15); back
 var(--card-2); color: var(--text); font-size: 1rem; }`, `:disabled { opacity: 0.4 }`, from 900px
 `left: calc(50% + 20px + max(var(--pile-w) + 24px, 92px) + 8px)` (13/20 = half the pile gap;
 `max(...)` is `.pile`'s whole `min-width`; the first cut used half of it and the button sat on the
-discard pile's card, caught by the live check after #29). Phone: 300-336 of 346 at the 84px pile.
+discard pile's card, caught by the live check after old repo PR 29). Phone: 300-336 of 346 at the 84px pile.
 Disabled without `discardIds`.
 
 STATE. `App.discardsOpen`, `App.discardsWithHand` (false; session-only, not saved). Intents

@@ -212,7 +212,7 @@ The pyramid, bottom up (`docs/ARCHITECTURE.md` "Testing pyramid" has the full li
    127.0.0.1 needs Chromium's Local Network Access permission, which the player fixture grants to
    its context. There is no `proxy` project in that run and nothing fetches `turn.sweedler.com`:
    games.sweedler.com and the credential Worker are Cloudflare, whose bot protection challenged the
-   runner once (issue #19), and no test depends on Cloudflare. What it proves is that the bytes
+   runner once (old repo issue 19), and no test depends on Cloudflare. What it proves is that the bytes
    Pages serves still play a two-peer game and a relay-forced one; the deployed relay credentials
    are checked by hand (see "Online play", "Verify"). A failure comments the run URL on the open
    issue labelled `nightly` (creating it when missing); a green run closes it.
@@ -336,7 +336,7 @@ changes, and the proxy needs nothing (`docs/ARCHITECTURE.md` "Conventions for sm
 9. The proxy needs nothing: the Worker's catch-all maps `games.sweedler.com/<g>/` to
    `/games/games/<g>/`.
 
-The existing files a game edits, verified by `grep -rl backgammon` over the tree at `9bf1548`
+The existing files a game edits, verified by `grep -rl backgammon` over the tree at `07f6529`
 (every other file naming a game is a comment, that game's own folder or a test of it):
 `web/shared/lib/roomCode.ts` (the `Game` union, the room-code row, the code normaliser),
 `tools/games.ts` (`GameSuite`, the `REGISTRY` row; `ShellGame`, `SHELL_GAMES` and `SHELL` for a
@@ -470,7 +470,7 @@ web/shared/lib/              shared pure TypeScript: result, rng, json decoders,
 web/shared/edge/             shared effects: ice, transport (the only importer of peerjs) + fake, clock, storage, prefs, dom, fx, share,
                              peer, netDeps, sound, cuePlayer, glossary, invite, drag (the pointer-drag kernel), motion (glide,
                              launchClone, reducedMotion), boot (bootShell), page.fake (shellPage)
-web/shared/net/              the sessions (host, guest, liveness) every shell game's net/ wraps; up to four guests since #87
+web/shared/net/              the sessions (host, guest, liveness) every shell game's net/ wraps; up to four guests since old repo PR 87
 web/shared/ui/               the shared shell: shell (the reducer), shellEffects, eventEffects, shellPaint, home, curtain, toast, keyed,
                              ids (SHELL_IDS, SHELL_GAMES), glossary, stories, cardFace; README.md
 web/shared/markup/           shell/*.html, the shell's partials, and shell.ts (renderShell); tools/shell-markup.ts composes each shell page
