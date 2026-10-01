@@ -22,7 +22,7 @@ The image must be served same-origin as the page it is named from, with `content
 (GitHub Pages sets it from the extension; the Worker passes it through) and no redirect, at
 1200 x 630, under about 1 MB. `<title>` is not part of the card and stays the page's.
 
-**Two origins.** The Pages origin (`arisweedler-at.github.io/hyperagent-web-apps/`) serves the
+**Two origins.** The Pages origin (`arisweedler.github.io/games/`) serves the
 committed `index.html` bytes for every query string: its card is the same for `/gin-rummy/` and
 `/gin-rummy/?join=TNJQ`. The Worker origin (`games.sweedler.com`, infra/games-proxy) sees the query
 before it fetches upstream, so only it can vary the card by code. Both pages name the Worker origin

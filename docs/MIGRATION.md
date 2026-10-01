@@ -27,7 +27,7 @@ Steps 1-4 are the foundation and should be done first, in order.
   `tsconfig.{json,base,web,pure,node}.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`,
   `.githooks/{pre-commit,pre-push}`, `.gitignore` (+dist, node_modules, playwright-report,
   test-results), `.github/workflows/ci.yml` job `check`; `infra/games-proxy/worker.js` exports
-  `mapPath()` and reads `env.UPSTREAM ?? 'https://arisweedler-at.github.io'`; `worker.test.js`
+  `mapPath()` and reads `env.UPSTREAM`, defaulting to the old Pages origin; `worker.test.js`
   moves to vitest and covers `mapPath` for every current path shape (both `.ts` since step 15).
 - Proves: CI `check` green; `npm run hooks:verify` passes; manually, committing a file with trailing
   whitespace still triggers the template hook's prompt, and `git push` runs pre-push. `git rev-parse
@@ -209,14 +209,14 @@ Gin's inline classic scripts depend on execution order (`window.GinEngine`, `win
   nightly passes once against both live origins including the relay-forced game.
 - Rollback: revert individual fixes; each is its own commit.
 - Done: step 14's gates (computed-style goldens, the class contract, the shared stylesheet seam)
-  landed in #13 and its hoist (tokens and base) in #14; part A (`allowJs` out, the TypeScript
-  games-proxy Worker, the coverage ratchet) in #15; the three behaviour fixes in #16; part B
+  landed in old repo PR 13 and its hoist (tokens and base) in old repo PR 14; part A (`allowJs` out, the TypeScript
+  games-proxy Worker, the coverage ratchet) in old repo PR 15; the three behaviour fixes in old repo PR 16; part B
   (`nightly.yml`, the `?ice-policy=relay` hook, `E2E_TARGET=live`, `npm run test:live` and the
-  README rewrite) in #17. Deviations for each are recorded below.
+  README rewrite) in old repo PR 17. Deviations for each are recorded below.
 
 ### 16. Move to the personal repo: the site mounts at `/games/` (2026-10-01)
 
-- Goal: the repository moves from `AriSweedler-at/hyperagent-web-apps` to `AriSweedler/games`
+- Goal: the repository moves from the old repo under the work account to `AriSweedler/games`
   (docs/design/repo-migration.md, approach A): GitHub Pages stays the origin, now
   `https://arisweedler.github.io/games/`; the games.sweedler.com Worker is retargeted; every
   games.sweedler.com URL is unchanged, no DNS or TLS change, no downtime. The tree goes
@@ -749,7 +749,7 @@ parity and e2e gates.
   'relay'` only when asked, so the default output is the legacy's key for key
   (`test/parity/ice.legacy.test.ts` pins that with the hook in the query string); `peerOptionsFor` /
   `realTransport` carry it for both games, host and guest. `E2E_TARGET=live` in
-  `playwright.config.ts` aims `pages` at `https://arisweedler-at.github.io/hyperagent-web-apps/` and
+  `playwright.config.ts` aims `pages` at the old Pages origin's project site and
   `proxy` at `https://games.sweedler.com/` (`LIVE_ORIGINS` and `baseUrl()` in `e2e/fixtures/site.ts`),
   starts no webServer and implies `E2E_BROKER=cloud`. Live, `gameQuery()` omits `?ice=` and `?peer=`
   (the deployed pages fetch `turn.sweedler.com` and meet on 0.peerjs.com) and `expectPeerOptions(call)`
@@ -760,7 +760,7 @@ parity and e2e gates.
   the local harness had a STUN-only fixture and no TURN server, so a relay-forced pair could not
   connect there; its second, hermetic `@relay` test hosts a room with the hook on both projects and
   asserts the option reached `new Peer` without attempting a join. Follow-up (2026-09-21, after
-  issue #19: Cloudflare's bot protection on the sweedler.com zone challenged the runner, and the
+  old repo issue 19: Cloudflare's bot protection on the sweedler.com zone challenged the runner, and the
   owner asked that no test depend on Cloudflare): the harness starts its own TURN relay, coturn
   (`turnserver` on PATH; `brew install coturn` / `apt-get install coturn`, which CI's `e2e` and
   `broker` jobs do) on 3478+`E2E_PORT_OFFSET` with one static long-term credential, loopback only,
@@ -790,7 +790,7 @@ parity and e2e gates.
   with turn.sweedler.com's credentials; and the relay-forced game run live against the deployed
   pages (which lack the hook) failed only at the `iceTransportPolicy` assertion, after both live
   pages had joined, toasted "Connected via relay" of their own accord and dealt. See ARCHITECTURE
-  "CI" and "Documented test hooks". Second follow-up (2026-09-21, the rest of issue #19): the owner
+  "CI" and "Documented test hooks". Second follow-up (2026-09-21, the rest of old repo issue 19): the owner
   ruled that no test depends on Cloudflare, so `E2E_TARGET=live` is retired with everything that
   existed only for it (`LIVE_ORIGINS`, `isLive()`, the live branches of `gameQuery()`,
   `expectPeerOptions()` and `skipWithoutRelay()`, the no-webServer config branch, `npm run
@@ -810,7 +810,7 @@ parity and e2e gates.
   deployed run failed/passed"). The deployed TURN credentials are no longer proven by any test;
   README "Online play" > "Verify" says how to check them by hand. Proof on the author's laptop
   (2026-09-21, `E2E_PORT_OFFSET=1000`, coturn 4.18 from the Homebrew bottle): the deployed gin and
-  fidice relay-forced games passed against https://arisweedler-at.github.io (both pages toasted
+  fidice relay-forced games passed against the old Pages origin (both pages toasted
   "Connected via relay", relay candidates on both sides, the deal and the round agreed), the
   hermetic hook check passed; the three direct `@online` specs timed out at the WebRTC ceiling on
   the deployed target exactly as they do on the local target on this machine (Cloudflare WARP drops

@@ -105,7 +105,7 @@ licence of its own, so the buddy is under the repository's terms; if the owner w
 `license` block.
 
 Attribution text (for a credits screen, should one ever exist): "RPS buddy pixel art: original,
-drawn in the hyperagent-web-apps repository."
+drawn in the AriSweedler/games repository."
 
 ## 5. Changing a frame
 

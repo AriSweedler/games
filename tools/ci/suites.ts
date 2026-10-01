@@ -173,12 +173,12 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
       // metric; the same lines uncovered elsewhere, fewer branches in the folder). Again when D3
       // (dry-round-2 E7) moved the two games' page-fake assembly into page.fake.ts `shellPage`, every
       // new branch under page.fake.test.ts: the folder 99.72/99.36/99.75/96.57 before,
-      // 99.72/99.37/99.76/96.62 after (measured on main at 0b1bec3 and this branch rebased onto it).
+      // 99.72/99.37/99.76/96.62 after (measured on main at c8b924b and this branch rebased onto it).
       // Re-measured when D4 (dry-round-2 E9) moved `CueSpec` and the shell's four rows (`SHELL_CUES`)
       // into lib/sound/cues.ts with cuePlayer.ts re-exporting the type: shared/lib still
       // 100/100/100/100 and the edge folder unchanged at 99.72/99.36/99.75/96.61 as the table prints
       // it (a type and data move; the coverage table before and after is byte-identical, measured on
-      // main at da40200 and this branch rebased onto it). Re-measured when C3 (shared-shell.md §5)
+      // main at 0c86b2e and this branch rebased onto it). Re-measured when C3 (shared-shell.md §5)
       // moved the boot itself (`bootShell`, the ~290 lines both main.ts files spelled around the B3
       // helpers) into boot.ts: boot.test.ts drives the whole boot over the page fake, so the file
       // stays at 100/100/100/100 (lines/functions/statements/branches) and the edge folder measures
@@ -190,21 +190,21 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
       // gesture: Point, Rect, DRAG_THRESHOLD, startedDrag, inside; 100/100/100/100 over
       // lib/drag.test.ts): shared/lib still 100/100/100/100; the edge folder 99.75/99.42/99.78/96.78
       // before, 99.76/99.44/99.79/97.03 after (the same three lines uncovered elsewhere, 1188 → 1273
-      // lines). Measured on main at 569d04d (#96) and this branch rebased onto it.
+      // lines). Measured on main at 0a537d8 (old repo PR 96) and this branch rebased onto it.
       // Re-measured when S1 of docs/design/briscola-sound-history.md (qualified cues, phrases, the
       // font ladder, the slot player, lib/events.ts and ui/eventEffects.ts) landed: shared/lib and
       // shared/ui still 100/100/100/100 (phrase.ts, events.ts, eventEffects.ts each with a test
       // beside them, fonts.ts's ladder and cues.ts's decoder covered branch for branch); the edge
       // folder 99.76/99.44/99.79/97.02 before, 99.77/99.45/99.79/97.08 after (sound.ts's slot player
       // and cuePlayer.ts's phrases each 100 on every metric; the games' fx.test.ts pins and suites
-      // ran unchanged, a CueSpec row being a one-step phrase). Measured on main at 60c50d6 (#102)
+      // ran unchanged, a CueSpec row being a one-step phrase). Measured on main at b18a880 (old repo PR 102)
       // and this branch rebased onto it.
       // Re-measured when E2 (dry-round-2.md §5 Wave E) added the motion kernel edge/motion.ts (glide
       // for gin's hand/flip.ts, launchClone for backgammon's board/fly.ts, reducedMotionOf read once;
       // 100/100/100/100 over motion.test.ts's six cases on page.fake elements with a logging style
       // and rect, fake timers and a fake matchMedia host): shared/lib still 100/100/100/100; the edge
       // folder 99.77/99.45/99.80/97.09 before, 99.78/99.46/99.80/97.13 after (the same three lines
-      // uncovered elsewhere, 1305 → 1349 lines). Measured on main at 25cb36c (#108) and this branch.
+      // uncovered elsewhere, 1305 → 1349 lines). Measured on main at f8242b7 (old repo PR 108) and this branch.
       thresholds: {
         'web/shared/lib/**': { lines: 100, functions: 100, branches: 100, statements: 100 },
         // The shared shell's helpers and painters (docs/design/glossary-links.md §3;
@@ -232,14 +232,14 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
         // Wave G1's paintConnDot (shellPaint.ts, dry-round-2 E6) and homeView/shellIntents (home.ts,
         // E8) measure 100/100/100/100 through two shellPaint.test.ts and three home.test.ts cases
         // over the fake page; the folder stays at 100 (622 lines, 200 functions, 674 statements,
-        // 367 branches, with #103's `tabButtonId` in ids.ts, G3's stories.ts and #106's cardFace.ts).
+        // 367 branches, with old repo PR 103's `tabButtonId` in ids.ts, G3's stories.ts and old repo PR 106's cardFace.ts).
         // history.ts, the shared history panel (docs/design/briscola-sound-history.md §6, PR S3:
         // `<details>` rows over a game's EventCopy, the list keyed on the last event id, the scroll
         // to the newest row) and ids.ts's HISTORY_IDS measure 100/100/100/100 through
         // history.test.ts over the fake page and one ids.test.ts case; the folder stays at 100 on
         // every metric, 625/201/677/370 (lines/functions/statements/branches) before,
         // 649/211/704/390 after (history.ts is 23/10/26/20 of it, ids.ts one line and statement
-        // more), no edge file touched. Measured on this branch rebased onto main at 9bf1548 (#109),
+        // more), no edge file touched. Measured on this branch rebased onto main at 07f6529 (old repo PR 109),
         // the before being the after less the two changed files' totals.
         'web/shared/ui/**': { lines: 100, functions: 100, branches: 100, statements: 100 },
         // The coin game (dry-round-2.md F3): the two-seat engine the replay driver under test/shared
@@ -342,29 +342,29 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
       // src/shellConfig.ts, a new row below: ui 98.52/98.18/97.55/94.58 before, 98.26/97.93/97.35/94.33
       // after (17 lines uncovered of 977: the lines moved out were fully covered, so the ratios dip
       // while the row stands); shellConfig.ts measures 100/100/100/100 through state.test.ts and
-      // the parity suites. Measured on this branch rebased onto main at 75dc0bd (#89).
+      // the parity suites. Measured on this branch rebased onto main at 937553f (old repo PR 89).
       // Re-measured when E1 (dry-round-2.md §5 Wave E) moved the drag's pointer events, ghost,
       // capture, frames and landing out of ui/hand/dragger.ts into web/shared/edge/drag.ts (the
       // residue configures the kernel; ui/hand/drag.ts keeps the momentum and re-exports the gesture
       // from web/shared/lib/drag.ts): ui 98.26/97.93/97.35/94.33 before, 98.80/97.95/98.12/95.06
       // after (11 lines uncovered of 920, 977 → 920 lines; the row stands). Measured on main at
-      // 8b50ce9 and this branch rebased onto it (#96 touched neither folder).
+      // 46229c9 and this branch rebased onto it (old repo PR 96 touched neither folder).
       // Re-measured when G2 (dry-round-2 F6) routed cues.ts `nextCue`'s once-per-key rule through
       // web/shared/ui/shell.ts `fresh` and added `decodeState` to shellConfig.ts for the shell's
       // `position/load`: ui 98.80/97.95/98.12/95.06 before, 98.81/97.95/98.12/95.06 after (the same
       // 11 lines uncovered, 920 → 921 lines); shellConfig.ts still 100/100/100/100. Measured on
-      // this branch rebased onto main at 60c50d6 (#102).
+      // this branch rebased onto main at b18a880 (old repo PR 102).
       // Re-measured when Wave G1 (dry-round-2 E6, E8) moved the connection dot's class and paint
       // out of ui/render.ts into web/shared/ui/shellPaint.ts paintConnDot, and the home view reader
       // and SHELL_INTENTS record out of ui/home.ts into web/shared/ui/home.ts homeView and
       // shellIntents: ui 98.81/97.95/98.12/95.06 before, 98.79/97.86/98.10/95.13 after (the same 11
       // lines uncovered, 921 → 906 lines; home.ts and the shared modules measure 100 on every
-      // metric; the row stands). Measured on this branch rebased onto main at 77776e8 (#106).
+      // metric; the row stands). Measured on this branch rebased onto main at e99e7fc (old repo PR 106).
       // Re-measured when E2 (dry-round-2.md §5 Wave E) moved the glide (the inverted transform, the
       // layout read, the release and the fallback) out of ui/hand/flip.ts into web/shared/edge/
       // motion.ts (the residue measures the cells and keeps the dead zone): ui 98.79/97.86/98.10/95.13
       // before, 98.78/97.86/98.08/95.13 after (the same 11 lines uncovered, 906 → 898 lines; the row
-      // stands). Measured on main at 25cb36c (#108) and this branch.
+      // stands). Measured on main at f8242b7 (old repo PR 108) and this branch.
       thresholds: {
         'web/games/gin-rummy/src/engine/**': {
           lines: 94,
@@ -553,7 +553,7 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
       // src/shellConfig.ts, a new row below: ui 99.59/100/98.68/92.52 before, 99.51/100/98.65/92.08
       // after (the same 6 lines uncovered, 1467 → 1218 lines; the row stands); shellConfig.ts
       // measures 100/100/100/100 through state.test.ts. Measured on this branch rebased onto main
-      // at 75dc0bd (#89).
+      // at 937553f (old repo PR 89).
       // Re-measured when Wave E3 (dry-round-2 items E3/E4) replaced ui/render.ts's `button()` and
       // its sixteen calls with one shellPaint `bindButtons` table and keyed the match score and the
       // history list through web/shared/ui/keyed.ts: ui 99.51/100/98.65/92.08 before,
@@ -561,25 +561,25 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
       // Re-measured when E1 (dry-round-2.md §5 Wave E) moved the drag's pointer events, ghost,
       // capture and landing out of ui/board/dragger.ts into web/shared/edge/drag.ts (the residue
       // configures the kernel): ui 99.50/100/98.62/92.12 before, 99.47/100/98.71/92.06 after (the
-      // same 6 lines uncovered, 1195 → 1141 lines; the row stands). Measured on main at 8b50ce9 and
-      // this branch rebased onto it (#96 touched neither folder).
+      // same 6 lines uncovered, 1195 → 1141 lines; the row stands). Measured on main at 46229c9 and
+      // this branch rebased onto it (old repo PR 96 touched neither folder).
       // Re-measured when G2 (dry-round-2 F5/F6) moved `sandboxLoad` and its two strings out of
       // ui/state.ts into web/shared/ui/shell.ts `position/load` and keyed `rendered`'s cues on the
       // shared `fresh`: ui 99.47/100/98.71/92.06 before, 99.47/100/98.70/92.09 after (the same 6
       // lines uncovered, 1141 → 1131 lines; the row stands); shellConfig.ts (now with
-      // `decodeState`) still 100/100/100/100. Measured on this branch rebased onto main at 60c50d6
-      // (#102).
+      // `decodeState`) still 100/100/100/100. Measured on this branch rebased onto main at b18a880
+      // (old repo PR 102).
       // Re-measured when Wave G1 (dry-round-2 E6, E8) moved the connection dot's class and paint
       // out of ui/render.ts into web/shared/ui/shellPaint.ts paintConnDot, and the home view reader
       // and SHELL_INTENTS record out of ui/home.ts into web/shared/ui/home.ts homeView and
       // shellIntents: ui 99.47/100/98.70/92.09 before, 99.46/100/98.68/92.12 after (the same 6
       // lines uncovered, 1131 → 1116 lines; home.ts and the shared modules measure 100 on every
-      // metric; the row stands). Measured on this branch rebased onto main at 77776e8 (#106).
+      // metric; the row stands). Measured on this branch rebased onto main at e99e7fc (old repo PR 106).
       // Re-measured when E2 (dry-round-2.md §5 Wave E) moved the flight's clone (fixed over the page,
       // sized, delayed, laid out, sent by translate and scale, removed) out of ui/board/fly.ts into
       // web/shared/edge/motion.ts (the residue measures departures and arrivals, staggers and culls):
       // ui 99.46/100/98.68/92.12 before, 99.45/100/98.66/92.19 after (the same 6 lines uncovered,
-      // 1116 → 1096 lines; the row stands). Measured on main at 25cb36c (#108) and this branch.
+      // 1116 → 1096 lines; the row stands). Measured on main at f8242b7 (old repo PR 108) and this branch.
       thresholds: {
         'web/games/backgammon/src/engine/**': {
           lines: 94,
@@ -904,7 +904,7 @@ export const RULES: ReadonlyArray<Rule> = [
       // hooks:verify runs in the always-on `check` job.
       '.githooks/**',
       'tools/hooks-verify.sh',
-      // No test touches Cloudflare (issue #19): the TURN worker is deployed by hand.
+      // No test touches Cloudflare (old repo issue 19): the TURN worker is deployed by hand.
       'infra/turn-worker/**',
       // The Dice App Clip (ios/DiceClip/README.md): Swift, an Xcode project and its plists, built by
       // Xcode alone; no web test reads it, so a Swift-only change runs the check job and nothing else.

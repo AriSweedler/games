@@ -4,7 +4,7 @@
 // through that relay, and the game still joins, starts and toasts "Connected via relay" (both shell
 // pages; fidice's guest alone: the row's `relayToasts` in e2e/fixtures/online-games.ts); the
 // selected candidate pair, read off the RTCPeerConnection, says so too. Hermetic: it plays on every
-// PR, and skips only where coturn is not installed (until issue #19 the relay was turn.sweedler.com
+// PR, and skips only where coturn is not installed (until old repo issue 19 the relay was turn.sweedler.com
 // and the nightly the one place this could run; now the nightly, E2E_TARGET=deployed, plays this
 // same spec with the deployed page and this same local relay). The hook itself is also proven alone
 // below, and in web/shared/edge/ice.test.ts and transport.test.ts: a page opened with it hands

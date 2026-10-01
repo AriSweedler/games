@@ -68,7 +68,7 @@
 > comes from a device table by the screen's size (web/shared/lib/devices.ts, §3.6), read and written
 > by the shell itself, the insets the fallback; `?probe=1` draws the inputs on the page.
 
-Synthesized 2026-09-25 from the four sweeps in this folder: `platform-apis.md` (612 lines), `how-games-do-it.md` (460), `board-games-web.md` (159), `our-page.md` (183), plus `shots/` and `shots/measurements.json`. The repo was measured at 25cb36c (main), research only. Every URL below was fetched by a sweep on 2026-09-25; the date in parentheses is the one the page states. UNVERIFIED marks a claim no sweep confirmed from a fetched page.
+Synthesized 2026-09-25 from the four sweeps in this folder: `platform-apis.md` (612 lines), `how-games-do-it.md` (460), `board-games-web.md` (159), `our-page.md` (183), plus `shots/` and `shots/measurements.json`. The repo was measured at f8242b7 (main), research only. Every URL below was fetched by a sweep on 2026-09-25; the date in parentheses is the one the page states. UNVERIFIED marks a claim no sweep confirmed from a fetched page.
 
 ## 1. The ask and the answer in ten lines
 
@@ -132,7 +132,7 @@ Accessibility: WCAG 2.2 F100 (2026-01-12) names a "rotate your device" message a
 
 Recurring patterns: (1) nobody on the open web locks; they re-grid on `(orientation: landscape)` or gate portrait; (2) in landscape the board is sized from the height and the chrome becomes a side column; (3) the phone-landscape breakpoint is keyed on height (under 540-600px) so tablets are not mistaken for phones; (4) the 2026 projects scope on `(pointer: coarse)`, not width alone; (5) no surveyed board game combines landscape with a pass-the-phone handoff (a survey gap, not a finding); the same-device two-player genre (Smily Volley, Pong Online) holds the phone in landscape between two players and puts each player's controls at their own short edge, the only precedent for §6.7 chirality and for chrome-per-player placement; (6) viewport units beat CSS `zoom` (BGA's Chrome 128 breakage).
 
-## 4. Our page today (25cb36c, measured 2026-09-25)
+## 4. Our page today (f8242b7, measured 2026-09-25)
 
 Source `our-page.md`: local `vite build` served by `tools/serve-dist.ts` on :12873, Playwright Chromium, pass-and-play Ann vs Bob; raw numbers in `shots/measurements.json`; screenshots `shots/<viewport>-{0-home,0b-home-local,1-curtain,2-rollmodal,3-rolled,3-rolled-full,4-rolled-scrolled-to-end}.png`.
 

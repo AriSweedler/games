@@ -17,7 +17,7 @@
 // nightly.yml's job `broker` plays through 0.peerjs.com instead. `E2E_TARGET=deployed`
 // (.github/workflows/nightly.yml) makes the deployed GitHub Pages page the subject: `pages` is the
 // deployed origin (e2e/fixtures/site.ts DEPLOYED_PAGES_ORIGIN), there is no `proxy` project (that
-// origin is a Cloudflare Worker, and no test depends on Cloudflare: issue #19), proxy-dev is not
+// origin is a Cloudflare Worker, and no test depends on Cloudflare: old repo issue 19), proxy-dev is not
 // started, and the deployed page reaches this same serve-dist, PeerServer and TURN relay through
 // its hooks; specs about the local build skip themselves with a reason. The @relay specs (gin and
 // fidice with `?ice-policy=relay`) relay through a coturn of the harness's own on :3478

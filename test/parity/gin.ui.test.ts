@@ -259,7 +259,7 @@ describe('rules', () => {
     html.replace(/ id="rule-[a-z-]+"/g, '').replace(/<a class="jargon"[^>]*>([^<]*)<\/a>/g, '$1');
 
   /**
-   * RULE CHANGE (docs/design/gin-arrangement-and-discards.md §7b, PR #45; the copy, PR #70):
+   * RULE CHANGE (docs/design/gin-arrangement-and-discards.md §7b, old repo PR 45; the copy, old repo PR 70):
    * laying off is by hand since, and the Lay off rule says so, where the legacy's said the fitting
    * cards were laid off automatically. Its heading is still the legacy's; its body is the one
    * item whose words are the app's own, so both sides compare with that body blanked.

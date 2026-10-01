@@ -34,7 +34,7 @@
 // Effects (KV, WebCrypto, fetch, the clock) come in through PairStore and Deps; everything that
 // shapes a request or a response is a pure function the tests call directly.
 
-/** The Dice App Clip's bundle id (ios/DiceClip, PR #176): what the clip posts as `bundle`. */
+/** The Dice App Clip's bundle id (ios/DiceClip, old repo PR 176): what the clip posts as `bundle`. */
 export const CLIP_BUNDLE = 'com.sweedler.games.dice.Clip';
 
 /** Where pushes go without an APNS_HOST var: the production APNs host (App Store and TestFlight builds). */
