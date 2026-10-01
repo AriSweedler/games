@@ -1,6 +1,10 @@
-name = "hyperagent-web-apps-turn"
-# The name is the Worker's identity: the custom domain below and the secrets hang off it. Never
-# rename it without moving the domain, since a rename makes a new Worker.
+name = "sweedler-turn"
+# Renamed 2026-10-01 from hyperagent-web-apps-turn. The name is the Worker's identity: the custom
+# domain below and the secret hang off it, so a rename is a NEW Worker plus a domain move.
+# `wrangler deploy` under the new name creates the Worker and, since the route below names a
+# hostname attached to the old Worker, moves the domain itself when stdout is piped (a terminal is
+# asked first). The secret does not follow: the first deploy must carry it (the note at the end).
+# Then delete the old Worker.
 main = "worker.js"
 compatibility_date = "2025-01-01"
 # The personal "Sweedler Family" account (the sweedler.com zone's too): pins the deploy target.
@@ -12,13 +16,18 @@ routes = [{ pattern = "turn.sweedler.com", custom_domain = true }]
 
 [vars]
 # Comma-separated list of origins allowed to fetch credentials. Empty = allow any origin.
-# Two Pages origins while the games move repos: the -at one goes once the old site only redirects.
-ALLOWED_ORIGINS = "https://arisweedler-at.github.io,https://arisweedler.github.io,https://games.sweedler.com"
+# The two live origins. The old Pages origin left on 2026-10-01, the day it became redirects.
+ALLOWED_ORIGINS = "https://arisweedler.github.io,https://games.sweedler.com"
 # Credential lifetime in seconds (300–86400). A game session should fit inside it.
 TTL_SECONDS = "7200"
 
 # The TURN key's ID is not secret; the API token that pairs with it is.
 TURN_KEY_ID = "acdb9db7a19e6f0d65998670bd779bbe"
 
-# Secret (set with `wrangler secret put TURN_KEY_API_TOKEN`, never commit it):
+# Secret (never commit it):
 #   TURN_KEY_API_TOKEN   — shown once when the TURN key is created (Realtime → TURN)
+# On a deployed Worker: `wrangler secret put TURN_KEY_API_TOKEN`. The first deploy of a renamed
+# Worker is the exception: `secret put` refuses a Worker that does not exist yet, and the deploy
+# itself moves the domain to a Worker that answers 500 until it has the secret, so the secret rides
+# on the deploy. Write one line, TURN_KEY_API_TOKEN=<token>, to a file outside the repo, run
+# `wrangler deploy --secrets-file <file>`, then delete the file.

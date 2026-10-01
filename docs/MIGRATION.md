@@ -234,7 +234,11 @@ Gin's inline classic scripts depend on execution order (`window.GinEngine`, `win
   personal Cloudflare account in the sibling change; the owner deploys both by hand, TURN before
   the flip. Last, the old repo's Pages get redirect stubs (query and hash kept) to
   games.sweedler.com from a `workflow_dispatch`-only workflow, and the old repo is archived (D9).
-  The lockfile and the package name are not touched.
+  On 2026-10-01, the soak waived, the Workers are renamed `sweedler-games` and `sweedler-turn`
+  (D12: a rename is a new Worker, wrangler moving each custom domain on the first deploy under the
+  new name and the TURN secret re-supplied with `--secrets-file`) and the TURN list narrows to the
+  two live origins, the old Pages origin only redirecting from that day. The lockfile and the
+  package name are not touched.
 - Proves: `npm run check` green in the old repo; `worker.test.ts` pins every row of the new table
   and the legacy redirects; the dist guards resolve every reference under `/games/` on both
   origins; the `pages` smoke plays under the new mount; after the flip,
