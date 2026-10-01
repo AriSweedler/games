@@ -4,6 +4,22 @@
 # (`npm run check:affected`; the browser suite and the e2e specs stay CI's, as they always were).
 # PRE_PUSH=full runs the whole gate (`npm run check`) instead, as does a checkout with no
 # origin/main to diff against. Installed by `npm run hooks`; see docs/ARCHITECTURE.md "Git hooks".
+#
+# Identity first (docs/design/repo-migration.md D7, D17): this is the personal repo, so every commit
+# a push adds must be authored and committed by a @sweedler.com address (~/.gitconfig's includeIf
+# would commit a fresh clone under the work address). Co-Authored-By trailers are message text, not
+# authorship, and pass. stdin holds one `<local ref> <local sha> <remote ref> <remote sha>` per ref.
+z=0000000000000000000000000000000000000000
+while read -r lref lsha rref rsha || [ -n "$lsha" ]; do # `||`: a last line with no newline still counts
+  case $lsha in "$z" | '') continue ;; esac # a deletion adds no commits
+  # What the remote lacks: rsha..lsha, or everything off its branches when the ref is new (rsha all
+  # zeros) or rsha is not known here (an unfetched tip under --force).
+  if [ "$rsha" = "$z" ] || ! git cat-file -e "$rsha" 2>/dev/null; then not="--remotes=$1"; else not=$rsha; fi
+  bad=$(git log --format='%h %ae%n%h %ce' "$lsha" --not "$not" | grep -iv '@sweedler\.com$' | head -n 1)
+  [ -z "$bad" ] && continue
+  echo "pre-push: ${bad#* } (commit ${bad%% *}) is not a @sweedler.com address; this is the personal repo: amend it (git commit --amend --reset-author) and push again" >&2
+  exit 1
+done
 cd "$(git rev-parse --show-toplevel)" || exit 1
 if [ ! -d node_modules ]; then
   echo "pre-push: node_modules is missing; run: npm ci" >&2
