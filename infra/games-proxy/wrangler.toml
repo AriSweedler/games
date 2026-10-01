@@ -1,6 +1,11 @@
-name = "hyperagent-web-apps-games"
-# The name is the Worker's identity: the custom domain below and the secrets hang off it. Never
-# rename it without moving the domain, since a rename makes a new Worker.
+name = "sweedler-games"
+# Renamed 2026-10-01 from hyperagent-web-apps-games. The name is the Worker's identity: the custom
+# domain below, the secrets and the KV binding hang off it, so a rename is a NEW Worker plus a
+# domain move. `wrangler deploy` under the new name creates the Worker and, since the route below
+# names a hostname attached to the old Worker, moves the domain itself when stdout is piped (a
+# terminal is asked first). Secrets do not follow: re-supply them on that first deploy with
+# `wrangler deploy --secrets-file <file>` (`secret put` refuses a Worker that does not exist yet).
+# Then delete the old Worker.
 main = "worker.ts"
 compatibility_date = "2025-01-01"
 # The personal "Sweedler Family" account (the sweedler.com zone's too): pins the deploy target.

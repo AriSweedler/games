@@ -380,9 +380,13 @@ origins send `cache-control: max-age=600` on it. A deploy that changes a hash (a
 can leave a browser holding the cached page 404ing on the previous `app-[hash].js` or shared chunk,
 an empty page, for up to 10 minutes until it reloads.
 
-**games.sweedler.com.** `infra/games-proxy/worker.ts` (TypeScript; wrangler bundles it as is) with
-its `wrangler.toml` (custom domain route). Deploy by hand, wrangler is not a dependency of this
-repo:
+**games.sweedler.com.** The Worker `sweedler-games` (renamed 2026-10-01 from
+`hyperagent-web-apps-games`): `infra/games-proxy/worker.ts` (TypeScript; wrangler bundles it as
+is) with its `wrangler.toml` (custom domain route). The name is the Worker's identity: the custom
+domain, the secrets and the KV binding hang off it, so a rename is a new Worker plus a domain move
+(wrangler moves the domain itself on the first deploy under the new name when stdout is piped) and
+secrets must be re-supplied on that deploy (`wrangler deploy --secrets-file <file>`); the toml's
+comment has the steps. Deploy by hand, wrangler is not a dependency of this repo:
 
 ```
 cd infra/games-proxy
@@ -393,8 +397,10 @@ The path mapping is the table at the top of `worker.ts`; `worker.test.ts` pins e
 `tools/proxy-dev.ts` runs the same handler locally.
 The island scoreboard's owner steps are ios/DiceClip/README.md's checklist: the App Clip experience at `https://games.sweedler.com/clip/rps` (the page's "Send buddy to your island" button links there, on this origin alone, on an iPhone with a Dynamic Island), the AASA, the `RPS_PAIRS` namespace and the `APNS_*` secrets, and the App Store id for `web/shared/lib/appClip.ts`.
 
-**turn.sweedler.com.** `infra/turn-worker/worker.js`, plain JavaScript deployed by hand: see
-"Online play".
+**turn.sweedler.com.** The Worker `sweedler-turn` (renamed 2026-10-01 from
+`hyperagent-web-apps-turn`): `infra/turn-worker/worker.js`, plain JavaScript deployed by hand: see
+"Online play". Its `ALLOWED_ORIGINS` lists the two live origins alone since 2026-10-01; the old
+Pages origin only redirects.
 
 **Nightly.** `.github/workflows/nightly.yml` plays the deployed Pages page every night through the
 harness's own local servers (see "Tests" 9; nothing Cloudflare is in the loop, so
@@ -430,7 +436,12 @@ to STUN-only.
    npx wrangler deploy
    npx wrangler secret put TURN_KEY_API_TOKEN
    ```
-   Deploy before the secret put so the Worker exists.
+   Deploy before the secret put so the Worker exists. The first deploy of a renamed Worker (the
+   name is `sweedler-turn` since 2026-10-01) is the exception: that deploy moves `turn.sweedler.com`
+   to the new Worker, which answers 500 until it has the secret, and `secret put` refuses a Worker
+   that does not exist yet, so the secret rides on the deploy: a file outside the repo holding one
+   line, `TURN_KEY_API_TOKEN=<token>`, `npx wrangler deploy --secrets-file <file>`, then delete the
+   file.
 3. `wrangler.toml` routes the Worker at `turn.sweedler.com` (custom domain on the sweedler.com
    zone); it also answers on the account's `*.workers.dev` URL. `ICE_CONFIG_URL` names the former.
 
