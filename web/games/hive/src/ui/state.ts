@@ -93,6 +93,8 @@ export type Table = Readonly<{
   /** The shell's pass-and-play curtain seat (`ShellTypes.Table`; the shell writes it from `local.viewer`): always null here, Hive raises none. */
   curtain: Seat | null;
   picked: Picked | null;
+  /** A tile dragged by hand (ui/dragger.ts): the lit hex it is over while the drag lasts; `picked` is its source. */
+  drag: Readonly<{ over: Hex | null }> | null;
   /** The result sheet's Continue was tapped: the final board stays on show. */
   resultSeen: boolean;
   /** `#historyOverlay` open. */
@@ -104,6 +106,9 @@ export type TableIntent =
   | Readonly<{ type: 'pick/hand'; bug: Bug }>
   | Readonly<{ type: 'tap/hex'; hex: Hex }>
   | Readonly<{ type: 'pick/clear' }>
+  | Readonly<{ type: 'drag/start'; picked: Picked }>
+  | Readonly<{ type: 'drag/over'; hex: Hex | null }>
+  | Readonly<{ type: 'drag/end' }>
   | Readonly<{ type: 'result/continue' }>
   | Readonly<{ type: 'rules/open' }>
   | Readonly<{ type: 'rules/close' }>
@@ -146,6 +151,7 @@ export type HomeSnapshot = SharedHomeSnapshot<Hive>;
 export const initialTable: Table = {
   curtain: null,
   picked: null,
+  drag: null,
   resultSeen: false,
   historyOpen: false,
 };
@@ -153,7 +159,7 @@ export const initialTable: Table = {
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
 const refuse = (app: App, message: string): Step =>
-  step(withTable(app, { picked: null }), toast(message));
+  step(withTable(app, { picked: null, drag: null }), toast(message));
 
 /** The cues for the change from `prev` to `next`: a tile placed or moved, the game won or lost. */
 export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
@@ -196,6 +202,7 @@ const rendered = (app: App, prev: View | null): Step => {
   const table: Table = {
     ...app.table,
     picked: fresh || newGame ? null : app.table.picked,
+    drag: newGame ? null : app.table.drag,
     resultSeen: newGame ? false : app.table.resultSeen,
   };
   return step(
@@ -215,7 +222,7 @@ const reset = (table: Table, at: TableReset): Table => {
     case 'view':
     case 'applied':
     case 'frame':
-      return { ...table, picked: null };
+      return { ...table, picked: null, drag: null };
   }
 };
 
@@ -300,21 +307,67 @@ export const reachable = (view: View, picked: Picked | null): ReadonlyArray<Hex>
 export const placeableNow = (view: View): ReadonlySet<Bug> =>
   new Set(view.placements.map((p) => p.bug));
 
-/** A tap on a hex: a lit hex plays the pick; one of my movable tiles becomes the pick; anything else clears it. */
+/** The pick played to `hex` (a tap on a lit hex, a drop on one): the tap cue, then the action through `act`. */
+const play = (app: App, picked: Picked, hex: Hex, ctx: Ctx): Step => {
+  const action: Action =
+    picked.kind === 'hand'
+      ? { type: 'place', bug: picked.bug, to: hex }
+      : { type: 'move', from: picked.hex, to: hex };
+  return then(step(app, fx('tap')), (a) =>
+    act(withTable(a, { picked: null, drag: null }), action, ctx),
+  );
+};
+
+/** Whether the pick may go to `hex` now. */
+const canReach = (view: View, picked: Picked | null, hex: Hex): boolean =>
+  picked !== null && reachable(view, picked).some((h) => sameHex(h, hex));
+
+/**
+ * A tap on a hex: a lit hex plays the pick; one of my movable tiles becomes the pick; anything else
+ * clears it. The click a drag's release fires reaches the board too: while the drag stands it is nothing.
+ */
 const tapHex = (app: App, hex: Hex, ctx: Ctx): Step => {
   const view = app.shell.view;
-  if (view === null) return pure(app);
+  if (view === null || app.table.drag !== null) return pure(app);
   const picked = app.table.picked;
-  if (picked !== null && reachable(view, picked).some((h) => sameHex(h, hex))) {
-    const action: Action =
-      picked.kind === 'hand'
-        ? { type: 'place', bug: picked.bug, to: hex }
-        : { type: 'move', from: picked.hex, to: hex };
-    return then(step(app, fx('tap')), (a) => act(withTable(a, { picked: null }), action, ctx));
-  }
+  if (picked !== null && canReach(view, picked, hex)) return play(app, picked, hex, ctx);
   const movable = view.movable.some((m) => sameHex(m.from, hex));
   const same = picked?.kind === 'hex' && sameHex(picked.hex, hex);
   return pure(withTable(app, { picked: movable && !same ? { kind: 'hex', hex } : null }));
+};
+
+/** Whether `picked` may be picked up now: a bug I may place, or one of my movable tiles. */
+const pickable = (view: View, picked: Picked): boolean =>
+  picked.kind === 'hand'
+    ? placeableNow(view).has(picked.bug)
+    : view.movable.some((m) => sameHex(m.from, picked.hex));
+
+/** `drag/start`: the tile pressed becomes the pick (its hexes light) and the drag stands; a tile not mine to lift is nothing. */
+const dragStart = (app: App, picked: Picked): Step => {
+  const view = app.shell.view;
+  if (view === null || !pickable(view, picked)) return pure(app);
+  return pure(withTable(app, { picked, drag: { over: null } }));
+};
+
+/** `drag/over`: the lit hex the ghost is over, or none; a hex the pick cannot reach counts as none. */
+const dragOver = (app: App, hex: Hex | null): Step => {
+  const view = app.shell.view;
+  const d = app.table.drag;
+  if (view === null || d === null) return pure(app);
+  const over = hex !== null && canReach(view, app.table.picked, hex) ? hex : null;
+  const same = over === d.over || (over !== null && d.over !== null && sameHex(over, d.over));
+  return same ? pure(app) : pure(withTable(app, { drag: { over } }));
+};
+
+/** `drag/end`: over a lit hex the pick is played there; anywhere else the pick is dropped. */
+const dragEnd = (app: App, ctx: Ctx): Step => {
+  const view = app.shell.view;
+  const d = app.table.drag;
+  const picked = app.table.picked;
+  if (view === null || d === null) return pure(withTable(app, { drag: null }));
+  if (picked !== null && d.over !== null && canReach(view, picked, d.over))
+    return play(app, picked, d.over, ctx);
+  return pure(withTable(app, { picked: null, drag: null }));
 };
 
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
@@ -323,6 +376,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       return then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
     case 'pick/hand': {
       const view = app.shell.view;
+      if (app.table.drag !== null) return pure(app);
       const same = app.table.picked?.kind === 'hand' && app.table.picked.bug === intent.bug;
       const can = view !== null && placeableNow(view).has(intent.bug);
       return pure(
@@ -332,7 +386,13 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
     case 'tap/hex':
       return tapHex(app, intent.hex, ctx);
     case 'pick/clear':
-      return pure(withTable(app, { picked: null }));
+      return app.table.drag !== null ? pure(app) : pure(withTable(app, { picked: null }));
+    case 'drag/start':
+      return dragStart(app, intent.picked);
+    case 'drag/over':
+      return dragOver(app, intent.hex);
+    case 'drag/end':
+      return dragEnd(app, ctx);
     case 'result/continue':
       return pure(withTable(app, { resultSeen: true }));
     case 'rules/open':

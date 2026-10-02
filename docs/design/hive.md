@@ -174,7 +174,13 @@ of the one symbol at the set's one line weight). e2e/hive.spec.ts reads the same
 tiles as hexagons of at least 44px with the bug's `<use>` inside and the sprite in the body, and
 finds the Queen on the board by her `data-bug`, not a letter. The computed-style goldens
 (test/fixtures/styles/hive.*.json) pin the engraved look: the rim, the shade and the gleam on each
-side, and the ink's colour for every bug on both trays.
+side, and the ink's colour for every bug on both trays. The drag (§7) has a pointer-sequence test beside its module
+(ui/dragger.test.ts over the page fake: the intents in order, the ghost's place and its following,
+the snap to the nearest lit hex once per change, the glide back, a press that never moves staying a
+tap) and the reducer's half in ui/state.test.ts (`drag/start` picks, `drag/over` holds a reachable
+hex once, `drag/end` plays or drops, the release's click ignored while the drag stands);
+e2e/hive.spec.ts drags with `page.mouse`: a tray tile onto the lit hex (the snap from beside it, the
+`drop` light), one released off every hex snapping back, and a board tile across the hive.
 
 Hive was the first engine-only game in tools/ci/suites.ts (`ENGINE_ONLY`) until its page row
 (§7) registered it in tools/games.ts as a shell game: its suite now has both halves (the unit tests
@@ -192,6 +198,21 @@ per occupied hex plus the hexes the picked tile may reach, the origin alone on a
 two hands as trays of hexagonal tiles with their counts, Pass when the seat must, Resign while the game is on, and the
 status line. A tap on a hand tile lights its placements, a tap on a tile already down lights its
 moves, a tap on a lit hex plays (ui/state.ts `tap/hex`); the engine's refusal is a toast.
+
+The tiles drag too (the owner, 2026-10-02: "The tiles must be click-and-draggable instead of just
+click-and-click to move"): ui/dragger.ts tells the shared pointer-drag kernel (web/shared/edge/drag.ts,
+dry-round-2.md E1) what a press on the trays or the board picks up (a playable tray tile, one of my
+`movable` board tiles), and past the kernel's threshold `drag/start` picks the tile as a tap would (the
+same hexes light; the source dims as `dragging`) while the kernel's ghost, the tile's clone, follows the
+pointer: a tray tile clones as it is; a board tile is a `g` in the SVG, which would not render on the
+body, so the paint lays a nested `svg.lift` over the picked cell (render.ts `liftHtml`, hidden by its
+own rule) for the kernel to clone. Every move snaps to the lit hex nearest the pointer within 0.9 of a
+hex's width (`nearestLit`; a thumb covers the hex it is over) and `drag/over` marks it `drop`; a release
+on it plays the tile through the same `act` as a tap, a release anywhere else glides the ghost back
+(180ms, a millisecond under reduced motion) and drops the pick. The board and the playable tiles take
+`touch-action: none`, so a finger drags the tile, never the page; the tap-tap path stays as the
+fallback for keyboards and assistive tech, and the click a release fires is nothing while the drag
+stands.
 
 Pass the phone raises no curtain (the owner, 2026-10-02: "hive is like backgammon, where you don't
 need to pass the phone for turns. It's just a game."): nothing is hidden, so both players share the
