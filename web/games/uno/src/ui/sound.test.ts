@@ -101,6 +101,7 @@ const position = (over: Partial<Game> = {}): State => ({
     turn: 1,
     direction: 1,
     phase: { kind: 'turn' },
+    uno: null,
     note: '',
     ...over,
   },
