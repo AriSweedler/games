@@ -2,7 +2,9 @@
 // flows (the home screen, the waiting rooms, the leave, the resume) over this game's config
 // (shellConfig.ts `HIVE_SHELL` completed here as `HIVE`), and the table's own intents: a tap on a
 // hand tile shows where it may be placed, a tap on a board tile where it may move, a tap on a lit
-// hex plays. Every role plays through `act`: pass-and-play and the host apply the action to the
+// hex plays; the lit hex the pointer is over is the `aim`, so a picked Spider's path to it reads
+// 1-2-3, and a Spider's move lands as a `hop` the paint plays along that path (the owner: "the
+// spider's moves must show the '1-2-3' when it moves, as a special case"). Every role plays through `act`: pass-and-play and the host apply the action to the
 // engine and broadcast each seat its view, a guest sends one `action` frame and waits for its
 // view. Pass-and-play raises no curtain (the owner, 2026-10-02: "hive is like backgammon, where
 // you don't need to pass the phone for turns. It's just a game."): nothing is hidden, so both
@@ -44,6 +46,7 @@ import {
   type TableReset,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import { heightAt, occupied, spiderPaths, topAt } from '../engine/engine.ts';
 import { keyOf, sameHex, type Hex } from '../engine/hex.ts';
 import type { Bug } from '../engine/pieces.ts';
 import {
@@ -57,6 +60,7 @@ import {
   type View,
 } from '../engine/view.ts';
 import { action as actionFrame } from '../protocol.ts';
+import type { Hop } from './board.ts';
 import { HIVE_SHELL } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
@@ -89,12 +93,17 @@ export type Home = Readonly<{ opts?: never }>;
 /** What the player has picked up: a bug from the hand, or a tile on the board. */
 export type Picked = Readonly<{ kind: 'hand'; bug: Bug }> | Readonly<{ kind: 'hex'; hex: Hex }>;
 
+export type { Hop };
+
 export type Table = Readonly<{
   /** The shell's pass-and-play curtain seat (`ShellTypes.Table`; the shell writes it from `local.viewer`): always null here, Hive raises none. */
   curtain: Seat | null;
   picked: Picked | null;
   /** A tile dragged by hand (ui/dragger.ts): the lit hex it is over while the drag lasts; `picked` is its source. */
   drag: Readonly<{ over: Hex | null }> | null;
+  /** The lit hex the pointer is over (or a drag's nearest), so a picked Spider's path to it reads 1-2-3; null off any. */
+  aim: Hex | null;
+  hop: Hop | null;
   /** The result sheet's Continue was tapped: the final board stays on show. */
   resultSeen: boolean;
   /** `#historyOverlay` open. */
@@ -109,6 +118,7 @@ export type TableIntent =
   | Readonly<{ type: 'drag/start'; picked: Picked }>
   | Readonly<{ type: 'drag/over'; hex: Hex | null }>
   | Readonly<{ type: 'drag/end' }>
+  | Readonly<{ type: 'aim/hex'; hex: Hex | null }>
   | Readonly<{ type: 'result/continue' }>
   | Readonly<{ type: 'rules/open' }>
   | Readonly<{ type: 'rules/close' }>
@@ -152,14 +162,19 @@ export const initialTable: Table = {
   curtain: null,
   picked: null,
   drag: null,
+  aim: null,
+  hop: null,
   resultSeen: false,
   historyOpen: false,
 };
 
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
+/** The table with `picked` in hand (or nothing); a new pick aims at nothing yet. */
+const pick = (app: App, picked: Picked | null): App => withTable(app, { picked, aim: null });
+
 const refuse = (app: App, message: string): Step =>
-  step(withTable(app, { picked: null, drag: null }), toast(message));
+  step(withTable(pick(app, null), { drag: null }), toast(message));
 
 /** The cues for the change from `prev` to `next`: a tile placed or moved, the game won or lost. */
 export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
@@ -176,6 +191,27 @@ export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
 
 const turnsOf = (v: View): number => v.game.turns.white + v.game.turns.black;
 
+/**
+ * The Spider move from `prev` to `next`: where it stood and its path (engine.ts `spiderPaths` on
+ * the position it left, the destination last). Null for any other change: a placement empties no
+ * hex, another bug has no three-hex path, and the Spider never stands on a stack (only Beetles
+ * climb), so its move is exactly one hex emptied and one filled.
+ */
+export const spiderHop = (
+  prev: View,
+  next: View,
+): Readonly<{ from: Hex; path: ReadonlyArray<Hex> }> | null => {
+  const emptied = occupied(prev.game.board).filter((h) => heightAt(next.game.board, h) === 0);
+  const filled = occupied(next.game.board).filter((h) => heightAt(prev.game.board, h) === 0);
+  const [from, ...moreEmptied] = emptied;
+  const [to, ...moreFilled] = filled;
+  if (from === undefined || to === undefined || moreEmptied.length > 0 || moreFilled.length > 0)
+    return null;
+  if (topAt(prev.game.board, from)?.bug !== 'spider') return null;
+  const path = spiderPaths(prev.game, from).get(keyOf(to));
+  return path === undefined ? null : { from, path };
+};
+
 /** One key per position, so a re-sent frame plays nothing. */
 const cueKey = (v: View): string =>
   `${String(v.startedAt)}:${String(turnsOf(v))}:${v.game.turn}:${v.game.result === null ? 'on' : 'over'}`;
@@ -185,7 +221,7 @@ const cueKey = (v: View): string =>
  * change since `prev`, once per position, and "your turn" when an online turn lands on my seat. A
  * new position drops the pick; a new game (its clock) drops the result sheet's memory.
  */
-const rendered = (app: App, prev: View | null): Step => {
+const rendered = (app: App, prev: View | null, ctx: Ctx): Step => {
   const view = app.shell.view;
   if (view === null) return pure(app);
   const key = cueKey(view);
@@ -199,10 +235,19 @@ const rendered = (app: App, prev: View | null): Step => {
   // A rematch: its clock, or (on a clock that stood still) the result cleared.
   const newGame =
     prev?.startedAt !== view.startedAt || (prev.game.result !== null && view.game.result === null);
+  const moved = fresh && !newGame ? spiderHop(prev, view) : null;
   const table: Table = {
     ...app.table,
     picked: fresh || newGame ? null : app.table.picked,
     drag: newGame ? null : app.table.drag,
+    aim: fresh || newGame ? null : app.table.aim,
+    // A Spider's move hops once, on this position; any other fresh position hops nothing.
+    hop:
+      moved !== null
+        ? { key, ...moved, reduced: ctx.reducedMotion ?? false }
+        : fresh || newGame
+          ? null
+          : app.table.hop,
     resultSeen: newGame ? false : app.table.resultSeen,
   };
   return step(
@@ -222,7 +267,7 @@ const reset = (table: Table, at: TableReset): Table => {
     case 'view':
     case 'applied':
     case 'frame':
-      return { ...table, picked: null, drag: null };
+      return { ...table, picked: null, drag: null, aim: null };
   }
 };
 
@@ -290,7 +335,7 @@ const act = (app: App, action: Action, ctx: Ctx): Step => {
     case 'guest':
     case null:
       return app.shell.role === 'guest' && app.shell.oppConnected
-        ? step(withTable(app, { picked: null }), { type: 'send', frame: actionFrame(action) })
+        ? step(pick(app, null), { type: 'send', frame: actionFrame(action) })
         : refuse(app, NOT_CONNECTED_MSG);
   }
 };
@@ -314,7 +359,7 @@ const play = (app: App, picked: Picked, hex: Hex, ctx: Ctx): Step => {
       ? { type: 'place', bug: picked.bug, to: hex }
       : { type: 'move', from: picked.hex, to: hex };
   return then(step(app, fx('tap')), (a) =>
-    act(withTable(a, { picked: null, drag: null }), action, ctx),
+    act(withTable(a, { picked: null, drag: null, aim: null }), action, ctx),
   );
 };
 
@@ -333,7 +378,7 @@ const tapHex = (app: App, hex: Hex, ctx: Ctx): Step => {
   if (picked !== null && canReach(view, picked, hex)) return play(app, picked, hex, ctx);
   const movable = view.movable.some((m) => sameHex(m.from, hex));
   const same = picked?.kind === 'hex' && sameHex(picked.hex, hex);
-  return pure(withTable(app, { picked: movable && !same ? { kind: 'hex', hex } : null }));
+  return pure(pick(app, movable && !same ? { kind: 'hex', hex } : null));
 };
 
 /** Whether `picked` may be picked up now: a bug I may place, or one of my movable tiles. */
@@ -367,7 +412,7 @@ const dragEnd = (app: App, ctx: Ctx): Step => {
   if (view === null || d === null) return pure(withTable(app, { drag: null }));
   if (picked !== null && d.over !== null && canReach(view, picked, d.over))
     return play(app, picked, d.over, ctx);
-  return pure(withTable(app, { picked: null, drag: null }));
+  return pure(withTable(app, { picked: null, drag: null, aim: null }));
 };
 
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
@@ -379,20 +424,26 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       if (app.table.drag !== null) return pure(app);
       const same = app.table.picked?.kind === 'hand' && app.table.picked.bug === intent.bug;
       const can = view !== null && placeableNow(view).has(intent.bug);
-      return pure(
-        withTable(app, { picked: can && !same ? { kind: 'hand', bug: intent.bug } : null }),
-      );
+      return pure(pick(app, can && !same ? { kind: 'hand', bug: intent.bug } : null));
     }
     case 'tap/hex':
       return tapHex(app, intent.hex, ctx);
     case 'pick/clear':
-      return app.table.drag !== null ? pure(app) : pure(withTable(app, { picked: null }));
+      return app.table.drag !== null ? pure(app) : pure(pick(app, null));
     case 'drag/start':
       return dragStart(app, intent.picked);
     case 'drag/over':
       return dragOver(app, intent.hex);
     case 'drag/end':
       return dragEnd(app, ctx);
+    case 'aim/hex': {
+      // The same aim again (the pointer crossing a cell's own parts) is no change, so no repaint.
+      const same =
+        intent.hex === null
+          ? app.table.aim === null
+          : app.table.aim !== null && sameHex(app.table.aim, intent.hex);
+      return same ? pure(app) : pure(withTable(app, { aim: intent.hex }));
+    }
     case 'result/continue':
       return pure(withTable(app, { resultSeen: true }));
     case 'rules/open':
@@ -406,7 +457,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
     case 'escape':
       if (app.table.historyOpen) return pure(withTable(app, { historyOpen: false }));
       if (app.shell.rulesOpen) return pure(withShell(app, { rulesOpen: false }));
-      return pure(withTable(app, { picked: null }));
+      return pure(pick(app, null));
   }
 };
 

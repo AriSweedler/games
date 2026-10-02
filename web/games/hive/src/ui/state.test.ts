@@ -2,10 +2,11 @@ import { describe, expect, test } from 'vitest';
 
 import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
-import { ORIGIN } from '../engine/hex.ts';
+import { ORIGIN, keyOf, sameHex, type Hex } from '../engine/hex.ts';
 import {
   cuesBetween,
   handoffLabel,
+  spiderHop,
   initialApp,
   placeableNow,
   reachable,
@@ -208,5 +209,94 @@ describe('a tile dragged by hand (ui/dragger.ts)', () => {
     expect(board['0,0']).toBeUndefined();
     expect(board[`${String(to.q)},${String(to.r)}`]).toEqual([{ side: 'white', bug: 'queen' }]);
     expect(moved.table.drag).toBeNull();
+  });
+});
+
+describe("the Spider's 1-2-3 (the owner: it must show when the Spider moves)", () => {
+  const h = (q: number, r: number): Hex => ({ q, r });
+  const SPIDER = h(-1, 0);
+  /** Both Queens down, White's Spider a leaf at (-1,0), White to move. */
+  const placed = (): App =>
+    run(
+      started(),
+      { type: 'act', action: { type: 'place', bug: 'queen', to: ORIGIN } },
+      { type: 'act', action: { type: 'place', bug: 'queen', to: h(1, 0) } },
+      { type: 'act', action: { type: 'place', bug: 'spider', to: SPIDER } },
+      { type: 'act', action: { type: 'place', bug: 'ant', to: h(2, 0) } },
+    ).app;
+
+  test('an aim is held while it changes and dropped with the pick; the same aim again is no change', () => {
+    const app = placed();
+    const picked = run(app, { type: 'tap/hex', hex: SPIDER }).app;
+    expect(picked.table.picked).toEqual({ kind: 'hex', hex: SPIDER });
+    const view = viewOf(picked);
+    if (view === null) throw new Error('no view');
+    const to = reachable(view, picked.table.picked)[0];
+    if (to === undefined) throw new Error('no move');
+    const aimed = run(picked, { type: 'aim/hex', hex: to }).app;
+    expect(aimed.table.aim).toEqual(to);
+    expect(run(aimed, { type: 'aim/hex', hex: to }).app).toBe(aimed);
+    expect(run(aimed, { type: 'aim/hex', hex: null }).app.table.aim).toBeNull();
+    expect(run(aimed, { type: 'pick/clear' }).app.table.aim).toBeNull();
+    expect(run(aimed, { type: 'escape' }).app.table.aim).toBeNull();
+    expect(run(aimed, { type: 'tap/hex', hex: SPIDER }).app.table.aim).toBeNull();
+    expect(run(app, { type: 'aim/hex', hex: null }).app).toBe(app);
+  });
+
+  test('a Spider’s move lands as a hop: its three hexes, keyed on the position; any other move hops nothing', () => {
+    const app = placed();
+    const picked = run(app, { type: 'tap/hex', hex: SPIDER }).app;
+    const view = viewOf(picked);
+    if (view === null) throw new Error('no view');
+    const to = reachable(view, picked.table.picked)[0];
+    if (to === undefined) throw new Error('no move');
+    const landed = run(picked, { type: 'aim/hex', hex: to }, { type: 'tap/hex', hex: to }).app;
+    const hop = landed.table.hop;
+    if (hop === null) throw new Error('no hop');
+    expect(hop.from).toEqual(SPIDER);
+    expect(hop.path).toHaveLength(3);
+    expect(sameHex(hop.path[2] ?? ORIGIN, to)).toBe(true);
+    expect(hop.reduced).toBe(false);
+    expect(landed.table.aim).toBeNull();
+    expect(landed.table.picked).toBeNull();
+    // The hop stays on the position (a later paint keys on it) and goes with the next one.
+    expect(run(landed, { type: 'pick/clear' }).app.table.hop).toBe(hop);
+    const blackView = viewOf(landed);
+    if (blackView === null) throw new Error('no view');
+    const ant = blackView.movable.find((m) => sameHex(m.from, h(2, 0)));
+    const antTo = ant?.to[0];
+    if (antTo === undefined) throw new Error('the Ant cannot move');
+    const antMoved = run(
+      landed,
+      { type: 'tap/hex', hex: h(2, 0) },
+      { type: 'tap/hex', hex: antTo },
+    ).app;
+    expect(antMoved.table.hop).toBeNull();
+    // Under reduced motion the hop says so, for one step instead of three.
+    const reduced = runIntents(reduce, { ...ctx, reducedMotion: true })(picked, {
+      type: 'tap/hex',
+      hex: to,
+    }).app;
+    expect(reduced.table.hop?.reduced).toBe(true);
+    expect(reduced.table.hop?.path).toEqual(hop.path);
+  });
+
+  test('spiderHop reads the move off two views: the one hex emptied, the one filled, and the path between', () => {
+    const app = placed();
+    const before = viewOf(app);
+    if (before === null) throw new Error('no view');
+    const to = before.movable.find((m) => sameHex(m.from, SPIDER))?.to[0];
+    if (to === undefined) throw new Error('no move');
+    const after = viewOf(run(app, { type: 'act', action: { type: 'move', from: SPIDER, to } }).app);
+    if (after === null) throw new Error('no view');
+    const hop = spiderHop(before, after);
+    expect(hop?.from).toEqual(SPIDER);
+    expect(hop?.path.map(keyOf)).toContain(keyOf(to));
+    expect(spiderHop(before, before)).toBeNull();
+    const placedMore = viewOf(
+      run(app, { type: 'act', action: { type: 'place', bug: 'ant', to: h(-2, 1) } }).app,
+    );
+    if (placedMore === null) throw new Error('no view');
+    expect(spiderHop(before, placedMore)).toBeNull();
   });
 });

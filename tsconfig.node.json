@@ -131,6 +131,8 @@
     "web/games/briscola/src/ui/motion*.ts",
     // UNO's motion layer (ui/motion.ts over web/shared/edge/motion.ts and dom.ts): the web project's alone, as briscola's.
     "web/games/uno/src/ui/motion*.ts",
+    // Hive's Spider hop (over web/shared/edge/motion.ts and dom.ts): the web project's alone.
+    "web/games/hive/src/ui/motion*.ts",
     "web/games/briscola/src/ui/history.test.ts"
   ]
 }

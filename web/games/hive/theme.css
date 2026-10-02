@@ -3,7 +3,7 @@
    toast are the shell's rules on the shared palette, and this file adds Hive's one accent (the
    amber of a honeycomb), the type scale the shell leaves to each theme, and the table: the names
    strip, the SVG hive (a bevelled hexagon per cell in the side's colour with the bug engraved on it,
-   lit where the picked tile may go) and the two hands as trays of hexagonal tiles (the board's
+   lit where the picked tile may go, the Spider's path numbered 1-2-3) and the two hands as trays of hexagonal tiles (the board's
    hexagon, the bug, the count left as a badge). The tiles after the official set (the owner,
    2026-10-02): the bugs in the set's colours, each with a shade for the cream tile and one for the
    black, a hairline grey rim and a shadow "as if the bugs were recessed instead of simply painted
@@ -376,6 +376,40 @@ label {
   stroke: rgba(0, 0, 0, 0.6);
   stroke-width: 1.2;
   stroke-linejoin: round;
+  pointer-events: none;
+}
+/* The Spider's 1-2-3 (render.ts `stepsOf`, `boardHtml`): a numeral on each hex of the picked
+   Spider's path to the lit hex the pointer is over, centred on an empty hex and in a tile's upper
+   left; `trail` is an empty hex drawn only while the tile hops along its path (ui/motion.ts
+   `hopAlong`; the hopping cell's own transition is written inline), dashed so it reads as the way,
+   not a place to go (its `face` carries the light, its `sheen` is off). Neither takes the pointer:
+   a tap through them meets the board. */
+.hex .step {
+  font-size: 7px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: var(--accent);
+  pointer-events: none;
+}
+.hex.w .step,
+.hex.b .step {
+  font-size: 5px;
+}
+.hex.trail {
+  pointer-events: none;
+}
+.hex.trail .face {
+  fill: var(--hive-lit);
+  stroke: var(--accent);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 1.5;
+  filter: none;
+}
+.hex.trail .sheen {
+  display: none;
+}
+.hex.hopping {
   pointer-events: none;
 }
 /* High contrast, or less transparency: the flat tiles and the ink alone. */

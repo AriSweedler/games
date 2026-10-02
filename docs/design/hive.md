@@ -117,6 +117,11 @@ into a hex that a sliding tile cannot reach. The Grasshopper jumps, so the rule 
 - **Grasshopper:** jumps in a straight line over one or more tiles in a row and lands on the first
   empty hex. It cannot jump a gap or move without jumping.
 - **Spider:** slides exactly three hexes around the hive, never entering a hex twice in the move.
+  The engine also names each walk: `spiderPaths(game, from)` keys the three hexes stepped on, in
+  order, by the destination (the first walk found where several reach one hex), behind the same
+  gate as `legalMoves`; the page shows them as 1-2-3 while a Spider is picked and hops her along
+  them as she moves (the owner: "the spider's moves must show the '1-2-3' when it moves, as a
+  special case").
 - **Soldier Ant:** slides any number of hexes around the hive.
 
 ### 4.7 Passing
@@ -156,7 +161,10 @@ step, Freedom to Move on the ground and above it, the flood fill, connectivity, 
 walks); the tiles; and the rules from hand-built positions: the first two placements and the colour
 rule (a stack counts as its top tile's colour), the Queen by the fourth tile and no move before
 her, each bug's moves (the Queen's one step, the Beetle's climb and pin, the beetle gate, the
-Grasshopper's line, the Spider's exactly three, the Ant everywhere it can slide), the cup a tile
+Grasshopper's line, the Spider's exactly three and her paths (`spiderPaths`: over every Spider
+move of the bot games the paths end exactly where `legalMoves` does, each a chain of single steps
+with no hex twice, every hex stepped on empty and touching the hive left behind), the Ant
+everywhere it can slide), the cup a tile
 cannot slide into or out of, One Hive mid-move, the pass, a surrounded Queen, both Queens at once
 and resigning. Three seeded random bot games of up to 200 turns check every turn: the intent came
 off the legal lists, every tile is kept, the hive is one group, the Queen is down by the fourth
@@ -164,15 +172,20 @@ tile and only Beetles stand above the ground.
 
 The page's own tests sit beside its modules too: the reducer (ui/state.test.ts: pass and play
 starts on White's table with no curtain and the view changes hands as the turn does, the picks, a
-refusal, the result sheet) and the board's fit (ui/board.test.ts: the fit of a hive equals the fit
+refusal, the result sheet, the aim a picked Spider's path is numbered to and the hop her move
+lands as), the board's fit (ui/board.test.ts: the fit of a hive equals the fit
 of the same hive plus its ring, and through three seeded games every legal destination lies inside
 it, so a pick never changes the viewBox) and the bugs on the tiles (ui/bugs.test.ts: a file
 becomes a `<symbol>` with its stroke-width stripped, the sprite carries every bug once with the
 tiles' gradients and filters, each fit keeps the art inside the hex, and a drawn bug is four layers
-of the one symbol at the set's one line weight). e2e/hive.spec.ts reads the same facts off the page
+of the one symbol at the set's one line weight), the paint (ui/render.test.ts: 1-2-3 along the picked
+Spider's path to the aimed hex, the way drawn as trail cells under the hive, the hop's path numbered
+as the move lands and nothing once it has) and the hop's stops and offsets (ui/motion.test.ts: three
+legs of one hex each, two ends under reduced motion). e2e/hive.spec.ts reads the same facts off the page
 (the curtain hidden throughout, the viewBox the same string before and after a pick), the tray's
 tiles as hexagons of at least 44px with the bug's `<use>` inside and the sprite in the body, and
-finds the Queen on the board by her `data-bug`, not a letter. The computed-style goldens
+finds the Queen on the board by her `data-bug`, not a letter; with the mouse over a lit hex it reads
+the Spider's 1-2-3 and watches her land at the end of the hop. The computed-style goldens
 (test/fixtures/styles/hive.*.json) pin the engraved look: the rim, the shade and the gleam on each
 side, and the ink's colour for every bug on both trays. The drag (§7) has a pointer-sequence test beside its module
 (ui/dragger.test.ts over the page fake: the intents in order, the ghost's place and its following,

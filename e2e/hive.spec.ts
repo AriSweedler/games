@@ -11,7 +11,9 @@
 // tile pressed and moved lights its hexes and a ghost follows the pointer; the lit hex nearest the
 // pointer, from beside it, carries `drop`; released there the tile is down, released off every hex
 // it glides back to the tray; a board tile drags the same way over the lift the paint lays on it.
-// Nothing is random, so no seed. The hook `window.__hive`
+// The Spider's path reads 1-2-3 over a lit hex the mouse is on while she is picked, and her move
+// hops along it (the owner: "the spider's moves must show the '1-2-3' when it moves, as a special
+// case"). Nothing is random, so no seed. The hook `window.__hive`
 // (`view()`, `legal()`, `act`) reads the game back. On `pages` alone: this is about the page, not
 // the origin. The shell's own flows (the home, the room, the handoff, resume) are the shell specs'
 // `@hive` describes.
@@ -243,3 +245,63 @@ const dragAt = (viewport: Viewport): void => {
 };
 
 dragAt(PHONE);
+
+test("the Spider's path reads 1-2-3 over the aimed hex, and her move hops along it", async ({
+  phone,
+  project,
+}) => {
+  test.skip(project !== 'pages', 'about the page, not the origin');
+  const { page } = phone;
+  await hiveStartLocal(page, pagePath(project, 'hive'), DESKTOP, [...NAMES]);
+  // Both Queens down and White's Spider a leaf at (-1,0), through the hook; White to move.
+  const placements = [
+    ['queen', { q: 0, r: 0 }, 1],
+    ['queen', { q: 1, r: 0 }, 0],
+    ['spider', { q: -1, r: 0 }, 1],
+    ['ant', { q: 2, r: 0 }, 0],
+  ] as const;
+  await placements.reduce(async (prev, [bug, to, seat]) => {
+    await prev;
+    await hiveAct(page, { type: 'place', bug, to });
+    await expect(page.locator('#myName')).toHaveText(seated(seat));
+  }, Promise.resolve());
+
+  // The Spider picked: her destinations lit, no numeral until one is aimed at.
+  const spider = page.locator('#board .hex[data-hex="-1,0"]');
+  await spider.click();
+  await expect(spider).toHaveClass(/picked/);
+  const lit = page.locator('#board .hex.lit');
+  await expect(lit.first()).toBeVisible();
+  await expect(page.locator('#board text.step')).toHaveCount(0);
+  const target = lit.first();
+  const toKey = await target.getAttribute('data-hex');
+  if (toKey === null) throw new Error('a lit hex has no key');
+  // The mouse over a lit hex: 1, 2, 3 along the way to it, 3 on the hex itself.
+  await target.hover();
+  await expect(page.locator('#board text.step')).toHaveCount(3);
+  expect((await page.locator('#board text.step').allTextContents()).sort()).toEqual([
+    '1',
+    '2',
+    '3',
+  ]);
+  await expect(page.locator(`#board .hex[data-hex="${toKey}"] text.step`)).toHaveText('3');
+  // Off the lit hexes, the numerals go.
+  await spider.hover();
+  await expect(page.locator('#board text.step')).toHaveCount(0);
+
+  // The move: the tile lands at the destination (the board keyed on the hop), the way under it
+  // cleared once it arrives, and the game agrees.
+  await target.hover();
+  await target.click();
+  const landed = page.locator(`#board .hex[data-hex="${toKey}"]`);
+  await expect(landed).toHaveClass(/\bw\b/);
+  await expect(landed).toHaveAttribute('aria-label', /Spider/);
+  await expect(page.locator('#board')).toHaveAttribute('data-hop', /./);
+  await expect(page.locator('#board .hex.trail')).toHaveCount(0);
+  await expect(page.locator('#board text.step')).toHaveCount(0);
+  await expect(landed).not.toHaveClass(/hopping/);
+  const after = await requireView(page);
+  expect(after.game.board[toKey]).toEqual([{ side: 'white', bug: 'spider' }]);
+  expect(after.game.board['-1,0']).toBeUndefined();
+  expect(after.game.turn).toBe('black');
+});

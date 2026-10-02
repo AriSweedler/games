@@ -12,13 +12,19 @@
 // in each tile's `aria-label`; the letter of the notation is no longer drawn.
 // A drag (ui/dragger.ts) paints over the same markup: `movable` on the tiles I may lift, `dragging`
 // on the one in the air, `drop` on the lit hex a release would play, and `svg.lift` over a lifted
-// board tile for the ghost to clone (`paintDrag`, `liftHtml`).
+// board tile for the ghost to clone (`paintDrag`, `liftHtml`). The Spider's 1-2-3: numerals
+// (`text.step`) on the three hexes of a picked Spider's path to the aimed hex (the lit hex the
+// pointer is over, or a drag's nearest), and, as her move lands, `trail` cells along the path while
+// the tile hops (ui/motion.ts `hopAlong`), once a position (`#board[data-hop]`).
 import {
   addClass,
   closestFrom,
   dataOf,
   listenId,
+  pointerTypeOf,
+  queryAllIn,
   queryIn,
+  removeElement,
   requireId,
   safeHtml,
   setAttr,
@@ -45,7 +51,7 @@ import {
   paintWaiting as paintShellWaiting,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
-import { stackAt, type Game } from '../engine/engine.ts';
+import { spiderPaths, stackAt, type Game } from '../engine/engine.ts';
 import { hexOf, keyOf, type Hex } from '../engine/hex.ts';
 import { BUG, BUGS, type Bug, type Side } from '../engine/pieces.ts';
 import { sideOf, turnSeat, winnerSeat, type Seat, type View } from '../engine/view.ts';
@@ -63,6 +69,7 @@ import {
 import { bugHtml } from './bugs.ts';
 import { bindDrag } from './dragger.ts';
 import { bindHome, paintHome } from './home.ts';
+import { hopAlong } from './motion.ts';
 import { aboutHtml, rulesItemsHtml } from './rules.ts';
 import {
   SCREENS,
@@ -70,6 +77,7 @@ import {
   placeableNow,
   reachable,
   type App,
+  type Hop,
   type Intent,
   type Picked,
 } from './state.ts';
@@ -91,8 +99,19 @@ const STACK_OFFSET = { x: 0.7, y: 0.9 } as const;
 const faceHtml = (c: Point, bug: Bug | undefined): string =>
   `<polygon class="face" points="${cornersOf(c)}" /><polygon class="sheen" points="${cornersOf(c, 1.1)}" />${bug === undefined ? '' : bugHtml(bug, c)}`;
 
-/** One cell of the board: the hexagon, the top tile's bug, a stack's lift and count. */
-export const cellHtml = (game: Game, hex: Hex, lit: boolean, picked: boolean): string => {
+/**
+ * One cell of the board: the hexagon, the top tile's bug, a stack's lift and count, and a `step`
+ * numeral where the hex is one of a Spider's path (1-2-3: centred on an empty hex, in the upper
+ * left of a tile, clear of its bug); `trail` on an empty hex drawn only for a Spider's path.
+ */
+export const cellHtml = (
+  game: Game,
+  hex: Hex,
+  lit: boolean,
+  picked: boolean,
+  step: number | null = null,
+  trail = false,
+): string => {
   const stack = stackAt(game.board, hex);
   const top = stack.at(-1);
   const c = centerOf(hex);
@@ -102,15 +121,19 @@ export const cellHtml = (game: Game, hex: Hex, lit: boolean, picked: boolean): s
     lit ? 'lit' : '',
     picked ? 'picked' : '',
     stack.length > 1 ? 'stack' : '',
+    trail ? 'trail' : '',
   ]
     .filter((s) => s !== '')
     .join(' ');
+  const stepNote = step === null ? '' : `, step ${String(step)} of the Spider’s path`;
   const label =
     top === undefined
       ? lit
-        ? 'A hex the tile may go to'
-        : 'An empty hex'
-      : `${game.names[top.side]}’s ${BUG[top.bug].name}${stack.length > 1 ? `, on a stack of ${String(stack.length)}` : ''}`;
+        ? `A hex the tile may go to${stepNote}`
+        : trail
+          ? `A hex the Spider stepped on${stepNote}`
+          : 'An empty hex'
+      : `${game.names[top.side]}’s ${BUG[top.bug].name}${stack.length > 1 ? `, on a stack of ${String(stack.length)}` : ''}${stepNote}`;
   const under =
     stack.length > 1
       ? `<polygon class="under" points="${cornersOf({ x: c.x + STACK_OFFSET.x, y: c.y + STACK_OFFSET.y })}" />`
@@ -120,21 +143,71 @@ export const cellHtml = (game: Game, hex: Hex, lit: boolean, picked: boolean): s
       ? safeHtml`<text class="badge" x="${(c.x + 5.2).toFixed(2)}" y="${(c.y - 5.2).toFixed(2)}">${String(stack.length)}</text>`
           .markup
       : '';
-  return `${safeHtml`<g class="${classes}" data-hex="${keyOf(hex)}" role="button" tabindex="0" aria-label="${label}">`.markup}${under}${faceHtml(c, top?.bug)}${badge}</g>`;
+  const numeral =
+    step === null
+      ? ''
+      : top === undefined
+        ? safeHtml`<text class="step" x="${c.x.toFixed(2)}" y="${(c.y + 0.5).toFixed(2)}">${String(step)}</text>`
+            .markup
+        : safeHtml`<text class="step" x="${(c.x - 5).toFixed(2)}" y="${(c.y - 4).toFixed(2)}">${String(step)}</text>`
+            .markup;
+  return `${safeHtml`<g class="${classes}" data-hex="${keyOf(hex)}" role="button" tabindex="0" aria-label="${label}">`.markup}${under}${faceHtml(c, top?.bug)}${badge}${numeral}</g>`;
 };
+
+/** `path`'s hexes numbered 1, 2, 3 in order, keyed by hex. */
+const numbered = (path: ReadonlyArray<Hex>): ReadonlyMap<string, number> =>
+  new Map(path.map((h, i) => [keyOf(h), i + 1] as const));
+
+/**
+ * The path a pick shows: the picked Spider's three hexes to `aim` (the lit hex the pointer is
+ * over, or a drag's nearest: engine.ts `spiderPaths`), none for any other pick or no aim.
+ */
+export const aimedPath = (v: View, picked: Picked | null, aim: Hex | null): ReadonlyArray<Hex> =>
+  picked?.kind !== 'hex' || aim === null
+    ? []
+    : (spiderPaths(v.game, picked.hex).get(keyOf(aim)) ?? []);
+
+/** The numerals a pick shows: `aimedPath` numbered 1-2-3. */
+export const stepsOf = (
+  v: View,
+  picked: Picked | null,
+  aim: Hex | null,
+): ReadonlyMap<string, number> => numbered(aimedPath(v, picked, aim));
 
 /**
  * The whole board as one SVG: the cells drawn (the hive and the lit hexes), the viewBox fitted to
  * the hive and its ring (board.ts `fitCells`), the same box with the pick lit or cleared; while a
- * board tile is dragged (`lift`), the lift over it for the ghost to clone (`liftHtml`).
+ * board tile is dragged (`lift`), the lift over it for the ghost to clone (`liftHtml`). A
+ * Spider's path (the aimed one on a pick, the `hop`'s as her move lands) is numbered 1-2-3, and
+ * the hexes of it the board would not draw otherwise (the way: empty, not a destination) are
+ * drawn first as `trail` cells, under the hive, so a hopping tile passes over them.
  */
-export const boardHtml = (v: View, picked: Picked | null, lift: Hex | null = null): string => {
+export const boardHtml = (
+  v: View,
+  picked: Picked | null,
+  lift: Hex | null = null,
+  aim: Hex | null = null,
+  hop: Hop | null = null,
+): string => {
   const lit = new Set(reachable(v, picked).map(keyOf));
   const cells = cellsOf(v.game.board, [...lit].map(hexOf));
   const pickedKey = picked?.kind === 'hex' ? keyOf(picked.hex) : null;
-  const inner = cells
-    .map((hex) => cellHtml(v.game, hex, lit.has(keyOf(hex)), keyOf(hex) === pickedKey))
-    .join('');
+  const path = hop === null ? aimedPath(v, picked, aim) : hop.path;
+  const steps = numbered(path);
+  const drawn = new Set(cells.map(keyOf));
+  const trail = path.filter((hex) => !drawn.has(keyOf(hex)));
+  const inner = [
+    ...trail.map((hex) => cellHtml(v.game, hex, false, false, steps.get(keyOf(hex)) ?? null, true)),
+    ...cells.map((hex) =>
+      cellHtml(
+        v.game,
+        hex,
+        lit.has(keyOf(hex)),
+        keyOf(hex) === pickedKey,
+        steps.get(keyOf(hex)) ?? null,
+      ),
+    ),
+  ].join('');
   return `<svg class="hive" viewBox="${viewBoxAttr(viewBoxOf(fitCells(v.game.board)))}" role="group" aria-label="The hive">${inner}${lift === null ? '' : liftHtml(v.game, lift)}</svg>`;
 };
 
@@ -249,7 +322,20 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   setText(requireId(doc, 'oppName'), nameAt(v, v.seat === 0 ? 1 : 0));
   paintConnDot(doc, 'oppDot', connDotView(app.shell));
   const lift = app.table.drag !== null && picked?.kind === 'hex' ? picked.hex : null;
-  setHtml(requireId(doc, 'board'), trustedHtml(boardHtml(v, picked, lift)));
+  // The aim a Spider's path is numbered to: a drag's nearest lit hex while one stands, else the hex the pointer is over.
+  const aim = app.table.drag !== null ? app.table.drag.over : app.table.aim;
+  // A Spider's move hops once: the board remembers the position it hopped on (`data-hop`), so a
+  // paint of the same position (an aim, a toast) draws the tile at rest and no trail.
+  const board = requireId(doc, 'board');
+  const hop = app.table.hop;
+  const fresh = hop !== null && dataOf(board, 'hop') !== hop.key ? hop : null;
+  setHtml(board, trustedHtml(boardHtml(v, picked, lift, aim, fresh)));
+  if (fresh !== null) {
+    setAttr(board, 'data-hop', fresh.key);
+    hopAlong(board, fresh, () => {
+      queryAllIn(board, '.hex.trail, text.step').forEach(removeElement);
+    });
+  }
   setHtml(requireId(doc, 'whiteHand'), trustedHtml(handHtml(v, 'white', picked)));
   setHtml(requireId(doc, 'blackHand'), trustedHtml(handHtml(v, 'black', picked)));
   paintDrag(doc, app, v);
@@ -319,6 +405,18 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
     const key = cell === null ? null : dataOf(cell, 'hex');
     if (key !== null && key !== '') dispatch({ type: 'tap/hex', hex: hexOf(key) });
     else dispatch({ type: 'pick/clear' });
+  });
+  // The aim: the lit hex a mouse or pen is over, none off them or off the board. Not a touch: a
+  // finger's pointerover comes with its tap, and the repaint would replace the cell under it
+  // before the click; a drag names its nearest hex itself.
+  listenId(doc, 'board', 'pointerover', (e) => {
+    if (pointerTypeOf(e) === 'touch') return;
+    const cell = closestFrom(e, '.hex.lit');
+    const key = cell === null ? null : dataOf(cell, 'hex');
+    dispatch({ type: 'aim/hex', hex: key === null || key === '' ? null : hexOf(key) });
+  });
+  listenId(doc, 'board', 'pointerleave', () => {
+    dispatch({ type: 'aim/hex', hex: null });
   });
   const pickHand = (e: Readonly<Event>): void => {
     const button = closestFrom(e, 'button.hand-tile');
