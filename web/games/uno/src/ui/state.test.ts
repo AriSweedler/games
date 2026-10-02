@@ -82,12 +82,12 @@ const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => 
   };
 };
 
-const localClick = (seats: string, p3 = ''): Intent => ({
+const localClick = (seats: string, names: ReadonlyArray<string> = []): Intent => ({
   type: 'local/click',
   p1: 'Ann',
   p2: 'Bob',
   localPlayers: seats,
-  p3,
+  names,
 });
 
 /** A pass-and-play table at the hand-built position, its curtain lifted by Ann. */
@@ -129,10 +129,28 @@ describe('pass and play', () => {
       p1: 'Ann',
       p2: 'Bob',
       localPlayers: '4',
-      p3: 'Cy',
-      p4: 'Di',
+      names: ['Cy', 'Di'],
     });
     expect(four.app.shell.game?.game.names).toEqual(['Ann', 'Bob', 'Cy', 'Di']);
+  });
+
+  test('a name typed for a later seat is remembered, written, and seats the game when the click carries none', () => {
+    const typed = run(initialApp, { type: 'pname/typed', seat: 4, value: 'Eve' });
+    expect(typed.app.table.extraNames[2]).toBe('Eve');
+    expect(typed.effects).toContainEqual({ type: 'rememberPName', seat: 4, name: 'Eve' });
+    const six = run(typed.app, { type: 'local/click', p1: 'Ann', p2: 'Bob', localPlayers: '6' });
+    expect(six.app.shell.game?.game.names).toEqual([
+      'Ann',
+      'Bob',
+      'Sandro',
+      'Grant',
+      'Eve',
+      'Player 6',
+    ]);
+    // Leaving the table keeps the names typed at home.
+    expect(six.app.table.extraNames[2]).toBe('Eve');
+    const cleared = run(typed.app, { type: 'pname/typed', seat: 4, value: '' });
+    expect(cleared.app.table.extraNames[2]).toBeNull();
   });
 
   test('the reveal shows the seat its own hand; a play hands the phone to the next seat', () => {

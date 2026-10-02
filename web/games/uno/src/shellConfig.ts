@@ -29,6 +29,7 @@ import {
   DEFAULT_HOME_TAB,
   DEFAULT_OPTS,
   DEFAULT_PLAY_MODE,
+  EXTRA_NAME_PREFS,
   HOME_TABS,
   SHELL_STORE,
   readOpts,
@@ -39,6 +40,9 @@ import { INITIAL_CUES } from './ui/sound.ts';
 import type { Raw, Seat, Uno } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
+/** The seat counts the room and the home's steppers allow (the owner, 2026-10-02: "uno caps out at 12"). */
+export const MIN_SEATS = 2;
+export const MAX_SEATS = 12;
 /** The pass-and-play seats when nothing is typed: the shell's two, then the third and fourth. */
 export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi', 'Sandro', 'Grant'];
 export const LEAVE_LOCAL_MSG = 'End this game? The score will be cleared.';
@@ -110,7 +114,7 @@ export const UNO_SHELL: ShellGameData<Uno> = {
     roomFull: TABLE_FULL_MSG,
     notEnough: notEnoughMsg,
   },
-  seats: { min: 2, max: 12, fixed: true },
+  seats: { min: MIN_SEATS, max: MAX_SEATS, fixed: true },
   opts: {
     initial: DEFAULT_OPTS,
     parse: parseOpts,
@@ -140,6 +144,14 @@ export const UNO_SHELL: ShellGameData<Uno> = {
   },
   frames: { lobby, state, toast, action, join },
   cues: { initial: INITIAL_CUES },
-  home: { read: (store) => ({ opts: readOpts(store) }) },
+  home: {
+    read: (store) => ({
+      opts: readOpts(store),
+      extraNames: EXTRA_NAME_PREFS.map((pref) => {
+        const name = pref.read(store);
+        return name.ok ? name.value : null;
+      }),
+    }),
+  },
   prefs: SHELL_STORE,
 };

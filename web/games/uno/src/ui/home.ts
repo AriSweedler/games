@@ -1,11 +1,11 @@
 // The home screen's game half (docs/design/uno.md §9): the shared shell's tabs, modes, inputs and
 // resume box (web/shared/ui/home.ts), and this page's own fields: the player-count stepper in each
 // panel (web/shared/ui/stepper.ts; the owner, 2026-10-02: "a number with - and + buttons on the
-// side") and the third and fourth pass-and-play names (`#moreNames`, shown from three players).
+// side") and the pass-and-play names past the second, one input per seat the stepper allows
+// (web/shared/ui/seatNames.ts: "more than 4 players should paint properly").
 import {
   readValue,
   requireId,
-  toggleClass,
   type DocumentLike,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
@@ -16,7 +16,14 @@ import {
   type HomeView,
   type ShellIntentBuilders,
 } from '../../../../shared/ui/home.ts';
+import {
+  bindSeatNames,
+  paintSeatNames,
+  readSeatNames,
+  type SeatNamesSpec,
+} from '../../../../shared/ui/seatNames.ts';
 import { bindStepper, paintStepper, type StepperSpec } from '../../../../shared/ui/stepper.ts';
+import { LOCAL_NAMES, MAX_SEATS, MIN_SEATS } from '../shellConfig.ts';
 import {
   HOME_TABS,
   resumeLabel,
@@ -43,8 +50,10 @@ const PLAY_MODES: ReadonlyArray<PlayMode> = ['online', 'local'];
 /** The two steppers' hidden fields (page.ts), two to twelve players each. */
 export const ONLINE_PLAYERS = 'playersCount';
 export const LOCAL_PLAYERS = 'localPlayersCount';
-const ONLINE_STEPPER: StepperSpec = { id: ONLINE_PLAYERS, min: 2, max: 12 };
-const LOCAL_STEPPER: StepperSpec = { id: LOCAL_PLAYERS, min: 2, max: 12 };
+const ONLINE_STEPPER: StepperSpec = { id: ONLINE_PLAYERS, min: MIN_SEATS, max: MAX_SEATS };
+const LOCAL_STEPPER: StepperSpec = { id: LOCAL_PLAYERS, min: MIN_SEATS, max: MAX_SEATS };
+/** The pass-and-play name inputs (page.ts `seatNamesHtml`): twelve, this game's defaults past the shell's two. */
+const SEAT_NAMES: SeatNamesSpec = { max: MAX_SEATS, names: LOCAL_NAMES };
 
 export const readHostOptions = (doc: DocumentLike): Raw => ({
   players: readValue(requireId(doc, ONLINE_PLAYERS)),
@@ -56,8 +65,7 @@ const readLocalSeats = (doc: DocumentLike): Raw => ({
 
 export const readLocalOptions = (doc: DocumentLike): Raw => ({
   ...readLocalSeats(doc),
-  p3: readValue(requireId(doc, 'p3NameInput')),
-  p4: readValue(requireId(doc, 'p4NameInput')),
+  names: readSeatNames(doc, SEAT_NAMES),
 });
 
 const homeView = (app: App): HomeView<HomeTab> => ({
@@ -67,14 +75,13 @@ const homeView = (app: App): HomeView<HomeTab> => ({
   resumeLabel: app.shell.resume === null ? null : resumeLabel(app.shell.resume),
 });
 
-/** The tabs and panels, the play mode, the submenu and the resume box; then both seat counts and the extra names' rows. */
+/** The tabs and panels, the play mode, the submenu and the resume box; then both seat counts and one name input per seat. */
 export const paintHome = (doc: DocumentLike, app: App): void => {
   paintHomeShell(doc, homeView(app), { tabs: HOME_TABS, modes: PLAY_MODES });
   const n = app.shell.opts.seatCount;
   paintStepper(doc, ONLINE_STEPPER, n);
   paintStepper(doc, LOCAL_STEPPER, n);
-  toggleClass(requireId(doc, 'moreNames'), 'hidden', n < 3);
-  toggleClass(requireId(doc, 'p4NameInput'), 'hidden', n < 4);
+  paintSeatNames(doc, SEAT_NAMES, n, app.table.extraNames);
 };
 
 const SHELL_INTENTS: ShellIntentBuilders<Intent, HomeTab, Raw> = {
@@ -99,7 +106,7 @@ const SHELL_INTENTS: ShellIntentBuilders<Intent, HomeTab, Raw> = {
   renameClick: (name) => ({ type: 'name/rename', name }),
 };
 
-/** Every control of the home screen and the two waiting screens; each count is remembered as it steps. */
+/** Every control of the home screen and the two waiting screens; each count is remembered as it steps, each extra name as it is typed. */
 export const bindHome = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
   bindHomeShell(doc, dispatch, {
     tabs: HOME_TABS,
@@ -111,5 +118,8 @@ export const bindHome = (doc: PageLike, dispatch: (intent: Intent) => void): voi
   });
   bindStepper(doc, LOCAL_STEPPER, (n) => {
     dispatch({ type: 'opts/set', raw: { localPlayers: String(n) } });
+  });
+  bindSeatNames(doc, SEAT_NAMES, (seat, value) => {
+    dispatch({ type: 'pname/typed', seat, value });
   });
 };

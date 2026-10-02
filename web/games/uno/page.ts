@@ -2,7 +2,8 @@
 // tools/shell-markup.ts fills web/shared/markup/shell/*.html with to compose ./index.html, which
 // test/dist/shell-markup.test.ts pins byte for byte. The home is the shell's (the host card, the
 // join card, Online or Pass the phone, the Rules tab), the player count in each panel the shared
-// stepper (web/shared/markup/stepper.ts; the owner, 2026-10-02), the looks the shell's classes with
+// stepper (web/shared/markup/stepper.ts; the owner, 2026-10-02) over one name input per seat
+// (web/shared/markup/seatNames.ts), the looks the shell's classes with
 // UNO's accent alone (theme.css). The residue here (`blocks`) is the head, the table (the seats with
 // their card counts, the names strip, the pile, the colour in play, the hand, the controls) and the
 // result sheet (the winner, Play again); the Open Graph card is assets/splash.svg rendered to web/public/games/uno/splash.png.
@@ -13,6 +14,7 @@ import type {
   ShellNotes,
   ShellPage,
 } from '../../shared/markup/shell.ts';
+import { seatNamesHtml } from '../../shared/markup/seatNames.ts';
 import { stepperHtml } from '../../shared/markup/stepper.ts';
 
 const copy: ShellCopy = {
@@ -116,14 +118,7 @@ const blocks: ShellBlocks = {
               <button class="btn btn-go btn-block" id="hostBtn">Open a table</button>`,
   localFields: `            <div class="card-box">
 ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
-              <div class="row">
-                <input type="text" id="p1NameInput" class="grow" placeholder="Player 1" maxlength="20" autocomplete="off" />
-                <input type="text" id="p2NameInput" class="grow" placeholder="Player 2" maxlength="20" autocomplete="off" />
-              </div>
-              <div class="row hidden" id="moreNames">
-                <input type="text" id="p3NameInput" class="grow" placeholder="Player 3" maxlength="20" autocomplete="off" />
-                <input type="text" id="p4NameInput" class="grow" placeholder="Player 4" maxlength="20" autocomplete="off" />
-              </div>
+${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
             </div>`,
   playExtra: '',
   extraPanels: '',
