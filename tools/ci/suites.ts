@@ -63,15 +63,26 @@ export type E2eSpec = Readonly<{
 const SHELL_SPECS: ReadonlyArray<string> = ['**/shell-*.spec.ts'];
 
 /**
- * The folder each game suite tests: REGISTRY's and SOLO's `suite` columns read backwards. It is
+ * The engine-only games (docs/design/hive.md §6): a folder under web/games/ holding a game's rules
+ * engine and its tests before the game has a page. Its suite rides the `game` matrix job like a
+ * page's (its unit tests under coverage) and has no e2e half, no registry row and no landing card;
+ * the page row moves the game to tools/games.ts SOLO_PAGES or REGISTRY and deletes it here.
+ */
+export const ENGINE_ONLY = ['hive'] as const satisfies ReadonlyArray<GameSuite>;
+
+/** A game suite with a page: a game's or a solo page's. */
+type PageSuite = Exclude<GameSuite, (typeof ENGINE_ONLY)[number]>;
+
+/**
+ * The folder each page suite tests: REGISTRY's and SOLO's `suite` columns read backwards. It is
  * the folder under web/games/ the suite's rules name and, for a game, the `@<game>` tag its
  * describes of a shared spec carry. A solo page (tools/games.ts SOLO_PAGES) has a suite of the
  * same shape and rides the same two matrix jobs, with no shared spec and no tag.
  */
-const FOLDER_OF: Readonly<Record<GameSuite, Game | SoloPage>> = Object.fromEntries([
+const FOLDER_OF: Readonly<Record<PageSuite, Game | SoloPage>> = Object.fromEntries([
   ...GAMES.map((game) => [REGISTRY[game].suite, game]),
   ...SOLO_PAGES.map((page) => [SOLO[page].suite, page]),
-]) as Record<GameSuite, Game | SoloPage>;
+]) as Record<PageSuite, Game | SoloPage>;
 
 const isSoloPage = (folder: Game | SoloPage): folder is SoloPage =>
   (SOLO_PAGES as ReadonlyArray<string>).includes(folder);
@@ -82,7 +93,7 @@ const isSoloPage = (folder: Game | SoloPage): folder is SoloPage =>
  * game since M5 of docs/design/fidice-shell-adoption.md), its `@<game>` tag and the other games'
  * tags, so each game's e2e job plays its own describes alone. A solo page's is its own specs.
  */
-const gameE2e = (suite: GameSuite): E2eSpec => {
+const gameE2e = (suite: PageSuite): E2eSpec => {
   const folder = FOLDER_OF[suite];
   if (isSoloPage(folder)) return { files: [...SOLO[folder].specs], otherTags: [] };
   const row = REGISTRY[folder];
@@ -805,6 +816,24 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
     },
     e2e: gameE2e('flip7'),
   },
+  hive: {
+    // Hive's rules and pure engine before its page (docs/design/hive.md §6): an engine-only game
+    // (ENGINE_ONLY) on the `game` matrix job, with no e2e half until the page row gives it one.
+    unit: ['web/games/hive/**/*.test.ts'],
+    standalone: [],
+    browser: false,
+    needsBuild: false,
+    coverage: {
+      include: ['web/games/hive/src/engine/**/*.ts'],
+      // Measured at the engine's landing (lines/functions/statements/branches): 97.8/100/98.4/93.7
+      // over hand-built positions for every bug and rule and three seeded bot games (engine.test.ts,
+      // hex.test.ts, pieces.test.ts; the unreached lines are the exhaustive switches' `never` arms
+      // and hex.ts's fallbacks for an index that is always in range).
+      thresholds: {
+        'web/games/hive/src/engine/**': { lines: 95, functions: 95, statements: 95, branches: 90 },
+      },
+    },
+  },
   site: {
     unit: [
       // Which theme.css declares which token, across all three games.
@@ -888,15 +917,16 @@ export type Rule = Readonly<{ globs: ReadonlyArray<string>; runs: Selection; why
  * (`game`: `npm run test:<suite> -- --coverage`; `e2e-game`: `npm run test:e2e:<suite>` under
  * Chromium and coturn) over the lists the `changes` job emits (dry-round-2.md I1). A fourth game
  * names its suite on its tools/games.ts REGISTRY row and adds its SUITES row; ci.yml is not edited.
+ * An engine-only game (ENGINE_ONLY) is one too, on the `game` job alone: it has no e2e half yet.
  */
 export const isGameSuite = (suite: Suite): suite is GameSuite =>
-  (Object.keys(FOLDER_OF) as ReadonlyArray<string>).includes(suite);
+  [...Object.keys(FOLDER_OF), ...ENGINE_ONLY].includes(suite);
 
 /** The game suites in job order: the values of the two matrix jobs' `strategy.matrix.suite`. */
 export const GAME_SUITES: ReadonlyArray<GameSuite> = SUITE_NAMES.filter(isGameSuite);
 
 /** The rows every game gets: its folder, its parity oracles, its specs and its style goldens. A solo page's specs are its row's, spelled whole. */
-const gameRules = (game: GameSuite): ReadonlyArray<Rule> => {
+const gameRules = (game: PageSuite): ReadonlyArray<Rule> => {
   const folder = FOLDER_OF[game];
   const ownSpecs = isSoloPage(folder)
     ? SOLO[folder].specs.map((glob) => glob.replace(/^\*\*\//, 'e2e/'))
@@ -1047,6 +1077,12 @@ export const RULES: ReadonlyArray<Rule> = [
   ...gameRules('rps'),
   ...gameRules('uno'),
   ...gameRules('flip7'),
+  // An engine-only game (ENGINE_ONLY): no page, so nothing of it is built or smoked.
+  ...ENGINE_ONLY.map((game): Rule => ({
+    globs: [`web/games/${game}/**`],
+    runs: [game, 'site', 'harness'],
+    why: 'an engine with no page yet: its suite, the ratchet over web/ and the suite accounting',
+  })),
   {
     globs: ['test/parity/ice.legacy.test.ts', 'test/parity/roomCode.legacy.test.ts'],
     runs: ['shared'],

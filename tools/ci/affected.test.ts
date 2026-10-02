@@ -15,7 +15,7 @@ import {
   parseArgs,
   reportFor,
 } from './affected.ts';
-import { GAME_SUITES, JOBS } from './suites.ts';
+import { ENGINE_ONLY, GAME_SUITES, JOBS } from './suites.ts';
 
 describe('parseArgs', () => {
   test('defaults: origin/main, a diff, the human format', () => {
@@ -61,6 +61,7 @@ describe('the three formats over a table of diffs', () => {
       'rps=false',
       'uno=false',
       'flip7=false',
+      'hive=false',
       'site=true',
       'harness=true',
       'e2e-gin=true',
@@ -77,7 +78,8 @@ describe('the three formats over a table of diffs', () => {
     ]);
     expect(formatGithub(everything).split('\n')).toEqual([
       ...JOBS.map((job) => `${job}=true`),
-      'games=["gin","fidice","backgammon","briscola","rps","uno","flip7"]',
+      // Hive's engine has no page yet (ENGINE_ONLY): the unit list carries it, the e2e list not.
+      'games=["gin","fidice","backgammon","briscola","rps","uno","flip7","hive"]',
       'e2e-games=["gin","fidice","backgammon","briscola","rps","uno","flip7"]',
       'everything=true',
     ]);
@@ -99,7 +101,15 @@ describe('the three formats over a table of diffs', () => {
 
   test('the matrix lists: the game suites among the selected jobs, in job order, each side on its own', () => {
     expect(matrices(ginOnly.jobs)).toEqual({ games: ['gin'], 'e2e-games': ['gin'] });
-    expect(matrices(everything.jobs)).toEqual({ games: GAME_SUITES, 'e2e-games': GAME_SUITES });
+    expect(matrices(everything.jobs)).toEqual({
+      games: GAME_SUITES,
+      'e2e-games': GAME_SUITES.filter((g) => !(ENGINE_ONLY as ReadonlyArray<string>).includes(g)),
+    });
+    // An engine-only game is on the unit side alone.
+    expect(matrices(reportFor(['web/games/hive/src/engine/engine.ts']).jobs)).toEqual({
+      games: ['hive'],
+      'e2e-games': [],
+    });
     expect(matrices(docsOnly.jobs)).toEqual({ games: [], 'e2e-games': [] });
     expect(matrices(nothing.jobs)).toEqual({ games: [], 'e2e-games': [] });
     // A spec alone selects the e2e side only; a parity oracle alone the unit side only.
@@ -138,6 +148,7 @@ describe('the three formats over a table of diffs', () => {
         rps: false,
         uno: false,
         flip7: false,
+        hive: false,
         site: true,
         harness: true,
         'e2e-gin': true,
