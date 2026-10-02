@@ -146,3 +146,67 @@ describe('pass and play', () => {
     expect(cuesBetween(before, resigned)).toEqual(['lose']);
   });
 });
+
+describe('a tile dragged by hand (ui/dragger.ts)', () => {
+  const lift: Intent = { type: 'drag/start', picked: { kind: 'hand', bug: 'ant' } };
+
+  test('drag/start picks the tile up (its hexes light) and the drag stands; a tile not mine to lift is nothing', () => {
+    const app = started();
+    const lifted = run(app, lift).app;
+    expect(lifted.table.picked).toEqual({ kind: 'hand', bug: 'ant' });
+    expect(lifted.table.drag).toEqual({ over: null });
+    // Nothing on the board yet: no board tile can be lifted.
+    const still = run(app, { type: 'drag/start', picked: { kind: 'hex', hex: ORIGIN } }).app;
+    expect(still.table.drag).toBeNull();
+    expect(still.table.picked).toBeNull();
+  });
+
+  test('drag/over holds a reachable hex once; an unreachable one is none; the click a release fires is nothing while the drag stands', () => {
+    const lifted = run(started(), lift).app;
+    const over = run(lifted, { type: 'drag/over', hex: ORIGIN }).app;
+    expect(over.table.drag).toEqual({ over: ORIGIN });
+    // The same hex again: the same App (no repaint).
+    expect(run(over, { type: 'drag/over', hex: { q: 0, r: 0 } }).app).toBe(over);
+    expect(run(over, { type: 'drag/over', hex: { q: 3, r: 3 } }).app.table.drag).toEqual({
+      over: null,
+    });
+    // The board's click, the tray's click, the stray click: all ignored under a drag.
+    expect(run(over, { type: 'pick/clear' }).app).toBe(over);
+    expect(run(over, { type: 'tap/hex', hex: ORIGIN }).app).toBe(over);
+    expect(run(over, { type: 'pick/hand', bug: 'queen' }).app).toBe(over);
+  });
+
+  test('drag/end over a lit hex plays the tile there (the tap cue, the view changes hands); off every hex it drops the pick', () => {
+    const lifted = run(started(), lift).app;
+    const over = run(lifted, { type: 'drag/over', hex: ORIGIN }).app;
+    const played = run(over, { type: 'drag/end' });
+    expect(played.app.shell.game?.game.board['0,0']).toEqual([{ side: 'white', bug: 'ant' }]);
+    expect(played.app.table.picked).toBeNull();
+    expect(played.app.table.drag).toBeNull();
+    expect(viewOf(played.app)?.seat).toBe(1);
+    expect(played.effects.map((e) => e.type)).toContain('fx');
+    const dropped = run(lifted, { type: 'drag/end' }).app;
+    expect(dropped.table.picked).toBeNull();
+    expect(dropped.table.drag).toBeNull();
+    expect(dropped.shell.game?.game.board).toEqual({});
+  });
+
+  test('a board tile dragged: my Queen lifted off the origin, dropped on a hex she may step to, moves', () => {
+    const app = run(
+      started(),
+      { type: 'act', action: { type: 'place', bug: 'queen', to: ORIGIN } },
+      { type: 'act', action: { type: 'place', bug: 'queen', to: { q: 1, r: 0 } } },
+    ).app;
+    const view = viewOf(app);
+    if (view === null) throw new Error('no view');
+    const lifted = run(app, { type: 'drag/start', picked: { kind: 'hex', hex: ORIGIN } }).app;
+    expect(lifted.table.picked).toEqual({ kind: 'hex', hex: ORIGIN });
+    const to = reachable(view, lifted.table.picked)[0];
+    if (to === undefined) throw new Error('the Queen has no step');
+    const moved = run(lifted, { type: 'drag/over', hex: to }, { type: 'drag/end' }).app;
+    const board = moved.shell.game?.game.board ?? {};
+    expect(board['0,0']).toBeUndefined();
+    expect(board[`${String(to.q)},${String(to.r)}`]).toEqual([{ side: 'white', bug: 'queen' }]);
+    expect(moved.table.drag).toBeNull();
+  });
+});

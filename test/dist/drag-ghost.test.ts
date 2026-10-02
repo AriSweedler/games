@@ -12,8 +12,8 @@ import { expect, test } from 'vitest';
 
 import { describeDist, distFiles, readDist } from './dist.ts';
 
-/** The games whose ui binds `bindDrag` (gin's hand, backgammon's board, briscola's hand). */
-const DRAG_GAMES: ReadonlyArray<string> = ['gin-rummy', 'backgammon', 'briscola'];
+/** The games whose ui binds `bindDrag` (gin's hand, backgammon's board, briscola's hand, hive's trays and board). */
+const DRAG_GAMES: ReadonlyArray<string> = ['gin-rummy', 'backgammon', 'briscola', 'hive'];
 
 const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
 /** Every `<selector> { <declarations> }` in the sheet, at any nesting. */

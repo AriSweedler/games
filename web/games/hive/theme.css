@@ -220,11 +220,13 @@ label {
   align-items: center;
   justify-content: center;
 }
+/* `touch-action: none`: a finger on the board or a tray tile drags the tile (ui/dragger.ts), never the
+   page; the rest of the table keeps the shell's `manipulation`. */
 .board svg.hive {
   width: 100%;
   height: 100%;
   max-height: 60vh;
-  touch-action: manipulation;
+  touch-action: none;
 }
 /* A cell's face: the side's colour, the state strokes (lit, picked), a shadow on the felt. An
    empty cell is a ghost: no sheen, no shadow. */
@@ -286,6 +288,24 @@ label {
 }
 .hex.b .under {
   fill: var(--hive-black-under);
+}
+/* The drag (ui/dragger.ts, render.ts `paintDrag`): a tile I may lift, the one in the air (dimmed under
+   its ghost), the lit hex a release would play (the strongest light), and the lift laid over a
+   lifted board tile for the ghost to clone: never seen itself, only its clone is. */
+.hex.movable {
+  cursor: grab;
+}
+.hex.dragging {
+  opacity: 0.35;
+}
+.hex.drop .face {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 1.6;
+}
+.hex.lift {
+  visibility: hidden;
+  pointer-events: none;
 }
 .hex.empty {
   cursor: pointer;
@@ -437,6 +457,14 @@ label {
   stroke-width: 1.6;
   filter: url(#hive-lift);
 }
+.hand-tile.playable {
+  touch-action: none;
+  cursor: grab;
+}
+.hand-tile.dragging {
+  opacity: 0.35;
+  transform: none;
+}
 /* The count, on the hex's upper-right edge (the box's corner above it is air). */
 .hand-tile .count {
   position: absolute;
@@ -468,4 +496,33 @@ label {
 .result-note {
   margin: 6px 0 14px;
   color: var(--muted);
+}
+
+/* ---------- the drag ghost (web/shared/edge/drag.ts; test/dist/drag-ghost.test.ts) ---------- */
+/* The clone of the tile in the air (a tray tile, or the lift over a board tile), fixed on the body
+   at the tile's box and translated with the pointer: still (no inherited transition, its own
+   layer), a lift of shadow, its count badge gone; `.landing` alone glides it back to its place on
+   a release off every lit hex, in a beat reduced motion cuts to nothing. */
+.drag-ghost {
+  position: fixed;
+  margin: 0;
+  z-index: 60;
+  pointer-events: none;
+  will-change: transform;
+  opacity: 1;
+  visibility: visible;
+  filter: drop-shadow(0 10px 10px rgba(0, 0, 0, 0.45));
+  transition: none;
+  animation: none;
+}
+.drag-ghost.landing {
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.drag-ghost .count {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drag-ghost.landing {
+    transition-duration: 1ms;
+  }
 }

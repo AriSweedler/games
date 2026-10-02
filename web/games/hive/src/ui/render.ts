@@ -10,10 +10,15 @@
 // the seat must, Resign while the game is on, the status line, and the result sheet over the
 // final board (Continue leaves the board on show; Play again starts anew). The bug's name stays
 // in each tile's `aria-label`; the letter of the notation is no longer drawn.
+// A drag (ui/dragger.ts) paints over the same markup: `movable` on the tiles I may lift, `dragging`
+// on the one in the air, `drop` on the lit hex a release would play, and `svg.lift` over a lifted
+// board tile for the ghost to clone (`paintDrag`, `liftHtml`).
 import {
+  addClass,
   closestFrom,
   dataOf,
   listenId,
+  queryIn,
   requireId,
   safeHtml,
   setAttr,
@@ -23,6 +28,7 @@ import {
   toggleClass,
   trustedHtml,
   type DocumentLike,
+  type Element,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
 import { RULES_SLOT_IDS } from '../../../../shared/ui/glossary.ts';
@@ -55,6 +61,7 @@ import {
   type Point,
 } from './board.ts';
 import { bugHtml } from './bugs.ts';
+import { bindDrag } from './dragger.ts';
 import { bindHome, paintHome } from './home.ts';
 import { aboutHtml, rulesItemsHtml } from './rules.ts';
 import {
@@ -118,16 +125,17 @@ export const cellHtml = (game: Game, hex: Hex, lit: boolean, picked: boolean): s
 
 /**
  * The whole board as one SVG: the cells drawn (the hive and the lit hexes), the viewBox fitted to
- * the hive and its ring (board.ts `fitCells`), the same box with the pick lit or cleared.
+ * the hive and its ring (board.ts `fitCells`), the same box with the pick lit or cleared; while a
+ * board tile is dragged (`lift`), the lift over it for the ghost to clone (`liftHtml`).
  */
-export const boardHtml = (v: View, picked: Picked | null): string => {
+export const boardHtml = (v: View, picked: Picked | null, lift: Hex | null = null): string => {
   const lit = new Set(reachable(v, picked).map(keyOf));
   const cells = cellsOf(v.game.board, [...lit].map(hexOf));
   const pickedKey = picked?.kind === 'hex' ? keyOf(picked.hex) : null;
   const inner = cells
     .map((hex) => cellHtml(v.game, hex, lit.has(keyOf(hex)), keyOf(hex) === pickedKey))
     .join('');
-  return `<svg class="hive" viewBox="${viewBoxAttr(viewBoxOf(fitCells(v.game.board)))}" role="group" aria-label="The hive">${inner}</svg>`;
+  return `<svg class="hive" viewBox="${viewBoxAttr(viewBoxOf(fitCells(v.game.board)))}" role="group" aria-label="The hive">${inner}${lift === null ? '' : liftHtml(v.game, lift)}</svg>`;
 };
 
 /** A tray tile's own viewBox: one hex (board.ts HEX_W by HEX_H) about the origin. */
@@ -141,6 +149,20 @@ export const TILE_VIEWBOX = [-HEX_W / 2, -HEX_H / 2, HEX_W, HEX_H]
  */
 export const tileHtml = (bug: Bug): string =>
   `<svg class="tile" viewBox="${TILE_VIEWBOX}" aria-hidden="true">${faceHtml({ x: 0, y: 0 }, bug)}</svg>`;
+
+/**
+ * The lift (ui/dragger.ts `source`): the top tile at `hex` once more, as a nested `<svg>` laid over
+ * its cell (the cell's box, the tray tile's face inside, so the drag kernel's clone of it renders
+ * on the body where a `g` would not) in the side's class, hidden by its own rule; the kernel strips
+ * `lift` from the clone and the ghost shows. Empty for an empty hex.
+ */
+export const liftHtml = (game: Game, hex: Hex): string => {
+  const top = stackAt(game.board, hex).at(-1);
+  if (top === undefined) return '';
+  const c = centerOf(hex);
+  const open = safeHtml`<svg class="hex lift ${sideClass(top.side)}" x="${(c.x - HEX_W / 2).toFixed(2)}" y="${(c.y - HEX_H / 2).toFixed(2)}" width="${HEX_W.toFixed(2)}" height="${HEX_H.toFixed(2)}" viewBox="${TILE_VIEWBOX}" aria-hidden="true">`;
+  return `${open.markup}${tileHtml(top.bug)}</svg>`;
+};
 
 /**
  * One side's hand: a hexagonal tile per bug (`tileHtml`) with the count left as a badge, the
@@ -191,14 +213,46 @@ export const resultTitle = (v: View): string => {
   return winner === v.seat ? 'You win!' : `${winner === null ? '' : nameAt(v, winner)} wins!`;
 };
 
+/** The cell at `hex` as painted, or null (the board is rebuilt each paint, so it is found afresh). */
+const cellAt = (board: Element, hex: Hex): Element | null =>
+  queryIn(board, `[data-hex="${keyOf(hex)}"]`);
+
+/**
+ * The drag's marks over the fresh markup (ui/dragger.ts): `movable` on each of my tiles that may move
+ * (what a press on the board may lift), and while a drag stands, `dragging` on its source (the tray
+ * tile or the board cell, dimmed under the ghost) and `drop` on the lit hex a release would play.
+ */
+const paintDrag = (doc: DocumentLike, app: App, v: View): void => {
+  const board = requireId(doc, 'board');
+  v.movable.forEach((m) => {
+    const cell = cellAt(board, m.from);
+    if (cell !== null) addClass(cell, 'movable');
+  });
+  const d = app.table.drag;
+  const picked = app.table.picked;
+  if (d === null || picked === null) return;
+  const source =
+    picked.kind === 'hex'
+      ? cellAt(board, picked.hex)
+      : queryIn(
+          requireId(doc, sideOf(v.seat) === 'white' ? 'whiteHand' : 'blackHand'),
+          `.hand-tile[data-bug="${picked.bug}"]`,
+        );
+  if (source !== null) addClass(source, 'dragging');
+  const over = d.over === null ? null : cellAt(board, d.over);
+  if (over !== null) addClass(over, 'drop');
+};
+
 const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const picked = app.table.picked;
   setText(requireId(doc, 'myName'), `${nameAt(v, v.seat)} · ${v.seat === 0 ? 'White' : 'Black'}`);
   setText(requireId(doc, 'oppName'), nameAt(v, v.seat === 0 ? 1 : 0));
   paintConnDot(doc, 'oppDot', connDotView(app.shell));
-  setHtml(requireId(doc, 'board'), trustedHtml(boardHtml(v, picked)));
+  const lift = app.table.drag !== null && picked?.kind === 'hex' ? picked.hex : null;
+  setHtml(requireId(doc, 'board'), trustedHtml(boardHtml(v, picked, lift)));
   setHtml(requireId(doc, 'whiteHand'), trustedHtml(handHtml(v, 'white', picked)));
   setHtml(requireId(doc, 'blackHand'), trustedHtml(handHtml(v, 'black', picked)));
+  paintDrag(doc, app, v);
   const turn = turnSeat(v.game);
   const mine = turn === v.seat;
   toggleClass(requireId(doc, 'whiteHand'), 'turn', turn === 0);
@@ -297,5 +351,6 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
 export const bindAll = (doc: PageLike, dispatch: Dispatch): void => {
   bindHome(doc, dispatch);
   bindTable(doc, dispatch);
+  bindDrag(doc, dispatch);
   bindSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'escape' } });
 };
