@@ -100,9 +100,7 @@ describeDist('dist paths on both origins', (root) => {
   });
 
   test('a page reaches its own bundle on the proxy origin without a redirect', () => {
-    const scripts = checked.filter(
-      ({ file, kind, value }) => file !== 'index.html' && kind === 'src' && value.startsWith('./'),
-    );
+    const scripts = checked.filter(({ kind, value }) => kind === 'src' && value.startsWith('./'));
     scripts.forEach(({ file, value }) => {
       const document = `${ORIGIN}${unmapPath(`${PAGES_BASE_PATH}${file}`)}`;
       expect(mapPath(resolvedPath(document, value)).kind, `${file} -> ${value}`).not.toBe(
@@ -129,7 +127,17 @@ describeDist('dist paths on both origins', (root) => {
       });
       expect(distTarget(root, throughProxy(proxyPath))).toBe(value.slice(2));
     });
-    const landingLinks = landingHrefs.filter((reference) => !icons.includes(reference));
+    // The landing's module graph (web/main.ts: the chunks its bundle preloads, under shared/) is
+    // fetched on the proxy like the icon, never redirected; the checks above resolve each file.
+    const preloads = landingHrefs.filter(({ value }) => value.endsWith('.js'));
+    expect(preloads.length).toBeGreaterThan(0);
+    preloads.forEach(({ value }) => {
+      expect(value).toMatch(/^\.\/shared\/assets\/[\w-]+\.js$/);
+      expect(mapPath(resolvedPath(`${ORIGIN}/`, value)).kind, value).toBe('fetch');
+    });
+    const landingLinks = landingHrefs.filter(
+      (reference) => !icons.includes(reference) && !preloads.includes(reference),
+    );
     // The cards, then the tools line (tools/games.ts TOOLS), all under games/ and all redirected.
     expect(landingLinks.map(({ value }) => value)).toEqual([
       ...LANDING_HREFS,

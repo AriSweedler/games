@@ -9,11 +9,23 @@
 <style>
   :root{--bg:#0f1115;--fg:#e8e6e1;--muted:#9a9891;--card:#181b22;--line:#262a33;--accent:#e0b35a}
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
   main{max-width:960px;margin:0 auto;padding:28px 16px 32px}
   h1{font-size:1.5rem;letter-spacing:-.02em;margin:0 0 .15em}
-  p.lede{color:var(--muted);margin:0 0 20px;font-size:.95rem}
+  p.lede{color:var(--muted);margin:0 0 16px;font-size:.95rem}
+  .search{position:sticky;top:0;z-index:1;margin:0 0 12px;padding:4px 0;background:var(--bg)}
+  .search input{display:block;width:100%;height:44px;margin:0;padding:0 48px 0 14px;font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:12px;-webkit-appearance:none;appearance:none}
+  .search input::placeholder{color:var(--muted)}
+  .search input:focus{outline:none;border-color:var(--accent)}
+  .search input::-webkit-search-cancel-button,.search input::-webkit-search-decoration{-webkit-appearance:none;display:none}
+  .search button{position:absolute;top:4px;right:0;width:44px;height:44px;border:0;background:none;color:var(--muted);font:inherit;font-size:1.25rem;line-height:1;cursor:pointer;border-radius:12px}
+  .search button:hover{color:var(--fg)}
   .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .results{overflow-y:auto;overscroll-behavior:contain;padding:2px;align-content:start}
+  .results hr.divider{grid-column:1/-1;position:relative;overflow:visible;margin:6px 0;border:0;border-top:1px solid var(--line)}
+  .results hr.divider::after{content:'more like this';position:absolute;top:-.75em;left:50%;transform:translateX(-50%);padding:0 8px;background:var(--bg);color:var(--muted);font-size:.8rem;white-space:nowrap}
+  .results p.none{grid-column:1/-1;margin:0;color:var(--muted)}
   a.card{display:flex;align-items:center;min-height:44px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:inherit;text-decoration:none;transition:border-color .15s,transform .15s}
   a.card:hover{border-color:var(--accent);transform:translateY(-1px)}
   a.card h2{margin:0;font-size:1rem;font-weight:600;line-height:1.3}
@@ -21,21 +33,37 @@
   p.tools a{color:var(--fg)}
   footer{margin-top:24px;color:var(--muted);font-size:.8rem}
   footer a{color:var(--muted)}
+  /* A phone: the page must hold four more games at 360x780 without scrolling (e2e/smoke.spec.ts), so the margins, the gap and the tiles' padding tighten; the bar and the tiles stay 44px targets. */
+  @media (max-width:400px){
+    main{padding:16px 16px 20px}
+    p.lede{margin-bottom:10px}
+    .search{margin-bottom:8px}
+    .grid{gap:8px}
+    a.card{padding:8px 12px}
+    p.tools{margin-top:14px}
+    footer{margin-top:16px}
+  }
 </style>
+<script type="module" src="./main.ts"></script>
 </head>
 <body>
 <main>
   <h1>Ari's web apps</h1>
   <p class="lede">Single-file browser games. Nothing to install.</p>
-  <div class="grid">
-    <a class="card" href="games/gin-rummy/"><h2>🃏 Gin Rummy</h2></a>
-    <a class="card" href="games/fidice/"><h2>🎲 Fidice</h2></a>
-    <a class="card" href="games/backgammon/"><h2>⚅⚄ Sheshbesh</h2></a>
-    <a class="card" href="games/briscola/"><h2>🃏 Briscola</h2></a>
-    <a class="card" href="games/rps/"><h2>✊✋✌️ Rock Paper Scissors</h2></a>
-    <a class="card" href="games/uno/"><h2>🟥🟨🟩🟦 UNO</h2></a>
-    <a class="card" href="games/flip7/"><h2>7️⃣ Flip 7</h2></a>
+  <form id="searchForm" class="search" role="search">
+    <input id="q" type="search" placeholder="Find a game" aria-label="Find a game" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">
+    <button id="clearBtn" type="button" aria-label="Clear the search" hidden>×</button>
+  </form>
+  <div id="grid" class="grid">
+    <a class="card" href="games/gin-rummy/"><h2><span class="glyph" aria-hidden="true">🃏</span> <span class="name">Gin Rummy</span></h2></a>
+    <a class="card" href="games/fidice/"><h2><span class="glyph" aria-hidden="true">🎲</span> <span class="name">Fidice</span></h2></a>
+    <a class="card" href="games/backgammon/"><h2><span class="glyph" aria-hidden="true">⚅⚄</span> <span class="name">Sheshbesh</span></h2></a>
+    <a class="card" href="games/briscola/"><h2><span class="glyph" aria-hidden="true">🃏</span> <span class="name">Briscola</span></h2></a>
+    <a class="card" href="games/rps/"><h2><span class="glyph" aria-hidden="true">✊✋✌️</span> <span class="name">Rock Paper Scissors</span></h2></a>
+    <a class="card" href="games/uno/"><h2><span class="glyph" aria-hidden="true">🟥🟨🟩🟦</span> <span class="name">UNO</span></h2></a>
+    <a class="card" href="games/flip7/"><h2><span class="glyph" aria-hidden="true">7️⃣</span> <span class="name">Flip 7</span></h2></a>
   </div>
+  <div id="results" class="grid results" aria-live="polite" hidden></div>
   <p class="tools">Tools: <a class="tool" href="games/ui-sandbox/">UI Sandbox</a></p>
   <footer>Source: <a href="https://github.com/AriSweedler/games">github.com/AriSweedler/games</a></footer>
 </main>
