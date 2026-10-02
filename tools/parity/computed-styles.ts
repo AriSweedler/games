@@ -40,7 +40,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer as createNetServer } from 'node:net';
 import { resolve } from 'node:path';
 
-import { chromium, type Browser, type Page } from '@playwright/test';
+import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { PeerServer } from 'peer';
 
 import { DESKTOP, PHONE, type Viewport } from '../../e2e/fixtures/geometry.ts';
@@ -755,9 +755,10 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
   ],
   // Hive (docs/design/hive.md §7; page.ts, ui/render.ts): after the shell's 43, the home's subtitle
   // and the names box, the table's top bar (the names strip, the connection dot), the board and
-  // its cells (empty, White's, Black's, lit, the letter and a stack's badge), the two hands and
-  // their tiles (playable, picked, spent, the count), the status line, the controls and the result
-  // sheet's note.
+  // its cells (empty, White's, Black's, lit, a stack's badge), the engraved bugs (the rim, the
+  // shade and the gleam on each side; the ink's colour per bug on each side's tray tiles, which
+  // every screen shows), the two hands and their tiles (playable, picked, spent, the count), the
+  // status line, the controls and the result sheet's note.
   hive: [
     ...SHELL_SELECTORS,
     '.masthead .subtitle',
@@ -777,9 +778,13 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.hex.b polygon',
     '.hex.lit polygon',
     '.hex.picked polygon',
-    '.hex .letter',
-    '.hex.w .letter',
-    '.hex.b .letter',
+    '.hex .sheen',
+    '.hex .bug',
+    '.hex .bug .rim',
+    '.hex.w .bug .shade',
+    '.hex.b .bug .shade',
+    '.hex.w .bug .gleam',
+    '.hex.b .bug .gleam',
     '.hex .badge',
     '.hand',
     '.hand.turn',
@@ -790,7 +795,17 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.hand-tile.picked',
     '.hand-tile.spent',
     '.hand-tile .count',
-    '.hand-tile .letter',
+    '.hand-tile .sheen',
+    '.hand-tile.w .bug[data-bug="queen"] .ink',
+    '.hand-tile.w .bug[data-bug="beetle"] .ink',
+    '.hand-tile.w .bug[data-bug="grasshopper"] .ink',
+    '.hand-tile.w .bug[data-bug="spider"] .ink',
+    '.hand-tile.w .bug[data-bug="ant"] .ink',
+    '.hand-tile.b .bug[data-bug="queen"] .ink',
+    '.hand-tile.b .bug[data-bug="beetle"] .ink',
+    '.hand-tile.b .bug[data-bug="grasshopper"] .ink',
+    '.hand-tile.b .bug[data-bug="spider"] .ink',
+    '.hand-tile.b .bug[data-bug="ant"] .ink',
     '.status-line',
     '.controls',
     '#passBtn',
@@ -2138,6 +2153,28 @@ export const pageUrl = (harness: Harness, game: Game): string =>
 
 export type Captured = Readonly<{ golden: Golden; errors: ReadonlyArray<string> }>;
 
+/**
+ * The media features every capture pins, so a golden holds the same bytes on every host. The owner's
+ * Mac runs with Reduce transparency on, which Chromium reports as `prefers-reduced-transparency:
+ * reduce` and Hive's theme answers by hiding the tiles' sheen and the bugs' engraving layers; CI's
+ * Linux reports no preference, so a golden recorded here failed there (PR #24, 2026-10-02).
+ * Playwright's context options cover the first four but not that one, and one CDP call replaces
+ * the whole list, so all five go through CDP together, at Playwright's own defaults.
+ */
+const MEDIA_FEATURES: ReadonlyArray<Readonly<{ name: string; value: string }>> = [
+  { name: 'prefers-color-scheme', value: 'light' },
+  { name: 'prefers-reduced-motion', value: 'no-preference' },
+  { name: 'forced-colors', value: 'none' },
+  { name: 'prefers-contrast', value: 'no-preference' },
+  { name: 'prefers-reduced-transparency', value: 'no-preference' },
+];
+
+const pinMedia = async (context: BrowserContext, page: Page): Promise<void> => {
+  // The session stays attached for the page's life: detaching it clears the override.
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Emulation.setEmulatedMedia', { features: [...MEDIA_FEATURES] });
+};
+
 /** Drive one game at one viewport in a fresh context; `errors` are the page's uncaught exceptions. */
 export const capture = async (
   browser: Browser,
@@ -2150,6 +2187,7 @@ export const capture = async (
   await context.addInitScript({ content: `${seedScript(SEED)}\n${clockScript(EPOCH)}` });
   await routeOffline(context);
   const page = await context.newPage();
+  await pinMedia(context, page);
   const errors: string[] = [];
   page.on('pageerror', (e) => {
     errors.push(e.message);

@@ -79,5 +79,15 @@ export const fitCells = (board: Board): ReadonlyArray<Hex> => {
   return dedupe([...hive, ...hive.flatMap(neighbours)]);
 };
 
+/**
+ * A Spider's move just landed (the owner: "the spider's moves must show the '1-2-3' when it
+ * moves"): where it stood, the three hexes of its path (engine.ts `spiderPaths` on the position
+ * it left, the destination last) and whether the page prefers reduced motion (one step then, not
+ * three), keyed on the position so the paint hops the tile once (ui/motion.ts `hopAlong`). The
+ * reducer (ui/state.ts `spiderHop`) writes it, the painter reads it; it lives here, with the
+ * board's other pure geometry, so the hop module needs nothing of the reducer.
+ */
+export type Hop = Readonly<{ key: string; from: Hex; path: ReadonlyArray<Hex>; reduced: boolean }>;
+
 /** The hexes in `hexes`, keyed for a constant-time "is this one reachable". */
 export const keySet = (hexes: ReadonlyArray<Hex>): ReadonlySet<string> => new Set(hexes.map(keyOf));

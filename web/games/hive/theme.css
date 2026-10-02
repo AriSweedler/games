@@ -2,10 +2,14 @@
    and shell.css before this file: the home, the waiting rooms, the sheets, the curtain and the
    toast are the shell's rules on the shared palette, and this file adds Hive's one accent (the
    amber of a honeycomb), the type scale the shell leaves to each theme, and the table: the names
-   strip, the SVG hive (a hexagon per cell in the side's colour with the bug's letter, lit where the
-   picked tile may go) and the two hands as trays of hexagonal tiles (the board's hexagon, the bug's
-   letter, the count left as a badge). The base pack is deliberately plain: a tile is its colour
-   and its letter. Prettier formats this file. */
+   strip, the SVG hive (a bevelled hexagon per cell in the side's colour with the bug engraved on it,
+   lit where the picked tile may go, the Spider's path numbered 1-2-3) and the two hands as trays of hexagonal tiles (the board's
+   hexagon, the bug, the count left as a badge). The tiles after the official set (the owner,
+   2026-10-02): the bugs in the set's colours, each with a shade for the cream tile and one for the
+   black, a hairline grey rim and a shadow "as if the bugs were recessed instead of simply painted
+   over", and the tiles with "an illusion of depth" (a sheen across the face, a lighter top-left
+   edge and a darker bottom-right one, a soft shadow on the felt, a stack's top tile raised); the
+   gradients and filters are ui/bugs.ts's sprite, read here by id. Prettier formats this file. */
 :root {
   --gutter: 12px;
   /* The one accent: honey amber, on the shared felt. */
@@ -17,8 +21,27 @@
   --hive-white-ink: #2a2418;
   --hive-black: #2b2a2e;
   --hive-black-ink: #f1e9d6;
+  --hive-white-under: #c9bc9b;
+  --hive-black-under: #141317;
   --hive-empty: rgba(255, 255, 255, 0.06);
   --hive-lit: rgba(217, 164, 65, 0.55);
+  /* The bugs (the official palette), a shade for the black tile and one for the cream. */
+  --bug-queen-dark: #d4a017;
+  --bug-queen-cream: #c8961e;
+  --bug-beetle-dark: #b9a7d6;
+  --bug-beetle-cream: #8f74c2;
+  --bug-grasshopper-dark: #3fa34d;
+  --bug-grasshopper-cream: #2e8b45;
+  --bug-spider-dark: #d4842a;
+  --bug-spider-cream: #c76f1e;
+  --bug-ant-dark: #3d55b8;
+  --bug-ant-cream: #2d3f9e;
+  /* The engraving: the hairline rim about every bug, the shadow up-left and the gleam down-right. */
+  --bug-rim: rgba(128, 128, 128, 0.5);
+  --bug-shade-cream: rgba(42, 36, 24, 0.5);
+  --bug-gleam-cream: rgba(255, 255, 255, 0.8);
+  --bug-shade-dark: rgba(0, 0, 0, 0.75);
+  --bug-gleam-dark: rgba(255, 255, 255, 0.2);
   /* A tray tile's width: a 44px tap target at the least, a hex is taller than wide (2/√3). */
   --tile-w: clamp(44px, 11vw, 56px);
   --tile-h: calc(var(--tile-w) * 1.1547);
@@ -197,38 +220,92 @@ label {
   align-items: center;
   justify-content: center;
 }
+/* `touch-action: none`: a finger on the board or a tray tile drags the tile (ui/dragger.ts), never the
+   page; the rest of the table keeps the shell's `manipulation`. */
 .board svg.hive {
   width: 100%;
   height: 100%;
   max-height: 60vh;
-  touch-action: manipulation;
+  touch-action: none;
 }
-.hex polygon {
+/* A cell's face: the side's colour, the state strokes (lit, picked), a shadow on the felt. An
+   empty cell is a ghost: no sheen, no shadow. */
+.hex .face {
   fill: var(--hive-empty);
   stroke: rgba(255, 255, 255, 0.12);
   stroke-width: 0.5;
 }
-.hex.w polygon {
+.hex.w .face {
   fill: var(--hive-white);
   stroke: #cbbf9f;
 }
-.hex.b polygon {
+.hex.b .face {
   fill: var(--hive-black);
   stroke: #57555c;
 }
-.hex.lit polygon {
+.hex.w .face,
+.hex.b .face {
+  filter: url(#hive-shadow);
+}
+.hex.lit .face {
   fill: var(--hive-lit);
   stroke: var(--accent);
   stroke-width: 1;
 }
-.hex.lit.w polygon,
-.hex.lit.b polygon {
+.hex.lit.w .face,
+.hex.lit.b .face {
   stroke: var(--accent);
   stroke-width: 1.4;
 }
-.hex.picked polygon {
+.hex.picked .face {
   stroke: var(--accent);
   stroke-width: 1.6;
+}
+/* The depth: a sheen across the face (light top-left, dark bottom-right) and the bevel along its
+   edge, the same light as a stroke; the amber state strokes show alone. */
+.hex .sheen,
+.hand-tile .sheen {
+  fill: url(#hive-sheen);
+  stroke: url(#hive-edge);
+  stroke-width: 0.7;
+  pointer-events: none;
+}
+.hex.empty .sheen {
+  display: none;
+}
+.hex.lit .sheen,
+.hex.picked .sheen,
+.hand-tile.playable .sheen,
+.hand-tile.picked .sheen {
+  stroke: none;
+}
+/* A stack: the top tile raised, the one under it peeking out down and to the right. */
+.hex.stack .face {
+  filter: url(#hive-lift);
+}
+.hex.w .under {
+  fill: var(--hive-white-under);
+}
+.hex.b .under {
+  fill: var(--hive-black-under);
+}
+/* The drag (ui/dragger.ts, render.ts `paintDrag`): a tile I may lift, the one in the air (dimmed under
+   its ghost), the lit hex a release would play (the strongest light), and the lift laid over a
+   lifted board tile for the ghost to clone: never seen itself, only its clone is. */
+.hex.movable {
+  cursor: grab;
+}
+.hex.dragging {
+  opacity: 0.35;
+}
+.hex.drop .face {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 1.6;
+}
+.hex.lift {
+  visibility: hidden;
+  pointer-events: none;
 }
 .hex.empty {
   cursor: pointer;
@@ -237,30 +314,120 @@ label {
 .hex.b {
   cursor: pointer;
 }
-.hex .letter {
-  font-size: 9px;
-  font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: central;
+/* The bug, engraved: four strokes of the one symbol (ui/bugs.ts bugHtml), each coloured through
+   `color` (the art strokes in currentColor): the grey rim under all, the shadow up-left and the
+   gleam down-right so the line reads as cut into the tile, the ink in the bug's colour on top. */
+.bug {
   pointer-events: none;
-  font-family: inherit;
 }
-.hex.w .letter {
-  fill: var(--hive-white-ink);
+.bug .rim {
+  color: var(--bug-rim);
 }
-.hex.b .letter {
-  fill: var(--hive-black-ink);
+.w .bug .shade {
+  color: var(--bug-shade-cream);
 }
+.w .bug .gleam {
+  color: var(--bug-gleam-cream);
+}
+.b .bug .shade {
+  color: var(--bug-shade-dark);
+}
+.b .bug .gleam {
+  color: var(--bug-gleam-dark);
+}
+.w .bug[data-bug='queen'] .ink {
+  color: var(--bug-queen-cream);
+}
+.w .bug[data-bug='beetle'] .ink {
+  color: var(--bug-beetle-cream);
+}
+.w .bug[data-bug='grasshopper'] .ink {
+  color: var(--bug-grasshopper-cream);
+}
+.w .bug[data-bug='spider'] .ink {
+  color: var(--bug-spider-cream);
+}
+.w .bug[data-bug='ant'] .ink {
+  color: var(--bug-ant-cream);
+}
+.b .bug[data-bug='queen'] .ink {
+  color: var(--bug-queen-dark);
+}
+.b .bug[data-bug='beetle'] .ink {
+  color: var(--bug-beetle-dark);
+}
+.b .bug[data-bug='grasshopper'] .ink {
+  color: var(--bug-grasshopper-dark);
+}
+.b .bug[data-bug='spider'] .ink {
+  color: var(--bug-spider-dark);
+}
+.b .bug[data-bug='ant'] .ink {
+  color: var(--bug-ant-dark);
+}
+/* The count on a stack, in the corner over the bug, haloed so it reads on either tile. */
 .hex .badge {
   font-size: 5px;
   font-weight: 700;
   text-anchor: middle;
   dominant-baseline: central;
   fill: var(--accent);
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
   pointer-events: none;
 }
+/* The Spider's 1-2-3 (render.ts `stepsOf`, `boardHtml`): a numeral on each hex of the picked
+   Spider's path to the lit hex the pointer is over, centred on an empty hex and in a tile's upper
+   left; `trail` is an empty hex drawn only while the tile hops along its path (ui/motion.ts
+   `hopAlong`; the hopping cell's own transition is written inline), dashed so it reads as the way,
+   not a place to go (its `face` carries the light, its `sheen` is off). Neither takes the pointer:
+   a tap through them meets the board. */
+.hex .step {
+  font-size: 7px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: var(--accent);
+  pointer-events: none;
+}
+.hex.w .step,
+.hex.b .step {
+  font-size: 5px;
+}
+.hex.trail {
+  pointer-events: none;
+}
+.hex.trail .face {
+  fill: var(--hive-lit);
+  stroke: var(--accent);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 1.5;
+  filter: none;
+}
+.hex.trail .sheen {
+  display: none;
+}
+.hex.hopping {
+  pointer-events: none;
+}
+/* High contrast, or less transparency: the flat tiles and the ink alone. */
+@media (prefers-contrast: more), (prefers-reduced-transparency: reduce) {
+  .hex .sheen,
+  .hand-tile .sheen,
+  .bug .rim,
+  .bug .shade,
+  .bug .gleam {
+    display: none;
+  }
+  .hex .face,
+  .hand-tile .face {
+    filter: none;
+  }
+}
 /* The hands: one tray a side, five hexagonal tiles each (the board's hexagon in the side's colour
-   with the bug's letter: render.ts `tileHtml`) with the count left as a badge; the side to move is
+   with the bug engraved: render.ts `tileHtml`) with the count left as a badge; the side to move is
    lit. A tile is a bare button around its SVG, so the shape, not a box, carries the colour and the
    accent (playable: an amber edge; picked: a thicker edge and a lift). */
 .hand {
@@ -290,30 +457,17 @@ label {
   height: 100%;
   overflow: visible;
 }
-.hand-tile polygon {
+.hand-tile .face {
   stroke-width: 0.5;
+  filter: url(#hive-shadow);
 }
-.hand-tile.w polygon {
+.hand-tile.w .face {
   fill: var(--hive-white);
   stroke: #cbbf9f;
 }
-.hand-tile.b polygon {
+.hand-tile.b .face {
   fill: var(--hive-black);
   stroke: #57555c;
-}
-.hand-tile .letter {
-  font-size: 9px;
-  font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
-  font-family: inherit;
-}
-.hand-tile.w .letter {
-  fill: var(--hive-white-ink);
-}
-.hand-tile.b .letter {
-  fill: var(--hive-black-ink);
 }
 .hand-tile:disabled {
   cursor: default;
@@ -325,16 +479,25 @@ label {
 .hand-tile.playable {
   opacity: 1;
 }
-.hand-tile.playable polygon {
+.hand-tile.playable .face {
   stroke: var(--accent);
   stroke-width: 1;
 }
 .hand-tile.picked {
   transform: translateY(-3px);
 }
-.hand-tile.picked polygon {
+.hand-tile.picked .face {
   stroke: var(--accent);
   stroke-width: 1.6;
+  filter: url(#hive-lift);
+}
+.hand-tile.playable {
+  touch-action: none;
+  cursor: grab;
+}
+.hand-tile.dragging {
+  opacity: 0.35;
+  transform: none;
 }
 /* The count, on the hex's upper-right edge (the box's corner above it is air). */
 .hand-tile .count {
@@ -367,4 +530,33 @@ label {
 .result-note {
   margin: 6px 0 14px;
   color: var(--muted);
+}
+
+/* ---------- the drag ghost (web/shared/edge/drag.ts; test/dist/drag-ghost.test.ts) ---------- */
+/* The clone of the tile in the air (a tray tile, or the lift over a board tile), fixed on the body
+   at the tile's box and translated with the pointer: still (no inherited transition, its own
+   layer), a lift of shadow, its count badge gone; `.landing` alone glides it back to its place on
+   a release off every lit hex, in a beat reduced motion cuts to nothing. */
+.drag-ghost {
+  position: fixed;
+  margin: 0;
+  z-index: 60;
+  pointer-events: none;
+  will-change: transform;
+  opacity: 1;
+  visibility: visible;
+  filter: drop-shadow(0 10px 10px rgba(0, 0, 0, 0.45));
+  transition: none;
+  animation: none;
+}
+.drag-ghost.landing {
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.drag-ghost .count {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drag-ghost.landing {
+    transition-duration: 1ms;
+  }
 }

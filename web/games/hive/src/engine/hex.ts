@@ -1,7 +1,7 @@
 // The grid Hive is played on (docs/design/hive.md §3): axial coordinates (q, r) on a grid with no
 // edges, the six neighbour offsets in turning order, the rings around a hex, the Freedom to Move
 // test for one step between neighbours at any height, the flood fill behind the One Hive rule and
-// the Ant, and the exact-length walks of the Spider. Game-free: the engine passes the board in as
+// the Ant, and the exact-length walks of the Spider (each path, and where they end). Game-free: the engine passes the board in as
 // a height function, so every rule here is a statement about hexes and heights alone.
 
 export type Hex = Readonly<{ q: number; r: number }>;
@@ -113,18 +113,30 @@ export const isConnected = (cells: ReadonlyArray<Hex>): boolean => {
   return flood([first], step).size === keys.size;
 };
 
-/** Where every walk of exactly `steps` steps from `start` through `step` ends, never entering a hex twice (the start included). */
-export const walkEnds = (
+/**
+ * Every walk of exactly `steps` steps from `start` through `step`, never entering a hex twice (the
+ * start included): each the hexes stepped on in order, the start left out, the last the end. The
+ * Spider's three-hex paths, as the page shows them (1-2-3).
+ */
+export const walks = (
   start: Hex,
   steps: number,
   step: (h: Hex) => ReadonlyArray<Hex>,
-): ReadonlyArray<Hex> => {
-  const extend = (path: ReadonlyArray<Hex>, left: number): ReadonlyArray<Hex> => {
+): ReadonlyArray<ReadonlyArray<Hex>> => {
+  const extend = (path: ReadonlyArray<Hex>, left: number): ReadonlyArray<ReadonlyArray<Hex>> => {
     const here = path[path.length - 1] ?? start;
-    if (left <= 0) return [here];
+    if (left <= 0) return [path.slice(1)];
     return step(here)
       .filter((next) => !path.some((been) => sameHex(been, next)))
       .flatMap((next) => extend([...path, next], left - 1));
   };
-  return dedupe(extend([start], steps));
+  return extend([start], steps);
 };
+
+/** Where every walk of exactly `steps` steps from `start` through `step` ends (`walks`), each end once. */
+export const walkEnds = (
+  start: Hex,
+  steps: number,
+  step: (h: Hex) => ReadonlyArray<Hex>,
+): ReadonlyArray<Hex> =>
+  dedupe(walks(start, steps, step).map((path) => path[path.length - 1] ?? start));

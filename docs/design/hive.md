@@ -117,6 +117,11 @@ into a hex that a sliding tile cannot reach. The Grasshopper jumps, so the rule 
 - **Grasshopper:** jumps in a straight line over one or more tiles in a row and lands on the first
   empty hex. It cannot jump a gap or move without jumping.
 - **Spider:** slides exactly three hexes around the hive, never entering a hex twice in the move.
+  The engine also names each walk: `spiderPaths(game, from)` keys the three hexes stepped on, in
+  order, by the destination (the first walk found where several reach one hex), behind the same
+  gate as `legalMoves`; the page shows them as 1-2-3 while a Spider is picked and hops her along
+  them as she moves (the owner: "the spider's moves must show the '1-2-3' when it moves, as a
+  special case").
 - **Soldier Ant:** slides any number of hexes around the hive.
 
 ### 4.7 Passing
@@ -156,7 +161,10 @@ step, Freedom to Move on the ground and above it, the flood fill, connectivity, 
 walks); the tiles; and the rules from hand-built positions: the first two placements and the colour
 rule (a stack counts as its top tile's colour), the Queen by the fourth tile and no move before
 her, each bug's moves (the Queen's one step, the Beetle's climb and pin, the beetle gate, the
-Grasshopper's line, the Spider's exactly three, the Ant everywhere it can slide), the cup a tile
+Grasshopper's line, the Spider's exactly three and her paths (`spiderPaths`: over every Spider
+move of the bot games the paths end exactly where `legalMoves` does, each a chain of single steps
+with no hex twice, every hex stepped on empty and touching the hive left behind), the Ant
+everywhere it can slide), the cup a tile
 cannot slide into or out of, One Hive mid-move, the pass, a surrounded Queen, both Queens at once
 and resigning. Three seeded random bot games of up to 200 turns check every turn: the intent came
 off the legal lists, every tile is kept, the hive is one group, the Queen is down by the fourth
@@ -164,11 +172,28 @@ tile and only Beetles stand above the ground.
 
 The page's own tests sit beside its modules too: the reducer (ui/state.test.ts: pass and play
 starts on White's table with no curtain and the view changes hands as the turn does, the picks, a
-refusal, the result sheet) and the board's fit (ui/board.test.ts: the fit of a hive equals the fit
+refusal, the result sheet, the aim a picked Spider's path is numbered to and the hop her move
+lands as), the board's fit (ui/board.test.ts: the fit of a hive equals the fit
 of the same hive plus its ring, and through three seeded games every legal destination lies inside
-it, so a pick never changes the viewBox). e2e/hive.spec.ts reads the same two facts off the page
-(the curtain hidden throughout, the viewBox the same string before and after a pick) and the tray's
-tiles as hexagons of at least 44px.
+it, so a pick never changes the viewBox) and the bugs on the tiles (ui/bugs.test.ts: a file
+becomes a `<symbol>` with its stroke-width stripped, the sprite carries every bug once with the
+tiles' gradients and filters, each fit keeps the art inside the hex, and a drawn bug is four layers
+of the one symbol at the set's one line weight), the paint (ui/render.test.ts: 1-2-3 along the picked
+Spider's path to the aimed hex, the way drawn as trail cells under the hive, the hop's path numbered
+as the move lands and nothing once it has) and the hop's stops and offsets (ui/motion.test.ts: three
+legs of one hex each, two ends under reduced motion). e2e/hive.spec.ts reads the same facts off the page
+(the curtain hidden throughout, the viewBox the same string before and after a pick), the tray's
+tiles as hexagons of at least 44px with the bug's `<use>` inside and the sprite in the body, and
+finds the Queen on the board by her `data-bug`, not a letter; with the mouse over a lit hex it reads
+the Spider's 1-2-3 and watches her land at the end of the hop. The computed-style goldens
+(test/fixtures/styles/hive.*.json) pin the engraved look: the rim, the shade and the gleam on each
+side, and the ink's colour for every bug on both trays. The drag (§7) has a pointer-sequence test beside its module
+(ui/dragger.test.ts over the page fake: the intents in order, the ghost's place and its following,
+the snap to the nearest lit hex once per change, the glide back, a press that never moves staying a
+tap) and the reducer's half in ui/state.test.ts (`drag/start` picks, `drag/over` holds a reachable
+hex once, `drag/end` plays or drops, the release's click ignored while the drag stands);
+e2e/hive.spec.ts drags with `page.mouse`: a tray tile onto the lit hex (the snap from beside it, the
+`drop` light), one released off every hex snapping back, and a board tile across the hive.
 
 Hive was the first engine-only game in tools/ci/suites.ts (`ENGINE_ONLY`) until its page row
 (§7) registered it in tools/games.ts as a shell game: its suite now has both halves (the unit tests
@@ -187,6 +212,21 @@ two hands as trays of hexagonal tiles with their counts, Pass when the seat must
 status line. A tap on a hand tile lights its placements, a tap on a tile already down lights its
 moves, a tap on a lit hex plays (ui/state.ts `tap/hex`); the engine's refusal is a toast.
 
+The tiles drag too (the owner, 2026-10-02: "The tiles must be click-and-draggable instead of just
+click-and-click to move"): ui/dragger.ts tells the shared pointer-drag kernel (web/shared/edge/drag.ts,
+dry-round-2.md E1) what a press on the trays or the board picks up (a playable tray tile, one of my
+`movable` board tiles), and past the kernel's threshold `drag/start` picks the tile as a tap would (the
+same hexes light; the source dims as `dragging`) while the kernel's ghost, the tile's clone, follows the
+pointer: a tray tile clones as it is; a board tile is a `g` in the SVG, which would not render on the
+body, so the paint lays a nested `svg.lift` over the picked cell (render.ts `liftHtml`, hidden by its
+own rule) for the kernel to clone. Every move snaps to the lit hex nearest the pointer within 0.9 of a
+hex's width (`nearestLit`; a thumb covers the hex it is over) and `drag/over` marks it `drop`; a release
+on it plays the tile through the same `act` as a tap, a release anywhere else glides the ghost back
+(180ms, a millisecond under reduced motion) and drops the pick. The board and the playable tiles take
+`touch-action: none`, so a finger drags the tile, never the page; the tap-tap path stays as the
+fallback for keyboards and assistive tech, and the click a release fires is nothing while the drag
+stands.
+
 Pass the phone raises no curtain (the owner, 2026-10-02: "hive is like backgammon, where you don't
 need to pass the phone for turns. It's just a game."): nothing is hidden, so both players share the
 one screen, the table is on show from Start (White's view) and the view changes hands as the turn
@@ -198,8 +238,12 @@ leaves the board on show with Play again beside it.
 
 The hands are trays of hexagonal tiles (the owner, 2026-10-02: "they are squares in your hand. They
 should be hexagonal in the hand"): each a bare button around an SVG of the board's own hexagon
-(ui/board.ts `cornersOf`, the same inset) in the side's colour with the bug's letter at its centre
-and the count left as a badge on its upper-right edge, at least 44px wide to tap; a playable tile
+(ui/board.ts `cornersOf`, the same inset) in the side's colour with the bug engraved at its centre
+(ui/bugs.ts: the five assets/bugs/ files inlined once as symbols, each fitted to the same hexagonal
+frame at one line weight, in the official palette with a shade for each tile colour, a hairline
+grey rim and an up-left shadow and down-right gleam so it reads as cut into the tile; the face has a
+sheen, a bevelled edge and a shadow on the felt, and a stack's top tile is raised) and the count
+left as a badge on its upper-right edge, at least 44px wide to tap; a playable tile
 has an amber edge, the picked one a thicker edge and a lift. Any tile may be picked at any time
 (Hive has no hand order), the Queen alone when she must come down. The board's viewBox fits the hive
 and the ring of hexes around it (ui/board.ts `fitCells`; the owner: "preshrink the board so there is
@@ -210,4 +254,4 @@ Online, the host holds the state (engine/view.ts `State`) and both seats get the
 whole game, over the two-seat protocol (protocol.ts: the room's one term is `seatCount: 2`).
 
 Not yet: a draw button (§4.8: by agreement or repetition; the engine has no draw intent), pan and
-zoom by gesture (the board fits itself instead), tile art beyond the letter.
+zoom by gesture (the board fits itself instead).

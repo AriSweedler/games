@@ -19,6 +19,7 @@ import {
   neighbours,
   sameHex,
   walkEnds,
+  walks,
   type Hex,
 } from './hex.ts';
 import {
@@ -159,11 +160,21 @@ const jumpEnd = (board: Board, h: Hex, d: Hex, jumped: boolean): Hex | undefined
   return jumped ? h : undefined;
 };
 
+const heightOn =
+  (board: Board) =>
+  (h: Hex): number =>
+    heightAt(board, h);
+
+/** The ground-level slides off `h` over `board`: the empty neighbours a tile may step to (hex.ts `canStep`). */
+const slidesOn =
+  (board: Board) =>
+  (h: Hex): ReadonlyArray<Hex> =>
+    neighbours(h).filter((n) => heightAt(board, n) === 0 && canStep(heightOn(board), h, n));
+
 /** §4.5-§4.6: where a `bug` lifted off `from` may go over the board left behind. */
 const destinations = (board: Board, from: Hex, bug: Bug): ReadonlyArray<Hex> => {
-  const height = (h: Hex): number => heightAt(board, h);
-  const slides = (h: Hex): ReadonlyArray<Hex> =>
-    neighbours(h).filter((n) => height(n) === 0 && canStep(height, h, n));
+  const height = heightOn(board);
+  const slides = slidesOn(board);
   switch (bug) {
     case 'queen':
       return slides(from);
@@ -186,17 +197,39 @@ const destinations = (board: Board, from: Hex, bug: Bug): ReadonlyArray<Hex> => 
 };
 
 /**
- * §4.3-§4.6: where the top tile at `from` may move. None unless it is the mover's, the mover's
- * Queen is down and lifting it leaves one hive (§4.3: the hive never splits, not even mid-move; a
- * Beetle lifted off a stack leaves the stack, so it never splits it).
+ * §4.3-§4.6's gate on a move: the top tile at `from` and the board with it lifted off, when the
+ * side to move may lift it: it is the mover's, the mover's Queen is down and lifting it leaves
+ * one hive (§4.3: the hive never splits, not even mid-move; a Beetle lifted off a stack leaves
+ * the stack, so it never splits it). None otherwise.
  */
-export const legalMoves = (game: Game, from: Hex): ReadonlyArray<Hex> => {
+const lifted = (game: Game, from: Hex): Readonly<{ tile: Tile; board: Board }> | undefined => {
   const tile = topAt(game.board, from);
-  if (game.result !== null || tile?.side !== game.turn) return [];
-  if (!queenDown(game, game.turn)) return [];
-  const lifted = liftTop(game.board, from);
-  if (heightAt(lifted, from) === 0 && !isConnected(occupied(lifted))) return [];
-  return destinations(lifted, from, tile.bug);
+  if (game.result !== null || tile?.side !== game.turn) return undefined;
+  if (!queenDown(game, game.turn)) return undefined;
+  const board = liftTop(game.board, from);
+  if (heightAt(board, from) === 0 && !isConnected(occupied(board))) return undefined;
+  return { tile, board };
+};
+
+/** §4.3-§4.6: where the top tile at `from` may move (`lifted`'s gate, then the bug's own reach). */
+export const legalMoves = (game: Game, from: Hex): ReadonlyArray<Hex> => {
+  const lift = lifted(game, from);
+  return lift === undefined ? [] : destinations(lift.board, from, lift.tile.bug);
+};
+
+/**
+ * §4.6: the Spider's walks off `from`, keyed by where they end (hex.ts `keyOf`): the three hexes
+ * it steps on, in order, the last the destination; where several walks reach one hex, the first
+ * found. Its keys are exactly `legalMoves(game, from)`; empty unless a Spider the side to move
+ * may lift stands at `from`. The page reads the path to show 1-2-3 and to hop the tile along it.
+ */
+export const spiderPaths = (game: Game, from: Hex): ReadonlyMap<string, ReadonlyArray<Hex>> => {
+  const lift = lifted(game, from);
+  if (lift?.tile.bug !== 'spider') return new Map();
+  const paths = walks(from, SPIDER_STEPS, slidesOn(lift.board));
+  const endOf = (path: ReadonlyArray<Hex>): string => keyOf(path[path.length - 1] ?? from);
+  const firsts = paths.filter((path, i) => paths.findIndex((p) => endOf(p) === endOf(path)) === i);
+  return new Map(firsts.map((path) => [endOf(path), path] as const));
 };
 
 /** Every placement and then every move the side to move may make. */

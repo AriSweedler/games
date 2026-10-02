@@ -3,11 +3,17 @@
 // show at once, White's view, with no curtain between turns (the owner, 2026-10-02: "hive is like
 // backgammon, where you don't need to pass the phone for turns"): a tap on a hand tile lights
 // where it may go, a tap on a lit hex places it and the view is Black's; a tap on a tile already
-// down lights its moves. The hands are trays of hexagonal tiles (the board's hexagon, the bug's
-// letter, a count badge), any of them playable at any time; three tiles without the Queen and the
+// down lights its moves. The hands are trays of hexagonal tiles (the board's hexagon, the bug
+// engraved on it, a count badge), any of them playable at any time; three tiles without the Queen and the
 // status says she must come down, with only her playable. The board's viewBox fits the hive and
 // its ring, so a pick never rescales it. Resign ends the game on the result sheet, whose Continue
-// leaves the final board on show. Nothing is random, so no seed. The hook `window.__hive`
+// leaves the final board on show. The tiles drag too (ui/dragger.ts over the shared kernel): a tray
+// tile pressed and moved lights its hexes and a ghost follows the pointer; the lit hex nearest the
+// pointer, from beside it, carries `drop`; released there the tile is down, released off every hex
+// it glides back to the tray; a board tile drags the same way over the lift the paint lays on it.
+// The Spider's path reads 1-2-3 over a lit hex the mouse is on while she is picked, and her move
+// hops along it (the owner: "the spider's moves must show the '1-2-3' when it moves, as a special
+// case"). Nothing is random, so no seed. The hook `window.__hive`
 // (`view()`, `legal()`, `act`) reads the game back. On `pages` alone: this is about the page, not
 // the origin. The shell's own flows (the home, the room, the handoff, resume) are the shell specs'
 // `@hive` describes.
@@ -15,7 +21,7 @@ import type { Page } from '@playwright/test';
 
 import type { Bug } from '../web/games/hive/src/engine/pieces.ts';
 import { DESKTOP, PHONE, type Viewport } from './fixtures/geometry.ts';
-import { hiveStartLocal, requireView } from './fixtures/hive.ts';
+import { hiveAct, hiveStartLocal, requireView } from './fixtures/hive.ts';
 import { pagePath } from './fixtures/site.ts';
 import { expect, test } from './fixtures/two-players.ts';
 
@@ -65,11 +71,12 @@ const playAt = (viewport: Viewport): void => {
     await expect(page.locator('#whiteHand .hand-tile.playable')).toHaveCount(5);
     await expect(page.locator('#blackHand .hand-tile.playable')).toHaveCount(0);
 
-    // The tray's tiles are hexagons: each a button around the board's polygon with the letter
-    // inside and the count badge; at least 44px to tap.
+    // The tray's tiles are hexagons: each a button around the board's polygon with the bug drawn
+    // inside (ui/bugs.ts: a `<use>` of the inlined symbol) and the count badge; at least 44px to tap.
     const ant = page.locator('#whiteHand .hand-tile[data-bug="ant"]');
-    await expect(ant.locator('svg.tile polygon')).toHaveCount(1);
-    await expect(ant.locator('svg.tile .letter')).toHaveText('A');
+    await expect(ant.locator('svg.tile polygon.face')).toHaveCount(1);
+    await expect(ant.locator('svg.tile .bug[data-bug="ant"] use.ink')).toHaveCount(1);
+    await expect(page.locator('body > svg symbol#bug-ant')).toHaveCount(1);
     await expect(ant.locator('.count')).toHaveText('3');
     const box = await ant.boundingBox();
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
@@ -101,7 +108,7 @@ const playAt = (viewport: Viewport): void => {
     await placeFirstLit(page, 'black', 'queen');
     await placeFirstLit(page, 'white', 'beetle');
     // Black's Queen is down, so Black may move: a tap on her lights her steps; a second tap clears.
-    const queen = page.locator('#board .hex.b').filter({ hasText: 'Q' });
+    const queen = page.locator('#board .hex.b', { has: page.locator('.bug[data-bug="queen"]') });
     await queen.click();
     await expect(page.locator('#board .hex.picked')).toHaveCount(1);
     await expect(page.locator('#board .hex.lit').first()).toBeVisible();
@@ -135,3 +142,166 @@ const playAt = (viewport: Viewport): void => {
 
 playAt(PHONE);
 playAt(DESKTOP);
+
+/** The centre of a locator's box, which it must have. */
+const centreOf = async (
+  page: Page,
+  selector: string,
+): Promise<{ x: number; y: number; w: number; h: number }> => {
+  const box = await page.locator(selector).boundingBox();
+  if (box === null) throw new Error(`${selector}: no box`);
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2, w: box.width, h: box.height };
+};
+
+/** A press at `from` carried `dx, dy` past the kernel's threshold: the drag has begun. */
+const lift = async (
+  page: Page,
+  from: { x: number; y: number },
+  dx: number,
+  dy: number,
+): Promise<void> => {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + dx, from.y + dy, { steps: 2 });
+};
+
+const GHOST = 'body > .drag-ghost';
+
+const dragAt = (viewport: Viewport): void => {
+  test(`drag a tile from the tray, one back to it, and one across the board at ${String(viewport.width)}x${String(viewport.height)}`, async ({
+    phone,
+    project,
+  }) => {
+    test.skip(project !== 'pages', 'about the page, not the origin');
+    const { page } = phone;
+    await hiveStartLocal(page, pagePath(project, 'hive'), viewport, [...NAMES]);
+
+    // White's Ant lifted off the tray: the origin lights, the tile dims, a ghost is on the body.
+    const ant = page.locator('#whiteHand .hand-tile[data-bug="ant"]');
+    const antAt = await centreOf(page, '#whiteHand .hand-tile[data-bug="ant"]');
+    await lift(page, antAt, 12, -12);
+    const litHex = page.locator('#board .hex.lit');
+    await expect(litHex).toHaveCount(1);
+    await expect(ant).toHaveClass(/dragging/);
+    await expect(page.locator(GHOST)).toHaveCount(1);
+    await expect(page.locator('#board .hex.drop')).toHaveCount(0);
+    // The hex is a thumb's target; beside it, outside its box but inside the snap, it takes the drop.
+    const to = await centreOf(page, '#board .hex.lit');
+    expect(to.w).toBeGreaterThanOrEqual(44);
+    expect(to.h).toBeGreaterThanOrEqual(44);
+    await page.mouse.move(to.x + to.w * 0.7, to.y, { steps: 4 });
+    await expect(litHex).toHaveClass(/drop/);
+    // Far away again: dark. Back over it and released: the Ant is down and Black's view is up.
+    await page.mouse.move(antAt.x, antAt.y, { steps: 4 });
+    await expect(page.locator('#board .hex.drop')).toHaveCount(0);
+    await page.mouse.move(to.x, to.y, { steps: 4 });
+    await expect(litHex).toHaveClass(/drop/);
+    await page.mouse.up();
+    await expect(page.locator('#board .hex.w')).toHaveCount(1);
+    await expect(page.locator('#myName')).toHaveText(seated(1));
+    await expect(page.locator(GHOST)).toHaveCount(0);
+    expect((await requireView(page)).game.board['0,0']).toEqual([{ side: 'white', bug: 'ant' }]);
+
+    // Black's Spider released on the names strip, off every hex: the ghost glides back, nothing is placed.
+    const spider = page.locator('#blackHand .hand-tile[data-bug="spider"]');
+    await lift(page, await centreOf(page, '#blackHand .hand-tile[data-bug="spider"]'), 12, 12);
+    await expect(page.locator('#board .hex.lit')).toHaveCount(6);
+    const strip = await centreOf(page, '#myName');
+    await page.mouse.move(strip.x, strip.y, { steps: 4 });
+    await page.mouse.up();
+    await expect(page.locator(GHOST)).toHaveCount(0);
+    await expect(page.locator('#board .hex.lit')).toHaveCount(0);
+    await expect(spider).not.toHaveClass(/picked|dragging/);
+    const kept = await requireView(page);
+    expect(kept.game.hands.black.spider).toBe(2);
+    expect(Object.keys(kept.game.board)).toHaveLength(1);
+
+    // Both Queens down through the hook; Black's Queen may step, so she is `movable`: dragged off her
+    // hex (the lift laid over it) onto a lit one, she moves and the turn is White's.
+    await hiveAct(page, { type: 'place', bug: 'queen', to: { q: 1, r: 0 } });
+    await expect(page.locator('#myName')).toHaveText(seated(0));
+    await hiveAct(page, { type: 'place', bug: 'queen', to: { q: -1, r: 0 } });
+    await expect(page.locator('#myName')).toHaveText(seated(1));
+    const queen = page.locator('#board .hex.b.movable');
+    await expect(queen).toHaveCount(1);
+    await lift(page, await centreOf(page, '#board .hex.b.movable'), 0, -12);
+    await expect(page.locator('#board .hex.picked')).toHaveCount(1);
+    await expect(page.locator('#board svg.lift')).toHaveCount(1);
+    await expect(page.locator(GHOST)).toHaveCount(1);
+    const target = page.locator('#board .hex.lit').first();
+    const key = await target.getAttribute('data-hex');
+    if (key === null) throw new Error('the lit hex has no key');
+    const step = await centreOf(page, `#board .hex.lit[data-hex="${key}"]`);
+    await page.mouse.move(step.x, step.y, { steps: 4 });
+    await expect(target).toHaveClass(/drop/);
+    await page.mouse.up();
+    const moved = await requireView(page);
+    expect(moved.game.board['1,0']).toBeUndefined();
+    expect(moved.game.board[key]).toEqual([{ side: 'black', bug: 'queen' }]);
+    await expect(page.locator('#myName')).toHaveText(seated(0));
+    await expect(page.locator(GHOST)).toHaveCount(0);
+    await expect(page.locator('#board svg.lift')).toHaveCount(0);
+  });
+};
+
+dragAt(PHONE);
+
+test("the Spider's path reads 1-2-3 over the aimed hex, and her move hops along it", async ({
+  phone,
+  project,
+}) => {
+  test.skip(project !== 'pages', 'about the page, not the origin');
+  const { page } = phone;
+  await hiveStartLocal(page, pagePath(project, 'hive'), DESKTOP, [...NAMES]);
+  // Both Queens down and White's Spider a leaf at (-1,0), through the hook; White to move.
+  const placements = [
+    ['queen', { q: 0, r: 0 }, 1],
+    ['queen', { q: 1, r: 0 }, 0],
+    ['spider', { q: -1, r: 0 }, 1],
+    ['ant', { q: 2, r: 0 }, 0],
+  ] as const;
+  await placements.reduce(async (prev, [bug, to, seat]) => {
+    await prev;
+    await hiveAct(page, { type: 'place', bug, to });
+    await expect(page.locator('#myName')).toHaveText(seated(seat));
+  }, Promise.resolve());
+
+  // The Spider picked: her destinations lit, no numeral until one is aimed at.
+  const spider = page.locator('#board .hex[data-hex="-1,0"]');
+  await spider.click();
+  await expect(spider).toHaveClass(/picked/);
+  const lit = page.locator('#board .hex.lit');
+  await expect(lit.first()).toBeVisible();
+  await expect(page.locator('#board text.step')).toHaveCount(0);
+  const target = lit.first();
+  const toKey = await target.getAttribute('data-hex');
+  if (toKey === null) throw new Error('a lit hex has no key');
+  // The mouse over a lit hex: 1, 2, 3 along the way to it, 3 on the hex itself.
+  await target.hover();
+  await expect(page.locator('#board text.step')).toHaveCount(3);
+  expect((await page.locator('#board text.step').allTextContents()).sort()).toEqual([
+    '1',
+    '2',
+    '3',
+  ]);
+  await expect(page.locator(`#board .hex[data-hex="${toKey}"] text.step`)).toHaveText('3');
+  // Off the lit hexes, the numerals go.
+  await spider.hover();
+  await expect(page.locator('#board text.step')).toHaveCount(0);
+
+  // The move: the tile lands at the destination (the board keyed on the hop), the way under it
+  // cleared once it arrives, and the game agrees.
+  await target.hover();
+  await target.click();
+  const landed = page.locator(`#board .hex[data-hex="${toKey}"]`);
+  await expect(landed).toHaveClass(/\bw\b/);
+  await expect(landed).toHaveAttribute('aria-label', /Spider/);
+  await expect(page.locator('#board')).toHaveAttribute('data-hop', /./);
+  await expect(page.locator('#board .hex.trail')).toHaveCount(0);
+  await expect(page.locator('#board text.step')).toHaveCount(0);
+  await expect(landed).not.toHaveClass(/hopping/);
+  const after = await requireView(page);
+  expect(after.game.board[toKey]).toEqual([{ side: 'white', bug: 'spider' }]);
+  expect(after.game.board['-1,0']).toBeUndefined();
+  expect(after.game.turn).toBe('black');
+});
