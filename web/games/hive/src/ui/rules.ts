@@ -1,8 +1,10 @@
 // The Rules tab and the in-game rules sheet (docs/design/hive.md §5; the owner, 2026-10-02: "the
 // ruleset to teach players should be as short as possible, ideally fitting on 1 screen"): the goal,
 // placing, the Queen, each bug's move and the two rules of the hive, one line each; the long form
-// is docs/design/hive.md §4. The About copy names the page. Both are static, filled once at boot
-// (render.ts `renderRules`).
+// is docs/design/hive.md §4. The About copy names the page, its first "hive" the lower-case word
+// (the shell's glossary spec taps the game's own name in lower case, as briscola's About does:
+// `linkJargon` links a term's first occurrence in any case, so a leading "Hive" would take the
+// link and leave the word plain). Both are static, filled once at boot (render.ts `renderRules`).
 import {
   linkJargon,
   rulesListHtml,
@@ -64,7 +66,7 @@ export const RULES: ReadonlyArray<RuleItem> = [
 export const rulesItemsHtml = (): string => rulesListHtml(RULES, GLOSSARY);
 
 const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
-  'Hive for two: eleven bugs a side on a board that grows as you play. Place them around the hive and move them along it; the first Queen surrounded on all six sides loses.',
+  'Eleven bugs a side on a board that grows as you play: place them around the hive and move them along it, and the first Queen surrounded on all six sides loses. That is Hive, for two.',
   'Pass one phone back and forth, or open a table online and send the link: both phones show the same board, since nothing is hidden.',
 ];
 

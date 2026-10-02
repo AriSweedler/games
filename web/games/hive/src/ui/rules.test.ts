@@ -25,6 +25,9 @@ describe('the rules', () => {
     expect(html).toContain('<li id="rule-goal">');
     expect(html).toMatch(/id="rule-goal">.*data-rule="queen"/);
     expect(html).toMatch(/id="rule-beetle">.*data-rule="hive"/);
-    expect(aboutHtml()).toContain('data-rule="hive"');
+    // The About's link is the lower-case word itself, the one the shell's glossary spec taps
+    // (e2e/shell-glossary.spec.ts: `aboutTerm: 'hive'`); the game's name later stays plain.
+    expect(aboutHtml()).toContain('data-rule="hive">hive</a>');
+    expect(aboutHtml()).not.toMatch(/data-rule="hive">Hive</);
   });
 });

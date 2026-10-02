@@ -26,6 +26,10 @@ import {
   BRISCOLA_CODE_LENGTH,
   BRISCOLA_CODE_LENGTH_ERROR,
   BRISCOLA_PEER_PREFIX,
+  HIVE_CODE_ALPHABET,
+  HIVE_CODE_LENGTH,
+  HIVE_CODE_LENGTH_ERROR,
+  HIVE_PEER_PREFIX,
 } from './roomCode.ts';
 
 const GAMES: ReadonlyArray<Game> = ['gin-rummy', 'fidice', 'backgammon', 'briscola', 'hive'];
@@ -95,6 +99,26 @@ describe('frozen literals (byte for byte what the legacy pages hold)', () => {
     expect(validateCode('backgammon', 'abcd')).toEqual(ok('ABCD'));
     expect(validateCode('backgammon', 'abc')).toEqual(err('Enter the 4-letter room code.'));
     expect(peerIdFor('backgammon', 'KQZM')).toBe('sheshbesh-KQZM');
+  });
+
+  test("hive: gin's alphabet and length under its own broker prefix (hive.md §7)", () => {
+    expect(HIVE_PEER_PREFIX).toBe('hive-');
+    expect(HIVE_CODE_ALPHABET).toBe('ABCDEFGHJKLMNPQRSTUVWXYZ');
+    expect(HIVE_CODE_LENGTH).toBe(4);
+    expect(HIVE_CODE_LENGTH_ERROR).toBe('Enter the 4-letter room code.');
+    expect(ROOM_CODE.hive).toEqual({
+      alphabet: 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+      length: 4,
+      peerPrefix: 'hive-',
+      peerCase: 'upper',
+      lengthError: 'Enter the 4-letter room code.',
+    });
+    expect(sanitiseCode('hive', 'ab1c-d io')).toBe('ABCD');
+    expect(validateCode('hive', 'abcd')).toEqual(ok('ABCD'));
+    expect(validateCode('hive', 'abc')).toEqual(err('Enter the 4-letter room code.'));
+    expect(peerIdFor('hive', 'KQZM')).toBe('hive-KQZM');
+    expect(isWellFormedCode('hive', 'KQZM')).toBe(true);
+    expect(isWellFormedCode('hive', 'KQZ1')).toBe(false);
   });
 
   test('the alphabets leave out the look-alikes and have no repeats', () => {
