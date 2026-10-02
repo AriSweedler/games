@@ -4,9 +4,10 @@
 // the render with the repo's config and the residue here (`blocks`: the head with its two fonts, the
 // table with its three relative seat cells, the stock with the briscola under it, the trick band, the
 // score strip and the three-slot hand; the endgame the shell requires; the result sheet; the two
-// seat-count selects and the four name inputs) is the committed, formatted bytes, cut out of the
-// page with the blank line each follows; the looks (`look`) are the theme's classes, as
-// backgammon's are. The
+// speed selects and the four name inputs) is the committed, formatted bytes, cut out of the
+// page with the blank line each follows; the seat count of each panel is the shell's stepper
+// (web/shared/markup/stepper.ts, two to four, as UNO's); the looks (`look`) are the theme's
+// classes, as backgammon's are. The
 // table ships the 2-player shape (#seatR2 shown, R1 and R3 hidden) so the page fake and the goldens
 // see a whole table before any paint; the Italian suit sprite (web/shared/ui/cardFace.ts
 // SUIT_SPRITE_SVG) is inlined at boot, not here, so it cannot drift from suits.ts.
@@ -17,6 +18,10 @@ import type {
   ShellNotes,
   ShellPage,
 } from '../../shared/markup/shell.ts';
+import { stepperHtml } from '../../shared/markup/stepper.ts';
+
+/** The seat count each panel asks for (design §5.8): two to four, the shared − n + stepper (the owner, 2026-10-02: "not a dropdown"). */
+const PLAYERS = { label: 'Players', min: 2, max: 4, value: 2, noun: 'players' } as const;
 
 const copy: ShellCopy = {
   modeOnline: 'Online',
@@ -122,14 +127,7 @@ const blocks: ShellBlocks = {
   submenuExtra: '',
   extraTabs: '',
   switchExtra: '',
-  hostFields: `              <div class="field">
-                <span class="field-label">Players</span>
-                <select id="playersSel">
-                  <option value="2" selected>2 players</option>
-                  <option value="3">3 players</option>
-                  <option value="4">4 players</option>
-                </select>
-              </div>
+  hostFields: `${stepperHtml({ id: 'playersCount', ...PLAYERS }, '              ')}
               <div class="field">
                 <span class="field-label">Battle animations</span>
                 <select id="speedSel">
@@ -140,16 +138,7 @@ const blocks: ShellBlocks = {
               </div>
               <button class="btn btn-go btn-block" id="hostBtn">Open a table</button>`,
   localFields: `            <div class="card-box">
-              <div class="row">
-                <label class="grow">Players</label>
-                <div class="field">
-                  <select id="localPlayersSel">
-                    <option value="2" selected>2 players</option>
-                    <option value="3">3 players</option>
-                    <option value="4">4 players</option>
-                  </select>
-                </div>
-              </div>
+${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
               <div class="row">
                 <label class="grow">Battle animations</label>
                 <div class="field">

@@ -1,11 +1,14 @@
 // No jsdom here (docs/ARCHITECTURE.md "Testing pyramid"): the home screen runs against the page
 // fake built from the page's own markup (ui/page.fake.ts over web/games/briscola/index.html). The
-// fake knows no `<option selected>`, so a test sets a select's value as a player would pick it.
+// seat count is the shell's stepper (web/shared/ui/stepper.ts): its hidden field ships `value="2"`,
+// which the fake reads, and a test taps − and + as a player would.
 import { describe, expect, test } from 'vitest';
 
 import { fakeTarget } from '../../../../shared/edge/page.fake.ts';
 import {
   EXTRA_NAME_INPUTS,
+  LOCAL_PLAYERS,
+  ONLINE_PLAYERS,
   bindHome,
   blocksCodeInput,
   fillNameInputs,
@@ -20,10 +23,14 @@ import {
 import { briscolaPage, type BriscolaPage } from './page.fake.ts';
 import { DEFAULT_OPTS, initialApp, type App, type Intent } from './state.ts';
 
+import { stepperIds } from '../../../../shared/markup/stepper.ts';
+
 import MARKUP from '../../index.html?raw';
 
-/** The controls the owner took off the home screen (2026-09-25): the match select and the house rules, in both panels. */
+/** The controls the owner took off the home screen (2026-09-25): the match select and the house rules, in both panels; the seat count selects (2026-10-02: the stepper). */
 const GONE_IDS = [
+  'playersSel',
+  'localPlayersSel',
   'matchSel',
   'localMatchSel',
   'removedTwoSel',
@@ -37,20 +44,19 @@ const GONE_IDS = [
 ];
 
 const page = (): BriscolaPage => briscolaPage(MARKUP);
-/** Type into an input, or pick a select's option, as the player would. */
+/** Type into an input as the player would. */
 const type = (p: BriscolaPage, id: string, value: string): void => {
   const input = p.get(id).el as HTMLInputElement;
   input.value = value;
+};
+/** One tap on a stepper's + (`inc`) or − (`dec`). */
+const tap = (p: BriscolaPage, field: string, which: 'inc' | 'dec'): void => {
+  p.get(stepperIds(field)[which]).fire('click');
 };
 const withOpts = (over: Partial<App['shell']['opts']>, table: Partial<App['table']> = {}): App => ({
   shell: { ...initialApp.shell, opts: { ...DEFAULT_OPTS, ...over } },
   table: { ...initialApp.table, ...table },
 });
-/** A page with both selects at their shipped default, as a browser would report it. */
-const defaults = (p: BriscolaPage): void => {
-  type(p, 'playersSel', '2');
-  type(p, 'localPlayersSel', '2');
-};
 const recorder = (): Readonly<{ intents: Intent[]; dispatch: (i: Intent) => void }> => {
   const intents: Intent[] = [];
   return { intents, dispatch: (i) => intents.push(i) };
@@ -105,8 +111,11 @@ describe('paintHome', () => {
     expect(p.get('onlineModeContent').hidden()).toBe(false);
     expect(p.get('localModeContent').hidden()).toBe(true);
     expect(p.get('resumeBox').hidden()).toBe(true);
-    // The default (D3): two players; the match and the house rules have no controls at all.
-    expect(p.get('localPlayersSel').value()).toBe('2');
+    // The default (D3): two players, − disabled at the floor; the match and the house rules have no controls at all.
+    expect(p.get(LOCAL_PLAYERS).value()).toBe('2');
+    expect(p.get(stepperIds(LOCAL_PLAYERS).num).text()).toBe('2');
+    expect(p.get(stepperIds(LOCAL_PLAYERS).dec).disabled()).toBe(true);
+    expect(p.get(stepperIds(LOCAL_PLAYERS).inc).disabled()).toBe(false);
     GONE_IDS.forEach((id) => {
       expect(MARKUP).not.toContain(`id="${id}"`);
     });
@@ -114,18 +123,21 @@ describe('paintHome', () => {
     // Two seats: the third and fourth name inputs are put away.
     expect(p.get('moreNames').hidden()).toBe(true);
     expect(p.get(EXTRA_NAME_INPUTS[3]).hidden()).toBe(true);
-    // One count for both panels: the Online select follows the room's too, and its three and four
-    // open a table online (docs/design/n-seat-sessions.md §7; the page no longer disables them).
-    expect(p.get('playersSel').value()).toBe('2');
+    // One count for both panels: the Online stepper follows the room's too, and its three and four
+    // open a table online (docs/design/n-seat-sessions.md §7); + is disabled at four.
+    expect(p.get(ONLINE_PLAYERS).value()).toBe('2');
     expect(MARKUP).not.toContain('online soon');
     paintHome(p.doc, withOpts({ seatCount: 4 }));
-    expect(p.get('playersSel').value()).toBe('4');
+    expect(p.get(ONLINE_PLAYERS).value()).toBe('4');
+    expect(p.get(stepperIds(ONLINE_PLAYERS).num).text()).toBe('4');
+    expect(p.get(stepperIds(ONLINE_PLAYERS).inc).disabled()).toBe(true);
+    expect(p.get(stepperIds(ONLINE_PLAYERS).dec).disabled()).toBe(false);
   });
 
   test('three and four seats show the extra names, painted from the table`s memory', () => {
     const p = page();
     paintHome(p.doc, withOpts({ seatCount: 3 }, { extraNames: { 2: 'Cara', 3: 'Dan' } }));
-    expect(p.get('localPlayersSel').value()).toBe('3');
+    expect(p.get(LOCAL_PLAYERS).value()).toBe('3');
     expect(p.get('moreNames').hidden()).toBe(false);
     expect(p.get(EXTRA_NAME_INPUTS[2]).hidden()).toBe(false);
     expect(p.get(EXTRA_NAME_INPUTS[3]).hidden()).toBe(true);
@@ -146,7 +158,7 @@ describe('paintHome', () => {
     expect(p.get(EXTRA_NAME_INPUTS[2]).attr('data-default')).toBeNull();
     expect(p.get(EXTRA_NAME_INPUTS[3]).attr('data-default')).toBe('1');
     paintHome(p.doc, withOpts({ seatCount: 4 }));
-    expect(p.get('localPlayersSel').value()).toBe('4');
+    expect(p.get(LOCAL_PLAYERS).value()).toBe('4');
     expect(p.get(EXTRA_NAME_INPUTS[3]).hidden()).toBe(false);
   });
 });
@@ -154,7 +166,6 @@ describe('paintHome', () => {
 describe('bindHome', () => {
   test('the start buttons carry the raw seat count of their panel (`Raw`), the extra names with Start', () => {
     const p = page();
-    defaults(p);
     const r = recorder();
     bindHome(p.doc, r.dispatch);
     type(p, 'nameInput', 'Ann');
@@ -163,7 +174,7 @@ describe('bindHome', () => {
     expect(readHostOptions(p.doc)).toEqual({ players: '2' });
     type(p, 'p1NameInput', 'Ann');
     type(p, 'p2NameInput', 'Bob');
-    type(p, 'localPlayersSel', '3');
+    tap(p, LOCAL_PLAYERS, 'inc');
     type(p, EXTRA_NAME_INPUTS[2], 'Cara');
     p.get('localBtn').fire('click');
     expect(r.intents.at(-1)).toEqual({
@@ -177,16 +188,28 @@ describe('bindHome', () => {
     expect(readLocalOptions(p.doc).p3).toBe('Cara');
   });
 
-  test('a changed select remembers its panel`s count at once; the third and fourth names as typed', () => {
+  test('a tap on − or + remembers its panel`s count at once, clamped to two and four; the third and fourth names as typed', () => {
     const p = page();
-    defaults(p);
     const r = recorder();
     bindHome(p.doc, r.dispatch);
-    type(p, 'localPlayersSel', '4');
-    p.get('localPlayersSel').fire('change');
-    expect(r.intents).toEqual([{ type: 'opts/set', raw: { localPlayers: '4' } }]);
-    p.get('playersSel').fire('change');
-    expect(r.intents.at(-1)).toEqual({ type: 'opts/set', raw: { players: '2' } });
+    tap(p, LOCAL_PLAYERS, 'inc');
+    tap(p, LOCAL_PLAYERS, 'inc');
+    expect(r.intents).toEqual([
+      { type: 'opts/set', raw: { localPlayers: '3' } },
+      { type: 'opts/set', raw: { localPlayers: '4' } },
+    ]);
+    expect(p.get(LOCAL_PLAYERS).value()).toBe('4');
+    expect(p.get(stepperIds(LOCAL_PLAYERS).num).text()).toBe('4');
+    // At four, + is disabled and a tap on it moves nothing: no intent.
+    expect(p.get(stepperIds(LOCAL_PLAYERS).inc).disabled()).toBe(true);
+    tap(p, LOCAL_PLAYERS, 'inc');
+    expect(r.intents).toHaveLength(2);
+    // The Online panel's − at two likewise; its + steps to three.
+    tap(p, ONLINE_PLAYERS, 'dec');
+    expect(r.intents).toHaveLength(2);
+    tap(p, ONLINE_PLAYERS, 'inc');
+    expect(r.intents.at(-1)).toEqual({ type: 'opts/set', raw: { players: '3' } });
+    expect(readHostOptions(p.doc)).toEqual({ players: '3' });
     type(p, EXTRA_NAME_INPUTS[2], 'Cara');
     p.get(EXTRA_NAME_INPUTS[2]).fire('input');
     type(p, EXTRA_NAME_INPUTS[3], 'Dan ');

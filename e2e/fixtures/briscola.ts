@@ -117,9 +117,19 @@ export const briscolaAct = (page: Page, action: Action): Promise<void> =>
 
 // ---- pass and play: the start and the curtain ----------------------------------------------------
 
+/** A panel's seat count stepper (`#playersCount` or `#localPlayersCount`) raised to `count`, one tap of its + a seat. */
+export const briscolaSeats = async (page: Page, field: string, count: number): Promise<void> => {
+  const input = page.locator(`#${field}`);
+  const now = Number(await input.inputValue());
+  if (now >= count) return;
+  await page.locator(`#${field}Inc`).click();
+  await expect(input).toHaveValue(String(now + 1));
+  await briscolaSeats(page, field, count);
+};
+
 /**
  * Start pass and play for `names.length` seats (the shell's `startLocal`: the switch, the two
- * names, Start) with the panel's count select and the third and fourth names filled first; the
+ * names, Start) with the panel's count stepped up and the third and fourth names filled first; the
  * room's other terms are fixed (one game per sitting, no house rules). Resolves with the table up
  * and the first curtain over it, naming the leader (the seat after the dealer).
  */
@@ -132,7 +142,7 @@ export const briscolaStartLocal = (
   startLocal(page, url, viewport, [names[0], names[1]], async (p) => {
     const [, , p3, p4] = names;
     if (p3 !== undefined) {
-      await p.locator('#localPlayersSel').selectOption(String(names.length));
+      await briscolaSeats(p, 'localPlayersCount', names.length);
       await expect(p.locator('#moreNames')).toBeVisible();
       await p.locator('#p3NameInput').fill(p3);
       if (p4 !== undefined) {
@@ -1020,7 +1030,7 @@ export const briscolaHostTable = async (
 ): Promise<string> => {
   await expect(page.locator('#onlineModeContent')).toBeVisible();
   await page.locator('#nameInput').fill(name);
-  await page.locator('#playersSel').selectOption(String(n));
+  await briscolaSeats(page, 'playersCount', n);
   await page.locator('#speedSel').selectOption('off');
   await page.locator('#hostBtn').click();
   await expect(page.locator('#hostWaitScreen')).toBeVisible();

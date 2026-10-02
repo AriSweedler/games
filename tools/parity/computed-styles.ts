@@ -540,7 +540,7 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.score-line',
   ],
   // Briscola (docs/design/briscola-board.md §3, §6): after the shell's 43, the home panel's own
-  // shapes (the seat count select), the rules' table of points, then the table: the trump badge
+  // shapes (the seat count stepper, the speed select), the rules' table of points, then the table: the trump badge
   // with its suit, the seats row in its three cells and the turn mark, the stock with the trump card
   // under it, the fan with its chips and the taking card, the score strip (per player or per team,
   // the leader), the taken strips and their chips, the hand's three slots and the card in each of
@@ -555,6 +555,7 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.card-box.resume',
     '.field',
     '.field-label',
+    '.stepper',
     'select',
     '.btn-block',
     '.rank-table',
@@ -1147,8 +1148,8 @@ const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
     submenuShot: null,
     localModeShot: 'home: play tab, pass the phone',
     curtainShot: 'local: dealt, curtain up',
-    // Two players; one game per sitting, so Play again deals anew.
-    localValues: { localPlayersSel: '2' },
+    // Two players: the stepper's hidden count, already at its default (setField leaves it); one game per sitting, so Play again deals anew.
+    localValues: { localPlayersCount: '2' },
   },
   fidice: {
     submenuShot: null,
@@ -1857,8 +1858,8 @@ const driveBriscola = async (page: Page, shot: Shot): Promise<void> => {
   await reveal();
   await leaveTable();
 
-  // ---- three and four seats: the seats row, the fan and the score strip in their other shapes ----
-  await page.locator('#localPlayersSel').selectOption('3');
+  // ---- three and four seats (one tap of the stepper's + each): the seats row, the fan and the score strip in their other shapes ----
+  await click(page, '#localPlayersCountInc');
   await fill(page, '#p3NameInput', 'Cara');
   await click(page, '#localBtn');
   await visible(page, '#curtainOverlay');
@@ -1866,7 +1867,7 @@ const driveBriscola = async (page: Page, shot: Shot): Promise<void> => {
   await reveal();
   await snap('local 3p: dealt');
   await leaveTable();
-  await page.locator('#localPlayersSel').selectOption('4');
+  await click(page, '#localPlayersCountInc');
   await fill(page, '#p4NameInput', 'Dan');
   await click(page, '#localBtn');
   await visible(page, '#curtainOverlay');

@@ -3,12 +3,13 @@
 // reads the App (ui/state.ts) and `bindHome` turns each control into an intent. The shell every
 // game's home screen shares (the tabs, the mode switch and its submenu, the code field, the resume
 // box, the start, join, share and cancel buttons) is web/shared/ui/home.ts; this file composes it
-// with what is briscola's alone: the seat count select in each mode panel (the pass-and-play
-// panel's a twin of the Online one; the match and the house rules have no controls since
-// 2026-09-25, the room's other terms being fixed) and the third and fourth name inputs, shown by
-// the seat count. The start buttons carry the raw value along (`Raw`, the keys the reducer's
-// `parseOpts` reads), and a change on the select remembers it at once (`opts/set`), so a select
-// changed without a `change` event (a test's fake) still counts. The three input writes that are
+// with what is briscola's alone: the seat count stepper in each mode panel (the shell's − n +,
+// web/shared/ui/stepper.ts, two to four; the owner, 2026-10-02: "not a dropdown but a number with
+// - and + buttons"; the pass-and-play panel's a twin of the Online one; the match and the house
+// rules have no controls since 2026-09-25, the room's other terms being fixed) and the third and
+// fourth name inputs, shown by the seat count. The start buttons carry the raw value along (`Raw`,
+// the keys the reducer's `parseOpts` reads), and each tap on − or + remembers the count at once
+// (`opts/set`), so the hidden field and the room agree before Start. The three input writes that are
 // not a paint (the saved names at `initHome`, the
 // sanitised room code as it is typed) are effects the reducer raises and main.ts runs through
 // `fillNameInputs` / `fillP2NameInput` / `setCodeInput`; the third and fourth names are painted from
@@ -36,6 +37,7 @@ import {
   type ShellIntentBuilders,
 } from '../../../../shared/ui/home.ts';
 import { localNameFor } from '../../../../shared/ui/shell.ts';
+import { bindStepper, paintStepper, type StepperSpec } from '../../../../shared/ui/stepper.ts';
 import { LOCAL_NAMES } from '../shellConfig.ts';
 import {
   HOME_TABS,
@@ -69,9 +71,11 @@ export { inviteUrl } from '../../../../shared/lib/invite.ts';
 /** The two mode panels the page carries (`${mode}ModeContent`): Online · Pass the phone. */
 const PLAY_MODES: ReadonlyArray<PlayMode> = ['online', 'local'];
 
-/** The seat count select in each panel, the same option values (design §5.8). */
-const ONLINE = { players: 'playersSel' } as const;
-const LOCAL = { players: 'localPlayersSel' } as const;
+/** The seat count stepper's hidden field in each panel (page.ts `PLAYERS`), two to four (design §5.8). */
+export const ONLINE_PLAYERS = 'playersCount';
+export const LOCAL_PLAYERS = 'localPlayersCount';
+const ONLINE_STEPPER: StepperSpec = { id: ONLINE_PLAYERS, min: 2, max: 4 };
+const LOCAL_STEPPER: StepperSpec = { id: LOCAL_PLAYERS, min: 2, max: 4 };
 /** The third and fourth pass-and-play seats' inputs (`#moreNames` shows them from three players). */
 export const EXTRA_NAME_INPUTS: Readonly<Record<ExtraSeat, string>> = {
   2: 'p3NameInput',
@@ -80,12 +84,12 @@ export const EXTRA_NAME_INPUTS: Readonly<Record<ExtraSeat, string>> = {
 
 /** The Online panel's raw value, the key `host/click` carries (`Raw`). */
 export const readHostOptions = (doc: DocumentLike): Raw => ({
-  players: readValue(requireId(doc, ONLINE.players)),
+  players: readValue(requireId(doc, ONLINE_PLAYERS)),
 });
 
 /** The pass-and-play panel's seat count under its `local*` key. */
 export const readLocalSeats = (doc: DocumentLike): Raw => ({
-  localPlayers: readValue(requireId(doc, LOCAL.players)),
+  localPlayers: readValue(requireId(doc, LOCAL_PLAYERS)),
 });
 
 /** What `#localBtn` carries beside the first two names: the seat count and the third and fourth names (the reducer seats the first `seatCount`). */
@@ -96,14 +100,14 @@ export const readLocalOptions = (doc: DocumentLike): Raw => ({
 });
 
 /**
- * The room's seat count into both panels' selects (written only when it differs, so an open
- * select is left alone): one count, the Online table's and pass-and-play's alike (D3; the N-seat
+ * The room's seat count into both panels' steppers (the number, the hidden field, − disabled at
+ * two and + at four): one count, the Online table's and pass-and-play's alike (D3; the N-seat
  * lobby lands with docs/design/n-seat-sessions.md §7, so three and four open online too).
  */
 const paintOptions = (doc: DocumentLike, app: App): void => {
   const o = app.shell.opts;
-  setValue(requireId(doc, ONLINE.players), String(o.seatCount));
-  setValue(requireId(doc, LOCAL.players), String(o.seatCount));
+  paintStepper(doc, ONLINE_STEPPER, o.seatCount);
+  paintStepper(doc, LOCAL_STEPPER, o.seatCount);
   // The third and fourth seats' inputs show with the count, holding the names as last read or
   // typed, or the seat's default marked for the first-tap clear (shellConfig.ts LOCAL_NAMES: the
   // owner's Sandro and Grant), as the shared fill marks the first two seats.
@@ -161,13 +165,13 @@ const SHELL_INTENTS: ShellIntentBuilders<Intent, HomeTab, Raw> = {
   renameClick: (name) => ({ type: 'name/rename', name }),
 };
 
-/** Each panel's seat count is remembered as it changes; the third and fourth names are remembered as typed. */
+/** Each panel's seat count is remembered as it steps; the third and fourth names are remembered as typed. */
 const bindOptions = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
-  listenId(doc, ONLINE.players, 'change', () => {
-    dispatch({ type: 'opts/set', raw: readHostOptions(doc) });
+  bindStepper(doc, ONLINE_STEPPER, (n) => {
+    dispatch({ type: 'opts/set', raw: { players: String(n) } });
   });
-  listenId(doc, LOCAL.players, 'change', () => {
-    dispatch({ type: 'opts/set', raw: readLocalSeats(doc) });
+  bindStepper(doc, LOCAL_STEPPER, (n) => {
+    dispatch({ type: 'opts/set', raw: { localPlayers: String(n) } });
   });
   SPEED_SELECTS.forEach((id) => {
     listenId(doc, id, 'change', () => {
