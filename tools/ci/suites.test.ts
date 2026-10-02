@@ -194,6 +194,7 @@ describe('every test file belongs to exactly one suite', () => {
       'rps',
       'uno',
       'flip7',
+      'hive',
       'site',
     ]);
     expect(JOBS).toEqual([
@@ -205,11 +206,12 @@ describe('every test file belongs to exactly one suite', () => {
       'e2e-rps',
       'e2e-uno',
       'e2e-flip7',
+      'e2e-hive',
       'e2e-site',
     ]);
     // The game suites are the matrix jobs' values: each has both halves (the unit script and the
     // e2e script the two jobs run), in job order; the reaction game, a solo page, rides them too.
-    // An engine-only game (ENGINE_ONLY: Hive's engine before its page) has the unit half alone.
+    // An engine-only game (ENGINE_ONLY; none since Hive's page row) has the unit half alone.
     expect(GAME_SUITES).toEqual([
       'gin',
       'fidice',
@@ -226,7 +228,7 @@ describe('every test file belongs to exactly one suite', () => {
         expect(E2E_SUITES, game).toContain(game);
       },
     );
-    ENGINE_ONLY.forEach((game) => {
+    (ENGINE_ONLY as ReadonlyArray<Suite>).forEach((game) => {
       expect(SUITES[game].e2e, game).toBeUndefined();
     });
     // The browser suite is the only one `npm test` leaves out, the built one the only one that builds.
@@ -241,24 +243,30 @@ describe('every test file belongs to exactly one suite', () => {
     expect(SUITES.gin.e2e).toStrictEqual({
       files: ['**/gin-*.spec.ts', '**/shell-*.spec.ts'],
       tag: '@gin-rummy',
-      otherTags: ['@fidice', '@backgammon', '@briscola'],
+      otherTags: ['@fidice', '@backgammon', '@briscola', '@hive'],
     });
     // Fidice's own spec (e2e/fidice-online.spec.ts, the N-seat table) beside the eight shell specs,
     // a shell game since M5 of docs/design/fidice-shell-adoption.md.
     expect(SUITES.fidice.e2e).toStrictEqual({
       files: ['**/fidice-*.spec.ts', '**/shell-*.spec.ts'],
       tag: '@fidice',
-      otherTags: ['@gin-rummy', '@backgammon', '@briscola'],
+      otherTags: ['@gin-rummy', '@backgammon', '@briscola', '@hive'],
     });
     expect(SUITES.backgammon.e2e).toStrictEqual({
       files: ['**/backgammon-*.spec.ts', '**/shell-*.spec.ts'],
       tag: '@backgammon',
-      otherTags: ['@gin-rummy', '@fidice', '@briscola'],
+      otherTags: ['@gin-rummy', '@fidice', '@briscola', '@hive'],
     });
     expect(SUITES.briscola.e2e).toStrictEqual({
       files: ['**/briscola-*.spec.ts', '**/shell-*.spec.ts'],
       tag: '@briscola',
-      otherTags: ['@gin-rummy', '@fidice', '@backgammon'],
+      otherTags: ['@gin-rummy', '@fidice', '@backgammon', '@hive'],
+    });
+    // Hive's own spec (e2e/hive.spec.ts, pass the phone through the shell page) beside the shell specs.
+    expect(SUITES.hive.e2e).toStrictEqual({
+      files: ['**/hive.spec.ts', '**/shell-*.spec.ts'],
+      tag: '@hive',
+      otherTags: ['@gin-rummy', '@fidice', '@backgammon', '@briscola'],
     });
     // A solo page's e2e half is its own specs alone: no shared spec, no tag.
     expect(SUITES.rps.e2e).toStrictEqual({ files: ['**/rps.spec.ts'], otherTags: [] });
@@ -272,7 +280,7 @@ describe('every test file belongs to exactly one suite', () => {
         ...ENGINE_ONLY,
       ].sort(),
     );
-    ENGINE_ONLY.forEach((game) => {
+    (ENGINE_ONLY as ReadonlyArray<Suite>).forEach((game) => {
       expect(
         FILES.some((f) => f.startsWith(`web/games/${game}/`)),
         game,
@@ -588,7 +596,8 @@ const INCLUDE_BEFORE: ReadonlyArray<string> = [
   'web/games/uno/src/ui/state.ts',
   'web/games/flip7/src/engine/**/*.ts',
   'web/games/flip7/src/ui/state.ts',
-  'web/games/hive/src/engine/**/*.ts',
+  // Hive's include covers its src/ since its page row.
+  'web/games/hive/src/**/*.ts',
   'web/shared/lib/**/*.ts',
   'web/shared/edge/**/*.ts',
   'web/shared/net/**/*.ts',
@@ -767,11 +776,16 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
   ["the reaction game's own spec", ['e2e/rps.spec.ts'], ['e2e-rps']],
   // An engine-only game (ENGINE_ONLY): its suite, the ratchet and the accounting; no page, no e2e.
   [
-    'the hive engine (no page yet)',
+    'the hive engine (a shell game since its page row)',
     ['web/games/hive/src/engine/engine.ts'],
-    ['hive', 'site', 'harness'],
+    ['hive', 'e2e-hive', 'site', 'e2e-site', 'harness'],
   ],
-  ['a hive test alone', ['web/games/hive/src/engine/hex.test.ts'], ['hive', 'site', 'harness']],
+  [
+    'a hive test alone',
+    ['web/games/hive/src/engine/hex.test.ts'],
+    ['hive', 'e2e-hive', 'site', 'e2e-site', 'harness'],
+  ],
+  ["Hive's own spec (a shell game's, spelled whole)", ['e2e/hive.spec.ts'], ['e2e-hive']],
   ['a briscola spec', ['e2e/briscola-local.spec.ts'], ['e2e-briscola']],
   ['a briscola style golden', ['test/fixtures/styles/briscola.390x844.json'], ['e2e-site']],
   ['a backgammon style golden', ['test/fixtures/styles/backgammon.390x844.json'], ['e2e-site']],
@@ -802,12 +816,12 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
   [
     'a shell spec',
     ['e2e/shell-home.spec.ts'],
-    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola'],
+    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola', 'e2e-hive'],
   ],
   [
     'an online spec',
     ['e2e/shell-relay.spec.ts'],
-    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola'],
+    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola', 'e2e-hive'],
   ],
   [
     'a shell spec beside a backgammon change',
@@ -818,6 +832,7 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
       'backgammon',
       'e2e-backgammon',
       'e2e-briscola',
+      'e2e-hive',
       'site',
       'e2e-site',
       'harness',
@@ -827,7 +842,7 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
   [
     "the shared shell's liveness spec",
     ['e2e/shell-liveness.spec.ts'],
-    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola'],
+    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola', 'e2e-hive'],
   ],
   ['the landing page', ['web/index.html'], ['site', 'e2e-site']],
   ['the alias stub', ['web/games/sheshbesh/index.html'], ['site', 'e2e-site']],

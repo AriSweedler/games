@@ -20,6 +20,7 @@ import { BACKGAMMON_PAGE } from '../web/games/backgammon/page.ts';
 import { BRISCOLA_PAGE } from '../web/games/briscola/page.ts';
 import { FIDICE_PAGE } from '../web/games/fidice/page.ts';
 import { GIN_PAGE } from '../web/games/gin-rummy/page.ts';
+import { HIVE_PAGE } from '../web/games/hive/page.ts';
 import {
   PARTIALS,
   renderShell,
@@ -45,6 +46,7 @@ export const PAGES: Readonly<Record<ShellGame, ShellPage>> = {
   backgammon: BACKGAMMON_PAGE,
   briscola: BRISCOLA_PAGE,
   fidice: FIDICE_PAGE,
+  hive: HIVE_PAGE,
 };
 
 /** The six partials as committed. */

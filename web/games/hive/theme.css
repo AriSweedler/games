@@ -1,0 +1,336 @@
+/* Hive's theme (docs/design/hive.md §7). The page links web/shared/styles/tokens.css, base.css
+   and shell.css before this file: the home, the waiting rooms, the sheets, the curtain and the
+   toast are the shell's rules on the shared palette, and this file adds Hive's one accent (the
+   amber of a honeycomb), the type scale the shell leaves to each theme, and the table: the names
+   strip, the SVG hive (a hexagon per cell in the side's colour with the bug's letter, lit where the
+   picked tile may go) and the two hands as trays of tiles. The base pack is deliberately plain: a
+   tile is its colour and its letter. Prettier formats this file. */
+:root {
+  --gutter: 12px;
+  /* The one accent: honey amber, on the shared felt. */
+  --accent: #d9a441;
+  --accent-dark: #a67a22;
+  --emphasis: var(--accent);
+  /* The two sides' tiles. */
+  --hive-white: #f1e9d6;
+  --hive-white-ink: #2a2418;
+  --hive-black: #2b2a2e;
+  --hive-black-ink: #f1e9d6;
+  --hive-empty: rgba(255, 255, 255, 0.06);
+  --hive-lit: rgba(217, 164, 65, 0.55);
+  --tile-w: clamp(40px, 11vw, 56px);
+}
+@media (min-width: 900px) {
+  :root {
+    --gutter: 16px;
+  }
+}
+
+/* ---------- the shell's type scale ---------- */
+/* The shared felt under every screen, gin's own (tokens.css `--felt`). */
+html,
+body {
+  background: var(--felt);
+}
+.card-box {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+/* The resume box's button in the accent, its ink light on the amber. */
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
+}
+.btn-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+h1 {
+  font-size: 2.2rem;
+  line-height: 1.1;
+  margin: 10px 0 0;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.masthead {
+  margin: 4px 0 14px;
+}
+.subtitle {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin: 4px 0 14px;
+}
+.card-box.centered,
+.centered {
+  text-align: center;
+}
+.card-box > label + *,
+.card-box > label + .row {
+  margin-top: 8px;
+}
+.card-box > .row + .row {
+  margin-top: 12px;
+}
+input[type='text'] {
+  padding: 13px 14px;
+  background: #0d2418;
+  font-size: 1.05rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-height: 48px;
+}
+label {
+  display: block;
+  letter-spacing: 0.06em;
+}
+.row + .btn {
+  margin-top: 10px;
+}
+.row.tight {
+  gap: 6px;
+}
+.row.between {
+  justify-content: space-between;
+}
+.muted {
+  color: var(--muted);
+}
+.icon-btn {
+  cursor: pointer;
+}
+.room-code {
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  margin: 6px 0 10px;
+}
+.tab-btn,
+.mode-btn {
+  min-height: 44px;
+  cursor: pointer;
+}
+.tab-btn.active {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.rules-list li {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+.sheet-title {
+  font-weight: 700;
+}
+.sheet .btn-block + .btn-block {
+  margin-top: 8px;
+}
+.empty-note {
+  font-size: 0.88rem;
+  padding: 8px 0 0;
+  line-height: 1.4;
+}
+.empty-note.left {
+  text-align: left;
+}
+#guestSeatName {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: left;
+}
+#guestSeatName .row {
+  margin-top: 8px;
+}
+#guestNameNote {
+  font-size: 0.82rem;
+  padding-top: 6px;
+}
+.conn-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+.conn-dot.on {
+  background: var(--accent-dark);
+}
+.conn-dot.off {
+  background: var(--danger);
+}
+
+/* ---------- the table ---------- */
+#tableScreen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100%;
+}
+#tableScreen.hidden {
+  display: none;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.names-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  min-width: 0;
+  flex: 1;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.names-strip .vs {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+/* The board: the SVG fills the width and takes the height the hands leave it. */
+.board {
+  flex: 1;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.board svg.hive {
+  width: 100%;
+  height: 100%;
+  max-height: 60vh;
+  touch-action: manipulation;
+}
+.hex polygon {
+  fill: var(--hive-empty);
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 0.5;
+}
+.hex.w polygon {
+  fill: var(--hive-white);
+  stroke: #cbbf9f;
+}
+.hex.b polygon {
+  fill: var(--hive-black);
+  stroke: #57555c;
+}
+.hex.lit polygon {
+  fill: var(--hive-lit);
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+.hex.lit.w polygon,
+.hex.lit.b polygon {
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+.hex.picked polygon {
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+.hex.empty {
+  cursor: pointer;
+}
+.hex.w,
+.hex.b {
+  cursor: pointer;
+}
+.hex .letter {
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  font-family: inherit;
+}
+.hex.w .letter {
+  fill: var(--hive-white-ink);
+}
+.hex.b .letter {
+  fill: var(--hive-black-ink);
+}
+.hex .badge {
+  font-size: 5px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: var(--accent);
+  pointer-events: none;
+}
+/* The hands: one tray a side, five tiles each with the count left; the side to move is lit. */
+.hand {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-radius: 10px;
+}
+.hand.turn {
+  box-shadow: inset 0 0 0 1px rgba(217, 164, 65, 0.45);
+}
+.hand-tile {
+  position: relative;
+  width: var(--tile-w);
+  height: var(--tile-w);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0;
+}
+.hand-tile.w {
+  background: var(--hive-white);
+  color: var(--hive-white-ink);
+}
+.hand-tile.b {
+  background: var(--hive-black);
+  color: var(--hive-black-ink);
+}
+.hand-tile:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.hand-tile.spent {
+  opacity: 0.2;
+}
+.hand-tile.playable {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.hand-tile.picked {
+  box-shadow: 0 0 0 3px var(--accent);
+  transform: translateY(-3px);
+}
+.hand-tile .count {
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #1b1408;
+  font-size: 0.72rem;
+  line-height: 18px;
+  text-align: center;
+  padding: 0 4px;
+}
+.status-line {
+  text-align: center;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  margin: 0;
+  min-height: 1.3em;
+  color: var(--muted);
+}
+.controls {
+  display: flex;
+  gap: 8px;
+}
+.result-note {
+  margin: 6px 0 14px;
+  color: var(--muted);
+}

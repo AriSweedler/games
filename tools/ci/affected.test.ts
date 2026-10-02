@@ -71,6 +71,7 @@ describe('the three formats over a table of diffs', () => {
       'e2e-rps=false',
       'e2e-uno=false',
       'e2e-flip7=false',
+      'e2e-hive=false',
       'e2e-site=true',
       'games=["gin"]',
       'e2e-games=["gin"]',
@@ -80,7 +81,7 @@ describe('the three formats over a table of diffs', () => {
       ...JOBS.map((job) => `${job}=true`),
       // Hive's engine has no page yet (ENGINE_ONLY): the unit list carries it, the e2e list not.
       'games=["gin","fidice","backgammon","briscola","rps","uno","flip7","hive"]',
-      'e2e-games=["gin","fidice","backgammon","briscola","rps","uno","flip7"]',
+      'e2e-games=["gin","fidice","backgammon","briscola","rps","uno","flip7","hive"]',
       'everything=true',
     ]);
     expect(formatGithub(docsOnly).split('\n')).toEqual([
@@ -105,10 +106,10 @@ describe('the three formats over a table of diffs', () => {
       games: GAME_SUITES,
       'e2e-games': GAME_SUITES.filter((g) => !(ENGINE_ONLY as ReadonlyArray<string>).includes(g)),
     });
-    // An engine-only game is on the unit side alone.
+    // Hive, a shell game since its page row, is on both sides (it was the engine-only case).
     expect(matrices(reportFor(['web/games/hive/src/engine/engine.ts']).jobs)).toEqual({
       games: ['hive'],
-      'e2e-games': [],
+      'e2e-games': ['hive'],
     });
     expect(matrices(docsOnly.jobs)).toEqual({ games: [], 'e2e-games': [] });
     expect(matrices(nothing.jobs)).toEqual({ games: [], 'e2e-games': [] });
@@ -158,6 +159,7 @@ describe('the three formats over a table of diffs', () => {
         'e2e-rps': false,
         'e2e-uno': false,
         'e2e-flip7': false,
+        'e2e-hive': false,
         'e2e-site': true,
       },
       games: ['gin'],

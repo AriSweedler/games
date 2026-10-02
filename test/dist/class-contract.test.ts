@@ -26,9 +26,11 @@ const names = (rows: ReadonlyArray<Row>): ReadonlyArray<string> => rows.flatMap(
 /**
  * How many class names the built CSS must yield; the per-game TypeScript and markup floors are
  * each game's `contractFloors` row in tools/games.ts (why a floor: so an extraction that silently
- * finds nothing fails here rather than passing the two orphan tests vacuously).
+ * finds nothing fails here rather than passing the two orphan tests vacuously). Hive's one-screen
+ * table styles the fewest (80 at its shell registration, the shared sheets included), so the
+ * floor sits under it.
  */
-const CSS_FLOOR = 100;
+const CSS_FLOOR = 75;
 /** Rows with a `Toggled by` and no `Styled in`: TS names the class, no rule is expected. */
 const behaviourOnly = (rows: ReadonlyArray<Row>): ReadonlyArray<Row> =>
   rows.filter((r) => r.toggledBy !== '' && r.styledIn === '');

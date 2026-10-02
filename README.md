@@ -18,6 +18,7 @@ pages got here.
 | Fidice (one-cup liar's dice) | https://arisweedler.github.io/games/games/fidice/     | https://games.sweedler.com/fidice/                                               | `web/games/fidice/`     |
 | Sheshbesh (backgammon)       | https://arisweedler.github.io/games/games/backgammon/ | https://games.sweedler.com/backgammon/ and https://games.sweedler.com/sheshbesh/ | `web/games/backgammon/` |
 | Briscola                     | https://arisweedler.github.io/games/games/briscola/   | https://games.sweedler.com/briscola/                                             | `web/games/briscola/`   |
+| Hive                         | https://arisweedler.github.io/games/games/hive/       | https://games.sweedler.com/hive/                                                 | `web/games/hive/`       |
 | Rock Paper Scissors          | https://arisweedler.github.io/games/games/rps/        | https://games.sweedler.com/rps/                                                  | `web/games/rps/`        |
 | UNO                          | https://arisweedler.github.io/games/games/uno/        | https://games.sweedler.com/uno/                                                  | `web/games/uno/`        |
 | Flip 7                       | https://arisweedler.github.io/games/games/flip7/      | https://games.sweedler.com/flip7/                                                | `web/games/flip7/`      |
