@@ -5,7 +5,7 @@
 // stepper (web/shared/markup/stepper.ts; the owner, 2026-10-02), the looks the shell's classes with
 // UNO's accent alone (theme.css). The residue here (`blocks`) is the head, the table (the seats with
 // their card counts, the names strip, the pile, the colour in play, the hand, the controls) and the
-// result sheet; the Open Graph card is assets/splash.svg rendered to web/public/games/uno/splash.png.
+// result sheet (the winner, Play again); the Open Graph card is assets/splash.svg rendered to web/public/games/uno/splash.png.
 import type {
   ShellBlocks,
   ShellCopy,
@@ -76,7 +76,7 @@ const blocks: ShellBlocks = {
     <meta property="og:title" content="UNO" />
     <meta
       property="og:description"
-      content="UNO for two to four: pass one phone, or open a table online and send the link."
+      content="UNO for two to twelve: pass one phone, or open a table online and send the link."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://games.sweedler.com/uno/" />
@@ -88,7 +88,7 @@ const blocks: ShellBlocks = {
     <meta name="twitter:title" content="UNO" />
     <meta
       name="twitter:description"
-      content="UNO for two to four: pass one phone, or open a table online and send the link."
+      content="UNO for two to twelve: pass one phone, or open a table online and send the link."
     />
     <meta name="twitter:image" content="https://games.sweedler.com/uno/splash.png" />
     <meta charset="UTF-8" />
@@ -96,7 +96,7 @@ const blocks: ShellBlocks = {
     <title>UNO</title>
     <meta
       name="description"
-      content="UNO for two to four: match the colour or the number, first to empty a hand takes the points."
+      content="UNO for two to twelve: match the colour or the number; the first to empty a hand wins."
     />
     <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
     <link rel="alternate icon" href="../../shared/favicon.ico" />
@@ -186,12 +186,13 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
   curtainIcon: '',
   curtainExtra: '',
   sheetsBefore: `
-    <!-- RESULT: the round's or the game's end over the table, everyone's scores; Next round deals again. -->
+    <!-- RESULT: one round is the game (the owner, 2026-10-02): the winner over the table, the cards
+         every other seat still held; Play again deals the same seats anew. -->
     <div id="resultOverlay" class="overlay hidden">
       <div class="sheet centered">
-        <div class="sheet-title" id="rsTitle">Round over</div>
+        <div class="sheet-title" id="rsTitle">Game over</div>
         <ul class="score-list" id="rsScore"></ul>
-        <button class="btn btn-go btn-block" id="rsNextBtn">Next round</button>
+        <button class="btn btn-go btn-block" id="rsAgainBtn">Play again</button>
         <button class="btn btn-ghost btn-block btn-sm" id="rsLeaveBtn">Leave the table</button>
       </div>
     </div>`,

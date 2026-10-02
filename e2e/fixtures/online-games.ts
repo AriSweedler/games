@@ -524,15 +524,15 @@ const uno: ShellDriver = {
     return table;
   },
   expectOpening: async (host, guest) => {
-    // Both tables agree on the deal: the host is seat 0 and the guest seat 1, round 1, nobody
-    // scored, the same card on the pile; each hand is the count the other table shows for it.
+    // Both tables agree on the deal: the host is seat 0 and the guest seat 1, nobody out yet, the
+    // same card on the pile; each hand is the count the other table shows for it.
     const opening = await requireUno(host);
-    expect(opening).toMatchObject({ round: 1, seat: 0, scores: [0, 0], winner: null });
+    expect(opening).toMatchObject({ seat: 0, winner: null });
     expect(opening.names).toEqual([...ONLINE_NAMES]);
     expect(['turn', 'color']).toContain(opening.phase);
     await expect.poll(() => unoSnapshot(guest)).toBe(unoKey(opening));
     const theirs = await requireUno(guest);
-    expect(theirs).toMatchObject({ round: 1, seat: 1, turn: opening.turn, top: opening.top });
+    expect(theirs).toMatchObject({ seat: 1, turn: opening.turn, top: opening.top });
     expect(opening.hand).toHaveLength(opening.counts[0] ?? -1);
     expect(theirs.hand).toHaveLength(opening.counts[1] ?? -1);
     await expect(host.locator('#hand .tile')).toHaveCount(opening.hand.length);
@@ -540,9 +540,9 @@ const uno: ShellDriver = {
     await expect(host.locator('#topCard')).toBeVisible();
     await expect(guest.locator('#topCard')).toBeVisible();
   },
-  // The host's save carries the room's one term (protocol.ts `Opts`) and the game at round 1.
-  hostSave: { seatCount: 2, game: { game: { round: 1 } } },
-  localSave: { game: { game: { round: 1 } } },
+  // The host's save carries the room's one term (protocol.ts `Opts`) and the game, nobody out yet.
+  hostSave: { seatCount: 2, game: { game: { phase: { kind: 'turn' } } } },
+  localSave: { game: { game: { direction: 1 } } },
   table: '#hand .tile',
   curtainOffer: {
     title:
@@ -559,15 +559,15 @@ const uno: ShellDriver = {
     },
   },
   // The Rules and About copy (ui/rules.ts GLOSSARY): "wild" in the About copy lands on the Wild
-  // rule; the goal's "score" names the points, the points' "wilds" the Wild rule.
+  // rule; the turn's "wild" names the Wild rule, Draw Two's "draws" the turn's.
   glossary: {
     aboutTerm: 'wild',
     aboutRule: 'wild',
-    innerFrom: 'goal',
-    innerTo: 'points',
+    innerFrom: 'turn',
+    innerTo: 'wild',
     deepLink: 'goal',
-    overlayFrom: 'points',
-    overlayTo: 'wild',
+    overlayFrom: 'draw2',
+    overlayTo: 'turn',
     openRulesOverTable: async (page, url, viewport) => {
       await unoStartLocal(page, url, viewport);
       await unoReveal(page);

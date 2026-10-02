@@ -22,19 +22,19 @@ export const requireView = async (page: Page): Promise<View> => {
   return view;
 };
 
-/** What every seat's table agrees on (the hands are private): the round, the pile, whose turn and which way, the counts, the scores. */
+/** What every seat's table agrees on (the hands are private): the deal, the pile, whose turn and which way, the counts, the winner. */
 export const unoKey = (v: View | null): string =>
   v === null
     ? 'none'
     : JSON.stringify([
-        v.round,
+        v.startedAt,
         v.phase,
         v.turn,
         v.direction,
         v.top.id,
         v.color,
         v.counts,
-        v.scores,
+        v.winner,
         v.drawCount,
       ]);
 
@@ -103,7 +103,7 @@ export const unoStep = async (page: Page): Promise<View> => {
 /** Steps (`unoStep`) until the turn is no longer `turn`'s, at most `left` of them. */
 const playUntilMoved = async (page: Page, turn: number, left: number): Promise<void> => {
   const v = await requireView(page);
-  if (v.turn !== turn || v.phase === 'roundOver' || v.phase === 'gameOver') return;
+  if (v.turn !== turn || v.phase === 'gameOver') return;
   if (left === 0) throw new Error(`seat ${String(turn)} kept the turn: ${v.note}`);
   await unoStep(page);
   await playUntilMoved(page, turn, left - 1);

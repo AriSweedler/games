@@ -52,13 +52,16 @@ turn comes straight back.
 
 ## 5. Going out
 
-The round ends the moment a hand is empty. The winner scores every card left in the other hands.
+The game ends the moment a hand is empty: its player wins. Going out on an action card or a wild
+wins before the card acts (no colour is named, nobody draws).
 
-## 6. Scoring
+## 6. One round is the game
 
-Number cards their face value; Skip, Reverse and Draw Two 20 each; Wild and Wild Draw Four 50
-each. The first player to 500 points wins the game (`DEFAULT_TARGET`). A whole deck is worth
-1,240 points: 360 in numbers, 480 in actions, 400 in wilds.
+The owner, 2026-10-02: "UNO should only be single round games. NOT like ginrummy. But more like
+briscola". There are no points and no target: the first empty hand wins, the result sheet names
+the winner and the cards every other seat still held, and Play again (the engine's `again`)
+deals a fresh game for the same seats. The printed rules' scoring (number cards their face, actions
+20, wilds 50, first to 500) is not played.
 
 ## 7. The MVP: pass-and-play on one phone
 
@@ -76,13 +79,28 @@ card-style packs were.
 
 Not in the MVP (follow-ups, each a row): the UNO call and its two-card penalty when caught; the
 Wild Draw Four challenge (four cards to the bluffer, six to a wrong challenger); house rules
-(stacking, 7-0, jump-in); the shared shell with online seats; sound; persistence of a game in
-progress across a reload.
+(stacking, 7-0, jump-in). The shared shell with online seats, sound and a saved game came with §9.
 
 ## 8. Tests
 
 `npm run test:uno`: the deck's composition and points, the matching rule, every action card from
 hand-built positions, the opener's four special cases found by seed, drawing with and without a
-playable card, the reshuffle, the round and game ends, and a bot that plays whole games of two,
-three and five seats to 200 points with the card count checked at every step. The page reducer's
-screens are pinned in `state.test.ts`; `e2e/uno.spec.ts` plays a seeded game through the page.
+playable card, the reshuffle, the game's end and Play again, and a bot that plays whole games of
+two, three, five and twelve seats to the first empty hand with the card count checked at every
+step. The shell adapter, the wire and the reducer are pinned in `view.test.ts`, `protocol.test.ts`,
+`shellConfig.test.ts` and `state.test.ts`; `e2e/uno.spec.ts` plays a seeded game through the page
+and the shell specs (`@uno`) drive its home, curtain, handoff and online seats.
+
+## 9. On the shared shell: pass the phone or play online
+
+Since uno-shell UNO is a shell game (tools/games.ts `SHELL_GAMES`, `REGISTRY.uno`, `SHELL.uno`),
+no longer a solo page, at the same `/uno/`: page.ts composed by tools/shell-markup.ts, the shell's
+home (Online or Pass the phone, the host and join cards, the Rules tab), the shell's curtain, and
+N-seat online sessions (n-seat-sessions.md) for 2 to 12 players (the owner, 2026-10-02: "uno caps
+out at 12"; 12 × 7 = 84 of 108 cards leaves a stock of 23). The player count is the shell's shared
+stepper (web/shared/markup/stepper.ts, web/shared/ui/stepper.ts), not a select. The host is the
+dealer: it holds the whole state (src/engine/view.ts `State`), applies every seat's action
+(`applyAction`, which refuses a play out of turn) and sends each seat its own `View`: its own hand,
+everyone's card count, never another hand. A Wild's colour is named by the player who played it.
+The Rules tab is seven one-line rules (ui/rules.ts) and fits one phone screen at 390 × 844. The UNO
+call and the Wild Draw Four challenge stay out (row uno-rules-extras).

@@ -1,7 +1,8 @@
 // The Rules tab and the in-game rules sheet (docs/design/uno.md §9; the owner, 2026-10-02: "the
 // ruleset to teach players should be as short as possible, ideally fitting on 1 screen"): the
-// goal, the turn and the special cards, one line each; the long form is docs/design/uno.md. The
-// About copy names the page. Both are static, filled once at boot (render.ts `renderRules`).
+// goal, the turn and the special cards, one line each; one round is the game, so no points (the
+// owner: "UNO should only be single round games"); the long form is docs/design/uno.md. The About
+// copy names the page. Both are static, filled once at boot (render.ts `renderRules`).
 import {
   linkJargon,
   rulesListHtml,
@@ -10,25 +11,24 @@ import {
 } from '../../../../shared/ui/glossary.ts';
 
 /**
- * The words linked to their rule (docs/design/glossary-links.md): "wild" in the About copy opens
- * the Wild rule, the goal's "score" the points, the points' "wilds" the Wild rule.
+ * The words linked to their rule (docs/design/glossary-links.md): "wild" in the About copy and the
+ * turn's rule opens the Wild rule, "draws" in the Draw Two and Wild Draw Four rules the turn's.
  */
 export const GLOSSARY: Glossary = [
   { rule: 'wild', terms: ['wild', 'wilds'] },
-  { rule: 'points', terms: ['score'] },
-  { rule: 'turn', terms: ['matches'] },
+  { rule: 'turn', terms: ['draws'] },
 ];
 
 export const RULES: ReadonlyArray<RuleItem> = [
   {
     id: 'goal',
     heading: 'Goal',
-    body: 'Empty your hand first. You score the cards left in the other hands; 500 wins.',
+    body: 'Empty your hand to win. One round is the game.',
   },
   {
     id: 'turn',
     heading: 'Your turn',
-    body: 'Play a card that matches the top card by colour, number or symbol. Can’t? Draw one; play it if it matches, or keep it and pass.',
+    body: 'Play a card that matches the top card by colour, number or symbol, or a wild. Can’t? Draw one; play it if it matches, or keep it and pass.',
   },
   { id: 'skip', heading: 'Skip ⊘', body: 'The next player misses a turn.' },
   { id: 'reverse', heading: 'Reverse ⇄', body: 'Play turns around (with two, you go again).' },
@@ -38,11 +38,6 @@ export const RULES: ReadonlyArray<RuleItem> = [
     id: 'wild4',
     heading: 'Wild Draw Four +4',
     body: 'Name the colour; the next player draws four and misses a turn.',
-  },
-  {
-    id: 'points',
-    heading: 'Points',
-    body: 'Number cards their face, actions 20, wilds 50.',
   },
 ];
 

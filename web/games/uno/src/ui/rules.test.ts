@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { RULES, aboutHtml, rulesItemsHtml } from './rules.ts';
 
 describe('the rules', () => {
-  test('short enough for one phone screen: eight one-line rules, under 120 words in all', () => {
+  test('short enough for one phone screen: seven one-line rules, no points, under 100 words in all', () => {
     expect(RULES.map((r) => r.id)).toEqual([
       'goal',
       'turn',
@@ -12,17 +12,18 @@ describe('the rules', () => {
       'draw2',
       'wild',
       'wild4',
-      'points',
     ]);
     const words = RULES.flatMap((r) => `${r.heading} ${r.body}`.split(/\s+/));
-    expect(words.length).toBeLessThan(120);
+    expect(words.length).toBeLessThan(100);
+    expect(RULES.find((r) => r.id === 'goal')?.body).toContain('Empty your hand to win');
+    expect(words.join(' ')).not.toMatch(/points|score|500/);
   });
 
-  test('the jargon links: the goal to the points, the points to the wild, the About to the wild', () => {
+  test('the jargon links: the turn to the wild, Draw Two to the turn, the About to the wild', () => {
     const html = rulesItemsHtml();
     expect(html).toContain('<li id="rule-goal">');
-    expect(html).toMatch(/id="rule-goal">.*data-rule="points"/);
-    expect(html).toMatch(/id="rule-points">.*data-rule="wild"/);
+    expect(html).toMatch(/id="rule-turn">.*data-rule="wild"/);
+    expect(html).toMatch(/id="rule-draw2">.*data-rule="turn"/);
     expect(aboutHtml()).toContain('data-rule="wild"');
   });
 });

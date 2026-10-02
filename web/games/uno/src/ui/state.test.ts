@@ -62,10 +62,7 @@ const position = (over: Partial<Game> = {}): State => ({
     turn: 0,
     direction: 1,
     phase: { kind: 'turn' },
-    scores: [0, 0, 0],
-    target: 500,
-    round: 1,
-    note: 'Round 1: Ann starts.',
+    note: 'Ann starts.',
     ...over,
   },
 });
@@ -167,14 +164,18 @@ describe('pass and play', () => {
     expect(named.app.table.curtain).toBe(1);
   });
 
-  test('the round’s end is everyone’s: no curtain; Next round deals and curtains its first player', () => {
+  test('one round is the game: the first empty hand wins, under no curtain; Play again deals anew and curtains its first player', () => {
     const app = atPosition({ hands: [[R7], [G9, B2], [B2, G9]] });
     const out = run(app, { type: 'act', action: { type: 'play', id: 'r7a' } });
-    expect(out.app.shell.view?.phase).toBe('roundOver');
+    expect(out.app.shell.view?.phase).toBe('gameOver');
+    expect(out.app.shell.view?.winner).toBe(0);
     expect(out.app.table.curtain).toBeNull();
     expect(out.effects).toContainEqual({ type: 'fx', cue: 'win' });
-    const next = run(out.app, { type: 'act', action: { type: 'nextRound' } });
-    expect(next.app.shell.game?.game.round).toBe(2);
+    expect(out.effects).toContainEqual(expect.objectContaining({ type: 'recordGame' }));
+    const next = run(out.app, { type: 'act', action: { type: 'again' } });
+    expect(next.app.shell.game?.game.names).toEqual(['Ann', 'Bob', 'Cy']);
+    expect(next.app.shell.game?.startedAt).toBe(NOW);
+    expect(next.app.shell.view?.phase).not.toBe('gameOver');
     expect(next.app.shell.revealed).toBeNull();
     expect(next.app.table.curtain).not.toBeNull();
   });
@@ -306,7 +307,7 @@ describe('the cues', () => {
     const played = viewFor(position({ discard: [R5, R7] }), 0);
     expect(cuesBetween(a, played)).toEqual(['play']);
     expect(cuesBetween(a, viewFor(position({ draw: [G9] }), 0))).toEqual(['draw']);
-    const won = viewFor(position({ phase: { kind: 'roundOver', winner: 0, gained: 5 } }), 0);
+    const won = viewFor(position({ phase: { kind: 'gameOver', winner: 0 } }), 0);
     expect(cuesBetween(a, won)).toEqual(['win']);
     const lost = viewFor(position({ phase: { kind: 'gameOver', winner: 1 } }), 0);
     expect(cuesBetween(a, lost)).toEqual(['lose']);
@@ -323,7 +324,7 @@ describe('the labels', () => {
     expect(resumeLabel({ kind: 'local', game: position() })).toBe(
       'Resume pass & play: Ann, Bob and Cy',
     );
-    const two = position({ names: ['Ann', 'Bob'], hands: [[R7], [G9]], scores: [0, 0] });
+    const two = position({ names: ['Ann', 'Bob'], hands: [[R7], [G9]] });
     expect(resumeLabel({ kind: 'local', game: two })).toBe('Resume pass & play: Ann vs Bob');
     expect(resumeLabel({ kind: 'guest', code: 'KQZM', myName: 'Bob' })).toBe('Rejoin room KQZM');
     const host = {

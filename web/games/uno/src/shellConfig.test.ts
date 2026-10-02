@@ -75,7 +75,7 @@ describe('the options and the seats', () => {
     expect(e.over(view)).toBe(false);
     expect(UNO_SHELL.result.keyOf(view)).toBe('77');
     expect(UNO_SHELL.result.playersOf(view)).toEqual(['Ann', 'Bob', 'Cy']);
-    expect(UNO_SHELL.result.scoreOf(view)).toBe('0–0–0');
+    expect(UNO_SHELL.result.scoreOf(view)).toBe(view.counts.map(String).join('–'));
     expect(UNO_SHELL.result.winnerOf(view)).toBeNull();
     expect(UNO_SHELL.result.winnerOf({ ...view, winner: 2 })).toBe(2);
     const applied = e.apply(game, 1, { type: 'draw' }, mulberry32(1), () => 0);
