@@ -65,9 +65,17 @@ import {
   type Save,
   type Store,
 } from '../storage.ts';
-import { INITIAL_CUES, type Cue, type CueState } from './sound.ts';
+import { INITIAL_CUES, cuesBetween, type Cue, type CueState } from './sound.ts';
 
-export { DEFAULT_PLAY_MODE, HOME_TABS, INITIAL_CUES, type CueState, type HomeTab, type PlayMode };
+export {
+  DEFAULT_PLAY_MODE,
+  HOME_TABS,
+  INITIAL_CUES,
+  cuesBetween,
+  type CueState,
+  type HomeTab,
+  type PlayMode,
+};
 
 export const SCREENS = [
   'homeScreen',
@@ -158,21 +166,14 @@ const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
 const refuse = (app: App, message: string): Step => step(app, toast(message));
 
-/** The cues for the change from `prev` to `next`: a card played, a draw, the game won or lost. */
-export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
-  if (next.winner !== null && prev.winner === null)
-    return [next.winner === next.seat ? 'win' : 'lose'];
-  if (next.top.id !== prev.top.id) return ['play'];
-  return next.drawCount < prev.drawCount ? ['draw'] : [];
-};
-
 /** One key per position, so a re-sent frame plays nothing. */
 const cueKey = (v: View): string =>
   `${String(v.startedAt)}:${String(v.drawCount)}:${v.top.id}:${String(v.turn)}:${v.phase}`;
 
 /**
  * The state side of a paint: the table is the screen while a view is held; the cues come from the
- * change since `prev`, once per position, and "your turn" when an online turn lands on my seat.
+ * change since `prev` (sound.ts `cuesBetween`: the card's kind, the penalty, the deal), once per
+ * position, and "your turn" when an online turn lands on my seat.
  */
 const rendered = (app: App, prev: View | null): Step => {
   const view = app.shell.view;

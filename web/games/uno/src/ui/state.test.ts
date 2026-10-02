@@ -45,6 +45,9 @@ const R7 = card('r7a', 'red', 'number', 7);
 const B2 = card('b2a', 'blue', 'number', 2);
 const G9 = card('g9a', 'green', 'number', 9);
 const WILD = card('W1', null, 'wild', null);
+const SKIP = card('rSa', 'red', 'skip', null);
+const REV = card('rRa', 'red', 'reverse', null);
+const D2 = card('rD2a', 'red', 'draw2', null);
 
 /** Ann (seat 0) to play on a red 5; Bob and Cy wait. */
 const position = (over: Partial<Game> = {}): State => ({
@@ -331,6 +334,28 @@ describe('the cues', () => {
     const lost = viewFor(position({ phase: { kind: 'gameOver', winner: 1 } }), 0);
     expect(cuesBetween(a, lost)).toEqual(['lose']);
     expect(cuesBetween(a, a)).toEqual([]);
+  });
+
+  test('a Skip, a Reverse and a Draw Two each cue once, by their kind (sound.ts is the table)', () => {
+    const a = viewFor(position(), 0);
+    expect(cuesBetween(a, viewFor(position({ discard: [R5, SKIP], turn: 2 }), 0))).toEqual([
+      'skip',
+    ]);
+    expect(
+      cuesBetween(a, viewFor(position({ discard: [R5, REV], direction: -1, turn: 2 }), 0)),
+    ).toEqual(['reverse']);
+    // The two cards land in Bob's hand: the table hears the sting, Bob the penalty.
+    const d2 = position({
+      discard: [R5, D2],
+      hands: [
+        [R7, B2, WILD],
+        [G9, B2, R7, G9],
+        [B2, G9],
+      ],
+      turn: 2,
+    });
+    expect(cuesBetween(a, viewFor(d2, 0))).toEqual(['draw2']);
+    expect(cuesBetween(viewFor(position(), 1), viewFor(d2, 1))).toEqual(['penalty']);
   });
 });
 
