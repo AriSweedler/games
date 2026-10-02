@@ -4,9 +4,13 @@
 // seat's name and card count (the turn lit), the names strip (`#myName`, `#oppName`: the seat
 // after mine, `#oppDot`), the direction, the top card and the colour in play, my hand as tiles (a
 // playable one lit, the rest dimmed; nothing lit off my turn), Draw, Pass after a drawn card, the
-// colour picker for my wild, the status line, and the result sheet (one round is the game: the
+// colour picker for my wild, the UNO button while I may call (at two cards on my turn, or my
+// window still open) and Call out UNO while another seat is at one card without the call (§7;
+// both off my turn too), the status line, and the result sheet (one round is the game: the
 // winner, the cards every other seat still held, Play again). The base pack is plain tiles: a
-// colour and a glyph.
+// colour and a glyph. The hand and the pile's top are keyed slots (keyed.ts `ensureKeyed`), so a
+// repaint of the same view keeps their tiles and a flight's `arriving` survives it; the motion
+// layer (ui/motion.ts) plans its flights off the table before it repaints and runs them after.
 import {
   closestFrom,
   dataOf,
@@ -26,6 +30,7 @@ import {
 } from '../../../../shared/edge/dom.ts';
 import { RULES_SLOT_IDS } from '../../../../shared/ui/glossary.ts';
 import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
+import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
@@ -43,6 +48,7 @@ import { COLORS, type Card, type Color } from '../engine/cards.ts';
 import { cardName } from '../engine/engine.ts';
 import type { View } from '../engine/view.ts';
 import { bindHome, paintHome } from './home.ts';
+import { flyCards, planFlights, type Flight } from './motion.ts';
 import { aboutHtml, rulesItemsHtml } from './rules.ts';
 import { SCREENS, handoffLabel, listNames, type App, type Intent } from './state.ts';
 
@@ -79,12 +85,12 @@ export const COLOR_NAME: Readonly<Record<Color, string>> = {
 export const tileHtml = (card: Card, playable: boolean | null): SafeHtml =>
   safeHtml`<button class="tile${playable === null ? ' top' : playable ? ' playable' : ' dim'}" type="button" data-id="${card.id}" data-color="${card.color ?? 'wild'}" data-kind="${card.kind}" aria-label="${cardName(card)}"><span>${glyphOf(card)}</span></button>`;
 
-/** The seats strip: every seat's name and card count, the turn's seat lit, mine marked. */
+/** The seats strip: every seat's name and card count (`data-count`, read back by ui/motion.ts), the turn's seat lit, mine marked. */
 export const seatsHtml = (v: View): string =>
   v.names
     .map(
       (name, seat) =>
-        safeHtml`<li class="seat${seat === v.turn ? ' current' : ''}${seat === v.seat ? ' mine' : ''}" data-seat="${String(seat)}"><span class="seat-name">${name}</span><span class="seat-count">${String(v.counts[seat] ?? 0)}</span></li>`
+        safeHtml`<li class="seat${seat === v.turn ? ' current' : ''}${seat === v.seat ? ' mine' : ''}" data-seat="${String(seat)}" data-count="${String(v.counts[seat] ?? 0)}"><span class="seat-name">${name}</span><span class="seat-count">${String(v.counts[seat] ?? 0)}</span></li>`
           .markup,
     )
     .join('');
@@ -128,21 +134,24 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   setText(requireId(doc, 'oppName'), nameAt(v, (v.seat + 1) % Math.max(1, v.names.length)));
   paintConnDot(doc, 'oppDot', connDotView(app.shell));
   setText(requireId(doc, 'direction'), v.direction === 1 ? '↻' : '↺');
-  setHtml(requireId(doc, 'topCard'), tileHtml(v.top, null));
+  ensureKeyed(requireId(doc, 'topCard'), v.top.id, () => tileHtml(v.top, null).markup);
   const dot = requireId(doc, 'colorDot');
   setAttr(dot, 'data-color', v.color);
   setText(dot, COLOR_NAME[v.color]);
   setText(requireId(doc, 'drawCount'), String(v.drawCount));
   const playable = new Set(v.playable);
-  setHtml(requireId(doc, 'hand'), {
-    kind: 'safe-html',
-    markup: v.hand.map((card) => tileHtml(card, playable.has(card.id)).markup).join(''),
-  });
+  // Keyed on what the tiles show, so a repaint that changes none of it keeps them (and a flight's `arriving`).
+  const handKey = v.hand.map((card) => `${card.id}${playable.has(card.id) ? '*' : ''}`).join(',');
+  ensureKeyed(requireId(doc, 'hand'), handKey, () =>
+    v.hand.map((card) => tileHtml(card, playable.has(card.id)).markup).join(''),
+  );
   queryAllIn(requireId(doc, 'hand'), 'button').forEach((button) => {
     setDisabled(button, !playable.has(dataOf(button, 'id') ?? ''));
   });
   setDisabled(requireId(doc, 'drawBtn'), !(mine && v.phase === 'turn'));
   toggleClass(requireId(doc, 'passBtn'), 'hidden', !(mine && v.phase === 'drawn'));
+  toggleClass(requireId(doc, 'unoBtn'), 'hidden', !v.canUno);
+  toggleClass(requireId(doc, 'callOutBtn'), 'hidden', !v.canCallOut);
   toggleClass(requireId(doc, 'colorPicker'), 'hidden', !(mine && v.phase === 'color'));
   setText(requireId(doc, 'statusText'), statusText(v));
   const over = v.phase === 'gameOver';
@@ -202,7 +211,10 @@ export const paint = (doc: PageLike, app: App): void => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
   paintShellHandoff(doc, game !== null && game.game.names.length === 2 ? handoffLabel(game) : null);
   const v = app.shell.view;
+  // Planned before the table repaints: my played tile's slot goes with it (ui/motion.ts).
+  const flights: ReadonlyArray<Flight> = v === null ? [] : planFlights(doc, v);
   if (v !== null) paintTable(doc, app, v);
+  flyCards(doc, flights);
   paintOverlays(doc, app);
 };
 
@@ -232,6 +244,8 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
     [
       ['drawBtn', { type: 'act', action: { type: 'draw' } }],
       ['passBtn', { type: 'act', action: { type: 'pass' } }],
+      ['unoBtn', { type: 'act', action: { type: 'uno' } }],
+      ['callOutBtn', { type: 'act', action: { type: 'callOut' } }],
       ['rsAgainBtn', { type: 'act', action: { type: 'again' } }],
       ['rsLeaveBtn', { type: 'leave/request' }],
       ['leaveBtn', { type: 'leave/request' }],

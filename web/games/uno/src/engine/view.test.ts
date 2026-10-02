@@ -45,6 +45,7 @@ const table = (over: Partial<Game> = {}): State => ({
     turn: 0,
     direction: 1,
     phase: { kind: 'turn' },
+    uno: null,
     note: 'Ann starts.',
     ...over,
   },
@@ -80,6 +81,32 @@ describe('applyAction', () => {
     expect(res.ok && res.value.game.turn).toBe(1);
     expect(res.ok && res.value.startedAt).toBe(42);
   });
+
+  test('the UNO call and the call-out take the sender’s seat and come off the turn; a refused call is the error', () => {
+    const open = table({
+      hands: [[R7], [G9], [B2, G9]],
+      turn: 1,
+      uno: { seat: 0, called: false, open: true },
+    });
+    expect(applyAction(open, 2, { type: 'draw' }, mulberry32(1), () => 0)).toEqual({
+      ok: false,
+      error: NOT_YOUR_TURN_MSG,
+    });
+    const said = applyAction(open, 0, { type: 'uno' }, mulberry32(1), () => 0);
+    expect(said.ok && said.value.game.uno).toEqual({ seat: 0, called: true, open: true });
+    expect(said.ok && said.value.startedAt).toBe(42);
+    const caught = applyAction(open, 2, { type: 'callOut' }, mulberry32(1), () => 0);
+    expect(caught.ok && caught.value.game.hands[0]).toHaveLength(3);
+    expect(caught.ok && caught.value.game.uno).toBeNull();
+    expect(applyAction(open, 0, { type: 'callOut' }, mulberry32(1), () => 0)).toEqual({
+      ok: false,
+      error: 'You cannot call yourself out.',
+    });
+    expect(applyAction(table(), 1, { type: 'uno' }, mulberry32(1), () => 0)).toEqual({
+      ok: false,
+      error: 'Not at one card yet.',
+    });
+  });
 });
 
 describe('viewFor', () => {
@@ -105,6 +132,23 @@ describe('viewFor', () => {
     const won = viewFor(table({ phase: { kind: 'gameOver', winner: 1 } }), 0);
     expect([won.winner, won.phase]).toEqual([1, 'gameOver']);
   });
+
+  test('the UNO window is everyone’s; the two buttons light for the seats they apply to', () => {
+    const twoLeft = table({ hands: [[R7, B2], [G9], [B2, G9]] });
+    expect(viewFor(twoLeft, 0)).toMatchObject({ uno: null, canUno: true, canCallOut: false });
+    expect(viewFor(twoLeft, 1)).toMatchObject({ canUno: false, canCallOut: false });
+    const open = table({
+      hands: [[R7], [G9], [B2, G9]],
+      turn: 1,
+      uno: { seat: 0, called: false, open: true },
+    });
+    expect(viewFor(open, 0)).toMatchObject({ uno: open.game.uno, canUno: true, canCallOut: false });
+    expect(viewFor(open, 1)).toMatchObject({ uno: open.game.uno, canUno: false, canCallOut: true });
+    expect(viewFor(open, 2).canCallOut).toBe(true);
+    const called = table({ ...open.game, uno: { seat: 0, called: true, open: true } });
+    expect(viewFor(called, 0).canUno).toBe(false);
+    expect(viewFor(called, 2).canCallOut).toBe(false);
+  });
 });
 
 describe('legalActions', () => {
@@ -126,6 +170,23 @@ describe('legalActions', () => {
     expect(legalActions(viewFor(over, 0))).toEqual([{ type: 'again' }]);
     expect(legalActions(viewFor(over, 2))).toEqual([{ type: 'again' }]);
   });
+
+  test('the UNO call joins my turn’s actions at two cards; the call-out is any other seat’s, off the turn', () => {
+    const twoLeft = table({ hands: [[R7, B2], [G9], [B2, G9]] });
+    expect(legalActions(viewFor(twoLeft, 0))).toEqual([
+      { type: 'play', id: 'r7a' },
+      { type: 'draw' },
+      { type: 'uno' },
+    ]);
+    const open = table({
+      hands: [[R7], [G9], [B2, G9]],
+      turn: 1,
+      uno: { seat: 0, called: false, open: true },
+    });
+    expect(legalActions(viewFor(open, 0))).toEqual([{ type: 'uno' }]);
+    expect(legalActions(viewFor(open, 2))).toEqual([{ type: 'callOut' }]);
+    expect(legalActions(viewFor(open, 1))).toEqual([{ type: 'draw' }, { type: 'callOut' }]);
+  });
 });
 
 describe('the decoders', () => {
@@ -145,15 +206,28 @@ describe('the decoders', () => {
       const t = table({ phase });
       expect(decodeState(viaJson(t))).toEqual({ ok: true, value: t });
     });
+    const open = table({ uno: { seat: 0, called: true, open: true } });
+    expect(decodeState(viaJson(open))).toEqual({ ok: true, value: open });
+    expect(decodeView(viaJson(viewFor(open, 1)))).toEqual({ ok: true, value: viewFor(open, 1) });
   });
 
-  test('the five intents decode; anything else is refused', () => {
+  test('a save from before the UNO call reads as no call in the air', () => {
+    const old = Object.fromEntries(Object.entries(table().game).filter(([k]) => k !== 'uno'));
+    expect(decodeState(viaJson({ game: old, startedAt: 42 }))).toEqual({
+      ok: true,
+      value: table(),
+    });
+  });
+
+  test('the seven intents decode; anything else is refused', () => {
     const intents = [
       { type: 'play', id: 'r7a' },
       { type: 'color', color: 'blue' },
       { type: 'draw' },
       { type: 'pass' },
       { type: 'again' },
+      { type: 'uno' },
+      { type: 'callOut' },
     ];
     intents.forEach((intent) => {
       expect(decodeAction(intent)).toEqual({ ok: true, value: intent });

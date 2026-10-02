@@ -77,19 +77,38 @@ The base pack is plain by design: a tile is its colour and a glyph (the digit, �
 Reverse, +2, W on a four-colour tile, +4). Packs with real art are a follow-up, as briscola's
 card-style packs were.
 
-Not in the MVP (follow-ups, each a row): the UNO call and its two-card penalty when caught; the
-Wild Draw Four challenge (four cards to the bluffer, six to a wrong challenger); house rules
-(stacking, 7-0, jump-in). The shared shell with online seats, sound and a saved game came with §9.
+Not in the MVP (follow-ups, each a row): the Wild Draw Four challenge (four cards to the bluffer,
+six to a wrong challenger); house rules (stacking, 7-0, jump-in). The shared shell with online
+seats, sound and a saved game came with §9; the UNO call came with row uno-rules-extras:
+
+**The UNO call** (the owner, 2026-10-02: "after you play a card and you have 1 left you should be
+able to hit an 'UNO' button and if you DON'T hit it then the opponent can hit the 'call out UNO'
+... button which will force you to draw cards"). The engine keeps the call as state (`Game.uno`:
+the seat it concerns, whether it has called, whether a catch may still land). A play down to one
+card opens the window for that seat; the seat may call UNO (`uno`) at two cards before its play,
+or while its window is open after it; until another seat has played or drawn, any other seat may
+call it out (`callOut`), and a seat caught without the call draws two (the standard penalty); a
+call made in time, or the next seat's play or draw, shuts the window. The last card wins outright.
+A wild played down to one card keeps the window open through its colour. On the wire the two
+intents carry no seat (n-seat-sessions.md D1): `applyAction` seats them from the sender's channel
+and lets them in off the turn. Every seat's view carries the window and its own two flags; the
+table shows "UNO!" to a seat that may call and "Call out UNO" to every other seat while a window is
+open without the call, online and pass the phone (where the call is made before the play, since
+the curtain drops as soon as the turn moves). An older save without `uno` reads as no call in the
+air.
 
 ## 8. Tests
 
 `npm run test:uno`: the deck's composition and points, the matching rule, every action card from
 hand-built positions, the opener's four special cases found by seed, drawing with and without a
-playable card, the reshuffle, the game's end and Play again, and a bot that plays whole games of
+playable card, the reshuffle, the UNO call (the window's open and close, the catch and its two
+cards, the call in time, the refusals), the game's end and Play again, and a bot that plays whole games of
 two, three, five and twelve seats to the first empty hand with the card count checked at every
 step. The shell adapter, the wire and the reducer are pinned in `view.test.ts`, `protocol.test.ts`,
 `shellConfig.test.ts` and `state.test.ts`; `e2e/uno.spec.ts` plays a seeded game through the page
-and the shell specs (`@uno`) drive its home, curtain, handoff and online seats.
+and the shell specs (`@uno`) drive its home, curtain, handoff and online seats; `e2e/uno.spec.ts`
+also seats a hand-made position and catches a seat without the call, then sees the call in time
+leave nothing to catch.
 
 ## 9. On the shared shell: pass the phone or play online
 
@@ -102,5 +121,5 @@ stepper (web/shared/markup/stepper.ts, web/shared/ui/stepper.ts), not a select. 
 dealer: it holds the whole state (src/engine/view.ts `State`), applies every seat's action
 (`applyAction`, which refuses a play out of turn) and sends each seat its own `View`: its own hand,
 everyone's card count, never another hand. A Wild's colour is named by the player who played it.
-The Rules tab is seven one-line rules (ui/rules.ts) and fits one phone screen at 390 × 844. The UNO
-call and the Wild Draw Four challenge stay out (row uno-rules-extras).
+The Rules tab is eight one-line rules (ui/rules.ts) and fits one phone screen at 390 × 844. The UNO
+call is §7's; the Wild Draw Four challenge stays out (row uno-rules-extras, second priority).

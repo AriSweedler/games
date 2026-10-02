@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { RULES, aboutHtml, rulesItemsHtml } from './rules.ts';
 
 describe('the rules', () => {
-  test('short enough for one phone screen: seven one-line rules, no points, under 100 words in all', () => {
+  test('short enough for one phone screen: eight one-line rules, no points, under 120 words in all', () => {
     expect(RULES.map((r) => r.id)).toEqual([
       'goal',
       'turn',
@@ -12,9 +12,10 @@ describe('the rules', () => {
       'draw2',
       'wild',
       'wild4',
+      'uno',
     ]);
     const words = RULES.flatMap((r) => `${r.heading} ${r.body}`.split(/\s+/));
-    expect(words.length).toBeLessThan(100);
+    expect(words.length).toBeLessThan(120);
     expect(RULES.find((r) => r.id === 'goal')?.body).toContain('Empty your hand to win');
     expect(words.join(' ')).not.toMatch(/points|score|500/);
   });

@@ -360,6 +360,18 @@ label {
   outline: 3px solid var(--go);
   outline-offset: 2px;
 }
+/* A tile whose clone is in the air (ui/motion.ts): hidden in place until the clone lands. */
+.tile.arriving {
+  visibility: hidden;
+}
+/* A tile in flight (ui/motion.ts over web/shared/edge/motion.ts `launchClone`): fixed on the body,
+   inert, over the overlays (50) and under the toast; `--fly-ms` is the flight's own length. */
+.flyer {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  transition: transform var(--fly-ms) cubic-bezier(0.2, 0.8, 0.2, 1);
+}
 .color-picker {
   display: flex;
   justify-content: center;
@@ -393,6 +405,7 @@ label {
 }
 .controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .score-list {
@@ -415,4 +428,12 @@ label {
 .score-row.winner {
   box-shadow: inset 0 0 0 2px var(--accent);
   font-weight: 700;
+}
+
+/* ---------- motion ---------- */
+/* Reduced motion: the flight is a 1 ms glide (ui/motion.ts `durationsFor(true)` agrees). */
+@media (prefers-reduced-motion: reduce) {
+  .flyer {
+    transition-duration: 1ms;
+  }
 }

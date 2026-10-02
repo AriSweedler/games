@@ -4,14 +4,23 @@
 // first curtain hides the hand until "Show my hand", the table shows the seat's tiles with the
 // playable ones lit, a tap (or, where no number card plays, the hook `window.__uno.act`) moves the
 // turn and the curtain drops for the other seat. The hook's `view()` reads the seat's view back.
-// On `pages` alone: this is about the page, not the origin. The shell's own flows (the home, the
+// The second test seats a hand-made position (§7): a seat plays down to one card without the call
+// and the next seat, under its curtain lifted, catches it for two; the call made in time leaves the
+// catcher nothing to press. On `pages` alone: this is about the page, not the origin. The shell's own flows (the home, the
 // room, the handoff, resume) are the shell specs' `@uno` describes.
 import type { Page } from '@playwright/test';
 
 import { PHONE } from './fixtures/geometry.ts';
 import { pagePath } from './fixtures/site.ts';
 import { expect, test } from './fixtures/two-players.ts';
-import { requireView, unoPlayTurn, unoReveal, unoStartLocal } from './fixtures/uno.ts';
+import {
+  requireView,
+  unoPlayTurn,
+  unoPosition,
+  unoReveal,
+  unoSetup,
+  unoStartLocal,
+} from './fixtures/uno.ts';
 
 /** mulberry32 as text: the specs run without the DOM lib and the page reads `window.__rng` at boot. */
 const seedRng = async (page: Page, seed: number): Promise<void> => {
@@ -81,4 +90,57 @@ test('a seeded two-seat game: the curtain, the hand, a play and the curtain for 
   expect(next.seat).toBe(next.turn);
   await expect(page.locator('#hand .tile')).toHaveCount(next.hand.length);
   if (number !== undefined && dealt.phase === 'turn') expect(next.top.id).toBe(number.id);
+});
+
+test('the UNO call (§7): a seat at one card without the call is caught for two; called in time, there is nothing to catch', async ({
+  phone,
+  project,
+}) => {
+  test.skip(project !== 'pages', 'about the page, not the origin');
+  const { page } = phone;
+  await unoStartLocal(page, pagePath(project, 'uno'), PHONE, [...NAMES]);
+  await unoReveal(page);
+
+  // Ari at two cards on a red 5: the UNO button is offered; Ari plays without pressing it.
+  const twoLeft = unoPosition({
+    hands: [
+      ['r7a', 'b2a'],
+      ['b3a', 'g4a', 'y6a'],
+    ],
+    top: 'r5a',
+    names: [...NAMES],
+  });
+  const ari = await unoSetup(page, twoLeft);
+  expect(ari).toMatchObject({ seat: 0, canUno: true, canCallOut: false });
+  await expect(page.locator('#unoBtn')).toBeVisible();
+  await expect(page.locator('#callOutBtn')).toBeHidden();
+  await page.locator('#hand .tile[data-id="r7a"]').click();
+
+  // The phone goes to Lavi, who sees Ari down to one card and calls it out: Ari draws two.
+  await expect(page.locator('#curtainTitle')).toHaveText('Pass the phone to Lavi');
+  await unoReveal(page);
+  const lavi = await requireView(page);
+  expect(lavi).toMatchObject({ seat: 1, counts: [1, 3], canCallOut: true, canUno: false });
+  expect(lavi.uno).toEqual({ seat: 0, called: false, open: true });
+  await expect(page.locator('#unoBtn')).toBeHidden();
+  await expect(page.locator('#callOutBtn')).toBeVisible();
+  await page.locator('#callOutBtn').click();
+  await expect(page.locator('#callOutBtn')).toBeHidden();
+  await expect(page.locator('#statusText')).toContainText('Ari draws two');
+  const caught = await requireView(page);
+  expect(caught).toMatchObject({ seat: 1, turn: 1, counts: [3, 3], uno: null });
+
+  // Again from the same position, with UNO pressed before the play: Lavi has nothing to catch.
+  const again = await unoSetup(page, twoLeft);
+  expect(again.canUno).toBe(true);
+  await page.locator('#unoBtn').click();
+  await expect(page.locator('#unoBtn')).toBeHidden();
+  await expect(page.locator('#statusText')).toContainText('Ari calls UNO!');
+  await page.locator('#hand .tile[data-id="r7a"]').click();
+  await expect(page.locator('#curtainTitle')).toHaveText('Pass the phone to Lavi');
+  await unoReveal(page);
+  const safe = await requireView(page);
+  expect(safe).toMatchObject({ seat: 1, counts: [1, 3], canCallOut: false });
+  expect(safe.uno).toEqual({ seat: 0, called: true, open: true });
+  await expect(page.locator('#callOutBtn')).toBeHidden();
 });
