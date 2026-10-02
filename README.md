@@ -20,6 +20,7 @@ pages got here.
 | Briscola                     | https://arisweedler.github.io/games/games/briscola/   | https://games.sweedler.com/briscola/                                             | `web/games/briscola/`   |
 | Rock Paper Scissors          | https://arisweedler.github.io/games/games/rps/        | https://games.sweedler.com/rps/                                                  | `web/games/rps/`        |
 | UNO                          | https://arisweedler.github.io/games/games/uno/        | https://games.sweedler.com/uno/                                                  | `web/games/uno/`        |
+| Flip 7                       | https://arisweedler.github.io/games/games/flip7/      | https://games.sweedler.com/flip7/                                                | `web/games/flip7/`      |
 | UI Sandbox (a tool, no game) | https://arisweedler.github.io/games/games/ui-sandbox/ | https://games.sweedler.com/ui-sandbox/                                           | `web/games/ui-sandbox/` |
 
 Both origins serve the same `dist/`. `games.sweedler.com` is the Cloudflare Worker in

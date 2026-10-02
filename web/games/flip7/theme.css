@@ -1,0 +1,290 @@
+/* Flip 7 (docs/design/flip7.md §7): a press-your-luck card game on one phone, portrait-first,
+   every card face up. The shared tokens and primitives are imported here rather than linked from
+   the page, so this page's sheet is its own and the games' shared CSS chunk is untouched
+   (test/dist/dist-parity.test.ts holds that chunk to one file). The base pack is deliberately
+   plain: a tile is its text on a colour per kind. One column upright; sideways and on a desktop
+   window the seats flow in two columns (docs/design/layout-buckets.md: the boot writes
+   `<body data-layout>`). */
+@import '../../shared/styles/tokens.css';
+@import '../../shared/styles/base.css';
+
+:root {
+  --bg: #14121a;
+  --card: #1d1a25;
+  --card-2: #272332;
+  --text: #ecebe6;
+  --muted: #9a9891;
+  --go: #c2d06d;
+  --go-text: #10281a;
+  --radius: 14px;
+  --num: #3b6fd8;
+  --num-text: #fff;
+  --mod: #e8c547;
+  --mod-text: #241d05;
+  --act: #d64578;
+  --act-text: #fff;
+  --second: #3fa66b;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body, system-ui, sans-serif);
+}
+
+#app {
+  min-height: 100dvh;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.bar h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  letter-spacing: 0.04em;
+}
+.bar .sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.link-btn {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.panel {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.field,
+.name-field {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.field select,
+.name-input {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--card-2);
+  border: 1px solid #3a3447;
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 44px;
+}
+.names {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.hint,
+.status,
+.round {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.btn {
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid #3f3850;
+  background: var(--card-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn-go {
+  background: var(--go);
+  color: var(--go-text);
+  border-color: transparent;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+.seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.seat {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+  border: 2px solid transparent;
+}
+.seat.current {
+  border-color: var(--go);
+}
+.seat.status-busted {
+  opacity: 0.55;
+}
+.seat-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.seat-name {
+  font-weight: 700;
+}
+.seat-bank {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.seat-bank::before {
+  content: 'banks ';
+  font-size: 0.8rem;
+}
+.seat-status {
+  margin-left: auto;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--card-2);
+  color: var(--muted);
+}
+.status-flip7 .seat-status {
+  background: var(--go);
+  color: var(--go-text);
+}
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 36px;
+}
+.tile {
+  min-width: 34px;
+  height: 46px;
+  padding: 0 8px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+  background: var(--num);
+  color: var(--num-text);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 40%);
+}
+.tile[data-kind='plus'],
+.tile[data-kind='times2'] {
+  background: var(--mod);
+  color: var(--mod-text);
+}
+.tile[data-kind='freeze'],
+.tile[data-kind='flip3'] {
+  background: var(--act);
+  color: var(--act-text);
+  font-size: 0.8rem;
+}
+.tile[data-kind='second'] {
+  background: var(--second);
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.controls .btn {
+  flex: 1;
+  max-width: 260px;
+}
+
+.target,
+.result {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+.target h2,
+.result h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.scores {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.scores li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--card-2);
+  border-radius: 8px;
+}
+
+/* Sideways and wide: the seats in two columns. */
+body:not([data-layout='phone-upright']):not([data-layout='tablet-upright']) .seats {
+  grid-template-columns: 1fr 1fr;
+}
+body[data-layout^='desktop'] #app {
+  max-width: 1100px;
+  margin: 0 auto;
+}
