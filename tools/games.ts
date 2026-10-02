@@ -245,9 +245,10 @@ export const SHELL: Readonly<Record<ShellGame, ShellSpec>> = {
     connDot: '#oppDot',
     // The first two of shellConfig.ts LOCAL_NAMES (the owner's "Ari and Lavi (with p3 Sandro and p4 Grant)"); the third and fourth are the page's.
     localNames: ['Ari', 'Lavi'],
-    // The one select: two players (D3). One game per sitting and no house-rule controls since
-    // 2026-09-25 (the owner: "take out the 'match' dropdown … get rid of the option to set house rules").
-    localFields: [['localPlayersSel', '2']],
+    // The one field: the players stepper's hidden count (web/shared/ui/stepper.ts), two to four
+    // (D3; the owner, 2026-10-02: "not a dropdown"). One game per sitting and no house-rule controls
+    // since 2026-09-25 (the owner: "take out the 'match' dropdown … get rid of the option to set house rules").
+    localFields: [['localPlayersCount', '2']],
     // The reveal and "Continue online": the handoff is offered under the curtain at two seats (D17).
     curtainButtons: 2,
     firstCurtain: 'Pass the phone to {name}',

@@ -79,13 +79,29 @@
             </div>
             <div class="card-box">
               <label>Open a table</label>
-              <div class="field">
-                <span class="field-label">Players</span>
-                <select id="playersSel">
-                  <option value="2" selected>2 players</option>
-                  <option value="3">3 players</option>
-                  <option value="4">4 players</option>
-                </select>
+              <div class="stepper" data-min="2" data-max="4">
+                <span class="stepper-label">Players</span>
+                <div class="stepper-row">
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="playersCountDec"
+                    aria-label="Fewer players"
+                    disabled
+                  >
+                    −
+                  </button>
+                  <output class="stepper-num" id="playersCountNum" aria-live="polite">2</output>
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="playersCountInc"
+                    aria-label="More players"
+                  >
+                    +
+                  </button>
+                </div>
+                <input type="hidden" id="playersCount" value="2" />
               </div>
               <div class="field">
                 <span class="field-label">Battle animations</span>
@@ -123,15 +139,31 @@
 
           <div id="localModeContent" class="hidden">
             <div class="card-box">
-              <div class="row">
-                <label class="grow">Players</label>
-                <div class="field">
-                  <select id="localPlayersSel">
-                    <option value="2" selected>2 players</option>
-                    <option value="3">3 players</option>
-                    <option value="4">4 players</option>
-                  </select>
+              <div class="stepper" data-min="2" data-max="4">
+                <span class="stepper-label">Players</span>
+                <div class="stepper-row">
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="localPlayersCountDec"
+                    aria-label="Fewer players"
+                    disabled
+                  >
+                    −
+                  </button>
+                  <output class="stepper-num" id="localPlayersCountNum" aria-live="polite"
+                    >2</output
+                  >
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="localPlayersCountInc"
+                    aria-label="More players"
+                  >
+                    +
+                  </button>
                 </div>
+                <input type="hidden" id="localPlayersCount" value="2" />
               </div>
               <div class="row">
                 <label class="grow">Battle animations</label>

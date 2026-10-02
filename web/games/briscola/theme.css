@@ -209,6 +209,8 @@ h1 {
 .card-box > .row + .row,
 .card-box > .row + .field,
 .card-box > .field + .row,
+.card-box > .stepper + .field,
+.card-box > .stepper + .row,
 .card-box > .row + details,
 .card-box > .field + details {
   margin-top: 10px;

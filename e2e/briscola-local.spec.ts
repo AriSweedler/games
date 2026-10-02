@@ -161,7 +161,7 @@ const seatCell = (page: Page, seat: Seat): ReturnType<Page['locator']> =>
 
 Object.entries(VIEWPORTS).forEach(([name, vp]) => {
   test.describe(name, () => {
-    test('home: the title, the shell tabs and modes, the count select brings the third and fourth names; no match select, no house rules', async ({
+    test('home: the title, the shell tabs and modes, the − n + stepper brings the third and fourth names; no match select, no house rules', async ({
       player,
       project,
     }) => {
@@ -175,28 +175,41 @@ Object.entries(VIEWPORTS).forEach(([name, vp]) => {
         'Online',
         'Pass the phone',
       ]);
-      // Online: the count select offers two, three and four, all open since PR-5 (n-seat-sessions.md §7).
-      await expect(page.locator('#playersSel')).toHaveValue('2');
-      await expect(page.locator('#playersSel option[value="3"]')).toBeEnabled();
-      await expect(page.locator('#playersSel option[value="4"]')).toBeEnabled();
+      // Online: the count is the shell's − n + stepper (the owner, 2026-10-02: "not a dropdown"),
+      // two to four, all open since PR-5 (n-seat-sessions.md §7): − disabled at two, + at four.
+      await expect(page.locator('#playersCount')).toHaveValue('2');
+      await expect(page.locator('#playersCountNum')).toHaveText('2');
+      await expect(page.locator('#playersCountDec')).toBeDisabled();
+      await expect(page.locator('#playersCountInc')).toBeEnabled();
+      await expect(page.locator('#playersSel')).toHaveCount(0);
       await expect(page.locator('#hostBtn')).toHaveClass(/\bbtn-go\b/);
       // One game per sitting on the engine's default rules: nothing else to set, in either panel.
       await Promise.all(
         GONE_CONTROLS.map((selector) => expect(page.locator(selector)).toHaveCount(0)),
       );
-      // Pass the phone: two names, the count select, the extra names shown with the count.
+      // Pass the phone: two names, the count stepper, the extra names shown with the count; one
+      // count for both panels, so the Online stepper follows.
       await page.locator('#playModeSwitch .mode-btn[data-mode="local"]').click();
       await expect(page.locator('#localModeContent')).toBeVisible();
-      await expect(page.locator('#localPlayersSel')).toHaveValue('2');
+      await expect(page.locator('#localPlayersCount')).toHaveValue('2');
+      await expect(page.locator('#localPlayersSel')).toHaveCount(0);
       await expect(page.locator('#moreNames')).toBeHidden();
       await expect(page.locator('#localBtn')).toHaveClass(/\bbtn-go\b/);
-      await page.locator('#localPlayersSel').selectOption('3');
+      await page.locator('#localPlayersCountInc').click();
+      await expect(page.locator('#localPlayersCount')).toHaveValue('3');
+      await expect(page.locator('#localPlayersCountNum')).toHaveText('3');
       await expect(page.locator('#moreNames')).toBeVisible();
       await expect(page.locator('#p3NameInput')).toBeVisible();
       await expect(page.locator('#p4NameInput')).toBeHidden();
-      await page.locator('#localPlayersSel').selectOption('4');
+      await page.locator('#localPlayersCountInc').click();
+      await expect(page.locator('#localPlayersCount')).toHaveValue('4');
+      await expect(page.locator('#localPlayersCountInc')).toBeDisabled();
       await expect(page.locator('#p4NameInput')).toBeVisible();
-      await page.locator('#localPlayersSel').selectOption('2');
+      await expect(page.locator('#playersCount')).toHaveValue('4');
+      await page.locator('#localPlayersCountDec').click();
+      await page.locator('#localPlayersCountDec').click();
+      await expect(page.locator('#localPlayersCount')).toHaveValue('2');
+      await expect(page.locator('#localPlayersCountDec')).toBeDisabled();
       await expect(page.locator('#moreNames')).toBeHidden();
     });
 

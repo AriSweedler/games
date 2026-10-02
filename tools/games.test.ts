@@ -188,7 +188,7 @@ describe('the games registry', () => {
           hostAnswered: /^Connected — waiting for .+ to deal$/,
           connDot: '#oppDot',
           localNames: ['Ari', 'Lavi'],
-          localFields: [['localPlayersSel', '2']],
+          localFields: [['localPlayersCount', '2']],
           curtainButtons: 2,
           firstCurtain: 'Pass the phone to {name}',
         },
