@@ -20,7 +20,7 @@
   --bg:var(--mist); --card-2:var(--cream-2); --text:var(--ink); --danger:var(--red);
   /* The call to action (docs/ARCHITECTURE.md "Calls to action"): a light olive on this palette, the pine's ink for its label. */
   --go:#a6b85c; --go-text:#14210c;
-  /* The shell's fourteen roles (web/shared/styles/shell.css; docs/design/fidice-shell-adoption.md §5) on this
+  /* The shell's fifteen roles (web/shared/styles/shell.css; docs/design/fidice-shell-adoption.md §5) on this
      palette, never gin's: Nunito for the body and Fredoka for the code, the birch panel and its shadow for the
      shell's boxes, the header's pine for its bars with the header's white on them, .btn-secondary's cream-2,
      timber and hover for the fills, the accent for emphasis, the buttons' 12px and the tabs' 10px. Read by every
@@ -30,6 +30,7 @@
   --surface-shell:var(--card); --surface-bar:var(--pine); --shadow-shell:var(--shadow);
   --fill:var(--cream-2); --fill-hover:#e6d8bd; --ink-on-fill:var(--timber); --ink-on-bar:#fffc; --ink-hover:#fff;
   --emphasis:var(--accent); --radius-control:12px; --radius-inner:12px; --radius-tab:10px;
+  --curtain-scrim:var(--felt-dark);
 }
 html,body{height:100%}
 /* The page links web/shared/styles/shell.css third since M1 of docs/design/fidice-shell-adoption.md. A theme rule of equal

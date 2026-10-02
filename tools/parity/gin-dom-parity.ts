@@ -91,7 +91,7 @@ export const normalise = (html: string): string =>
     // A hidden curtain keeps the text of its last showing, and the new page shows one the legacy
     // never had: a knock hands the phone to the defender to lay off (§7b). Unseen, it is blanked.
     .replace(
-      /^<div id="curtainOverlay" class="overlay hidden"[^>]*>[\s\S]*$/,
+      /^<div id="curtainOverlay" class="overlay(?: curtain)? hidden"[^>]*>[\s\S]*$/,
       '<div id="curtainOverlay" class="overlay hidden"></div>',
     )
     // The sandbox (src/sandbox.ts): a third mode button in the switch and the submenu, and its

@@ -1,7 +1,7 @@
 /* Sheshbesh's theme (docs/design/backgammon-board.md §3, §5; the owner: "subtle but recognizable").
    The page links web/shared/styles/tokens.css, base.css and shell.css (the shell's rules, since
    docs/design/dry-round-2.md G1) before this file, and :root below redeclares every one of the
-   thirteen shared names and the fourteen shell tokens (a partial override would inherit gin's
+   thirteen shared names and the fifteen shell tokens (a partial override would inherit gin's
    green felt; test/tokens.test.ts holds it); what stays here under a shell selector is this
    theme's own: the type scale, the panel's hairline and shadow, `font-family: inherit` on every
    control (gin's controls keep the UA font), the parchment. The palette is restrained: a parchment page
@@ -41,7 +41,7 @@
   --go-text: #1f2a12;
   --radius: 12px;
   --felt: linear-gradient(160deg, #a67c52 0%, #8e6740 55%, #6e4b2a 100%);
-  /* The shell's fourteen roles (web/shared/styles/shell.css; dry-round-2.md G1), on this palette:
+  /* The shell's fifteen roles (web/shared/styles/shell.css; dry-round-2.md G1), on this palette:
      Cardo for the body and GFS Didot for the code, the panel behind every shell box and bar,
      nacre fills with the accent for their text and a dimmed nacre for the resting tab, the accent
      for emphasis, the panel's hairline-and-shadow, --radius on every control and 9px on a tab. */
@@ -59,6 +59,9 @@
   --radius-control: var(--radius);
   --radius-inner: var(--radius);
   --radius-tab: 9px;
+  /* The curtain's scrim (design §4.9): aegean-deep at 78%, the position readable beneath (the shell's
+     default is opaque; the position here is public). */
+  --curtain-scrim: rgba(6, 37, 61, 0.78);
   /* The game's own tokens: only the ones a rule below reads. */
   --olivewood-dark: #6e4b2a;
   --stone: #d9cbad;
@@ -554,10 +557,6 @@ label {
 /* ---------- overlays and sheets (shell.css's shapes; here the ink scrim, the sheet's shadow and radius, the type scale) ---------- */
 .overlay {
   background: rgba(42, 26, 18, 0.55);
-}
-/* The curtain (design §4.9): aegean-deep at 78%, the position readable beneath. */
-.overlay.curtain {
-  background: rgba(6, 37, 61, 0.78);
 }
 /* The turn gate's scrim (docs/design/backgammon-landscape.md §5D; the gate itself is the shell's:
    web/shared/ui/shell.ts gateOpen, shellPaint.ts paintGate, shell.css its z-index and glyph): the

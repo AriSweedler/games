@@ -2,7 +2,7 @@
    cards as ornate as the pack). The page links web/shared/styles/tokens.css, base.css and the shell
    games' shell.css before this file (dry-round-2.md G1: the shell's boxes, buttons, fields, tabs,
    sheets, history rows and toast are rules there, token-only), and :root below redeclares every one
-   of the thirteen shared palette names and the fourteen shell tokens (a partial override would
+   of the thirteen shared palette names and the fifteen shell tokens (a partial override would
    inherit gin's green felt; test/tokens.test.ts holds both). What follows under a shell selector is
    what this theme alone declares: its type (Lora and Bodoni through the font tokens; `font-family:
    inherit` on every control), its hairlines and shadows, the gold underline of the open tab, the
@@ -36,7 +36,7 @@
   --go-text: #1f2a12;
   --radius: 12px;
   --felt: radial-gradient(ellipse at 50% 35%, #2c6d6b 0%, #235a59 60%, #194645 100%);
-  /* The fourteen shell tokens (web/shared/styles/shell.css reads them; CONTRACT.md "Shell tokens"):
+  /* The fifteen shell tokens (web/shared/styles/shell.css reads them; CONTRACT.md "Shell tokens"):
      the espresso panel is every shell surface and bar, cream its fill, the panel's dimmed cream its
      ink on a bar, the accent its emphasis, this theme's hairline-and-shadow its shadow, one radius. */
   --font-body: var(--serif-text);
@@ -53,6 +53,9 @@
   --radius-control: var(--radius);
   --radius-inner: var(--radius);
   --radius-tab: 9px;
+  /* The curtain's scrim (design §5.4): the terracotta dark at 78%, the table readable beneath (the
+     shell's default is opaque; the hand here paints backs under the curtain). */
+  --curtain-scrim: rgba(122, 47, 29, 0.78);
   /* The game's own tokens: only the ones a rule below reads. */
   --baize: #235a59;
   --baize-edge: #163f3e;
@@ -573,10 +576,6 @@ label {
 /* ---------- overlays and sheets (shell.css's shapes; the scrim, the edge and the radius this theme's) ---------- */
 .overlay {
   background: rgba(43, 29, 20, 0.55);
-}
-/* The curtain (design §5.4): the terracotta dark at 78%, the table readable beneath, the hand face down. */
-.overlay.curtain {
-  background: rgba(122, 47, 29, 0.78);
 }
 .overlay.curtain .sheet {
   background: var(--panel);

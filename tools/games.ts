@@ -770,11 +770,6 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     hides: true,
     gaps: [
       {
-        rule: 'curtain',
-        followUp:
-          'the curtain overlay has no scrim (0 opaque) over the cups; the scrim lane paints .overlay.curtain in shell.css: delete this row when it lands',
-      },
-      {
         rule: 'rules-fit',
         followUp:
           'the Rules tab scrolls at 390x844 (2130px tall, 2026-10-02): cut RULES_ITEMS to the goal, the turn and one line per special case',
@@ -846,9 +841,6 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     hides: true,
     gaps: [
       {
-        rule: 'curtain',
-        followUp:
-          'the curtain overlay has no opaque scrim, so the hand shows through "Pass the phone to …"; the scrim lane paints .overlay.curtain in shell.css: delete this row when it lands',
       },
       {
         rule: 'pauses',

@@ -59,6 +59,7 @@ const SHELL_TOKENS: ReadonlyArray<string> = [
   '--radius-control',
   '--radius-inner',
   '--radius-tab',
+  '--curtain-scrim',
 ];
 
 /** The shared vocabulary: everything tokens.css declares. */
