@@ -754,9 +754,10 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
   ],
   // Hive (docs/design/hive.md §7; page.ts, ui/render.ts): after the shell's 43, the home's subtitle
   // and the names box, the table's top bar (the names strip, the connection dot), the board and
-  // its cells (empty, White's, Black's, lit, the letter and a stack's badge), the two hands and
-  // their tiles (playable, picked, spent, the count), the status line, the controls and the result
-  // sheet's note.
+  // its cells (empty, White's, Black's, lit, a stack's badge), the engraved bugs (the rim, the
+  // shade and the gleam on each side; the ink's colour per bug on each side's tray tiles, which
+  // every screen shows), the two hands and their tiles (playable, picked, spent, the count), the
+  // status line, the controls and the result sheet's note.
   hive: [
     ...SHELL_SELECTORS,
     '.masthead .subtitle',
@@ -776,9 +777,13 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.hex.b polygon',
     '.hex.lit polygon',
     '.hex.picked polygon',
-    '.hex .letter',
-    '.hex.w .letter',
-    '.hex.b .letter',
+    '.hex .sheen',
+    '.hex .bug',
+    '.hex .bug .rim',
+    '.hex.w .bug .shade',
+    '.hex.b .bug .shade',
+    '.hex.w .bug .gleam',
+    '.hex.b .bug .gleam',
     '.hex .badge',
     '.hand',
     '.hand.turn',
@@ -789,7 +794,17 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.hand-tile.picked',
     '.hand-tile.spent',
     '.hand-tile .count',
-    '.hand-tile .letter',
+    '.hand-tile .sheen',
+    '.hand-tile.w .bug[data-bug="queen"] .ink',
+    '.hand-tile.w .bug[data-bug="beetle"] .ink',
+    '.hand-tile.w .bug[data-bug="grasshopper"] .ink',
+    '.hand-tile.w .bug[data-bug="spider"] .ink',
+    '.hand-tile.w .bug[data-bug="ant"] .ink',
+    '.hand-tile.b .bug[data-bug="queen"] .ink',
+    '.hand-tile.b .bug[data-bug="beetle"] .ink',
+    '.hand-tile.b .bug[data-bug="grasshopper"] .ink',
+    '.hand-tile.b .bug[data-bug="spider"] .ink',
+    '.hand-tile.b .bug[data-bug="ant"] .ink',
     '.status-line',
     '.controls',
     '#passBtn',

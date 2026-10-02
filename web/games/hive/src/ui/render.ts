@@ -2,13 +2,14 @@
 // DOM edge, and every control bound to an intent. The shell's half is web/shared/ui's (the screens,
 // the waiting rooms, the home tabs, the sheets; its curtain is composed but never raised, since
 // Hive hides nothing: ui/state.ts `viewer`); the table is this file's: the names strip (`#myName`,
-// `#oppName`, `#oppDot`), the SVG board (one `g.hex` per cell: a hexagon in the side's colour with
-// the bug's letter, a count badge on a stack, `lit` where the picked tile may go, `picked` on the
-// tile in hand; the viewBox fitted to the hive and its ring, ui/board.ts `fitCells`, so a pick
-// never rescales it), the two hands as trays of hexagonal tiles (the board's hexagon, the bug's
-// letter, the count left as a badge), Pass when the seat must, Resign while the game is on, the
-// status line, and the result sheet over the final board (Continue leaves the board on show; Play
-// again starts anew). The base pack is plain: a tile is its colour and its letter.
+// `#oppName`, `#oppDot`), the SVG board (one `g.hex` per cell: a bevelled hexagon in the side's
+// colour with the top tile's bug engraved on it (ui/bugs.ts `bugHtml`), a count badge and a lift
+// on a stack, `lit` where the picked tile may go, `picked` on the tile in hand; the viewBox fitted
+// to the hive and its ring, ui/board.ts `fitCells`, so a pick never rescales it), the two hands as
+// trays of hexagonal tiles (the board's hexagon, the bug, the count left as a badge), Pass when
+// the seat must, Resign while the game is on, the status line, and the result sheet over the
+// final board (Continue leaves the board on show; Play again starts anew). The bug's name stays
+// in each tile's `aria-label`; the letter of the notation is no longer drawn.
 import {
   closestFrom,
   dataOf,
@@ -51,7 +52,9 @@ import {
   fitCells,
   viewBoxAttr,
   viewBoxOf,
+  type Point,
 } from './board.ts';
+import { bugHtml } from './bugs.ts';
 import { bindHome, paintHome } from './home.ts';
 import { aboutHtml, rulesItemsHtml } from './rules.ts';
 import {
@@ -68,12 +71,20 @@ export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 
 type Dispatch = (intent: Intent) => void;
 
-/** The letter on a tile: the usual notation (Q, B, G, S, A). */
-export const letterOf = (bug: Bug): string => BUG[bug].letter;
-
 const sideClass = (side: Side): string => (side === 'white' ? 'w' : 'b');
 
-/** One cell of the board: the hexagon, the top tile's letter, a stack's count. */
+/** How far a stack's lower tile peeks out from under the top one, tile units, down and to the right. */
+const STACK_OFFSET = { x: 0.7, y: 0.9 } as const;
+
+/**
+ * A tile's face about `c`: the hexagon in the side's colour (`face`: the state strokes, lit and
+ * picked, are its), the sheen and bevel over it (`sheen`: the gradients bugs.ts defines), and the
+ * bug engraved at the centre (bugs.ts `bugHtml`), or no bug for an empty cell.
+ */
+const faceHtml = (c: Point, bug: Bug | undefined): string =>
+  `<polygon class="face" points="${cornersOf(c)}" /><polygon class="sheen" points="${cornersOf(c, 1.1)}" />${bug === undefined ? '' : bugHtml(bug, c)}`;
+
+/** One cell of the board: the hexagon, the top tile's bug, a stack's lift and count. */
 export const cellHtml = (game: Game, hex: Hex, lit: boolean, picked: boolean): string => {
   const stack = stackAt(game.board, hex);
   const top = stack.at(-1);
@@ -83,6 +94,7 @@ export const cellHtml = (game: Game, hex: Hex, lit: boolean, picked: boolean): s
     top === undefined ? 'empty' : sideClass(top.side),
     lit ? 'lit' : '',
     picked ? 'picked' : '',
+    stack.length > 1 ? 'stack' : '',
   ]
     .filter((s) => s !== '')
     .join(' ');
@@ -92,17 +104,16 @@ export const cellHtml = (game: Game, hex: Hex, lit: boolean, picked: boolean): s
         ? 'A hex the tile may go to'
         : 'An empty hex'
       : `${game.names[top.side]}’s ${BUG[top.bug].name}${stack.length > 1 ? `, on a stack of ${String(stack.length)}` : ''}`;
-  const letter =
-    top === undefined
-      ? ''
-      : safeHtml`<text class="letter" x="${c.x.toFixed(2)}" y="${(c.y + 0.5).toFixed(2)}">${letterOf(top.bug)}</text>`
-          .markup;
+  const under =
+    stack.length > 1
+      ? `<polygon class="under" points="${cornersOf({ x: c.x + STACK_OFFSET.x, y: c.y + STACK_OFFSET.y })}" />`
+      : '';
   const badge =
     stack.length > 1
-      ? safeHtml`<text class="badge" x="${(c.x + 5).toFixed(2)}" y="${(c.y - 4).toFixed(2)}">${String(stack.length)}</text>`
+      ? safeHtml`<text class="badge" x="${(c.x + 5.2).toFixed(2)}" y="${(c.y - 5.2).toFixed(2)}">${String(stack.length)}</text>`
           .markup
       : '';
-  return `${safeHtml`<g class="${classes}" data-hex="${keyOf(hex)}" role="button" tabindex="0" aria-label="${label}"><polygon points="${cornersOf(c)}" />`.markup}${letter}${badge}</g>`;
+  return `${safeHtml`<g class="${classes}" data-hex="${keyOf(hex)}" role="button" tabindex="0" aria-label="${label}">`.markup}${under}${faceHtml(c, top?.bug)}${badge}</g>`;
 };
 
 /**
@@ -126,10 +137,10 @@ export const TILE_VIEWBOX = [-HEX_W / 2, -HEX_H / 2, HEX_W, HEX_H]
 
 /**
  * A tray tile's face: the board's hexagon (`cornersOf`, the same inset, so the shape matches the
- * board's cell by cell) with the bug's letter at its centre, in a viewBox of its own.
+ * board's cell by cell) with the bug engraved at its centre, in a viewBox of its own.
  */
 export const tileHtml = (bug: Bug): string =>
-  `<svg class="tile" viewBox="${TILE_VIEWBOX}" aria-hidden="true"><polygon points="${cornersOf({ x: 0, y: 0 })}" />${safeHtml`<text class="letter" x="0" y="0.5">${letterOf(bug)}</text>`.markup}</svg>`;
+  `<svg class="tile" viewBox="${TILE_VIEWBOX}" aria-hidden="true">${faceHtml({ x: 0, y: 0 }, bug)}</svg>`;
 
 /**
  * One side's hand: a hexagonal tile per bug (`tileHtml`) with the count left as a badge, the

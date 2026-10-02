@@ -166,9 +166,15 @@ The page's own tests sit beside its modules too: the reducer (ui/state.test.ts: 
 starts on White's table with no curtain and the view changes hands as the turn does, the picks, a
 refusal, the result sheet) and the board's fit (ui/board.test.ts: the fit of a hive equals the fit
 of the same hive plus its ring, and through three seeded games every legal destination lies inside
-it, so a pick never changes the viewBox). e2e/hive.spec.ts reads the same two facts off the page
-(the curtain hidden throughout, the viewBox the same string before and after a pick) and the tray's
-tiles as hexagons of at least 44px.
+it, so a pick never changes the viewBox) and the bugs on the tiles (ui/bugs.test.ts: a file
+becomes a `<symbol>` with its stroke-width stripped, the sprite carries every bug once with the
+tiles' gradients and filters, each fit keeps the art inside the hex, and a drawn bug is four layers
+of the one symbol at the set's one line weight). e2e/hive.spec.ts reads the same facts off the page
+(the curtain hidden throughout, the viewBox the same string before and after a pick), the tray's
+tiles as hexagons of at least 44px with the bug's `<use>` inside and the sprite in the body, and
+finds the Queen on the board by her `data-bug`, not a letter. The computed-style goldens
+(test/fixtures/styles/hive.*.json) pin the engraved look: the rim, the shade and the gleam on each
+side, and the ink's colour for every bug on both trays.
 
 Hive was the first engine-only game in tools/ci/suites.ts (`ENGINE_ONLY`) until its page row
 (§7) registered it in tools/games.ts as a shell game: its suite now has both halves (the unit tests
@@ -198,8 +204,12 @@ leaves the board on show with Play again beside it.
 
 The hands are trays of hexagonal tiles (the owner, 2026-10-02: "they are squares in your hand. They
 should be hexagonal in the hand"): each a bare button around an SVG of the board's own hexagon
-(ui/board.ts `cornersOf`, the same inset) in the side's colour with the bug's letter at its centre
-and the count left as a badge on its upper-right edge, at least 44px wide to tap; a playable tile
+(ui/board.ts `cornersOf`, the same inset) in the side's colour with the bug engraved at its centre
+(ui/bugs.ts: the five assets/bugs/ files inlined once as symbols, each fitted to the same hexagonal
+frame at one line weight, in the official palette with a shade for each tile colour, a hairline
+grey rim and an up-left shadow and down-right gleam so it reads as cut into the tile; the face has a
+sheen, a bevelled edge and a shadow on the felt, and a stack's top tile is raised) and the count
+left as a badge on its upper-right edge, at least 44px wide to tap; a playable tile
 has an amber edge, the picked one a thicker edge and a lift. Any tile may be picked at any time
 (Hive has no hand order), the Queen alone when she must come down. The board's viewBox fits the hive
 and the ring of hexes around it (ui/board.ts `fitCells`; the owner: "preshrink the board so there is
@@ -210,4 +220,4 @@ Online, the host holds the state (engine/view.ts `State`) and both seats get the
 whole game, over the two-seat protocol (protocol.ts: the room's one term is `seatCount: 2`).
 
 Not yet: a draw button (§4.8: by agreement or repetition; the engine has no draw intent), pan and
-zoom by gesture (the board fits itself instead), tile art beyond the letter.
+zoom by gesture (the board fits itself instead).

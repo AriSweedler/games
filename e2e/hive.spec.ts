@@ -3,8 +3,8 @@
 // show at once, White's view, with no curtain between turns (the owner, 2026-10-02: "hive is like
 // backgammon, where you don't need to pass the phone for turns"): a tap on a hand tile lights
 // where it may go, a tap on a lit hex places it and the view is Black's; a tap on a tile already
-// down lights its moves. The hands are trays of hexagonal tiles (the board's hexagon, the bug's
-// letter, a count badge), any of them playable at any time; three tiles without the Queen and the
+// down lights its moves. The hands are trays of hexagonal tiles (the board's hexagon, the bug
+// engraved on it, a count badge), any of them playable at any time; three tiles without the Queen and the
 // status says she must come down, with only her playable. The board's viewBox fits the hive and
 // its ring, so a pick never rescales it. Resign ends the game on the result sheet, whose Continue
 // leaves the final board on show. Nothing is random, so no seed. The hook `window.__hive`
@@ -65,11 +65,12 @@ const playAt = (viewport: Viewport): void => {
     await expect(page.locator('#whiteHand .hand-tile.playable')).toHaveCount(5);
     await expect(page.locator('#blackHand .hand-tile.playable')).toHaveCount(0);
 
-    // The tray's tiles are hexagons: each a button around the board's polygon with the letter
-    // inside and the count badge; at least 44px to tap.
+    // The tray's tiles are hexagons: each a button around the board's polygon with the bug drawn
+    // inside (ui/bugs.ts: a `<use>` of the inlined symbol) and the count badge; at least 44px to tap.
     const ant = page.locator('#whiteHand .hand-tile[data-bug="ant"]');
-    await expect(ant.locator('svg.tile polygon')).toHaveCount(1);
-    await expect(ant.locator('svg.tile .letter')).toHaveText('A');
+    await expect(ant.locator('svg.tile polygon.face')).toHaveCount(1);
+    await expect(ant.locator('svg.tile .bug[data-bug="ant"] use.ink')).toHaveCount(1);
+    await expect(page.locator('body > svg symbol#bug-ant')).toHaveCount(1);
     await expect(ant.locator('.count')).toHaveText('3');
     const box = await ant.boundingBox();
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
@@ -101,7 +102,7 @@ const playAt = (viewport: Viewport): void => {
     await placeFirstLit(page, 'black', 'queen');
     await placeFirstLit(page, 'white', 'beetle');
     // Black's Queen is down, so Black may move: a tap on her lights her steps; a second tap clears.
-    const queen = page.locator('#board .hex.b').filter({ hasText: 'Q' });
+    const queen = page.locator('#board .hex.b', { has: page.locator('.bug[data-bug="queen"]') });
     await queen.click();
     await expect(page.locator('#board .hex.picked')).toHaveCount(1);
     await expect(page.locator('#board .hex.lit').first()).toBeVisible();

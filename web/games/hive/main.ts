@@ -4,8 +4,9 @@
 // clock, `Math.random` (or the harness's `window.__rng`; Hive rolls nothing), Web Audio, vibration
 // and the wake lock, handed to the reducer (src/ui/state.ts), the sessions (src/net) and the paint
 // (src/ui/render.ts). This file passes Hive's reducer, painters, sessions, cue table, sound key, the
-// rules and About copy, and the members of `window.__hive` (the documented test hook) beyond the
-// shared ones: `act`, `view`, `setup` and `legal`.
+// rules and About copy, the bug sprite the tiles `<use>` (ui/bugs.ts, inlined once here before any
+// paint, as briscola inlines its suits), and the members of `window.__hive` (the documented test
+// hook) beyond the shared ones: `act`, `view`, `setup` and `legal`.
 import { bootShell } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import { browserStore } from '../../shared/edge/storage.ts';
@@ -15,6 +16,7 @@ import { GuestSession } from './src/net/guest.ts';
 import { HostSession } from './src/net/host.ts';
 import { isGuestFrame } from './src/protocol.ts';
 import { STORAGE_KEYS, soundEnabled } from './src/storage.ts';
+import { BUG_SPRITE_SVG } from './src/ui/bugs.ts';
 import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
 import { bindAll, paint, paintSound, renderAbout, renderRules } from './src/ui/render.ts';
 import {
@@ -48,6 +50,7 @@ bootShell<Hive, App, object, HostContext>({
   deps: {},
   hooks: {
     render: () => {
+      document.body.insertAdjacentHTML('afterbegin', BUG_SPRITE_SVG);
       renderRules(document);
       renderAbout(document);
     },
