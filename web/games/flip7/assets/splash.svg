@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Flip 7">
+  <!-- The link-preview card (docs/design/link-previews.md §2), in Flip 7's look (theme.css): the
+       shell's dark felt, the name, and a line of plain number tiles in the deck's blue ending on a
+       seven in the accent. tools/splash.ts renders it to web/public/games/flip7/splash.png. -->
+  <defs>
+    <radialGradient id="felt" cx="0.62" cy="0.55" r="0.75">
+      <stop offset="0" stop-color="#1f5a3a"/>
+      <stop offset="1" stop-color="#0b2418"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#felt)"/>
+  <text x="96" y="250" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="150" letter-spacing="4" fill="#f2fdf6">Flip 7</text>
+  <rect x="100" y="284" width="130" height="4" fill="#e8c547"/>
+  <text x="100" y="346" font-family="'Helvetica Neue', Arial, sans-serif" font-size="34" fill="#9cc9ac">Press your luck, two to twelve players.</text>
+  <g font-family="'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="56" text-anchor="middle">
+    <rect x="100" y="400" width="96" height="132" rx="12" fill="#3b6fd8"/>
+    <text x="148" y="487" fill="#fff">2</text>
+    <rect x="214" y="400" width="96" height="132" rx="12" fill="#3b6fd8"/>
+    <text x="262" y="487" fill="#fff">5</text>
+    <rect x="328" y="400" width="96" height="132" rx="12" fill="#3b6fd8"/>
+    <text x="376" y="487" fill="#fff">11</text>
+    <rect x="442" y="400" width="96" height="132" rx="12" fill="#e8c547"/>
+    <text x="490" y="487" fill="#241d05">x2</text>
+    <rect x="556" y="400" width="96" height="132" rx="12" fill="#3b6fd8"/>
+    <text x="604" y="487" fill="#fff">0</text>
+    <rect x="670" y="400" width="96" height="132" rx="12" fill="#3b6fd8"/>
+    <text x="718" y="487" fill="#fff">9</text>
+    <rect x="784" y="384" width="112" height="152" rx="14" fill="#e8c547" stroke="#f2fdf6" stroke-width="6" transform="rotate(6 840 460)"/>
+    <text x="840" y="482" fill="#241d05" font-size="72" transform="rotate(6 840 460)">7</text>
+  </g>
+  <text x="98" y="600" font-family="'Helvetica Neue', Arial, sans-serif" font-size="26" fill="#f2fdf6" fill-opacity="0.7" letter-spacing="1">games.sweedler.com</text>
+</svg>

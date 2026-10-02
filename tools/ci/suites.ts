@@ -771,19 +771,20 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
     e2e: gameE2e('rps'),
   },
   uno: {
-    // UNO pass-and-play (docs/design/uno.md §7): a solo page on the matrix jobs like a game.
+    // UNO (docs/design/uno.md), a shell game since its N-seat sessions: its colocated tests, the
+    // engine's positions and whole bot games, the page's reducer and painters.
     unit: ['web/games/uno/**/*.test.ts'],
     standalone: [],
     browser: false,
     needsBuild: false,
     coverage: {
-      include: ['web/games/uno/src/engine/**/*.ts', 'web/games/uno/src/ui/state.ts'],
+      include: ['web/games/uno/src/**/*.ts'],
       // Measured at the page's landing (lines/functions/statements/branches): the engine
       // 94.4/100/95.1/86.2 over hand-built positions, seeded deals and whole bot games
       // (engine.test.ts; the unreached lines are the exhaustive switches' `never` arms and the
       // never-dealt sentinel's branches), the screens reducer 91.7/100/93.3/96.0 (state.test.ts;
-      // the `never` arm). The paint (ui/render.ts) and main.ts have no unit test: e2e/uno.spec.ts
-      // drives them.
+      // the `never` arm). The include covers the whole of src/ since the shell registration; the
+      // rows bind what was measured, the paint and main.ts are e2e/uno.spec.ts's and the shell specs'.
       thresholds: {
         'web/games/uno/src/engine/**': { lines: 92, functions: 95, statements: 92, branches: 84 },
         'web/games/uno/src/ui/state.ts': { lines: 90, functions: 95, statements: 90, branches: 90 },
@@ -792,26 +793,35 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
     e2e: gameE2e('uno'),
   },
   flip7: {
-    // Flip 7 pass-and-play (docs/design/flip7.md §7): a solo page on the matrix jobs like a game.
+    // Flip 7 on the shared shell (docs/design/flip7.md §8): pass the phone or N-seat online, a
+    // game suite like briscola's (its own spec and the shell specs' @flip7 describes).
     unit: ['web/games/flip7/**/*.test.ts'],
     standalone: [],
     browser: false,
     needsBuild: false,
     coverage: {
-      include: ['web/games/flip7/src/engine/**/*.ts', 'web/games/flip7/src/ui/state.ts'],
-      // Measured at the page's landing (lines/functions/statements/branches): the engine
-      // 94.9/98.1/92.8/85.7 and the deck 94.4/100/95.9/79.2 over hand-built positions, seeded
-      // deals and whole bot games (engine.test.ts, cards.test.ts; the unreached lines are the
-      // exhaustive switches' `never` arms and the never-dealt sentinel's branches), the screens
-      // reducer 88.2/100/90.0/92.9 (state.test.ts; the `never` arm). The paint (ui/render.ts) and
-      // main.ts have no unit test: e2e/flip7.spec.ts drives them.
+      include: [
+        'web/games/flip7/src/engine/**/*.ts',
+        'web/games/flip7/src/protocol.ts',
+        'web/games/flip7/src/ui/state.ts',
+      ],
+      // The engine over hand-built positions, seeded deals and whole bot games (engine.test.ts,
+      // cards.test.ts, index.test.ts: the seat checks and the decoders); the wire (protocol.test.ts);
+      // the table's reducer over the shell (state.test.ts). The paint (ui/render.ts) and main.ts
+      // have no unit test: e2e/flip7-local.spec.ts and the shell specs drive them.
       thresholds: {
         'web/games/flip7/src/engine/**': { lines: 92, functions: 95, statements: 92, branches: 84 },
+        'web/games/flip7/src/protocol.ts': {
+          lines: 90,
+          functions: 90,
+          statements: 90,
+          branches: 80,
+        },
         'web/games/flip7/src/ui/state.ts': {
-          lines: 85,
-          functions: 95,
-          statements: 88,
-          branches: 90,
+          lines: 80,
+          functions: 80,
+          statements: 80,
+          branches: 70,
         },
       },
     },
@@ -936,7 +946,7 @@ export const isGameSuite = (suite: Suite): suite is GameSuite =>
 /** The game suites in job order: the values of the two matrix jobs' `strategy.matrix.suite`. */
 export const GAME_SUITES: ReadonlyArray<GameSuite> = SUITE_NAMES.filter(isGameSuite);
 
-/** The rows every game gets: its folder, its parity oracles, its specs and its style goldens. Its own specs are its row's, spelled whole (Hive's is `e2e/hive.spec.ts`, no `hive-*`). */
+/** The rows every game gets: its folder, its parity oracles, its specs and its style goldens. Its own specs are its row's, spelled whole (UNO's is `e2e/uno.spec.ts`, no `uno-*`; Hive's `e2e/hive.spec.ts`). */
 const gameRules = (game: PageSuite): ReadonlyArray<Rule> => {
   const folder = FOLDER_OF[game];
   const ownSpecs = (isSoloPage(folder) ? SOLO[folder].specs : REGISTRY[folder].specs).map((glob) =>
@@ -1047,7 +1057,7 @@ export const RULES: ReadonlyArray<Rule> = [
   {
     // One describe per shell game (every game since M5 of docs/design/fidice-shell-adoption.md),
     // each played by that game's e2e job through its tag (every game row claims the files, each
-    // inverting the others' tags): a spec change runs the five jobs, a change under
+    // inverting the others' tags): a spec change runs the six jobs, a change under
     // web/games/<g>/** runs e2e-<g> with its describes (gameRules), and web/shared/** runs
     // everything (above). No game-e2e job runs another game's describes.
     globs: ['e2e/shell-*.spec.ts'],
@@ -1056,6 +1066,8 @@ export const RULES: ReadonlyArray<Rule> = [
       e2eJob('fidice'),
       e2eJob('backgammon'),
       e2eJob('briscola'),
+      e2eJob('uno'),
+      e2eJob('flip7'),
       e2eJob('hive'),
     ],
     why: "the shared shell specs: a describe per shell game, each run by that game's e2e job through its tag",

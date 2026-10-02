@@ -1,7 +1,7 @@
 // The UNO deck (docs/design/uno.md §2): 108 cards, four colours of one 0, two each of 1-9, two
 // Skip, two Reverse, two Draw Two, plus four Wild and four Wild Draw Four. `playableOn` is the one
-// matching rule (colour, number or symbol; a wild always), `pointsOf` the one scoring table
-// (face value, 20 for an action card, 50 for a wild). Nothing here reads a game: these are the
+// matching rule (colour, number or symbol; a wild always); there are no points (one round is the
+// game, docs/design/uno.md §6). Nothing here reads a game: these are the
 // selectors the engine, the paint and the tests share. The art is the paint's (a coloured tile
 // with a glyph: the base pack is deliberately plain, §7).
 
@@ -77,13 +77,6 @@ export const makeDeck = (): Cards => [
 ];
 
 export const isWild = (card: Card): boolean => WILD_KINDS.includes(card.kind);
-
-/** §6: face value for a number, 20 for Skip, Reverse and Draw Two, 50 for either wild. */
-export const pointsOf = (card: Card): number =>
-  card.kind === 'number' ? (card.value ?? 0) : isWild(card) ? 50 : 20;
-
-export const pointsOfHand = (cards: Cards): number =>
-  cards.reduce((sum, card) => sum + pointsOf(card), 0);
 
 /**
  * §3: a card may be played on the top card when it is a wild, shares the active colour (the top

@@ -902,3 +902,53 @@ body[data-flip='1'] {
     }
   }
 }
+/* The number stepper (web/shared/markup/stepper.ts, web/shared/ui/stepper.ts; the owner,
+   2026-10-02: "a number with - and + buttons on the side so you can increase and decrease"): the
+   label over a row of −, the count and +, centred in its card, each button a 44px target in the
+   theme's fill, the count in the display face between them; a button at its bound is disabled and
+   fades as .btn does. */
+.stepper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.stepper-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.stepper-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-inner);
+  background: var(--fill);
+  color: var(--ink-on-fill);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.stepper-num {
+  min-width: 2ch;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}

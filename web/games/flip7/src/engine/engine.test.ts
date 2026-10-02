@@ -129,7 +129,7 @@ describe('hitting and staying (§3, §4)', () => {
     expect(cardCount(saved)).toBe(cardCount(game));
   });
 
-  test('stay banks the line; the round ends when nobody is active', () => {
+  test('stay banks the line; the round ends when nobody is active, the lines left on the table until the next deal', () => {
     const game = scenario(
       [{ line: ['n10-1', 'n12-1', 'times2'] }, { line: ['n4-1'], status: 'stayed' }],
       ['n1-1'],
@@ -137,9 +137,12 @@ describe('hitting and staying (§3, §4)', () => {
     const over = apply(game, { type: 'stay' }, rng);
     expect(over.phase).toEqual({ kind: 'roundOver' });
     expect(over.scores).toEqual([44, 4]);
-    expect(over.seats.every((s) => s.line.length === 0)).toBe(true);
-    expect(over.discard).toHaveLength(4);
+    expect(over.seats.map((s) => s.line.length)).toEqual([3, 1]);
+    expect(over.discard).toHaveLength(0);
     expect(over.note).toContain('P1 +44, P2 +4');
+    const next = apply(over, { type: 'nextRound' }, rng);
+    expect(next.seats.every((s) => s.line.length <= 1)).toBe(true);
+    expect(cardCount(next)).toBe(cardCount(over));
   });
 
   test('a bust by the last active seat also ends the round, scoring the others', () => {

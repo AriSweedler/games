@@ -1,9 +1,11 @@
-// The UNO engine (docs/design/uno.md §3-§6): a pure game of two to ten players on one table. The
-// state holds every hand, both piles, the active colour, whose turn and which way, the phase the
-// turn is in and the running scores; `deal` starts a round from a shuffled deck, `apply` plays one
-// intent (play a card, choose a colour for a wild, draw, pass on a drawn card, deal the next
-// round) and returns the next state with a one-line note of what happened for the paint. The
-// randomness (the shuffles) comes in as an `Rng` so a test scripts a whole round and the e2e
+// The UNO engine (docs/design/uno.md §3-§6): a pure game of two to twelve players on one table,
+// one round long (the owner, 2026-10-02: "UNO should only be single round games ... more like
+// briscola"): the first player to empty a hand wins the game. The state holds every hand, both
+// piles, the active colour, whose turn and which way, and the phase the turn is in; `deal` starts a
+// game from a shuffled deck, `apply` plays one intent (play a card, choose a colour for a wild,
+// draw, pass on a drawn card, deal again once the game is won) and returns the next state with a
+// one-line note of what happened for the paint. The
+// randomness (the shuffles) comes in as an `Rng` so a test scripts a whole game and the e2e
 // seeds one. Not here (§8, the MVP's edges): the UNO call and its penalty, the Wild Draw Four
 // challenge, stacking; a card played is final (the paint confirms nothing).
 import type { Rng } from '../../../../shared/lib/rng.ts';
@@ -13,7 +15,6 @@ import {
   isWild,
   makeDeck,
   playableOn,
-  pointsOfHand,
   without,
   type Card,
   type Cards,
@@ -21,10 +22,9 @@ import {
 } from './cards.ts';
 
 export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 10;
+/** The owner, 2026-10-02: "uno caps out at 12"; 12 × 7 = 84 of the 108 cards leaves a stock of 23. */
+export const MAX_PLAYERS = 12;
 export const HAND_SIZE = 7;
-/** §6: the first player to reach this many points wins the game. */
-export const DEFAULT_TARGET = 500;
 
 export type Direction = 1 | -1;
 
@@ -33,11 +33,9 @@ export type Phase =
   | Readonly<{ kind: 'turn' }>
   /** The current player drew a playable card: play that card, or keep it and pass. */
   | Readonly<{ kind: 'drawn'; card: Card }>
-  /** A wild is on the discard pile (or opened the round): the current player names the colour. */
+  /** A wild is on the discard pile (or opened the game): the current player names the colour. */
   | Readonly<{ kind: 'color'; card: Card }>
-  /** One hand is empty; the round's points are added. */
-  | Readonly<{ kind: 'roundOver'; winner: number; gained: number }>
-  /** A score reached the target. */
+  /** One hand is empty: its player has won the game. */
   | Readonly<{ kind: 'gameOver'; winner: number }>;
 
 export type Game = Readonly<{
@@ -53,10 +51,6 @@ export type Game = Readonly<{
   turn: number;
   direction: Direction;
   phase: Phase;
-  scores: ReadonlyArray<number>;
-  target: number;
-  /** 1 for the first round. */
-  round: number;
   /** What just happened, for the status line. */
   note: string;
 }>;
@@ -66,7 +60,8 @@ export type Intent =
   | Readonly<{ type: 'color'; color: Color }>
   | Readonly<{ type: 'draw' }>
   | Readonly<{ type: 'pass' }>
-  | Readonly<{ type: 'nextRound' }>;
+  /** Play again: a fresh deal for the same seats, once the game is won. */
+  | Readonly<{ type: 'again' }>;
 
 /** A card that is never dealt: the fallback where a pile the engine keeps non-empty is read. */
 export const NO_CARD: Card = { id: '', kind: 'number', color: 'red', value: 0 };
@@ -200,27 +195,15 @@ const resolve = (game: Game, card: Card, by: string, rng: Rng): Game => {
   }
 };
 
-/** §5: the round ends when a hand is empty; the winner takes everyone else's points. */
-const settleRound = (game: Game, winner: number): Game => {
-  const gained = game.hands.reduce(
-    (sum, hand, i) => (i === winner ? sum : sum + pointsOfHand(hand)),
-    0,
-  );
-  const scores = game.scores.map((score, i) => (i === winner ? score + gained : score));
-  const name = nameOf(game, winner);
-  const won = (scores[winner] ?? 0) >= game.target;
-  return {
-    ...game,
-    scores,
-    phase: won ? { kind: 'gameOver', winner } : { kind: 'roundOver', winner, gained },
-    note: won
-      ? `${name} wins the game with ${String(scores[winner] ?? 0)} points.`
-      : `${name} goes out and takes ${String(gained)} points.`,
-  };
-};
+/** §5: the game ends when a hand is empty; its player wins (no points: one round is the game). */
+const win = (game: Game, winner: number): Game => ({
+  ...game,
+  phase: { kind: 'gameOver', winner },
+  note: `${nameOf(game, winner)} wins!`,
+});
 
 /**
- * §3: a fresh round. Seven cards each from a shuffled deck; the first card of the rest opens the
+ * §3: a fresh game. Seven cards each from a shuffled deck; the first card of the rest opens the
  * discard pile, unless it is a Wild Draw Four, which goes back for another (the first other card
  * opens, the pile keeps its order). The opener's action applies to the first player: a Skip skips
  * them, a Reverse makes the dealer (the last seat) first, a Draw Two deals them two and skips
@@ -249,7 +232,7 @@ const open = (base: Game, rng: Rng): Game => {
     turn: first,
     direction: 1,
     phase: { kind: 'turn' },
-    note: `Round ${String(base.round)}: ${nameOf(base, first)} starts.`,
+    note: `${nameOf(base, first)} starts.`,
   };
   switch (starter.kind) {
     case 'number':
@@ -288,8 +271,8 @@ const open = (base: Game, rng: Rng): Game => {
   }
 };
 
-/** A new game of `names` (MIN_PLAYERS to MAX_PLAYERS seats; the page's setup keeps the bounds), round 1 dealt. */
-export const deal = (names: ReadonlyArray<string>, rng: Rng, target = DEFAULT_TARGET): Game =>
+/** A new game of `names` (MIN_PLAYERS to MAX_PLAYERS seats; the page's setup keeps the bounds), dealt. */
+export const deal = (names: ReadonlyArray<string>, rng: Rng): Game =>
   open(
     {
       names,
@@ -300,9 +283,6 @@ export const deal = (names: ReadonlyArray<string>, rng: Rng, target = DEFAULT_TA
       turn: 0,
       direction: 1,
       phase: { kind: 'turn' },
-      scores: names.map(() => 0),
-      target,
-      round: 1,
       note: '',
     },
     rng,
@@ -327,7 +307,7 @@ const play = (game: Game, id: string, rng: Rng): Game => {
     discard: [...game.discard, card],
     color: isWild(card) ? game.color : (card.color ?? game.color),
   };
-  if ((played.hands[game.turn] ?? []).length === 0) return settleRound(played, game.turn);
+  if ((played.hands[game.turn] ?? []).length === 0) return win(played, game.turn);
   return resolve(played, card, by, rng);
 };
 
@@ -344,7 +324,7 @@ const chooseColor = (game: Game, color: Color, rng: Rng): Game => {
       `${by} named ${color}: ${nameOf(game, next)} draws four and is skipped.`,
     );
   }
-  // A Wild that opened the round was nobody's play: the namer keeps the turn.
+  // A Wild that opened the game was nobody's play: the namer keeps the turn.
   const opened = game.discard.length === 1 && currentHand(game).length === HAND_SIZE;
   return opened
     ? withTurn(coloured, game.turn, `${by} named ${color}.`)
@@ -372,9 +352,9 @@ const pass = (game: Game): Game => {
   return withTurn(game, nextSeat(game), `${by} keeps the card and passes.`);
 };
 
-const nextRound = (game: Game, rng: Rng): Game => {
-  if (game.phase.kind !== 'roundOver') return refuse(game, 'The round is not over.');
-  return open({ ...game, round: game.round + 1, hands: [], draw: [], discard: [] }, rng);
+const again = (game: Game, rng: Rng): Game => {
+  if (game.phase.kind !== 'gameOver') return refuse(game, 'The game is not over.');
+  return deal(game.names, rng);
 };
 
 /** One intent against the game; an intent that does not apply leaves the state and sets the note. */
@@ -388,8 +368,8 @@ export const apply = (game: Game, intent: Intent, rng: Rng): Game => {
       return drawOne(game, rng);
     case 'pass':
       return pass(game);
-    case 'nextRound':
-      return nextRound(game, rng);
+    case 'again':
+      return again(game, rng);
     default: {
       const never: never = intent;
       return never;

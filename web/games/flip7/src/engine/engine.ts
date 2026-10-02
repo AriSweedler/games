@@ -20,7 +20,7 @@ import {
 } from './cards.ts';
 
 export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 8;
+export const MAX_PLAYERS = 12;
 /** §6: the first player to reach this many points, alone at the top, wins the game. */
 export const DEFAULT_TARGET = 200;
 export const FLIP3_COUNT = 3;
@@ -131,7 +131,8 @@ const toDiscard = (game: Game, cards: Cards): Game => ({
 
 /**
  * §6: the round ends. Every seat not busted banks its line (seven distinct numbers carry the
- * bonus); the lines go to the discards; a score at or over the target wins the game when it
+ * bonus); the lines stay on the table, every bust still showing, until the next round is dealt
+ * (`startRound` sends them to the discards); a score at or over the target wins the game when it
  * stands alone at the top, otherwise another round is played.
  */
 const settle = (game: Game, note: string): Game => {
@@ -140,12 +141,7 @@ const settle = (game: Game, note: string): Game => {
   const cleared: Game = {
     ...game,
     scores,
-    discard: [
-      ...game.discard,
-      ...game.seats.flatMap((seat) => seat.line),
-      ...game.pending.map((pending) => pending.card),
-    ],
-    seats: game.seats.map((seat) => ({ ...seat, line: [] })),
+    discard: [...game.discard, ...game.pending.map((pending) => pending.card)],
     pending: [],
     flip3: null,
     opening: 0,
@@ -340,6 +336,7 @@ const startRound = (game: Game): Game => {
   const first = seatAfter(game, game.dealer);
   return {
     ...game,
+    discard: [...game.discard, ...game.seats.flatMap((seat) => seat.line)],
     seats: game.seats.map((seat) => ({ ...seat, line: [], status: 'active' })),
     turn: first,
     opening: game.seats.length,

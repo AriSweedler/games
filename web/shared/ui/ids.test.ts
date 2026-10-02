@@ -4,7 +4,15 @@ import { HISTORY_IDS, SHELL_GAMES, SHELL_IDS } from './ids.ts';
 
 describe('SHELL_IDS', () => {
   test('is a list of distinct, well-formed ids for the three shell games; the built pages are checked in test/dist', () => {
-    expect(SHELL_GAMES).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola', 'hive']);
+    expect(SHELL_GAMES).toEqual([
+      'gin-rummy',
+      'fidice',
+      'backgammon',
+      'briscola',
+      'uno',
+      'flip7',
+      'hive',
+    ]);
     expect(new Set(SHELL_IDS).size).toBe(SHELL_IDS.length);
     SHELL_IDS.forEach((id) => {
       expect(id).toMatch(/^[a-z][A-Za-z0-9]*$/);

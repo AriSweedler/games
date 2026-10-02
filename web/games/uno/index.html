@@ -1,81 +1,375 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <meta property="og:title" content="UNO" />
+    <meta
+      property="og:description"
+      content="UNO for two to twelve: pass one phone, or open a table online and send the link."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://games.sweedler.com/uno/" />
+    <meta property="og:image" content="https://games.sweedler.com/uno/splash.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="UNO: four coloured cards fanned on a dark table" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="UNO" />
+    <meta
+      name="twitter:description"
+      content="UNO for two to twelve: pass one phone, or open a table online and send the link."
+    />
+    <meta name="twitter:image" content="https://games.sweedler.com/uno/splash.png" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>UNO</title>
     <meta
       name="description"
-      content="UNO on one phone: pass it around, match the colour or the number, first to empty a hand takes the points."
+      content="UNO for two to twelve: match the colour or the number; the first to empty a hand wins."
     />
     <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
     <link rel="alternate icon" href="../../shared/favicon.ico" />
+    <link rel="stylesheet" href="../../shared/styles/tokens.css" />
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../../shared/styles/shell.css" />
     <link rel="stylesheet" href="./theme.css" />
   </head>
   <body>
-    <div id="app" data-screen="setup">
-      <header class="bar">
-        <div class="titles">
+    <div id="app">
+      <!-- HOME / LOBBY (docs/design/uno.md §9): Online (the default) or Pass the phone for 2 to 12 players. -->
+      <div id="homeScreen">
+        <div class="masthead">
           <h1>UNO</h1>
-          <p class="sub">pass and play</p>
+          <div class="subtitle">Match the colour or the number, for two to twelve</div>
         </div>
-        <button id="newGameBtn" class="link-btn" type="button">New game</button>
-      </header>
-      <main>
-        <section id="setup" class="panel">
-          <label class="field">
-            <span>Players</span>
-            <select id="seatCount">
-              <option value="2" selected>2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-            </select>
-          </label>
-          <div id="names" class="names"></div>
-          <button id="startBtn" class="btn btn-go" type="button">Deal</button>
-          <p class="hint">
-            Match the colour, the number or the symbol. Can't play? Draw one. Empty your hand to
-            take everyone else's points; 500 wins.
-          </p>
-        </section>
-        <section id="curtain" class="panel curtain" hidden>
-          <p class="pass">Pass the phone to</p>
-          <h2 id="curtainName" class="curtain-name"></h2>
-          <p id="curtainNote" class="note"></p>
-          <button id="revealBtn" class="btn btn-go" type="button">Show my hand</button>
-        </section>
-        <section id="table" class="table" hidden>
-          <div class="turn">
-            <span id="turnName" class="turn-name"></span>
-            <span id="direction" class="direction" aria-label="Direction of play">→</span>
+
+        <div id="resumeBox" class="card-box resume hidden">
+          <label>Game in progress</label>
+          <button class="btn btn-primary btn-block" id="resumeBtn">Resume</button>
+        </div>
+
+        <div class="tabbar" id="topTabbar">
+          <div class="tab-wrap" id="tabPlayWrap">
+            <button type="button" class="tab-btn" id="tabPlayBtn" data-tab="play">Play</button>
+            <div class="tab-submenu" id="playSubmenu">
+              <button type="button" data-mode="online">Online</button>
+              <button type="button" data-mode="local">Pass the phone</button>
+            </div>
           </div>
-          <ul id="seats" class="seats" aria-label="Cards in each hand"></ul>
-          <div class="pile">
-            <div id="topCard" class="top-card" aria-label="Top of the pile"></div>
-            <span id="colorDot" class="color-dot" data-color="red">Red</span>
+          <button type="button" class="tab-btn" id="tabRulesBtn" data-tab="rules">Rules</button>
+          <button type="button" class="tab-btn" id="tabAboutBtn" data-tab="about">About</button>
+        </div>
+
+        <!-- PLAY TAB -->
+        <div id="playPanel" class="tab-panel">
+          <div class="mode-switch" id="playModeSwitch">
+            <button type="button" class="mode-btn active" data-mode="online">Online</button>
+            <button type="button" class="mode-btn" data-mode="local">Pass the phone</button>
           </div>
-          <div id="colorPicker" class="color-picker" hidden>
-            <button class="swatch" type="button" data-color="red" aria-label="Red"></button>
-            <button class="swatch" type="button" data-color="yellow" aria-label="Yellow"></button>
-            <button class="swatch" type="button" data-color="green" aria-label="Green"></button>
-            <button class="swatch" type="button" data-color="blue" aria-label="Blue"></button>
+
+          <div id="onlineModeContent">
+            <div class="card-box">
+              <label>Your name</label>
+              <input type="text" id="nameInput" value="Ari" maxlength="20" autocomplete="off" />
+            </div>
+            <div class="card-box">
+              <label>Open a table</label>
+              <div class="stepper" data-min="2" data-max="12">
+                <span class="stepper-label">Players</span>
+                <div class="stepper-row">
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="playersCountDec"
+                    aria-label="Fewer players"
+                    disabled
+                  >
+                    −
+                  </button>
+                  <output class="stepper-num" id="playersCountNum" aria-live="polite">2</output>
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="playersCountInc"
+                    aria-label="More players"
+                  >
+                    +
+                  </button>
+                </div>
+                <input type="hidden" id="playersCount" value="2" />
+              </div>
+              <button class="btn btn-go btn-block" id="hostBtn">Open a table</button>
+              <div class="empty-note left">You'll get a 4-letter room code to share.</div>
+            </div>
+            <div class="card-box">
+              <label>Sit down at a table</label>
+              <div class="row">
+                <input
+                  type="text"
+                  id="codeInput"
+                  class="code-input grow"
+                  placeholder="CODE"
+                  maxlength="4"
+                  autocapitalize="characters"
+                  autocomplete="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                  inputmode="text"
+                  enterkeyhint="go"
+                  data-lpignore="true"
+                  name="room-code-no-ac"
+                />
+                <button class="btn btn-go" id="joinBtn">Sit down</button>
+              </div>
+            </div>
           </div>
-          <p id="status" class="status" aria-live="polite"></p>
-          <div id="hand" class="hand" aria-label="Your hand"></div>
-          <div class="controls">
-            <button id="drawBtn" class="btn" type="button">Draw</button>
-            <button id="passBtn" class="btn" type="button" hidden>Keep it, pass</button>
+
+          <div id="localModeContent" class="hidden">
+            <div class="card-box">
+              <div class="stepper" data-min="2" data-max="12">
+                <span class="stepper-label">Players</span>
+                <div class="stepper-row">
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="localPlayersCountDec"
+                    aria-label="Fewer players"
+                    disabled
+                  >
+                    −
+                  </button>
+                  <output class="stepper-num" id="localPlayersCountNum" aria-live="polite"
+                    >2</output
+                  >
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="localPlayersCountInc"
+                    aria-label="More players"
+                  >
+                    +
+                  </button>
+                </div>
+                <input type="hidden" id="localPlayersCount" value="2" />
+              </div>
+              <div class="row">
+                <input
+                  type="text"
+                  id="p1NameInput"
+                  class="grow"
+                  placeholder="Player 1"
+                  maxlength="20"
+                  autocomplete="off"
+                />
+                <input
+                  type="text"
+                  id="p2NameInput"
+                  class="grow"
+                  placeholder="Player 2"
+                  maxlength="20"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="row hidden" id="moreNames">
+                <input
+                  type="text"
+                  id="p3NameInput"
+                  class="grow"
+                  placeholder="Player 3"
+                  maxlength="20"
+                  autocomplete="off"
+                />
+                <input
+                  type="text"
+                  id="p4NameInput"
+                  class="grow"
+                  placeholder="Player 4"
+                  maxlength="20"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+            <button class="btn btn-go btn-block" id="localBtn">Start</button>
+            <div class="empty-note left">
+              One phone, no internet needed. A curtain names whose turn it is; everyone else looks
+              away.
+            </div>
           </div>
-          <section id="result" class="result" hidden>
-            <h2 id="resultTitle"></h2>
-            <ul id="scores" class="scores"></ul>
-            <button id="nextRoundBtn" class="btn btn-go" type="button">Next round</button>
-          </section>
-        </section>
-      </main>
+        </div>
+
+        <!-- RULES TAB: ui/rules.ts fills both slots at boot (render.ts renderRules). -->
+        <div id="rulesPanel" class="tab-panel hidden">
+          <ul class="rules-list" id="rulesList"></ul>
+        </div>
+
+        <!-- ABOUT TAB: about.ts fills the copy, its jargon linked to the rules (glossary-links.md). -->
+        <div id="aboutPanel" class="tab-panel hidden">
+          <div class="card-box prose" id="aboutCopy"></div>
+        </div>
+      </div>
+
+      <!-- HOST WAITING -->
+      <div id="hostWaitScreen" class="hidden">
+        <h1>Your table</h1>
+        <div class="subtitle">Have the others open this same page and enter the code</div>
+        <div class="card-box centered">
+          <label>Room code</label>
+          <div class="room-code" id="roomCode">----</div>
+          <button class="btn btn-secondary btn-sm" id="shareCodeBtn">Share invite</button>
+        </div>
+        <div class="card-box centered">
+          <div id="hostWaitStatus" class="pulse muted">Opening the table…</div>
+          <ul class="seat-list" id="seatList" aria-label="Seats"></ul>
+          <div class="empty-note">
+            Keep this screen open while the others sit down. If you switch apps, come straight back
+            and the table reconnects on its own.
+          </div>
+        </div>
+        <button class="btn btn-go btn-block hidden" id="startGameBtn">Deal</button>
+        <button class="btn btn-ghost btn-block" id="cancelHostBtn">Cancel</button>
+      </div>
+
+      <!-- GUEST WAITING -->
+      <div id="guestWaitScreen" class="hidden">
+        <h1>Joining…</h1>
+        <div class="card-box centered">
+          <div id="guestWaitStatus" class="pulse muted">Connecting…</div>
+          <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>
+          <div id="guestSeatName" class="hidden">
+            <label for="guestNameInput">Playing as</label>
+            <div class="row">
+              <input
+                type="text"
+                id="guestNameInput"
+                class="grow"
+                maxlength="20"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                enterkeyhint="done"
+              />
+              <button class="btn btn-secondary btn-sm" id="guestRenameBtn">Change</button>
+            </div>
+            <div class="muted" id="guestNameNote"></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-block" id="cancelGuestBtn">Back</button>
+      </div>
+
+      <!-- TABLE (docs/design/uno.md §9): every seat with its card count (the turn lit), the names
+           strip (me, the seat after me and its connection), the pile with the colour in play, my
+           hand, Draw and Pass, the colour picker for my wild, the status line. -->
+      <div id="tableScreen" class="hidden">
+        <div class="topbar">
+          <div class="row tight">
+            <button
+              class="icon-btn"
+              id="leaveBtn"
+              title="Leave the table"
+              aria-label="Leave the table"
+            >
+              ✕
+            </button>
+            <button
+              class="icon-btn hidden"
+              id="handoffBtn"
+              title="Continue online"
+              aria-label="Continue online"
+            >
+              🌐
+            </button>
+          </div>
+          <div class="names-strip">
+            <span id="myName">You</span>
+            <span class="direction" id="direction" aria-label="Direction of play">↻</span>
+            <span id="oppName">Opponent</span>
+            <span class="conn-dot" id="oppDot"></span>
+          </div>
+          <div class="row tight">
+            <button class="icon-btn" id="rulesBtnGame" title="Rules" aria-label="Rules">📖</button>
+            <button class="icon-btn" id="historyBtn" title="History" aria-label="History">
+              📜
+            </button>
+            <button
+              class="icon-btn"
+              id="soundBtn"
+              title="Sound &amp; vibration"
+              aria-label="Sound"
+              aria-pressed="true"
+            >
+              🔊
+            </button>
+          </div>
+        </div>
+        <ul class="seats" id="seats" aria-label="Cards in each hand"></ul>
+        <div class="pile">
+          <div class="draw-pile" aria-label="Draw pile"><span id="drawCount">0</span></div>
+          <div class="top-card" id="topCard" aria-label="Top of the pile"></div>
+          <span class="color-dot" id="colorDot" data-color="red">Red</span>
+        </div>
+        <div class="color-picker hidden" id="colorPicker" aria-label="Name a colour">
+          <button class="swatch" type="button" data-color="red" aria-label="Red"></button>
+          <button class="swatch" type="button" data-color="yellow" aria-label="Yellow"></button>
+          <button class="swatch" type="button" data-color="green" aria-label="Green"></button>
+          <button class="swatch" type="button" data-color="blue" aria-label="Blue"></button>
+        </div>
+        <p class="status-line" id="statusText" aria-live="polite"></p>
+        <div class="hand" id="hand" aria-label="Your hand"></div>
+        <div class="controls">
+          <button class="btn btn-secondary grow" id="drawBtn">Draw</button>
+          <button class="btn btn-secondary grow hidden" id="passBtn">Keep it, pass</button>
+        </div>
+      </div>
+
+      <!-- ENDGAME: the shell's fifth screen, which this page never shows: a round and the game end
+           on the result sheet over the table. -->
+      <div id="endgameScreen" class="hidden">
+        <h1>Game over</h1>
+      </div>
     </div>
+
+    <!-- PASS-AND-PLAY CURTAIN: the table hidden while the phone changes hands. -->
+    <div id="curtainOverlay" class="overlay curtain hidden">
+      <div class="sheet centered">
+        <div class="sheet-title" id="curtainTitle">Pass the phone</div>
+        <div class="sheet-sub" id="curtainSub"></div>
+        <div id="curtainLast" class="empty-note"></div>
+        <button class="btn btn-primary btn-block" id="curtainBtn">Show my hand</button>
+      </div>
+    </div>
+
+    <!-- RESULT: one round is the game (the owner, 2026-10-02): the winner over the table, the cards
+         every other seat still held; Play again deals the same seats anew. -->
+    <div id="resultOverlay" class="overlay hidden">
+      <div class="sheet centered">
+        <div class="sheet-title" id="rsTitle">Game over</div>
+        <ul class="score-list" id="rsScore"></ul>
+        <button class="btn btn-go btn-block" id="rsAgainBtn">Play again</button>
+        <button class="btn btn-ghost btn-block btn-sm" id="rsLeaveBtn">Leave the table</button>
+      </div>
+    </div>
+
+    <!-- RULES -->
+    <div id="rulesOverlay" class="overlay hidden">
+      <div class="sheet">
+        <div class="sheet-title">Rules</div>
+        <ul class="rules-list" id="rulesOverlayList"></ul>
+        <button class="btn btn-primary btn-block" id="closeRulesBtn">Got it</button>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="historyOverlay" class="overlay hidden">
+      <div class="sheet">
+        <div class="row between">
+          <div class="sheet-title">History</div>
+          <button class="btn btn-ghost btn-sm" id="closeHistoryBtn">Close</button>
+        </div>
+        <div class="history" id="historyList"></div>
+        <div class="recent-games" id="recentGames"></div>
+      </div>
+    </div>
+
+    <div id="toast" role="status"></div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

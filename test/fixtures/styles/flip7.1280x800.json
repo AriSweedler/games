@@ -1,0 +1,572 @@
+{
+  "game": "flip7",
+  "viewport": "1280x800",
+  "properties": ["background-color", "background-image", "border-color", "border-radius", "border-style", "border-width", "box-shadow", "color", "display", "font-family", "font-size", "font-weight", "gap", "letter-spacing", "margin", "opacity", "padding", "text-transform", "visibility"],
+  "tokens": {
+    "--accent": "#e8c547",
+    "--accent-dark": "#c9a52c",
+    "--act": "#d64578",
+    "--act-text": "#fff",
+    "--bg": "#0f2318",
+    "--card": "#163526",
+    "--card-2": "#1c4030",
+    "--danger": "#f87171",
+    "--emphasis": "#e8c547",
+    "--felt": "radial-gradient(ellipse at 50% 30%, #1f5a3a 0%, #123a26 55%, #0b2418 100%)",
+    "--fill": "#1c4030",
+    "--fill-hover": "rgba(255, 255, 255, 0.07)",
+    "--font-body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    "--font-display": "ui-monospace, Menlo, monospace",
+    "--frame-band": "6px",
+    "--frame-color": "#e8c547",
+    "--frame-corner": "max(0px, 0px, 0px)",
+    "--frame-corner-bl": "max(0px, 0px, 0px)",
+    "--frame-corner-br": "max(0px, 0px, 0px)",
+    "--frame-corner-tl": "max(0px, 0px, 0px)",
+    "--frame-corner-tr": "max(0px, 0px, 0px)",
+    "--frame-gap": "4px",
+    "--frame-hairline": "transparent",
+    "--frame-hairline-w": "1px",
+    "--frame-inset-bottom": "0px",
+    "--frame-inset-left": "0px",
+    "--frame-inset-right": "0px",
+    "--frame-inset-top": "0px",
+    "--go": "#c2d06d",
+    "--go-text": "#10281a",
+    "--gold": "#fbbf24",
+    "--ink-hover": "#f2fdf6",
+    "--ink-on-bar": "#9cc9ac",
+    "--ink-on-fill": "#f2fdf6",
+    "--mini-font": "0.8rem",
+    "--mini-h": "30px",
+    "--mini-w": "22px",
+    "--mod": "#e8c547",
+    "--mod-text": "#241d05",
+    "--muted": "#9cc9ac",
+    "--num": "#3b6fd8",
+    "--num-text": "#fff",
+    "--radius": "18px",
+    "--radius-control": "14px",
+    "--radius-inner": "12px",
+    "--radius-tab": "10px",
+    "--second": "#3fa66b",
+    "--shadow-shell": "0 4px 14px rgba(0, 0, 0, 0.25)",
+    "--surface-bar": "rgba(0, 0, 0, 0.22)",
+    "--surface-shell": "#163526",
+    "--text": "#f2fdf6",
+    "--tile-font": "1.15rem",
+    "--tile-h": "52px",
+    "--tile-w": "40px"
+  },
+  "values": ["#0f2318", "#10281a", "#163526", "#1c4030", "#241d05", "#3b6fd8", "#3fa66b", "#9cc9ac", "#c2d06d", "#c9a52c", "#d64578", "#e8c547", "#f2fdf6", "#f87171", "#fbbf24", "#fff", "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif", "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", "0", "0 4px 14px rgba(0, 0, 0, 0.25)", "0.4", "0.45", "0.88", "0.8rem", "0px", "0px 0px 0px 0px", "0px 0px 0px auto", "0px 0px 12px 0px", "0px 0px 14px 14px", "0px 0px 16px 0px", "0px 3px", "0px 8px", "0px auto 0px auto", "1", "1.15rem", "10px", "10px 12px", "10px 12px 16px", "11.2px", "11px 6px", "12.48px", "12.8px", "12px", "12px 0px 0px 0px", "12px 16px", "13.3333px", "14.4px", "14px", "14px 18px", "16px", "17.6px", "18.4px", "18px", "1px", "1px 2px", "1px 6px", "21.44px 0px 21.44px 0px", "21.6px", "22px", "22px 18px", "24px", "2px", "30px", "32px", "400", "40px", "48px", "4px", "4px 0px 16px 0px", "4px 0px 2px 0px", "52px", "5px", "6px", "6px 10px", "6px 7px", "700", "800", "8px", "8px 10px", "9.6px", "999px", "9px 6px", "Arial", "auto 0px 0px 0px", "block", "flex", "grid", "hidden", "inline", "inline-block", "inline-flex", "inset", "list-item", "max(0px, 0px, 0px)", "none", "normal", "radial-gradient(ellipse at 50% 30%, #1f5a3a 0%, #123a26 55%, #0b2418 100%)", "rgb(118, 118, 118)", "rgb(156, 201, 172)", "rgb(16, 40, 26)", "rgb(194, 208, 109)", "rgb(22, 53, 38)", "rgb(232, 197, 71)", "rgb(239, 239, 239)", "rgb(242, 253, 246)", "rgb(248, 113, 113)", "rgb(255, 255, 255)", "rgb(28, 64, 48)", "rgb(59, 111, 216)", "rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0.22)", "rgba(0, 0, 0, 0.25) 0px 4px 14px 0px", "rgba(0, 0, 0, 0.4) 0px 1px 3px 0px", "rgba(255, 255, 255, 0.07)", "solid", "transparent", "ui-monospace, Menlo, monospace", "uppercase", "visible"],
+  "styles": {
+    "0224b40e4086": {
+      "v": [110, 94, 104, 47, 94, 24, 94, 104, 85, 16, 49, 64, 72, 95, 68, 33, 67, 94, 118],
+      "vars": {}
+    },
+    "0fb15cf62294": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 72, 95, 25, 21, 24, 94, 118],
+      "vars": {}
+    },
+    "0fe8759f5fbf": {
+      "v": [109, 94, 98, 24, 94, 24, 94, 98, 88, 16, 49, 64, 95, 95, 24, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "10219447716f": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 84, 16, 63, 75, 95, 95, 56, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "15afc568e8a9": {
+      "v": [109, 94, 98, 47, 94, 24, 94, 98, 90, 82, 49, 75, 72, 95, 25, 33, 48, 94, 118],
+      "vars": {}
+    },
+    "1850dc08dffd": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 72, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "1d3fab4c6601": {
+      "v": [108, 94, 106, 77, 94, 24, 112, 106, 86, 16, 51, 76, 95, 95, 25, 33, 31, 94, 118],
+      "vars": {}
+    },
+    "1ef944750a70": {
+      "v": [109, 94, 98, 24, 94, 24, 94, 98, 84, 16, 49, 64, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "22962586fc9a": {
+      "v": [109, 94, 102, 24, 94, 24, 94, 102, 84, 116, 66, 64, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "266308350b9d": {
+      "v": [103, 94, 104, 47, 94, 24, 94, 104, 94, 82, 50, 75, 72, 95, 25, 33, 48, 94, 118],
+      "vars": {}
+    },
+    "26cde5196e1f": {
+      "v": [106, 94, 97, 47, 91, 61, 94, 98, 89, 82, 45, 64, 95, 95, 25, 33, 54, 94, 118],
+      "vars": {}
+    },
+    "350ddced420e": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 84, 16, 49, 64, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {
+        "--accent": 11,
+        "--accent-dark": 9,
+        "--act": 10,
+        "--act-text": 15,
+        "--bg": 0,
+        "--card": 2,
+        "--card-2": 3,
+        "--danger": 13,
+        "--emphasis": 11,
+        "--felt": 96,
+        "--fill": 3,
+        "--fill-hover": 113,
+        "--font-body": 17,
+        "--font-display": 116,
+        "--frame-band": 72,
+        "--frame-color": 11,
+        "--frame-corner": 93,
+        "--frame-corner-bl": 93,
+        "--frame-corner-br": 93,
+        "--frame-corner-tl": 93,
+        "--frame-corner-tr": 93,
+        "--frame-gap": 67,
+        "--frame-hairline": 115,
+        "--frame-hairline-w": 53,
+        "--frame-inset-bottom": 24,
+        "--frame-inset-left": 24,
+        "--frame-inset-right": 24,
+        "--frame-inset-top": 24,
+        "--go": 8,
+        "--go-text": 1,
+        "--gold": 14,
+        "--ink-hover": 12,
+        "--ink-on-bar": 7,
+        "--ink-on-fill": 12,
+        "--mini-font": 23,
+        "--mini-h": 62,
+        "--mini-w": 58,
+        "--mod": 11,
+        "--mod-text": 4,
+        "--muted": 7,
+        "--num": 5,
+        "--num-text": 15,
+        "--radius": 52,
+        "--radius-control": 47,
+        "--radius-inner": 42,
+        "--radius-tab": 35,
+        "--second": 6,
+        "--shadow-shell": 19,
+        "--surface-bar": 110,
+        "--surface-shell": 2,
+        "--text": 12,
+        "--tile-font": 34,
+        "--tile-h": 70,
+        "--tile-w": 65
+      }
+    },
+    "3b2ffc06577a": {
+      "v": [101, 94, 100, 42, 114, 61, 94, 104, 86, 16, 49, 64, 72, 95, 83, 33, 78, 94, 118],
+      "vars": {}
+    },
+    "4a4942840145": {
+      "v": [106, 94, 97, 47, 91, 61, 94, 104, 89, 82, 45, 64, 95, 95, 25, 33, 54, 94, 118],
+      "vars": {}
+    },
+    "5b7bb0b588c3": {
+      "v": [107, 94, 104, 47, 94, 24, 94, 104, 85, 82, 50, 75, 72, 95, 25, 20, 48, 94, 118],
+      "vars": {}
+    },
+    "5c47d3f6c648": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 84, 16, 57, 64, 95, 95, 69, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "5cdacfe102a2": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 35, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "5cfa0938c007": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 94, 16, 49, 64, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "616cbe38437a": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 94, 16, 49, 64, 77, 95, 25, 33, 37, 94, 118],
+      "vars": {}
+    },
+    "61b00de8ac56": {
+      "v": [109, 94, 98, 24, 94, 24, 94, 98, 85, 16, 46, 64, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "65745ccb8a3d": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 86, 16, 49, 64, 72, 95, 25, 33, 24, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "6582a49bd17f": {
+      "v": [107, 94, 98, 80, 94, 24, 94, 98, 84, 16, 38, 64, 95, 95, 25, 33, 55, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "66381f12b5fb": {
+      "v": [106, 94, 97, 47, 91, 61, 94, 104, 84, 116, 60, 64, 95, 79, 25, 33, 54, 117, 118],
+      "vars": {}
+    },
+    "6eaff85d5b58": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 77, 95, 43, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "716e446b9495": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 72, 95, 25, 33, 24, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "7358660921fc": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 77, 95, 25, 33, 37, 94, 118],
+      "vars": {}
+    },
+    "7407ac703f44": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 84, 16, 49, 64, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "772a90eea22e": {
+      "v": [109, 94, 104, 47, 94, 24, 94, 104, 84, 16, 49, 75, 95, 95, 25, 18, 44, 94, 118],
+      "vars": {}
+    },
+    "7a0db96cfe08": {
+      "v": [109, 94, 102, 24, 94, 24, 94, 102, 88, 16, 49, 75, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "7cc729596378": {
+      "v": [110, 94, 104, 28, 94, 24, 94, 104, 85, 16, 49, 64, 72, 95, 29, 33, 67, 94, 118],
+      "vars": {}
+    },
+    "8b6108b19c44": {
+      "v": [100, 94, 99, 47, 94, 24, 94, 99, 90, 82, 50, 75, 72, 95, 25, 33, 48, 94, 118],
+      "vars": {}
+    },
+    "920946824ae4": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 86, 16, 49, 64, 72, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "9277958ef455": {
+      "v": [101, 94, 107, 42, 114, 61, 94, 104, 86, 16, 49, 64, 72, 95, 83, 33, 78, 94, 118],
+      "vars": {}
+    },
+    "958d75fe136c": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 67, 95, 25, 21, 24, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "95b1def0c99a": {
+      "v": [109, 94, 98, 35, 94, 24, 94, 98, 84, 82, 45, 75, 95, 95, 25, 33, 81, 94, 118],
+      "vars": {}
+    },
+    "987b568869d3": {
+      "v": [101, 94, 109, 42, 114, 61, 94, 104, 86, 16, 49, 64, 67, 95, 25, 22, 74, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "9a1567457b82": {
+      "v": [101, 94, 104, 42, 94, 24, 94, 104, 85, 16, 49, 64, 61, 95, 25, 18, 67, 94, 87],
+      "vars": {}
+    },
+    "9a7dd2bfd53b": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 67, 95, 25, 33, 24, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "9e7109b13f1c": {
+      "v": [101, 94, 104, 42, 94, 24, 94, 104, 94, 16, 49, 64, 35, 95, 25, 33, 47, 94, 118],
+      "vars": {}
+    },
+    "a21a1129d6c8": {
+      "v": [103, 94, 104, 47, 94, 24, 94, 104, 90, 82, 50, 75, 72, 95, 25, 33, 48, 94, 118],
+      "vars": {}
+    },
+    "a2435fbbf26e": {
+      "v": [107, 94, 104, 35, 94, 24, 94, 104, 84, 82, 45, 75, 95, 95, 25, 33, 39, 94, 118],
+      "vars": {}
+    },
+    "a94e618a0779": {
+      "v": [107, 94, 104, 35, 94, 24, 94, 104, 84, 82, 45, 75, 95, 95, 25, 33, 81, 94, 118],
+      "vars": {}
+    },
+    "ac86a3be62af": {
+      "v": [108, 94, 106, 71, 94, 24, 112, 106, 86, 16, 41, 76, 95, 95, 25, 33, 30, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "ada9a9d20593": {
+      "v": [107, 94, 104, 47, 94, 24, 94, 104, 94, 82, 50, 75, 72, 95, 25, 20, 48, 94, 118],
+      "vars": {}
+    },
+    "b07b4c57298f": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 84, 16, 42, 75, 95, 95, 26, 33, 24, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "b507d99a93af": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 84, 16, 49, 75, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "b6087c126b83": {
+      "v": [109, 94, 98, 35, 94, 24, 94, 98, 84, 82, 45, 75, 95, 95, 25, 33, 39, 94, 118],
+      "vars": {}
+    },
+    "bb5cee839088": {
+      "v": [107, 94, 104, 42, 94, 24, 94, 104, 84, 82, 50, 64, 95, 95, 25, 33, 55, 94, 118],
+      "vars": {}
+    },
+    "bb88fb9a35d1": {
+      "v": [101, 94, 104, 24, 94, 24, 94, 104, 84, 16, 49, 64, 95, 95, 25, 33, 59, 94, 118],
+      "vars": {}
+    },
+    "bd5ca73dfbb6": {
+      "v": [109, 94, 104, 42, 94, 24, 94, 104, 92, 16, 49, 64, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "c0f7ffd55d3b": {
+      "v": [101, 94, 104, 52, 94, 24, 111, 104, 94, 16, 49, 64, 95, 95, 27, 33, 49, 94, 118],
+      "vars": {}
+    },
+    "c70c74712b71": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 94, 16, 49, 64, 95, 95, 25, 33, 49, 94, 118],
+      "vars": {}
+    },
+    "c8676299bbde": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 95, 95, 25, 33, 49, 94, 118],
+      "vars": {}
+    },
+    "cfbb9aea27e4": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 77, 95, 25, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "d51325e1a513": {
+      "v": [107, 94, 104, 47, 94, 24, 94, 104, 90, 82, 49, 75, 72, 95, 25, 33, 36, 94, 118],
+      "vars": {}
+    },
+    "d5488b784151": {
+      "v": [109, 94, 98, 24, 94, 24, 94, 98, 84, 16, 49, 64, 95, 95, 27, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "d7d4828ca3ca": {
+      "v": [109, 94, 98, 24, 94, 24, 94, 98, 88, 16, 40, 75, 95, 95, 25, 33, 24, 117, 118],
+      "vars": {}
+    },
+    "da0f84747178": {
+      "v": [103, 94, 104, 47, 94, 24, 94, 104, 85, 82, 50, 75, 72, 95, 25, 33, 48, 94, 118],
+      "vars": {}
+    },
+    "db8a3065c5fc": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 85, 16, 49, 64, 95, 95, 32, 33, 24, 94, 118],
+      "vars": {}
+    },
+    "dfe57c5231b6": {
+      "v": [105, 94, 106, 80, 94, 24, 94, 106, 84, 16, 38, 64, 95, 95, 25, 33, 55, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "e5f720470f14": {
+      "v": [107, 94, 104, 77, 94, 24, 94, 104, 85, 16, 49, 64, 95, 95, 25, 33, 73, 94, 118],
+      "vars": {}
+    },
+    "f118a717e190": {
+      "v": [109, 94, 98, 24, 94, 24, 94, 98, 84, 16, 42, 64, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "f70dc64553d0": {
+      "v": [109, 94, 104, 24, 94, 24, 94, 104, 84, 16, 41, 75, 95, 95, 25, 33, 24, 94, 118],
+      "vars": {
+        "--cols": 33
+      }
+    },
+    "fb5fc3329c02": {
+      "v": [101, 94, 104, 42, 94, 24, 94, 104, 85, 16, 49, 64, 35, 95, 25, 33, 47, 94, 118],
+      "vars": {}
+    }
+  },
+  "screens": [
+    {
+      "name": "01 home: play tab, online",
+      "changes": {
+        "#app": "db8a3065c5fc",
+        "#myName": "b507d99a93af",
+        "#oppName": "1ef944750a70",
+        "#tableScreen": "616cbe38437a",
+        "#tableScreen .names": "1850dc08dffd",
+        "#tableScreen .topbar": "cfbb9aea27e4",
+        "#toast": "772a90eea22e",
+        ".badge": null,
+        ".badge.dim": null,
+        ".btn": "a21a1129d6c8",
+        ".btn-block": "a21a1129d6c8",
+        ".btn-ghost": "15afc568e8a9",
+        ".btn-go": "8b6108b19c44",
+        ".btn-primary": "a21a1129d6c8",
+        ".btn-secondary": "d51325e1a513",
+        ".btn-sm": "d51325e1a513",
+        ".btn:disabled": null,
+        ".card-box": "c0f7ffd55d3b",
+        ".chip": null,
+        ".choices": "cfbb9aea27e4",
+        ".code-input": "66381f12b5fb",
+        ".conn-dot": "7407ac703f44",
+        ".conn-dot.on": null,
+        ".controls": "5cdacfe102a2",
+        ".controls .btn": "266308350b9d",
+        ".empty-note": "1ef944750a70",
+        ".field": null,
+        ".field-label": null,
+        ".icon-btn": "bb5cee839088",
+        ".line": null,
+        ".masthead .subtitle": "1ef944750a70",
+        ".mode-btn": "a94e618a0779",
+        ".mode-btn.active": "a94e618a0779",
+        ".mode-switch": "7cc729596378",
+        ".opp-strip": null,
+        ".others": "65745ccb8a3d",
+        ".others .seat": null,
+        ".overlay": "c70c74712b71",
+        ".pulse": "7407ac703f44",
+        ".result": "9e7109b13f1c",
+        ".room-code": "22962586fc9a",
+        ".round-row": "61b00de8ac56",
+        ".row": "5cdacfe102a2",
+        ".rules-list": "6eaff85d5b58",
+        ".rules-list li": "bd5ca73dfbb6",
+        ".rules-list li strong": "7a0db96cfe08",
+        ".scores": "920946824ae4",
+        ".scores li": null,
+        ".seat": "9277958ef455",
+        ".seat-bank": null,
+        ".seat-head": null,
+        ".seat-name": null,
+        ".seat-score": null,
+        ".seat-status": null,
+        ".seat.current": null,
+        ".seat.me": "9277958ef455",
+        ".seat.me .seat-name::after": null,
+        ".seat.me .tile": null,
+        ".seat.status-busted .line": null,
+        ".seats": "cfbb9aea27e4",
+        ".sheet": "bb88fb9a35d1",
+        ".sheet-sub": "d5488b784151",
+        ".sheet-title": "5c47d3f6c648",
+        ".status-line": "1ef944750a70",
+        ".stepper": "1850dc08dffd",
+        ".tab-btn": "a2435fbbf26e",
+        ".tab-btn.active": "a2435fbbf26e",
+        ".tab-submenu": "9a1567457b82",
+        ".tabbar": "0224b40e4086",
+        ".target": "9e7109b13f1c",
+        ".tile": null,
+        ".tile[data-kind=\"flip3\"]": null,
+        ".tile[data-kind=\"freeze\"]": null,
+        ".tile[data-kind=\"number\"]": null,
+        ".tile[data-kind=\"plus\"]": null,
+        ".tile[data-kind=\"second\"]": null,
+        ".tile[data-kind=\"times2\"]": null,
+        ".topbar": "cfbb9aea27e4",
+        ":root": "350ddced420e",
+        "body": "7407ac703f44",
+        "h1": "10219447716f",
+        "input[type=\"text\"]": "26cde5196e1f",
+        "label": "d7d4828ca3ca"
+      }
+    },
+    {
+      "name": "02 home: rules tab",
+      "changes": {
+        ".tab-btn": "b6087c126b83"
+      }
+    },
+    {
+      "name": "03 home: about tab",
+      "changes": {}
+    },
+    {
+      "name": "04 host: waiting for the opponent",
+      "changes": {
+        ".tab-btn": "a2435fbbf26e",
+        "input[type=\"text\"]": "4a4942840145"
+      }
+    },
+    {
+      "name": "05 home: play tab, pass the phone",
+      "changes": {
+        ".mode-btn": "95b1def0c99a"
+      }
+    },
+    {
+      "name": "06 local: dealt, curtain up",
+      "changes": {
+        "#tableScreen": "7358660921fc",
+        ".btn:disabled": "ada9a9d20593",
+        ".conn-dot": "5cfa0938c007",
+        ".conn-dot.on": "5cfa0938c007",
+        ".line": "9a7dd2bfd53b",
+        ".others .seat": "987b568869d3",
+        ".overlay": "c8676299bbde",
+        ".seat": "987b568869d3",
+        ".seat-bank": "f118a717e190",
+        ".seat-head": "716e446b9495",
+        ".seat-name": "f70dc64553d0",
+        ".seat-score": "b07b4c57298f",
+        ".seat.current": "3b2ffc06577a",
+        ".seat.me": "3b2ffc06577a",
+        ".seat.me .seat-name::after": "0fe8759f5fbf"
+      }
+    },
+    {
+      "name": "07 local: the opening deal",
+      "changes": {
+        ".btn:disabled": "5b7bb0b588c3",
+        ".controls .btn": "da0f84747178",
+        ".overlay": "c70c74712b71"
+      }
+    },
+    {
+      "name": "08 local: dealt, hit or stay",
+      "changes": {
+        ".btn:disabled": null,
+        ".seat.me .tile": "1d3fab4c6601",
+        ".tile": "ac86a3be62af",
+        ".tile[data-kind=\"number\"]": "ac86a3be62af"
+      }
+    },
+    {
+      "name": "09 table: rules sheet",
+      "changes": {}
+    },
+    {
+      "name": "10 local: the pause, Continue",
+      "changes": {
+        ".controls .btn": "266308350b9d",
+        ".line": "958d75fe136c",
+        ".seat-status": "dfe57c5231b6",
+        ".seat.status-busted .line": "958d75fe136c"
+      }
+    },
+    {
+      "name": "11 round over: the scores",
+      "changes": {
+        ".line": "9a7dd2bfd53b",
+        ".result": "fb5fc3329c02",
+        ".scores li": "e5f720470f14",
+        ".seat-status": "6582a49bd17f",
+        ".seat.current": null,
+        ".seat.me": "9277958ef455",
+        ".seat.status-busted .line": "0fb15cf62294"
+      }
+    }
+  ]
+}

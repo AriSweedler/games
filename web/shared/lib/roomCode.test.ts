@@ -26,13 +26,29 @@ import {
   BRISCOLA_CODE_LENGTH,
   BRISCOLA_CODE_LENGTH_ERROR,
   BRISCOLA_PEER_PREFIX,
+  FLIP7_CODE_ALPHABET,
+  FLIP7_CODE_LENGTH,
+  FLIP7_CODE_LENGTH_ERROR,
+  FLIP7_PEER_PREFIX,
   HIVE_CODE_ALPHABET,
   HIVE_CODE_LENGTH,
   HIVE_CODE_LENGTH_ERROR,
   HIVE_PEER_PREFIX,
+  UNO_CODE_ALPHABET,
+  UNO_CODE_LENGTH,
+  UNO_CODE_LENGTH_ERROR,
+  UNO_PEER_PREFIX,
 } from './roomCode.ts';
 
-const GAMES: ReadonlyArray<Game> = ['gin-rummy', 'fidice', 'backgammon', 'briscola', 'hive'];
+const GAMES: ReadonlyArray<Game> = [
+  'gin-rummy',
+  'fidice',
+  'backgammon',
+  'briscola',
+  'uno',
+  'flip7',
+  'hive',
+];
 
 describe('frozen literals (byte for byte what the legacy pages hold)', () => {
   test('gin', () => {
@@ -81,6 +97,38 @@ describe('frozen literals (byte for byte what the legacy pages hold)', () => {
     expect(peerIdFor('briscola', 'KQZM')).toBe('briscola-KQZM');
     expect(isWellFormedCode('briscola', 'KQZM')).toBe(true);
     expect(isWellFormedCode('briscola', 'KQZ1')).toBe(false);
+  });
+
+  test("uno: gin's alphabet and length under its own broker prefix (uno.md §9)", () => {
+    expect(UNO_PEER_PREFIX).toBe('uno-');
+    expect(UNO_CODE_ALPHABET).toBe('ABCDEFGHJKLMNPQRSTUVWXYZ');
+    expect(UNO_CODE_LENGTH).toBe(4);
+    expect(UNO_CODE_LENGTH_ERROR).toBe('Enter the 4-letter room code.');
+    expect(ROOM_CODE.uno).toEqual({
+      alphabet: 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+      length: 4,
+      peerPrefix: 'uno-',
+      peerCase: 'upper',
+      lengthError: 'Enter the 4-letter room code.',
+    });
+    expect(sanitiseCode('uno', 'ab1c-d io')).toBe('ABCD');
+    expect(peerIdFor('uno', 'KQZM')).toBe('uno-KQZM');
+  });
+
+  test("flip7: gin's alphabet and length under its own broker prefix (flip7.md)", () => {
+    expect(FLIP7_PEER_PREFIX).toBe('flip7-');
+    expect(FLIP7_CODE_ALPHABET).toBe('ABCDEFGHJKLMNPQRSTUVWXYZ');
+    expect(FLIP7_CODE_LENGTH).toBe(4);
+    expect(FLIP7_CODE_LENGTH_ERROR).toBe('Enter the 4-letter room code.');
+    expect(ROOM_CODE.flip7).toEqual({
+      alphabet: 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+      length: 4,
+      peerPrefix: 'flip7-',
+      peerCase: 'upper',
+      lengthError: 'Enter the 4-letter room code.',
+    });
+    expect(sanitiseCode('flip7', 'ab1c-d io')).toBe('ABCD');
+    expect(peerIdFor('flip7', 'KQZM')).toBe('flip7-KQZM');
   });
 
   test("backgammon: gin's alphabet and length under its own broker prefix", () => {
