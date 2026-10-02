@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>UNO</title>
+    <meta
+      name="description"
+      content="UNO on one phone: pass it around, match the colour or the number, first to empty a hand takes the points."
+    />
+    <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="../../shared/favicon.ico" />
+    <link rel="stylesheet" href="./theme.css" />
+  </head>
+  <body>
+    <div id="app" data-screen="setup">
+      <header class="bar">
+        <div class="titles">
+          <h1>UNO</h1>
+          <p class="sub">pass and play</p>
+        </div>
+        <button id="newGameBtn" class="link-btn" type="button">New game</button>
+      </header>
+      <main>
+        <section id="setup" class="panel">
+          <label class="field">
+            <span>Players</span>
+            <select id="seatCount">
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+            </select>
+          </label>
+          <div id="names" class="names"></div>
+          <button id="startBtn" class="btn btn-go" type="button">Deal</button>
+          <p class="hint">
+            Match the colour, the number or the symbol. Can't play? Draw one. Empty your hand to
+            take everyone else's points; 500 wins.
+          </p>
+        </section>
+        <section id="curtain" class="panel curtain" hidden>
+          <p class="pass">Pass the phone to</p>
+          <h2 id="curtainName" class="curtain-name"></h2>
+          <p id="curtainNote" class="note"></p>
+          <button id="revealBtn" class="btn btn-go" type="button">Show my hand</button>
+        </section>
+        <section id="table" class="table" hidden>
+          <div class="turn">
+            <span id="turnName" class="turn-name"></span>
+            <span id="direction" class="direction" aria-label="Direction of play">→</span>
+          </div>
+          <ul id="seats" class="seats" aria-label="Cards in each hand"></ul>
+          <div class="pile">
+            <div id="topCard" class="top-card" aria-label="Top of the pile"></div>
+            <span id="colorDot" class="color-dot" data-color="red">Red</span>
+          </div>
+          <div id="colorPicker" class="color-picker" hidden>
+            <button class="swatch" type="button" data-color="red" aria-label="Red"></button>
+            <button class="swatch" type="button" data-color="yellow" aria-label="Yellow"></button>
+            <button class="swatch" type="button" data-color="green" aria-label="Green"></button>
+            <button class="swatch" type="button" data-color="blue" aria-label="Blue"></button>
+          </div>
+          <p id="status" class="status" aria-live="polite"></p>
+          <div id="hand" class="hand" aria-label="Your hand"></div>
+          <div class="controls">
+            <button id="drawBtn" class="btn" type="button">Draw</button>
+            <button id="passBtn" class="btn" type="button" hidden>Keep it, pass</button>
+          </div>
+          <section id="result" class="result" hidden>
+            <h2 id="resultTitle"></h2>
+            <ul id="scores" class="scores"></ul>
+            <button id="nextRoundBtn" class="btn btn-go" type="button">Next round</button>
+          </section>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
