@@ -1,13 +1,14 @@
 // Hive's reducer on the shared shell (docs/design/hive.md §7; web/shared/ui/shell.ts): the shell's
-// flows (the home screen, the waiting rooms, the curtain, the leave, the resume) over this game's
-// config (shellConfig.ts `HIVE_SHELL` completed here as `HIVE`), and the table's own intents: a
-// tap on a hand tile shows where it may be placed, a tap on a board tile where it may move, a tap
-// on a lit hex plays. Every role plays through `act`: pass-and-play and the host apply the action
-// to the engine and broadcast each seat its view, a guest sends one `action` frame and waits for
-// its view. In pass-and-play the curtain comes up whenever the turn moves to the other seat, with
-// the last move written on it (the owner: "understand what happened before proceeding"); the game's
-// end is a sheet over the final board whose Continue leaves the board on show. Pure: the clock
-// comes in through `Ctx`; Hive rolls nothing.
+// flows (the home screen, the waiting rooms, the leave, the resume) over this game's config
+// (shellConfig.ts `HIVE_SHELL` completed here as `HIVE`), and the table's own intents: a tap on a
+// hand tile shows where it may be placed, a tap on a board tile where it may move, a tap on a lit
+// hex plays. Every role plays through `act`: pass-and-play and the host apply the action to the
+// engine and broadcast each seat its view, a guest sends one `action` frame and waits for its
+// view. Pass-and-play raises no curtain (the owner, 2026-10-02: "hive is like backgammon, where
+// you don't need to pass the phone for turns. It's just a game."): nothing is hidden, so both
+// players share the one screen and the view changes hands as the turn does, the way backgammon's
+// does with its curtain off; the game's end is a sheet over the final board whose Continue leaves
+// the board on show. Pure: the clock comes in through `Ctx`; Hive rolls nothing.
 import {
   NOT_CONNECTED_MSG,
   andThen as then,
@@ -89,7 +90,7 @@ export type Home = Readonly<{ opts?: never }>;
 export type Picked = Readonly<{ kind: 'hand'; bug: Bug }> | Readonly<{ kind: 'hex'; hex: Hex }>;
 
 export type Table = Readonly<{
-  /** The pass-and-play seat the curtain names, or null (the shell writes it, `local.viewer`). */
+  /** The shell's pass-and-play curtain seat (`ShellTypes.Table`; the shell writes it from `local.viewer`): always null here, Hive raises none. */
   curtain: Seat | null;
   picked: Picked | null;
   /** The result sheet's Continue was tapped: the final board stays on show. */
@@ -220,17 +221,17 @@ const reset = (table: Table, at: TableReset): Table => {
 
 /**
  * `localBroadcast`'s seat: the actor's view while the game is on, the phone holder's once it is
- * over; the curtain comes up when the phone must change hands and the incoming seat has not lifted
- * it this turn.
+ * over. Never a curtain: Hive hides nothing, so the view just changes hands on screen (as
+ * backgammon's does with its curtain off) and `#curtainOverlay` stays as the shell composed it,
+ * hidden.
  */
 const viewer: ShellConfig<Hive>['local']['viewer'] = (app, game) => {
   const actor = turnSeat(game.game);
   const holder: Seat = app.shell.view?.seat ?? app.shell.revealed ?? 0;
-  const seat: Seat = actor ?? holder;
-  const curtain = actor !== null && app.shell.revealed !== seat ? seat : null;
-  return { seat, curtain, effects: [] };
+  return { seat: actor ?? holder, curtain: null, effects: [] };
 };
 
+/** `curtain/reveal` never fires (no curtain comes up); the shell's `position/load` reads the seat to move off this. */
 const revealer: ShellConfig<Hive>['local']['revealer'] = (game) => ({
   seat: turnSeat(game.game) ?? 0,
   effects: [],
@@ -251,7 +252,7 @@ export const HIVE: ShellConfig<Hive> = {
 export const initialShell: Shell = shellInitial(HIVE);
 export const initialApp: App = { shell: initialShell, table: initialTable };
 
-/** Pass-and-play: the seat whose turn it is acts (either seat may play again); a new game lowers the curtain for White. */
+/** Pass-and-play: the seat whose turn it is acts (either seat may play again); a new game shows White's view. */
 const localAct = (app: App, action: Action, ctx: Ctx): Step => {
   const game = app.shell.game;
   if (game === null) return pure(app);

@@ -4,7 +4,8 @@
 // is the table's 🌐 (beside gin's leave button, backgammon's menu button), shown for pass and play
 // alone, its tooltip naming who hosts and who joins; under the curtain gin offers nothing but the
 // reveal, while backgammon, where the phone changes hands under it, offers "Continue online" there
-// too (SHELL.curtainButtons and the driver's `curtainOffer`, e2e/fixtures/online-games.ts).
+// too (SHELL.curtainButtons and the driver's `curtainOffer`, e2e/fixtures/online-games.ts); hive
+// raises no curtain at all (SHELL.firstCurtain null), so its offer is the table's throughout.
 // `#shareCodeBtn` hands the invite to the share sheet where there is one (a phone's OS menu) and to
 // the clipboard otherwise (desktop); an invite link fills the join form, sits the guest down at once
 // (no tap on Sit down: the owner, 2026-09-25) and leaves the address bar, a malformed one seats nobody;
@@ -22,11 +23,13 @@ import {
   DEFAULT_NAMES,
   INVITE_COPIED_MSG,
   curtainTitle,
+  expectCurtainUp,
+  hasCurtain,
   prefKey,
   readPref,
   rememberName,
   resumeLabel,
-  reveal,
+  revealIf,
   roomOpen,
   startLocal,
   takeOffer,
@@ -60,8 +63,8 @@ const pageUrlOf = (page: Page): string => {
 const inviteLinkOf = (page: Page, code: string): string => `${pageUrlOf(page)}?join=${code}`;
 
 /**
- * Start Ann and Bob's pass-and-play game, lift the first curtain and take the table's offer.
- * Returns the confirmed code and the table as the first mover saw it.
+ * Start Ann and Bob's pass-and-play game, lift the first curtain (where the game raises one) and
+ * take the table's offer. Returns the confirmed code and the table as the first mover saw it.
  */
 const handOff = async (
   page: Page,
@@ -70,22 +73,27 @@ const handOff = async (
   url: string,
 ): Promise<Readonly<{ code: string; before: string }>> => {
   await startLocal(page, url, PHONE);
-  await reveal(page);
+  await revealIf(page, game);
   const before = await driver.snapshot(page);
   return { code: await takeOffer(page, game), before };
 };
 
 /**
  * Cancel the room and resume pass and play: the table as it stands, read beneath the curtain that
- * names the mover again (its reveal would bring backgammon's roll modal for a seat still to roll, so it is left up).
+ * names the mover again (its reveal would bring backgammon's roll modal for a seat still to roll,
+ * so it is left up), or on show at once where the game raises none (hive).
  */
-const cancelAndResume = async (page: Page, driver: ShellDriver): Promise<string> => {
+const cancelAndResume = async (
+  page: Page,
+  game: ShellGame,
+  driver: ShellDriver,
+): Promise<string> => {
   await page.locator('#cancelHostBtn').click();
   await expect(page.locator('#homeScreen')).toBeVisible();
   await expect(page.locator('#resumeBtn')).toHaveText(resumeLabel.local(DEFAULT_NAMES));
   await page.locator('#resumeBtn').click();
   await expect(page.locator('#tableScreen')).toBeVisible();
-  await expect(page.locator('#curtainOverlay')).toBeVisible();
+  await expectCurtainUp(page, game);
   await expect(page.locator('#handoffBtn')).toBeVisible();
   return driver.snapshot(page);
 };
@@ -115,7 +123,7 @@ SHELL_GAMES.forEach((game) => {
       expect(await roomOpen(page, game)).toBe(code);
 
       // Nobody joined: cancelling the room gives the game back to pass and play, as it stood.
-      expect(await cancelAndResume(page, driver)).toBe(before);
+      expect(await cancelAndResume(page, game, driver)).toBe(before);
     });
 
     test('without a share sheet (desktop) the link is copied', async ({ player, project }) => {
@@ -131,17 +139,22 @@ SHELL_GAMES.forEach((game) => {
       const { page } = player;
       await startLocal(page, gamePath(project, game), PHONE);
       await driver.curtainOffer.toCurtain(page);
-      // The curtain hands the phone to a seat and carries the game's buttons. Every game is past
-      // its first curtain here (whose wording is the game's own: shell-local.spec.ts): gin's and
-      // backgammon's `toCurtain` play to the second, where backgammon first offers Continue
-      // online; briscola's first already reads "Pass the phone to".
-      await expect(page.locator('#curtainOverlay')).toBeVisible();
-      await expect(page.locator('#curtainTitle')).toHaveText(curtainTitle(DEFAULT_NAMES));
-      await expect(page.locator('#curtainOverlay .btn')).toHaveCount(shell.curtainButtons);
+      if (hasCurtain(game)) {
+        // The curtain hands the phone to a seat and carries the game's buttons. Every game is past
+        // its first curtain here (whose wording is the game's own: shell-local.spec.ts): gin's and
+        // backgammon's `toCurtain` play to the second, where backgammon first offers Continue
+        // online; briscola's first already reads "Pass the phone to".
+        await expect(page.locator('#curtainOverlay')).toBeVisible();
+        await expect(page.locator('#curtainTitle')).toHaveText(curtainTitle(DEFAULT_NAMES));
+        await expect(page.locator('#curtainOverlay .btn')).toHaveCount(shell.curtainButtons);
+      } else {
+        // No curtain (hive): the next seat's table is on show, the offer the table's alone.
+        await expect(page.locator('#curtainOverlay')).toBeHidden();
+      }
       const before = await driver.snapshot(page);
       await driver.curtainOffer.take(page);
       await expect(page.locator('#curtainOverlay')).toBeHidden();
-      expect(await cancelAndResume(page, driver)).toBe(before);
+      expect(await cancelAndResume(page, game, driver)).toBe(before);
     });
 
     test('an invite link sits the guest down at once: the waiting room with no tap, nothing stored, the link out of the address bar; cancel is the home screen with the code still in the form', async ({

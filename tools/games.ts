@@ -142,7 +142,8 @@ export type ShellSpec = Readonly<{
   localFields: ReadonlyArray<readonly [id: string, value: string]>;
   /**
    * The `.btn`s the curtain carries: the reveal, and backgammon's "Continue online" (the handoff
-   * offered under the curtain, where the phone is about to change hands; gin's table alone offers it).
+   * offered under the curtain, where the phone is about to change hands; gin's table alone offers
+   * it); 0 on a game that raises no curtain (`firstCurtain` null).
    */
   curtainButtons: number;
   /**
@@ -150,8 +151,12 @@ export type ShellSpec = Readonly<{
    * phone over ("Pass the phone to {name}"); backgammon names the starter ("{name} starts":
    * whoever tapped Start is holding the phone and may be the starter, its ui/local.ts). Every
    * later curtain hands the phone over on every game. Data, not a RegExp: the specs build one.
+   * Null on a game that never raises the curtain: Hive hides nothing, so both players share the
+   * one screen and the view changes hands as the turn does (the owner, 2026-10-02: "hive is like
+   * backgammon, where you don't need to pass the phone for turns"); the shell specs' pass-and-play
+   * cases then read the table at once (e2e/fixtures/shell.ts `hasCurtain`).
    */
-  firstCurtain: string;
+  firstCurtain: string | null;
 }>;
 
 /**
@@ -257,9 +262,10 @@ export const SHELL: Readonly<Record<ShellGame, ShellSpec>> = {
     localNames: ['Ari', 'Lavi'],
     // No field beyond the names: Hive seats two and has no option.
     localFields: [],
-    // The reveal alone ("Show the board"): the handoff is the table's 🌐 (#handoffBtn), never the curtain's.
-    curtainButtons: 1,
-    firstCurtain: 'Pass the phone to {name}',
+    // No curtain at all (ui/state.ts `viewer`): the table is on show from Start, White's view
+    // first, and the handoff is the table's 🌐 (#handoffBtn) throughout.
+    curtainButtons: 0,
+    firstCurtain: null,
   },
 };
 

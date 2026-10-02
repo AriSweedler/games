@@ -2,7 +2,8 @@
 // and a laptop: the mode switch, two names, Start; the first curtain names the first player (gin
 // and briscola hand the phone over, backgammon says who starts: SHELL `firstCurtain`) and speaks
 // to the seats in the game's words (gin tells the other to look away, backgammon names the turn);
-// the reveal shows the table with the names in place; and the game is saved for "Resume
+// the reveal shows the table with the names in place (hive raises no curtain: its table is on
+// show from Start, seat 0 first, `firstPlayer`); and the game is saved for "Resume
 // pass & play" under the game's key with role 'local'. The game halves (the hand the curtain must
 // cover, the upcard and the discard; the opening roll, the dice, the cube, the Kapará toast) stay in
 // e2e/gin-local.spec.ts and e2e/backgammon-local.spec.ts. Page-only; tagged per game (see
@@ -12,8 +13,8 @@ import { DESKTOP, PHONE, type Viewport } from './fixtures/geometry.ts';
 import {
   DEFAULT_MARK,
   DEFAULT_NAMES,
-  firstCurtainTitle,
-  firstSeat,
+  firstPlayer,
+  hasCurtain,
   localNames,
   readPref,
   readSave,
@@ -38,15 +39,17 @@ SHELL_GAMES.forEach((game) => {
         }) => {
           const { page } = player;
           await startLocal(page, gamePath(project, game), vp);
-          // The curtain hides the table from the first player until they take the phone.
-          const curtain = page.locator('#curtainOverlay');
-          const title = page.locator('#curtainTitle');
-          await expect(title).toHaveText(firstCurtainTitle(game, DEFAULT_NAMES));
-          const first = firstSeat(game, DEFAULT_NAMES, await title.innerText());
+          // The curtain hides the table from the first player until they take the phone; a game
+          // with no curtain (hive) shows seat 0's table at once.
+          const first = await firstPlayer(page, game, DEFAULT_NAMES);
           const other = first === DEFAULT_NAMES[0] ? DEFAULT_NAMES[1] : DEFAULT_NAMES[0];
-          await expect(page.locator('#curtainSub')).toContainText(driver.curtainSub(first, other));
-          await reveal(page);
-          await expect(curtain).toBeHidden();
+          if (hasCurtain(game)) {
+            await expect(page.locator('#curtainSub')).toContainText(
+              driver.curtainSub(first, other),
+            );
+            await reveal(page);
+          }
+          await expect(page.locator('#curtainOverlay')).toBeHidden();
           await expect(page.locator('#tableScreen')).toBeVisible();
           await expect(page.locator('#myName')).toContainText(first);
           await expect(page.locator('#oppName')).toHaveText(other);
@@ -74,10 +77,8 @@ SHELL_GAMES.forEach((game) => {
       await expect(page.locator('#p1NameInput')).toHaveValue(names[0]);
       await expect(page.locator('#p2NameInput')).toHaveValue(names[1]);
       await page.locator('#localBtn').click();
-      const title = page.locator('#curtainTitle');
-      await expect(title).toHaveText(firstCurtainTitle(game, names));
-      const first = firstSeat(game, names, await title.innerText());
-      await reveal(page);
+      const first = await firstPlayer(page, game, names);
+      if (hasCurtain(game)) await reveal(page);
       await expect(page.locator('#myName')).toContainText(first);
       await expect(page.locator('#oppName')).toHaveText(first === names[0] ? names[1] : names[0]);
     });
@@ -110,9 +111,7 @@ SHELL_GAMES.forEach((game) => {
       await p2.pressSequentially('Max');
       // Start seats the typed names, which were remembered as typed.
       await page.locator('#localBtn').click();
-      await expect(page.locator('#curtainTitle')).toHaveText(
-        firstCurtainTitle(game, ['Zoë', 'Max']),
-      );
+      await firstPlayer(page, game, ['Zoë', 'Max']);
       await expect.poll(() => readPref(page, game, 'name')).toBe('Zoë');
       await expect.poll(() => readPref(page, game, 'p2Name')).toBe('Max');
       // Back on the home screen the remembered names show unmarked, and a tap leaves them.

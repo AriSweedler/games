@@ -21,21 +21,23 @@ const run = runIntents(reduce, ctx);
 
 const localClick: Intent = { type: 'local/click', p1: 'Ann', p2: 'Bob' };
 
-/** A pass-and-play table, its curtain lifted by White. */
-const started = (): App => run(initialApp, localClick, { type: 'curtain/reveal' }).app;
+/** A pass-and-play table: White's view, on show at once (no curtain). */
+const started = (): App => run(initialApp, localClick).app;
 
 describe('pass and play', () => {
-  test('the start: White first, the curtain up for her, the names defaulted when empty', () => {
+  test('the start: White first with the board on show, no curtain, the names defaulted when empty', () => {
     const s = run(initialApp, localClick);
     expect(s.app.shell.role).toBe('local');
     expect(s.app.shell.game?.game.names).toEqual({ white: 'Ann', black: 'Bob' });
     expect(s.app.shell.screen).toBe('tableScreen');
-    expect(s.app.table.curtain).toBe(0);
+    // The owner (2026-10-02): "hive is like backgammon, where you don't need to pass the phone for turns."
+    expect(s.app.table.curtain).toBeNull();
+    expect(viewOf(s.app)?.seat).toBe(0);
     const defaults = run(initialApp, { type: 'local/click', p1: '', p2: '' });
     expect(defaults.app.shell.game?.game.names).toEqual({ white: 'Ari', black: 'Lavi' });
   });
 
-  test('a hand tile picked lights its placements; a tap on one places and hands the phone over', () => {
+  test('a hand tile picked lights its placements; a tap on one places and the view changes hands, no curtain', () => {
     const app = started();
     expect(app.table.curtain).toBeNull();
     const view = viewOf(app);
@@ -49,7 +51,8 @@ describe('pass and play', () => {
     const placed = run(picked, { type: 'tap/hex', hex: ORIGIN });
     expect(placed.app.shell.game?.game.board['0,0']).toEqual([{ side: 'white', bug: 'ant' }]);
     expect(placed.app.table.picked).toBeNull();
-    expect(placed.app.table.curtain).toBe(1);
+    expect(placed.app.table.curtain).toBeNull();
+    expect(viewOf(placed.app)?.seat).toBe(1);
     expect(placed.effects.map((e) => e.type)).toContain('fx');
   });
 
@@ -66,9 +69,7 @@ describe('pass and play', () => {
     const moved = run(
       app,
       { type: 'act', action: { type: 'place', bug: 'queen', to: ORIGIN } },
-      { type: 'curtain/reveal' },
       { type: 'act', action: { type: 'place', bug: 'queen', to: { q: 1, r: 0 } } },
-      { type: 'curtain/reveal' },
     ).app;
     const view = viewOf(moved);
     if (view === null) throw new Error('no view');
@@ -80,7 +81,8 @@ describe('pass and play', () => {
     if (to === undefined) throw new Error('no move');
     const done = run(picked, { type: 'tap/hex', hex: to }).app;
     expect(done.shell.game?.game.board['0,0']).toBeUndefined();
-    expect(done.table.curtain).toBe(1);
+    expect(done.table.curtain).toBeNull();
+    expect(viewOf(done)?.seat).toBe(1);
   });
 
   test('a refused action toasts and drops the pick; the result sheet, Continue and Play again', () => {
@@ -101,7 +103,8 @@ describe('pass and play', () => {
     const again = run(seen, { type: 'act', action: { type: 'again' } }).app;
     expect(again.shell.game?.game.board).toEqual({});
     expect(again.table.resultSeen).toBe(false);
-    expect(again.table.curtain).toBe(0);
+    expect(again.table.curtain).toBeNull();
+    expect(viewOf(again)?.seat).toBe(0);
   });
 
   test('the sheets and Escape', () => {

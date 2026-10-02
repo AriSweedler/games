@@ -60,18 +60,47 @@ export const curtainTitle = (names: Names = DEFAULT_NAMES): RegExp =>
   new RegExp(`^Pass the phone to (${escapeRegExp(names[0])}|${escapeRegExp(names[1])})$`);
 
 /**
+ * Whether the game raises a pass-and-play curtain at all (tools/games.ts SHELL `firstCurtain`):
+ * hive raises none, both players share the one screen and its table is on show from Start.
+ */
+export const hasCurtain = (game: ShellGame): boolean => SHELL[game].firstCurtain !== null;
+
+/**
  * The first curtain's title for `names` (tools/games.ts SHELL `firstCurtain`, its `{name}` one of
  * the two seats), the seat named as the one capture: gin and briscola "Pass the phone to Ann",
  * backgammon "Ann starts" (whoever tapped Start is holding the phone and may be the starter).
+ * A game with no curtain has no title: a case that reaches for one is wrong about the game.
  */
 export const firstCurtainTitle = (game: ShellGame, names: Names = DEFAULT_NAMES): RegExp => {
+  const first = SHELL[game].firstCurtain;
+  if (first === null) throw new Error(`${game} raises no curtain (SHELL firstCurtain null)`);
   const seat = `(${names.map(escapeRegExp).join('|')})`;
-  const [before = '', after = ''] = SHELL[game].firstCurtain.split('{name}');
+  const [before = '', after = ''] = first.split('{name}');
   return new RegExp(`^${escapeRegExp(before)}${seat}${escapeRegExp(after)}$`);
 };
 /** The seat the first curtain names, read off its title. */
 export const firstSeat = (game: ShellGame, names: Names, title: string): string =>
   firstCurtainTitle(game, names).exec(title)?.[1] ?? '';
+
+/**
+ * The first player of a pass-and-play game just started, as the page says: the seat the first
+ * curtain names (the curtain up, its title read) on a game that raises one; seat 0, whose table is
+ * on show at once with no curtain, on a game that raises none (hive: `#myName` carries the name).
+ */
+export const firstPlayer = async (
+  page: Page,
+  game: ShellGame,
+  names: Names = DEFAULT_NAMES,
+): Promise<string> => {
+  if (!hasCurtain(game)) {
+    await expect(page.locator('#curtainOverlay')).toBeHidden();
+    await expect(page.locator('#myName')).toContainText(names[0]);
+    return names[0];
+  }
+  const title = page.locator('#curtainTitle');
+  await expect(title).toHaveText(firstCurtainTitle(game, names));
+  return firstSeat(game, names, await title.innerText());
+};
 
 // ---- the code -----------------------------------------------------------------------------------
 
@@ -259,11 +288,25 @@ export const reveal = async (page: Page): Promise<void> => {
   await expect(page.locator('#curtainOverlay')).toBeHidden();
 };
 
+/** `reveal` on a game that raises a curtain; on one that raises none (hive) the table is already on show, the curtain hidden. */
+export const revealIf = async (page: Page, game: ShellGame): Promise<void> => {
+  if (hasCurtain(game)) await reveal(page);
+  else await expect(page.locator('#curtainOverlay')).toBeHidden();
+};
+
+/** The curtain as the game's pass-and-play shows it when a seat is to take the phone: up, or never (hive). */
+export const expectCurtainUp = async (page: Page, game: ShellGame): Promise<void> => {
+  const curtain = page.locator('#curtainOverlay');
+  if (hasCurtain(game)) await expect(curtain).toBeVisible();
+  else await expect(curtain).toBeHidden();
+};
+
 /**
  * Start pass and play between `names` at `viewport` on the page at `url`: the switch flips to pass
  * and play (Online is the default mode), the two names go in, `beforeStart` sets what the game's
- * panel adds (backgammon's two selects), Start; resolves with the table up and the first curtain
- * over it. The player fixture opens its own context, so a describe's viewport is applied here.
+ * panel adds (backgammon's two selects), Start; resolves with the table up (the first curtain over
+ * it on a game that raises one: `hasCurtain`; `reveal` checks it is). The player fixture opens its
+ * own context, so a describe's viewport is applied here.
  */
 export const startLocal = async (
   page: Page,
@@ -281,7 +324,6 @@ export const startLocal = async (
   if (beforeStart !== undefined) await beforeStart(page);
   await page.locator('#localBtn').click();
   await expect(page.locator('#tableScreen')).toBeVisible();
-  await expect(page.locator('#curtainOverlay')).toBeVisible();
 };
 
 // ---- the handoff ----------------------------------------------------------------------------------

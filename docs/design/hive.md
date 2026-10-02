@@ -162,6 +162,14 @@ and resigning. Three seeded random bot games of up to 200 turns check every turn
 off the legal lists, every tile is kept, the hive is one group, the Queen is down by the fourth
 tile and only Beetles stand above the ground.
 
+The page's own tests sit beside its modules too: the reducer (ui/state.test.ts: pass and play
+starts on White's table with no curtain and the view changes hands as the turn does, the picks, a
+refusal, the result sheet) and the board's fit (ui/board.test.ts: the fit of a hive equals the fit
+of the same hive plus its ring, and through three seeded games every legal destination lies inside
+it, so a pick never changes the viewBox). e2e/hive.spec.ts reads the same two facts off the page
+(the curtain hidden throughout, the viewBox the same string before and after a pick) and the tray's
+tiles as hexagons of at least 44px.
+
 Hive was the first engine-only game in tools/ci/suites.ts (`ENGINE_ONLY`) until its page row
 (§7) registered it in tools/games.ts as a shell game: its suite now has both halves (the unit tests
 under coverage, e2e/hive.spec.ts and its `@hive` describes of the shell specs), a landing card and
@@ -173,16 +181,31 @@ web/games/hive/, a shell game (docs/design/shared-shell.md) from the start, as t
 every multiplayer game: page.ts composed by tools/shell-markup.ts into index.html, two modes
 (Online and Pass the phone), the tabs Play, Rules (§5) and About, two seats and no option (White is
 seat 0, the host or the first name; Black seat 1). The table (ui/render.ts) is the names strip, an
-SVG board that fits itself to the hive (ui/board.ts: pointy-top axial hexes, a `g.hex` per occupied
-hex plus the hexes the picked tile may reach, the origin alone on an empty board), the two hands as
-trays of tiles with their counts, Pass when the seat must, Resign while the game is on, and the
+SVG board that fits itself to the hive and its ring (ui/board.ts: pointy-top axial hexes, a `g.hex`
+per occupied hex plus the hexes the picked tile may reach, the origin alone on an empty board), the
+two hands as trays of hexagonal tiles with their counts, Pass when the seat must, Resign while the game is on, and the
 status line. A tap on a hand tile lights its placements, a tap on a tile already down lights its
 moves, a tap on a lit hex plays (ui/state.ts `tap/hex`); the engine's refusal is a toast.
 
-Pass the phone keeps the shell's curtain as the pause between turns (the owner: "understand what
-happened before proceeding"): nothing is hidden, but the curtain names whose turn it is and carries
-the last move, and one tap shows the board. The end is a sheet over the final board (the winner or
-the draw, the engine's note) whose Continue leaves the board on show with Play again beside it.
+Pass the phone raises no curtain (the owner, 2026-10-02: "hive is like backgammon, where you don't
+need to pass the phone for turns. It's just a game."): nothing is hidden, so both players share the
+one screen, the table is on show from Start (White's view) and the view changes hands as the turn
+does, the status line carrying the last move; the shell composes its curtain as on every shell page
+but ui/state.ts `viewer` never raises it (tools/games.ts SHELL `firstCurtain` null, which the shell
+specs read). Until then the curtain was the pause between turns with the last move written on it.
+The end is a sheet over the final board (the winner or the draw, the engine's note) whose Continue
+leaves the board on show with Play again beside it.
+
+The hands are trays of hexagonal tiles (the owner, 2026-10-02: "they are squares in your hand. They
+should be hexagonal in the hand"): each a bare button around an SVG of the board's own hexagon
+(ui/board.ts `cornersOf`, the same inset) in the side's colour with the bug's letter at its centre
+and the count left as a badge on its upper-right edge, at least 44px wide to tap; a playable tile
+has an amber edge, the picked one a thicker edge and a lift. Any tile may be picked at any time
+(Hive has no hand order), the Queen alone when she must come down. The board's viewBox fits the hive
+and the ring of hexes around it (ui/board.ts `fitCells`; the owner: "preshrink the board so there is
+no jarring visual movement when you select or deselect stuff"): every placement and every move lands
+in that ring, so lighting a pick's hexes never rescales or pans the board, and only a tile that
+extends the ring moves the fit, once, after it is played.
 Online, the host holds the state (engine/view.ts `State`) and both seats get the same view, the
 whole game, over the two-seat protocol (protocol.ts: the room's one term is `seatCount: 2`).
 

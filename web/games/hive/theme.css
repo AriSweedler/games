@@ -3,8 +3,9 @@
    toast are the shell's rules on the shared palette, and this file adds Hive's one accent (the
    amber of a honeycomb), the type scale the shell leaves to each theme, and the table: the names
    strip, the SVG hive (a hexagon per cell in the side's colour with the bug's letter, lit where the
-   picked tile may go) and the two hands as trays of tiles. The base pack is deliberately plain: a
-   tile is its colour and its letter. Prettier formats this file. */
+   picked tile may go) and the two hands as trays of hexagonal tiles (the board's hexagon, the bug's
+   letter, the count left as a badge). The base pack is deliberately plain: a tile is its colour
+   and its letter. Prettier formats this file. */
 :root {
   --gutter: 12px;
   /* The one accent: honey amber, on the shared felt. */
@@ -18,7 +19,9 @@
   --hive-black-ink: #f1e9d6;
   --hive-empty: rgba(255, 255, 255, 0.06);
   --hive-lit: rgba(217, 164, 65, 0.55);
-  --tile-w: clamp(40px, 11vw, 56px);
+  /* A tray tile's width: a 44px tap target at the least, a hex is taller than wide (2/√3). */
+  --tile-w: clamp(44px, 11vw, 56px);
+  --tile-h: calc(var(--tile-w) * 1.1547);
 }
 @media (min-width: 900px) {
   :root {
@@ -256,7 +259,10 @@ label {
   fill: var(--accent);
   pointer-events: none;
 }
-/* The hands: one tray a side, five tiles each with the count left; the side to move is lit. */
+/* The hands: one tray a side, five hexagonal tiles each (the board's hexagon in the side's colour
+   with the bug's letter: render.ts `tileHtml`) with the count left as a badge; the side to move is
+   lit. A tile is a bare button around its SVG, so the shape, not a box, carries the colour and the
+   accent (playable: an amber edge; picked: a thicker edge and a lift). */
 .hand {
   display: flex;
   justify-content: center;
@@ -270,24 +276,44 @@ label {
 .hand-tile {
   position: relative;
   width: var(--tile-w);
-  height: var(--tile-w);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1.1rem;
-  cursor: pointer;
+  height: var(--tile-h);
+  display: block;
+  background: none;
+  border: 0;
   padding: 0;
+  cursor: pointer;
+  color: inherit;
 }
-.hand-tile.w {
-  background: var(--hive-white);
-  color: var(--hive-white-ink);
+.hand-tile svg.tile {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
-.hand-tile.b {
-  background: var(--hive-black);
-  color: var(--hive-black-ink);
+.hand-tile polygon {
+  stroke-width: 0.5;
+}
+.hand-tile.w polygon {
+  fill: var(--hive-white);
+  stroke: #cbbf9f;
+}
+.hand-tile.b polygon {
+  fill: var(--hive-black);
+  stroke: #57555c;
+}
+.hand-tile .letter {
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  font-family: inherit;
+}
+.hand-tile.w .letter {
+  fill: var(--hive-white-ink);
+}
+.hand-tile.b .letter {
+  fill: var(--hive-black-ink);
 }
 .hand-tile:disabled {
   cursor: default;
@@ -298,22 +324,30 @@ label {
 }
 .hand-tile.playable {
   opacity: 1;
-  box-shadow: 0 0 0 2px var(--accent);
+}
+.hand-tile.playable polygon {
+  stroke: var(--accent);
+  stroke-width: 1;
 }
 .hand-tile.picked {
-  box-shadow: 0 0 0 3px var(--accent);
   transform: translateY(-3px);
 }
+.hand-tile.picked polygon {
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+/* The count, on the hex's upper-right edge (the box's corner above it is air). */
 .hand-tile .count {
   position: absolute;
-  right: -4px;
-  top: -4px;
+  right: -3px;
+  top: 8%;
   min-width: 18px;
   height: 18px;
   border-radius: 9px;
   background: var(--accent);
   color: #1b1408;
   font-size: 0.72rem;
+  font-weight: 700;
   line-height: 18px;
   text-align: center;
   padding: 0 4px;
