@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Soldier Ant, from above, after the official Hive tile: outlined head, thorax and abdomen,
+       six elbowed legs off the thorax, bent antennae. Line art in currentColor so the tile sets
+       the colour. -->
+  <!-- antennae: up from the head, elbow, then splayed out -->
+  <path d="M46 16 L41 7.5 L30 4" />
+  <path d="M54 16 L59 7.5 L70 4" />
+  <!-- head -->
+  <ellipse cx="50" cy="24.5" rx="7.5" ry="9" />
+  <!-- neck -->
+  <line x1="50" y1="33.5" x2="50" y2="36" />
+  <!-- thorax -->
+  <ellipse cx="50" cy="42" rx="6" ry="6.5" />
+  <!-- waist -->
+  <line x1="50" y1="48.5" x2="50" y2="53" />
+  <!-- abdomen: an egg, widest above the middle, a slight point at the tip -->
+  <path d="M50 53 C64 53 64 74 55 85 Q50 90 45 85 C36 74 36 53 50 53 Z" />
+  <!-- front legs: up and out, knee at head height, tip down -->
+  <path d="M45 39 L28 25 L19 34" />
+  <path d="M55 39 L72 25 L81 34" />
+  <!-- middle legs: out, then steeply down -->
+  <path d="M44 42 L26 46 L18 62" />
+  <path d="M56 42 L74 46 L82 62" />
+  <!-- rear legs: down alongside the abdomen -->
+  <path d="M45 46 L31 63 L29 82" />
+  <path d="M55 46 L69 63 L71 82" />
+</svg>
