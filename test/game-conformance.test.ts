@@ -20,6 +20,7 @@ import {
   REGISTRY,
   SHELL,
   SHELL_GAMES,
+  SOLO,
   SOLO_PAGES,
   TOOL_NAMES,
   type ConformanceRule,
@@ -89,6 +90,31 @@ describe('game conformance: the sources and the tables', () => {
         `${page}: a SOLO page declares seats; register it in SHELL_GAMES (AGENT.md "Every game is a shared-shell game")`,
       ).toBe(false);
       expect(page in ROOM_CODE).toBe(false);
+    });
+
+    // The landing half of a solo page's row: a listed page has its card like a game; an unlisted
+    // one (SOLO `listed: false`) is served and smoked but the landing never names it, while the
+    // README keeps its row so the URL is still written down somewhere.
+    test(`${page}: ${SOLO[page].listed ? 'a listed solo page has its landing card' : 'an unlisted solo page has no landing card'}; the README keeps its row`, () => {
+      const card = `class="card" href="games/${page}/"`;
+      const landing = read(resolve(ROOT, 'web', 'index.html'));
+      if (SOLO[page].listed) {
+        expect(landing, `${page}: landing: add the <a class="card" href="games/<p>/">`).toContain(
+          card,
+        );
+      } else {
+        expect(
+          landing,
+          `${page}: landing: the page is unlisted (tools/games.ts SOLO listed: false); delete its card from web/index.html`,
+        ).not.toContain(card);
+        expect(landing, `${page}: landing: no link to an unlisted page`).not.toContain(
+          `href="games/${page}/"`,
+        );
+      }
+      expect(
+        read(resolve(ROOT, 'README.md')),
+        `${page}: landing: add the README "Play" row`,
+      ).toContain(`https://games.sweedler.com/${page}/`);
     });
   });
 

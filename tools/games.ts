@@ -41,9 +41,11 @@ export const TOOL_NAMES: ReadonlyArray<ToolName> = Object.keys(TOOLS) as Readonl
 
 /**
  * The solo pages (docs/design/rps-island.md D1): a page under web/games/<name>/ with a suite, a
- * hook, a landing card and the dist guards' checks, but no seats, no room code and no shell, so it
- * is not a `Game` (ROOM_CODE, the online drivers and the computed-style oracle key on that union).
- * The reaction game is the first. A name here without a SOLO row is a type error.
+ * hook and the dist guards' checks, but no seats, no room code and no shell, so it is not a `Game`
+ * (ROOM_CODE, the online drivers and the computed-style oracle key on that union). Its row says
+ * whether the landing page lists it (`listed`): the reaction game, the first, is served at /rps/
+ * but carries no card (the owner's call: it does not fit among the games, and its name ran to two
+ * rows in the pill selector). A name here without a SOLO row is a type error.
  */
 export type SoloPage = 'rps';
 export const SOLO_PAGES: ReadonlyArray<SoloPage> = ['rps'];
@@ -561,17 +563,24 @@ export type SoloSpec = Readonly<{
   suite: GameSuite;
   /** The page's own e2e specs, as Playwright globs; no shared spec drives a solo page. */
   specs: ReadonlyArray<string>;
+  /**
+   * Whether the landing page carries a card for it (LANDING_PAGES). An unlisted page is still
+   * built, served and smoked, keeps its README row and its App Clip link; the conformance suite
+   * (test/game-conformance.test.ts) asserts the landing has NO card for it.
+   */
+  listed: boolean;
   /** The ids the built page must carry (test/dist/dist-parity.test.ts). */
   pageShape: Readonly<{ ids: ReadonlyArray<string> }>;
 }>;
 
-/** The solo pages, one row each, in the order the landing page lists them after the games. */
+/** The solo pages, one row each, in the order the landing page lists the listed ones after the games. */
 export const SOLO: Readonly<Record<SoloPage, SoloSpec>> = {
   rps: {
     title: 'Rock Paper Scissors',
     hook: 'window.__rps',
     suite: 'rps',
     specs: ['**/rps.spec.ts'],
+    listed: false,
     // The page's fixed ids (web/games/rps/src/ui/render.ts IDS): the score, the table, the three
     // hands, the controls, and the empty slot the island pairing row mounts into (rps-island.md §8).
     pageShape: {
@@ -604,8 +613,16 @@ export const SOLO: Readonly<Record<SoloPage, SoloSpec>> = {
   },
 };
 
-/** Every page with a landing card, in card order: the games, then the solo pages. */
-export const LANDING_PAGES: ReadonlyArray<Game | SoloPage> = [...GAMES, ...SOLO_PAGES];
+/** The solo pages the landing page does not list (`listed: false`): served, never carded. */
+export const UNLISTED_PAGES: ReadonlyArray<SoloPage> = SOLO_PAGES.filter(
+  (page) => !SOLO[page].listed,
+);
+
+/** Every page with a landing card, in card order: the games, then the listed solo pages. */
+export const LANDING_PAGES: ReadonlyArray<Game | SoloPage> = [
+  ...GAMES,
+  ...SOLO_PAGES.filter((page) => SOLO[page].listed),
+];
 
 /** One value per game, read off its row (the cast: Object.fromEntries widens the keys to string). */
 const perGame = <T>(pick: (spec: GameSpec) => T): Readonly<Record<Game, T>> =>
@@ -638,7 +655,7 @@ export const PAGE_HOOKS: Readonly<Record<Exclude<PageName, 'landing'>, string>> 
   ...perSolo((spec) => spec.hook),
 };
 
-/** The landing page's card links, relative to the site root, in LANDING_PAGES order (the games, then the solo pages). */
+/** The landing page's card links, relative to the site root, in LANDING_PAGES order (the games, then the listed solo pages). */
 export const LANDING_HREFS: ReadonlyArray<string> = LANDING_PAGES.map((page) => `games/${page}/`);
 /** The landing page's tools line, `a.tool` links after the cards, in TOOL_NAMES order. */
 export const LANDING_TOOL_HREFS: ReadonlyArray<string> = TOOL_NAMES.map((t) => `games/${t}/`);
@@ -828,11 +845,6 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     cssFloor: 80,
     hides: true,
     gaps: [
-      {
-        rule: 'seat-names',
-        followUp:
-          'the stepper reaches 12 while the pass-and-play panel has four name inputs; the shell-seat-names lane paints one per seat: delete this row when it lands so the guard bites',
-      },
       {
         rule: 'curtain',
         followUp:

@@ -3,11 +3,12 @@
 // viewport with the keyboard open is about half its height, so the context is an iPhone (390 x
 // 844) that is resized to 390 x 420 once the bar has focus, which is what `visualViewport`
 // reports then (its resize fires, and the page sizes the results to it). What is checked: the bar
-// is 44px tall and sits at the top of what is visible; typing filters on each keystroke with the
-// input keeping focus; the exact and prefix matches come first, a labelled divider, then the
-// lesser matches; the first result ends above the keyboard; Enter opens the top match; Escape and
-// the clear button empty the search and the grid returns; nothing matching is one line. About the
-// page alone: on `pages` only (e2e/fixtures/site.ts PAGE_ONLY_SPECS).
+// is 44px tall and the heading and the lede stay in view above it while typing (the page is never
+// scrolled for the keyboard); typing filters on each keystroke with the input keeping focus; the
+// exact and prefix matches come first, a labelled divider, then the lesser matches; the list ends
+// at the visible edge, so the first result is above the keyboard; Enter opens the top match;
+// Escape and the clear button empty the search and the grid returns; nothing matching is one
+// line. About the page alone: on `pages` only (e2e/fixtures/site.ts PAGE_ONLY_SPECS).
 import type { Page } from '@playwright/test';
 
 import { LANDING_PAGES, PAGE_TITLES } from '../tools/games.ts';
@@ -66,7 +67,7 @@ const onPhone = async (
   }
 };
 
-test('phone: the bar is 44px at the top, the first result ends above the keyboard, Enter opens it', async ({
+test('phone: the bar is 44px under the heading, which stays in view; the list ends at the visible edge; Enter opens the top match', async ({
   browser,
   project,
 }) => {
@@ -87,11 +88,33 @@ test('phone: the bar is 44px at the top, the first result ends above the keyboar
     await expect(page.locator('#results hr.divider')).toHaveCount(0);
     expect(await focusedId(page), 'the input keeps focus while filtering').toBe('q');
 
+    // The heading, the lede and the bar keep their place: nothing scrolled when the keyboard rose.
+    const heading = page.locator('h1');
+    await expect(heading).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('p.lede')).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate<number>('window.scrollY'), 'the page is not scrolled').toBe(0);
+    const headingBox = await heading.boundingBox();
     const bar = await page.locator('#searchForm').boundingBox();
     const first = await results.first().boundingBox();
+    const list = await page.locator('#results').boundingBox();
+    expect(headingBox, 'the heading').not.toBeNull();
     expect(bar, 'the bar').not.toBeNull();
     expect(first, 'the first result').not.toBeNull();
-    expect(bar?.y ?? -1, 'the bar at the top of what is visible').toBeLessThanOrEqual(1);
+    expect(list, 'the list').not.toBeNull();
+    expect(bar?.y ?? -1, 'the bar under the heading').toBeGreaterThan(
+      (headingBox?.y ?? 0) + (headingBox?.height ?? 0),
+    );
+    expect(
+      (first?.y ?? -1) >= (bar?.y ?? 0) + (bar?.height ?? 0),
+      'the first result under the bar',
+    ).toBe(true);
+    const listBottom = (list?.y ?? 0) + (list?.height ?? 0);
+    expect(listBottom, 'the list ends at the visible edge').toBeLessThanOrEqual(
+      PHONE_KEYBOARD.height,
+    );
+    expect(listBottom, 'the list reaches the visible edge').toBeGreaterThanOrEqual(
+      PHONE_KEYBOARD.height - 2,
+    );
     expect(
       (first?.y ?? 0) + (first?.height ?? 0),
       'the first result above the keyboard',
@@ -111,11 +134,12 @@ test('phone: lesser matches sit under the divider; Escape and the clear button r
     await input.focus();
     await page.setViewportSize(PHONE_KEYBOARD);
 
-    // 's': Sheshbesh is a prefix; Rock Paper Scissors a word start, Briscola a subsequence.
+    // 's': Sheshbesh is a prefix; Briscola a subsequence (the reaction game, a word start, is
+    // unlisted: tools/games.ts SOLO `listed: false`, so it is never a result).
     await input.pressSequentially('s');
-    await expect(page.locator('#results a.card')).toHaveCount(3);
+    await expect(page.locator('#results a.card')).toHaveCount(2);
     expect(await listing(page)).toEqual({
-      names: ['Sheshbesh', 'Rock Paper Scissors', 'Briscola'],
+      names: ['Sheshbesh', 'Briscola'],
       divider: 1,
     });
     await expect(page.locator('#results hr.divider')).toHaveAttribute(

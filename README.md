@@ -19,7 +19,7 @@ pages got here.
 | Sheshbesh (backgammon)       | https://arisweedler.github.io/games/games/backgammon/ | https://games.sweedler.com/backgammon/ and https://games.sweedler.com/sheshbesh/ | `web/games/backgammon/` |
 | Briscola                     | https://arisweedler.github.io/games/games/briscola/   | https://games.sweedler.com/briscola/                                             | `web/games/briscola/`   |
 | Hive                         | https://arisweedler.github.io/games/games/hive/       | https://games.sweedler.com/hive/                                                 | `web/games/hive/`       |
-| Rock Paper Scissors          | https://arisweedler.github.io/games/games/rps/        | https://games.sweedler.com/rps/                                                  | `web/games/rps/`        |
+| Rock Paper Scissors (hidden) | https://arisweedler.github.io/games/games/rps/        | https://games.sweedler.com/rps/                                                  | `web/games/rps/`        |
 | UNO                          | https://arisweedler.github.io/games/games/uno/        | https://games.sweedler.com/uno/                                                  | `web/games/uno/`        |
 | Flip 7                       | https://arisweedler.github.io/games/games/flip7/      | https://games.sweedler.com/flip7/                                                | `web/games/flip7/`      |
 | UI Sandbox (a tool, no game) | https://arisweedler.github.io/games/games/ui-sandbox/ | https://games.sweedler.com/ui-sandbox/                                           | `web/games/ui-sandbox/` |
@@ -33,7 +33,10 @@ address bar nor the history ever holds `/games/` (the redirect stays for links a
 there). Sheshbesh answers to two
 names: `/sheshbesh/` is the backgammon page served in place by the Worker, and on GitHub Pages
 `games/sheshbesh/` forwards to `games/backgammon/`; only `/backgammon/` is linked from the landing
-page. A host on one origin and a guest on the other still meet: peer ids carry no origin.
+page. A host on one origin and a guest on the other still meet: peer ids carry no origin. Rock
+Paper Scissors is hidden: both origins serve `/rps/` (the App Clip link points there), but the
+landing page carries no card for it (`tools/games.ts` SOLO `listed: false`; the conformance suite
+holds the landing to that).
 
 Sheshbesh plays portes (the Greek set's first game: no doubling cube, a gammon doubles) or Western
 backgammon (the cube, the triple game, the Crawford rule) as a match to 1, 3, 5 or 7 points, on one
