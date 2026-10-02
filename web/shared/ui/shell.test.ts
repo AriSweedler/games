@@ -2848,7 +2848,7 @@ describe('resume and the handoff', () => {
 });
 
 describe('leaving and cancelling', () => {
-  test('leave/request confirms with the role`s copy; leave/confirmed drops the wake lock, closes the network, then finishes (in that order); leave/finish resets the shell, the cue memory and the table, then goes home', () => {
+  test('leave/request confirms with the role`s copy; leave/confirmed drops the wake lock, closes the network, then finishes (in that order); leave/finish resets the shell (the rules sheet put away), the cue memory and the table, then goes home', () => {
     expect(run(local(), { type: 'leave/request' }).effects).toEqual([
       { type: 'confirm', message: 'Leave the local game?', then: { type: 'leave/confirmed' } },
     ]);
@@ -2863,7 +2863,11 @@ describe('leaving and cancelling', () => {
       { type: 'closeNet' },
       { type: 'then', intent: { type: 'leave/finish' } },
     ]);
-    const finished = run(withShell(h, { revealed: 1, handoff: true }), { type: 'leave/finish' });
+    // The rules sheet open at the leave goes with the table: the home has no sheet (shellPaint.ts
+    // `paintScreen` puts every overlay away there; a `rulesOpen` left true would bring it back).
+    const finished = run(withShell(h, { revealed: 1, handoff: true, rulesOpen: true }), {
+      type: 'leave/finish',
+    });
     expect(finished.app.shell).toMatchObject({
       role: null,
       game: null,
@@ -2872,6 +2876,7 @@ describe('leaving and cancelling', () => {
       code: null,
       revealed: null,
       handoff: false,
+      rulesOpen: false,
       cues: { seen: null },
       netAttempt: h.shell.netAttempt + 1,
     });

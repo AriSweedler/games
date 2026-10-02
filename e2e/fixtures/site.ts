@@ -146,6 +146,8 @@ export const PAGE_ONLY_SPECS: ReadonlyArray<string> = [
   // The sessions' silence watch is a timer, the same on either origin.
   '**/shell-liveness.spec.ts',
   '**/shell-local.spec.ts',
+  // Leave the table from a finished game: about the page's paint, not the origin.
+  '**/shell-result.spec.ts',
   // UI Sandbox's device sweep: about the page's frame and map, not the origin.
   '**/ui-sandbox.spec.ts',
   // The landing page's search bar under an emulated keyboard: about the page alone.

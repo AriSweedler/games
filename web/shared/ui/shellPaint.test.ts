@@ -105,6 +105,41 @@ describe('paintScreen', () => {
     expect(shown(p)).toEqual(['hostWaitScreen']);
     expect(p.body.hasClass('fixed-screen')).toBe(false);
   });
+
+  // The owner on Hive (2026-10-02): "the modal didn't go away after clicking 'leave the table'".
+  // A game paints its own sheets with its table and skips that paint without a view, so the
+  // switch to the home puts every overlay away itself (the home has no sheet); every other screen
+  // leaves them to their own paints (the rules sheet is open in a waiting room, the curtain over
+  // the table).
+  test('the home puts every overlay away (a game`s result sheet, the shell`s sheets, the curtain); the other screens leave them as they are', () => {
+    const result = fakeEl('resultOverlay', { classes: ['overlay'] });
+    const rules = fakeEl('rulesOverlay', { classes: ['overlay', 'hidden'] });
+    const curtain = fakeEl('curtainOverlay', { classes: ['overlay', 'curtain'] });
+    const p = fakePage(
+      [
+        fakeEl('homeScreen', { classes: ['hidden'] }),
+        fakeEl('hostWaitScreen', { classes: ['hidden'] }),
+        fakeEl('tableScreen'),
+        result,
+        rules,
+        curtain,
+      ],
+      fakeEl('body', { queries: { '.overlay': [curtain, result, rules] } }),
+    );
+    paintScreen(p.doc, SCREENS, 'tableScreen', 'tableScreen');
+    expect(shown(p)).toEqual(['tableScreen']);
+    expect(p.get('resultOverlay').hidden()).toBe(false);
+    expect(p.get('curtainOverlay').hidden()).toBe(false);
+    expect(p.get('rulesOverlay').hidden()).toBe(true);
+    paintScreen(p.doc, SCREENS, 'hostWaitScreen', 'tableScreen');
+    expect(p.get('resultOverlay').hidden()).toBe(false);
+    paintScreen(p.doc, SCREENS, 'homeScreen', 'tableScreen');
+    expect(shown(p)).toEqual(['homeScreen']);
+    expect(p.body.hasClass('fixed-screen')).toBe(false);
+    ['resultOverlay', 'rulesOverlay', 'curtainOverlay'].forEach((id) => {
+      expect(p.get(id).hidden(), id).toBe(true);
+    });
+  });
 });
 
 describe('paintWaiting', () => {
