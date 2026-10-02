@@ -9,17 +9,18 @@
 // and e2e/backgammon-online.spec.ts (a roll out of turn refused, the guest's roll rolled by the
 // host, a move propagating). Both origins: a spec about the origin. Tagged per game (see
 // shell-home.spec.ts) and @online (nightly.yml's grep, for its deployed and broker jobs). Fidice's
-// row in e2e/fixtures/online-games.ts replaced its own e2e/fidice-online.spec.ts (dry-round-2.md
+// row in e2e/fixtures/online-games.ts drives its shell path (M5 of
+// docs/design/fidice-shell-adoption.md; the row replaced its legacy online spec at dry-round-2.md
 // H1). The last block is the guest's name (the owner, 2026-09-28: the client defines its own):
 // what the guest's box shows is what both tables seat, an empty box or a fresh invite link seats
 // 'Guest', a clash with the host is deduped once, and the guest wait screen says who you are
-// before the table does (backgammon and briscola; gin's page carries no such card), where the
-// name can be changed before the deal: the host's status and both tables follow.
+// before the table does (backgammon and briscola; gin's and fidice's pages carry no such card),
+// where the name can be changed before the deal: the host's status and both tables follow.
 import type { Page } from '@playwright/test';
 
-import { GAMES, REGISTRY, SHELL_GAMES } from '../tools/games.ts';
+import { REGISTRY, SHELL_GAMES } from '../tools/games.ts';
 import { peerIdFor } from '../web/shared/lib/roomCode.ts';
-import { ONLINE_DRIVERS, SHELL_DRIVERS, connect, connectByLink } from './fixtures/online-games.ts';
+import { SHELL_DRIVERS, connect, connectByLink } from './fixtures/online-games.ts';
 import { expectPeerOptions, invitePath, openGame } from './fixtures/player.ts';
 import {
   DEFAULT_MARK,
@@ -37,10 +38,10 @@ import {
 } from './fixtures/shell.ts';
 import { expect, test } from './fixtures/two-players.ts';
 
-GAMES.forEach((game) => {
+SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
     const spec = REGISTRY[game];
-    const driver = ONLINE_DRIVERS[game];
+    const driver = SHELL_DRIVERS[game];
 
     test(
       'host opens a room, guest joins by code, the host starts, both see the opening, the Peers carry the harness hooks',
@@ -61,17 +62,11 @@ GAMES.forEach((game) => {
         expectPeerOptions(guestCall, spec.debug);
       },
     );
-  });
-});
 
-// The shell games' invite (the owner, 2026-09-25: "when you visit a '?join=TNJQ' link, it
-// shouldn't make you THEN click 'sit down'"): the guest, its name remembered from an earlier visit,
-// follows the link and is sat down at once, no tap; the host sees the join and starts, and both
-// tables show the opening with the names crossed over as when the code was typed.
-SHELL_GAMES.forEach((game) => {
-  test.describe(game, { tag: `@${game}` }, () => {
-    const driver = SHELL_DRIVERS[game];
-
+    // The invite (the owner, 2026-09-25: "when you visit a '?join=TNJQ' link, it shouldn't make
+    // you THEN click 'sit down'"): the guest, its name remembered from an earlier visit, follows
+    // the link and is sat down at once, no tap; the host sees the join and starts, and both tables
+    // show the opening with the names crossed over as when the code was typed.
     test(
       'the guest follows the invite link: seated at once under the remembered name, no tap; the host starts, both see the opening',
       { tag: '@online' },
@@ -171,7 +166,7 @@ SHELL_GAMES.forEach((game) => {
       async ({ players, project }) => {
         test.skip(
           cells.seated === null,
-          'the page carries no name card (gin: its DOM parity oracle)',
+          'the page carries no name card (gin: its DOM parity oracle; fidice: until its restyle)',
         );
         const { host, guest } = players;
         await openGame(host, project, game);
