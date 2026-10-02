@@ -21,8 +21,9 @@ ALLOWED_ORIGINS = "https://arisweedler.github.io,https://games.sweedler.com"
 # Credential lifetime in seconds (300–86400). A game session should fit inside it.
 TTL_SECONDS = "7200"
 
-# The TURN key's ID is not secret; the API token that pairs with it is.
-TURN_KEY_ID = "acdb9db7a19e6f0d65998670bd779bbe"
+# The TURN key's ID is not secret; the API token that pairs with it is. Key "games-turn", created
+# 2026-10-02 for the renamed Worker (the first key's token was never saved; a Worker secret cannot be read back).
+TURN_KEY_ID = "e8ee50e4785559847f6e676b7300360a"
 
 # Secret (never commit it):
 #   TURN_KEY_API_TOKEN   — shown once when the TURN key is created (Realtime → TURN)
