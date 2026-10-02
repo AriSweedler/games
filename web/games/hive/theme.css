@@ -138,6 +138,15 @@ label {
   font-size: 0.92rem;
   line-height: 1.4;
 }
+/* The rules' bug panels (ui/rules.ts `bugArt`; the shell's `.rule-card` lays the panel out): the
+   tray tile in White's colour, the board's hexagon with the bug engraved (the `.w .bug` rules below
+   colour its strokes, the svg carries `w`), a touch of the felt's shadow. */
+.rule-art .face {
+  fill: var(--hive-white);
+  stroke: #cbbf9f;
+  stroke-width: 0.5;
+  filter: url(#hive-shadow);
+}
 .sheet-title {
   font-weight: 700;
 }
