@@ -48,6 +48,7 @@ const legacyPage = (game: string): string => resolve(REPO_ROOT, 'legacy', game, 
  */
 const SOLO_ASSETS: Readonly<Record<(typeof SOLO_PAGES)[number], ReadonlyArray<string>>> = {
   rps: [`${BUDDY_DIR.replace('web/public/', '')}/`],
+  uno: [],
 };
 
 describeDist('dist parity with legacy/ and web/', (root) => {

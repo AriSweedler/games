@@ -758,6 +758,27 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
     },
     e2e: gameE2e('rps'),
   },
+  uno: {
+    // UNO pass-and-play (docs/design/uno.md §7): a solo page on the matrix jobs like a game.
+    unit: ['web/games/uno/**/*.test.ts'],
+    standalone: [],
+    browser: false,
+    needsBuild: false,
+    coverage: {
+      include: ['web/games/uno/src/engine/**/*.ts', 'web/games/uno/src/ui/state.ts'],
+      // Measured at the page's landing (lines/functions/statements/branches): the engine
+      // 94.4/100/95.1/86.2 over hand-built positions, seeded deals and whole bot games
+      // (engine.test.ts; the unreached lines are the exhaustive switches' `never` arms and the
+      // never-dealt sentinel's branches), the screens reducer 91.7/100/93.3/96.0 (state.test.ts;
+      // the `never` arm). The paint (ui/render.ts) and main.ts have no unit test: e2e/uno.spec.ts
+      // drives them.
+      thresholds: {
+        'web/games/uno/src/engine/**': { lines: 92, functions: 95, statements: 92, branches: 84 },
+        'web/games/uno/src/ui/state.ts': { lines: 90, functions: 95, statements: 90, branches: 90 },
+      },
+    },
+    e2e: gameE2e('uno'),
+  },
   site: {
     unit: [
       // Which theme.css declares which token, across all three games.
@@ -998,6 +1019,7 @@ export const RULES: ReadonlyArray<Rule> = [
     why: 'the briscola wire goldens (self-recorded: protocol.test.ts pins them)',
   },
   ...gameRules('rps'),
+  ...gameRules('uno'),
   {
     globs: ['test/parity/ice.legacy.test.ts', 'test/parity/roomCode.legacy.test.ts'],
     runs: ['shared'],

@@ -179,10 +179,11 @@ describe('every test file belongs to exactly one suite', () => {
       'backgammon',
       'briscola',
       'rps',
+      'uno',
       'site',
       'harness',
     ]);
-    expect(E2E_SUITES).toEqual(['gin', 'fidice', 'backgammon', 'briscola', 'rps', 'site']);
+    expect(E2E_SUITES).toEqual(['gin', 'fidice', 'backgammon', 'briscola', 'rps', 'uno', 'site']);
     expect(JOBS).toEqual([
       ...SUITE_NAMES,
       'e2e-gin',
@@ -190,11 +191,12 @@ describe('every test file belongs to exactly one suite', () => {
       'e2e-backgammon',
       'e2e-briscola',
       'e2e-rps',
+      'e2e-uno',
       'e2e-site',
     ]);
     // The game suites are the matrix jobs' values: each has both halves (the unit script and the
     // e2e script the two jobs run), in job order; the reaction game, a solo page, rides them too.
-    expect(GAME_SUITES).toEqual(['gin', 'fidice', 'backgammon', 'briscola', 'rps']);
+    expect(GAME_SUITES).toEqual(['gin', 'fidice', 'backgammon', 'briscola', 'rps', 'uno']);
     expect(SUITE_NAMES.filter(isGameSuite)).toEqual(GAME_SUITES);
     GAME_SUITES.forEach((game) => {
       expect(E2E_SUITES, game).toContain(game);
@@ -292,6 +294,16 @@ const ROWS_BEFORE: ReadonlyArray<readonly [string, Suite, Thresholds]> = [
     'web/games/rps/src/ui/sound.ts',
     'rps',
     { lines: 95, functions: 95, statements: 95, branches: 90 },
+  ],
+  [
+    'web/games/uno/src/engine/**',
+    'uno',
+    { lines: 92, functions: 95, statements: 92, branches: 84 },
+  ],
+  [
+    'web/games/uno/src/ui/state.ts',
+    'uno',
+    { lines: 90, functions: 95, statements: 90, branches: 90 },
   ],
   ['web/shared/lib/**', 'shared', { lines: 100, functions: 100, branches: 100, statements: 100 }],
   // Added after the partition (docs/design/glossary-links.md §3): held at 100 like shared/lib.
@@ -517,6 +529,8 @@ const INCLUDE_BEFORE: ReadonlyArray<string> = [
   'web/games/rps/src/ui/state.ts',
   'web/games/rps/src/ui/buddy.ts',
   'web/games/rps/src/ui/sound.ts',
+  'web/games/uno/src/engine/**/*.ts',
+  'web/games/uno/src/ui/state.ts',
   'web/shared/lib/**/*.ts',
   'web/shared/edge/**/*.ts',
   'web/shared/net/**/*.ts',

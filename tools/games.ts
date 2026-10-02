@@ -19,7 +19,7 @@ export type { Game };
  * of its own e2e specs. A game's row names its suite (dry-round-2.md I6), and a name here without
  * a suites.ts row is a type error there.
  */
-export type GameSuite = 'gin' | 'fidice' | 'backgammon' | 'briscola' | 'rps';
+export type GameSuite = 'gin' | 'fidice' | 'backgammon' | 'briscola' | 'rps' | 'uno';
 
 /**
  * The tool pages (docs/design/ui-sandbox.md): built and smoked like a game (a folder under
@@ -42,8 +42,8 @@ export const TOOL_NAMES: ReadonlyArray<ToolName> = Object.keys(TOOLS) as Readonl
  * is not a `Game` (ROOM_CODE, the online drivers and the computed-style oracle key on that union).
  * The reaction game is the first. A name here without a SOLO row is a type error.
  */
-export type SoloPage = 'rps';
-export const SOLO_PAGES: ReadonlyArray<SoloPage> = ['rps'];
+export type SoloPage = 'rps' | 'uno';
+export const SOLO_PAGES: ReadonlyArray<SoloPage> = ['rps', 'uno'];
 
 /** The pages smoke opens: every game, every solo page, every tool page and the landing page. */
 export type PageName = Game | SoloPage | ToolName | 'landing';
@@ -428,6 +428,44 @@ export const SOLO: Readonly<Record<SoloPage, SoloSpec>> = {
         'islandSlot',
         'resetBtn',
         'soundBtn',
+      ],
+    },
+  },
+  uno: {
+    title: 'UNO',
+    hook: 'window.__uno',
+    suite: 'uno',
+    specs: ['**/uno.spec.ts'],
+    // The page's fixed ids (web/games/uno/src/ui/render.ts IDS): the three screens (setup, curtain,
+    // table), the setup's fields, the pile and the colour in play, the seats, the hand, the
+    // controls, the colour picker and the result panel (docs/design/uno.md §7).
+    pageShape: {
+      ids: [
+        'app',
+        'setup',
+        'seatCount',
+        'names',
+        'startBtn',
+        'curtain',
+        'curtainName',
+        'curtainNote',
+        'revealBtn',
+        'table',
+        'turnName',
+        'direction',
+        'topCard',
+        'colorDot',
+        'seats',
+        'hand',
+        'drawBtn',
+        'passBtn',
+        'colorPicker',
+        'status',
+        'result',
+        'resultTitle',
+        'scores',
+        'nextRoundBtn',
+        'newGameBtn',
       ],
     },
   },
