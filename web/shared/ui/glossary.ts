@@ -5,8 +5,20 @@
 // each rule); these helpers build the rules list with the anchors, wrap the terms in links and read
 // a `#rule-<id>` deep link. The edge that scrolls and flashes the rule is web/shared/edge/glossary.ts.
 
-/** A rule item: an id (the anchor), its heading and body as safe HTML (the body may contain jargon). */
-export type RuleItem = Readonly<{ id: string; heading: string; body: string }>;
+/**
+ * A rule item: an id (the anchor), its heading and body as safe HTML (the body may contain jargon),
+ * and `art`, inline SVG markup (a game's own, hive's engraved bug on a tile) that makes the rule a
+ * panel with the picture at its left.
+ */
+export type RuleItem = Readonly<{ id: string; heading: string; body: string; art?: string }>;
+
+/**
+ * A group of rules under one heading (the owner, 2026-10-02, on hive: "the specific-to-movement-
+ * of-a-bug rules and the other rules should be in separate columns"): the slot's list becomes one
+ * `<li>` per group, each holding its own `rules-list`, stacked on a phone and side by side where
+ * the slot is wide (shell.css). `id` names the group (`data-group`); the rules keep their anchors.
+ */
+export type RuleGroup = Readonly<{ id: string; heading: string; rules: ReadonlyArray<RuleItem> }>;
 
 /** A glossary entry: the words that mean this rule (whole words, any case; phrases allowed). */
 export type GlossaryEntry = Readonly<{ rule: string; terms: ReadonlyArray<string> }>;
@@ -124,14 +136,52 @@ export const linkJargon = (
     { html, linked: [] },
   ).html;
 
-/** One `<li id="rule-<id>"><strong>Heading:</strong> body</li>` per item, the body's jargon linked. */
-export const rulesListHtml = (items: ReadonlyArray<RuleItem>, glossary: Glossary): string =>
-  items
-    .map(
-      (item) =>
-        `<li id="${ruleAnchor(item.id)}"><strong>${item.heading}:</strong> ${linkJargon(item.body, glossary, { except: item.id })}</li>`,
-    )
-    .join('\n');
+/** The class of a rule that carries art: a panel, the art tile at its left (shell.css `.rule-card`). */
+const CARD_CLASS = 'rule-card';
+
+/**
+ * One `<li id="rule-<id>"><strong>Heading:</strong> body</li>`, the body's jargon linked; with art,
+ * `<li class="rule-card">` holding the art in a `<span class="rule-art">` (decoration: the heading
+ * names the bug) and the text in a `<span class="rule-copy">`.
+ */
+const ruleHtml = (item: RuleItem, glossary: Glossary): string => {
+  const copy = `<strong>${item.heading}:</strong> ${linkJargon(item.body, glossary, { except: item.id })}`;
+  return item.art === undefined
+    ? `<li id="${ruleAnchor(item.id)}">${copy}</li>`
+    : `<li id="${ruleAnchor(item.id)}" class="${CARD_CLASS}"><span class="rule-art" aria-hidden="true">${item.art}</span><span class="rule-copy">${copy}</span></li>`;
+};
+
+/** A list of groups rather than of rules: the first entry carries `rules`. */
+const isGrouped = (
+  list: ReadonlyArray<RuleItem> | ReadonlyArray<RuleGroup>,
+): list is ReadonlyArray<RuleGroup> => {
+  const first = list[0];
+  return first !== undefined && 'rules' in first;
+};
+
+/**
+ * One `<li class="rules-group" data-group="<id>">` per group: its `<h3>` and a nested
+ * `<ul class="rules-list">` of its rules (the slot is itself a `<ul>`, so a group is a list item,
+ * not a `<section>`: the markup stays valid and every rule's `<li id="rule-<id>">` is still inside
+ * the slot for `revealRule`).
+ */
+const groupHtml = (group: RuleGroup, glossary: Glossary): string =>
+  `<li class="rules-group" data-group="${group.id}"><h3>${group.heading}</h3><ul class="rules-list">\n${group.rules
+    .map((item) => ruleHtml(item, glossary))
+    .join('\n')}\n</ul></li>`;
+
+/**
+ * The rules slot's markup: one `<li id="rule-<id>"><strong>Heading:</strong> body</li>` per item of
+ * a flat list, the body's jargon linked (a rule with `art` is a `rule-card`), or one `rules-group`
+ * `<li>` per group of a grouped list.
+ */
+export const rulesListHtml = (
+  list: ReadonlyArray<RuleItem> | ReadonlyArray<RuleGroup>,
+  glossary: Glossary,
+): string =>
+  isGrouped(list)
+    ? list.map((group) => groupHtml(group, glossary)).join('\n')
+    : list.map((item) => ruleHtml(item, glossary)).join('\n');
 
 /** The rule id a `#rule-<id>` hash names (`location.hash`, with or without the `#`), else null. */
 export const ruleFromHash = (hash: string): string | null => {

@@ -6,6 +6,7 @@ import {
   ruleAnchor,
   ruleFromHash,
   rulesListHtml,
+  type RuleGroup,
   type Glossary,
   type RuleItem,
 } from './glossary.ts';
@@ -116,6 +117,45 @@ describe('rulesListHtml', () => {
     expect(rulesListHtml(items, GLOSSARY)).toBe(
       `<li id="rule-goal"><strong>Goal:</strong> Build a ${link('melds', 'set')}.</li>`,
     );
+  });
+});
+
+describe('rulesListHtml over groups', () => {
+  const ART = '<svg class="tile" viewBox="0 0 1 1"><circle r="1"/></svg>';
+  const GROUPS: ReadonlyArray<RuleGroup> = [
+    {
+      id: 'moves',
+      heading: 'The moves',
+      rules: [
+        { id: 'knock', heading: 'Knock', body: 'Knock when your melds are ready.', art: ART },
+      ],
+    },
+    {
+      id: 'game',
+      heading: 'The game',
+      rules: [{ id: 'melds', heading: 'Melds', body: 'A set or a run; a knock ends the hand.' }],
+    },
+  ];
+
+  test('one rules-group <li> per group with its heading and its own list; a rule with art is a card', () => {
+    expect(rulesListHtml(GROUPS, GLOSSARY).split('\n')).toEqual([
+      '<li class="rules-group" data-group="moves"><h3>The moves</h3><ul class="rules-list">',
+      `<li id="rule-knock" class="rule-card"><span class="rule-art" aria-hidden="true">${ART}</span><span class="rule-copy"><strong>Knock:</strong> Knock when your melds are ready.</span></li>`,
+      '</ul></li>',
+      '<li class="rules-group" data-group="game"><h3>The game</h3><ul class="rules-list">',
+      `<li id="rule-melds"><strong>Melds:</strong> A set or a run; a ${link('knock', 'knock')} ends the hand.</li>`,
+      '</ul></li>',
+    ]);
+  });
+
+  test('a flat list with art is cards without groups; an empty list is empty either way', () => {
+    const items: ReadonlyArray<RuleItem> = [
+      { id: 'goal', heading: 'Goal', body: 'Build a set.', art: ART },
+    ];
+    expect(rulesListHtml(items, GLOSSARY)).toBe(
+      `<li id="rule-goal" class="rule-card"><span class="rule-art" aria-hidden="true">${ART}</span><span class="rule-copy"><strong>Goal:</strong> Build a ${link('melds', 'set')}.</span></li>`,
+    );
+    expect(rulesListHtml([], GLOSSARY)).toBe('');
   });
 });
 
