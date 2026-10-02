@@ -11,6 +11,7 @@ import { GAMES, REGISTRY, SOLO, SOLO_PAGES } from '../games.ts';
 import { matchesAny } from './glob.ts';
 import {
   E2E_SUITES,
+  ENGINE_ONLY,
   GAME_SUITES,
   JOBS,
   RULES,
@@ -181,6 +182,7 @@ describe('every test file belongs to exactly one suite', () => {
       'rps',
       'uno',
       'flip7',
+      'hive',
       'site',
       'harness',
     ]);
@@ -207,10 +209,25 @@ describe('every test file belongs to exactly one suite', () => {
     ]);
     // The game suites are the matrix jobs' values: each has both halves (the unit script and the
     // e2e script the two jobs run), in job order; the reaction game, a solo page, rides them too.
-    expect(GAME_SUITES).toEqual(['gin', 'fidice', 'backgammon', 'briscola', 'rps', 'uno', 'flip7']);
+    // An engine-only game (ENGINE_ONLY: Hive's engine before its page) has the unit half alone.
+    expect(GAME_SUITES).toEqual([
+      'gin',
+      'fidice',
+      'backgammon',
+      'briscola',
+      'rps',
+      'uno',
+      'flip7',
+      'hive',
+    ]);
     expect(SUITE_NAMES.filter(isGameSuite)).toEqual(GAME_SUITES);
-    GAME_SUITES.forEach((game) => {
-      expect(E2E_SUITES, game).toContain(game);
+    GAME_SUITES.filter((game) => !(ENGINE_ONLY as ReadonlyArray<string>).includes(game)).forEach(
+      (game) => {
+        expect(E2E_SUITES, game).toContain(game);
+      },
+    );
+    ENGINE_ONLY.forEach((game) => {
+      expect(SUITES[game].e2e, game).toBeUndefined();
     });
     // The browser suite is the only one `npm test` leaves out, the built one the only one that builds.
     expect(SUITE_NAMES.filter((s) => SUITES[s].browser)).toEqual(['shared-integration']);
@@ -246,13 +263,22 @@ describe('every test file belongs to exactly one suite', () => {
     // A solo page's e2e half is its own specs alone: no shared spec, no tag.
     expect(SUITES.rps.e2e).toStrictEqual({ files: ['**/rps.spec.ts'], otherTags: [] });
     // Every game and solo page names a suite of its own (two rows naming one suite would drop one
-    // from the reverse map silently), and every game suite is some page's.
+    // from the reverse map silently), and every game suite is some page's or an engine-only
+    // game's: a folder under web/games/ with no page yet, which its page row moves out.
     expect([...GAME_SUITES].sort()).toEqual(
       [
         ...GAMES.map((game) => REGISTRY[game].suite),
         ...SOLO_PAGES.map((page) => SOLO[page].suite),
+        ...ENGINE_ONLY,
       ].sort(),
     );
+    ENGINE_ONLY.forEach((game) => {
+      expect(
+        FILES.some((f) => f.startsWith(`web/games/${game}/`)),
+        game,
+      ).toBe(true);
+      expect(FILES, game).not.toContain(`web/games/${game}/index.html`);
+    });
   });
 
   test('the per-suite file counts as cut over (the table of the design, re-counted on main)', () => {
@@ -269,6 +295,8 @@ describe('every test file belongs to exactly one suite', () => {
     expect(counts['briscola']).toBeGreaterThanOrEqual(18);
     // The reaction game: the engine, the codec's round trip, the reducer, storage, fx, the buddy table.
     expect(counts['rps']).toBeGreaterThanOrEqual(5);
+    // Hive's engine before its page (docs/design/hive.md §6): the grid, the tiles, the rules.
+    expect(counts['hive']).toBeGreaterThanOrEqual(3);
     expect(counts['site']).toBeGreaterThanOrEqual(8);
     expect(counts['harness']).toBeGreaterThanOrEqual(6);
   });
@@ -325,6 +353,12 @@ const ROWS_BEFORE: ReadonlyArray<readonly [string, Suite, Thresholds]> = [
     'web/games/flip7/src/ui/state.ts',
     'flip7',
     { lines: 85, functions: 95, statements: 88, branches: 90 },
+  ],
+  // Hive's engine before its page (docs/design/hive.md §6), measured at its landing.
+  [
+    'web/games/hive/src/engine/**',
+    'hive',
+    { lines: 95, functions: 95, statements: 95, branches: 90 },
   ],
   ['web/shared/lib/**', 'shared', { lines: 100, functions: 100, branches: 100, statements: 100 }],
   // Added after the partition (docs/design/glossary-links.md §3): held at 100 like shared/lib.
@@ -554,6 +588,7 @@ const INCLUDE_BEFORE: ReadonlyArray<string> = [
   'web/games/uno/src/ui/state.ts',
   'web/games/flip7/src/engine/**/*.ts',
   'web/games/flip7/src/ui/state.ts',
+  'web/games/hive/src/engine/**/*.ts',
   'web/shared/lib/**/*.ts',
   'web/shared/edge/**/*.ts',
   'web/shared/net/**/*.ts',
@@ -730,6 +765,13 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
     ['rps', 'e2e-rps', 'site', 'e2e-site', 'harness'],
   ],
   ["the reaction game's own spec", ['e2e/rps.spec.ts'], ['e2e-rps']],
+  // An engine-only game (ENGINE_ONLY): its suite, the ratchet and the accounting; no page, no e2e.
+  [
+    'the hive engine (no page yet)',
+    ['web/games/hive/src/engine/engine.ts'],
+    ['hive', 'site', 'harness'],
+  ],
+  ['a hive test alone', ['web/games/hive/src/engine/hex.test.ts'], ['hive', 'site', 'harness']],
   ['a briscola spec', ['e2e/briscola-local.spec.ts'], ['e2e-briscola']],
   ['a briscola style golden', ['test/fixtures/styles/briscola.390x844.json'], ['e2e-site']],
   ['a backgammon style golden', ['test/fixtures/styles/backgammon.390x844.json'], ['e2e-site']],

@@ -17,9 +17,12 @@ export type { Game };
  * The game suites' names (tools/ci/suites.ts): `npm run test:<suite>`, the value of CI's two matrix
  * jobs, and the prefix of the game's parity oracles (`test/parity/<suite>.*`) and, by convention,
  * of its own e2e specs. A game's row names its suite (dry-round-2.md I6), and a name here without
- * a suites.ts row is a type error there.
+ * a suites.ts row is a type error there. An engine-only game (tools/ci/suites.ts ENGINE_ONLY:
+ * Hive's rules engine before its page, docs/design/hive.md §6) names its suite here with no row
+ * below until its page row adds one.
  */
-export type GameSuite = 'gin' | 'fidice' | 'backgammon' | 'briscola' | 'rps' | 'uno' | 'flip7';
+export type GameSuite =
+  'gin' | 'fidice' | 'backgammon' | 'briscola' | 'rps' | 'uno' | 'flip7' | 'hive';
 
 /**
  * The tool pages (docs/design/ui-sandbox.md): built and smoked like a game (a folder under
