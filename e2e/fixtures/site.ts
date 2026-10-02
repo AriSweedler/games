@@ -122,6 +122,8 @@ export const PAGE_ONLY_SPECS: ReadonlyArray<string> = [
   '**/computed-styles.spec.ts',
   // UNO pass-and-play: a seeded game through the page, about the page alone.
   '**/uno.spec.ts',
+  // Flip 7 pass-and-play: a seeded game through the page, about the page alone.
+  '**/flip7.spec.ts',
   // Three contexts and a computer over the N-seat sessions, plus Solo and Watch: about the seats.
   '**/fidice-online.spec.ts',
   '**/gin-drag-discard.spec.ts',

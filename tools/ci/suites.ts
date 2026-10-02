@@ -779,6 +779,32 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
     },
     e2e: gameE2e('uno'),
   },
+  flip7: {
+    // Flip 7 pass-and-play (docs/design/flip7.md §7): a solo page on the matrix jobs like a game.
+    unit: ['web/games/flip7/**/*.test.ts'],
+    standalone: [],
+    browser: false,
+    needsBuild: false,
+    coverage: {
+      include: ['web/games/flip7/src/engine/**/*.ts', 'web/games/flip7/src/ui/state.ts'],
+      // Measured at the page's landing (lines/functions/statements/branches): the engine
+      // 94.9/98.1/92.8/85.7 and the deck 94.4/100/95.9/79.2 over hand-built positions, seeded
+      // deals and whole bot games (engine.test.ts, cards.test.ts; the unreached lines are the
+      // exhaustive switches' `never` arms and the never-dealt sentinel's branches), the screens
+      // reducer 88.2/100/90.0/92.9 (state.test.ts; the `never` arm). The paint (ui/render.ts) and
+      // main.ts have no unit test: e2e/flip7.spec.ts drives them.
+      thresholds: {
+        'web/games/flip7/src/engine/**': { lines: 92, functions: 95, statements: 92, branches: 84 },
+        'web/games/flip7/src/ui/state.ts': {
+          lines: 85,
+          functions: 95,
+          statements: 88,
+          branches: 90,
+        },
+      },
+    },
+    e2e: gameE2e('flip7'),
+  },
   site: {
     unit: [
       // Which theme.css declares which token, across all three games.
@@ -1020,6 +1046,7 @@ export const RULES: ReadonlyArray<Rule> = [
   },
   ...gameRules('rps'),
   ...gameRules('uno'),
+  ...gameRules('flip7'),
   {
     globs: ['test/parity/ice.legacy.test.ts', 'test/parity/roomCode.legacy.test.ts'],
     runs: ['shared'],

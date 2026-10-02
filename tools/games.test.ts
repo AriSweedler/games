@@ -225,13 +225,20 @@ describe('the games registry', () => {
       briscola: 'Briscola — cards',
       rps: 'Rock Paper Scissors',
       uno: 'UNO',
+      flip7: 'Flip 7',
       // The tool page (TOOLS): smoked like a game, no game.
       'ui-sandbox': 'UI Sandbox',
     });
   });
 
-  test('the solo pages: the reaction game and UNO, a row each with a title, a hook, a suite, its spec and its ids; never a game', () => {
-    expect(SOLO_PAGES).toEqual(['rps', 'uno']);
+  test('the solo pages: the reaction game, UNO and Flip 7, a row each with a title, a hook, a suite, its spec and its ids; never a game', () => {
+    expect(SOLO_PAGES).toEqual(['rps', 'uno', 'flip7']);
+    expect(SOLO.flip7).toMatchObject({
+      title: 'Flip 7',
+      hook: 'window.__flip7',
+      suite: 'flip7',
+      specs: ['**/flip7.spec.ts'],
+    });
     expect(SOLO.uno).toMatchObject({
       title: 'UNO',
       hook: 'window.__uno',
@@ -257,8 +264,13 @@ describe('the games registry', () => {
       );
       expect(existsSync(resolve(import.meta.dirname, '..', 'web', 'games', page)), page).toBe(true);
     });
-    expect(PAGE_HOOKS).toEqual({ ...HOOKS, rps: 'window.__rps', uno: 'window.__uno' });
-    expect(LANDING_PAGES).toEqual([...GAMES, 'rps', 'uno']);
+    expect(PAGE_HOOKS).toEqual({
+      ...HOOKS,
+      rps: 'window.__rps',
+      uno: 'window.__uno',
+      flip7: 'window.__flip7',
+    });
+    expect(LANDING_PAGES).toEqual([...GAMES, 'rps', 'uno', 'flip7']);
   });
 
   test('pins every page hook, read off the rows', () => {
@@ -279,6 +291,7 @@ describe('the games registry', () => {
       'games/briscola/',
       'games/rps/',
       'games/uno/',
+      'games/flip7/',
     ]);
   });
 

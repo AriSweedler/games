@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Flip 7</title>
+    <meta
+      name="description"
+      content="Flip 7 on one phone: hit or stay, never flip the same number twice, seven different numbers end the round with a bonus. First to 200."
+    />
+    <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="../../shared/favicon.ico" />
+    <link rel="stylesheet" href="./theme.css" />
+  </head>
+  <body>
+    <div id="app" data-screen="setup">
+      <header class="bar">
+        <div class="titles">
+          <h1>Flip 7</h1>
+          <p class="sub">press your luck</p>
+        </div>
+        <button id="newGameBtn" class="link-btn" type="button">New game</button>
+      </header>
+      <main>
+        <section id="setup" class="panel">
+          <label class="field">
+            <span>Players</span>
+            <select id="seatCount">
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+            </select>
+          </label>
+          <div id="names" class="names"></div>
+          <button id="startBtn" class="btn btn-go" type="button">Deal</button>
+          <p class="hint">
+            On your turn, hit for a card or stay to bank. A number you already have busts you. Seven
+            different numbers end the round and pay 15 more. First to 200 wins.
+          </p>
+        </section>
+        <section id="table" class="table" hidden>
+          <p id="roundLabel" class="round"></p>
+          <ul id="seats" class="seats" aria-label="The seats"></ul>
+          <p id="status" class="status" aria-live="polite"></p>
+          <div class="controls">
+            <button id="hitBtn" class="btn btn-go" type="button">Hit</button>
+            <button id="stayBtn" class="btn" type="button">Stay</button>
+          </div>
+          <section id="target" class="target" hidden>
+            <h2 id="targetTitle"></h2>
+            <div id="targetSeats" class="choices"></div>
+          </section>
+          <section id="result" class="result" hidden>
+            <h2 id="resultTitle"></h2>
+            <ul id="scores" class="scores"></ul>
+            <button id="nextRoundBtn" class="btn btn-go" type="button">Next round</button>
+          </section>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

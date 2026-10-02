@@ -19,7 +19,7 @@ export type { Game };
  * of its own e2e specs. A game's row names its suite (dry-round-2.md I6), and a name here without
  * a suites.ts row is a type error there.
  */
-export type GameSuite = 'gin' | 'fidice' | 'backgammon' | 'briscola' | 'rps' | 'uno';
+export type GameSuite = 'gin' | 'fidice' | 'backgammon' | 'briscola' | 'rps' | 'uno' | 'flip7';
 
 /**
  * The tool pages (docs/design/ui-sandbox.md): built and smoked like a game (a folder under
@@ -42,8 +42,8 @@ export const TOOL_NAMES: ReadonlyArray<ToolName> = Object.keys(TOOLS) as Readonl
  * is not a `Game` (ROOM_CODE, the online drivers and the computed-style oracle key on that union).
  * The reaction game is the first. A name here without a SOLO row is a type error.
  */
-export type SoloPage = 'rps' | 'uno';
-export const SOLO_PAGES: ReadonlyArray<SoloPage> = ['rps', 'uno'];
+export type SoloPage = 'rps' | 'uno' | 'flip7';
+export const SOLO_PAGES: ReadonlyArray<SoloPage> = ['rps', 'uno', 'flip7'];
 
 /** The pages smoke opens: every game, every solo page, every tool page and the landing page. */
 export type PageName = Game | SoloPage | ToolName | 'landing';
@@ -461,6 +461,38 @@ export const SOLO: Readonly<Record<SoloPage, SoloSpec>> = {
         'passBtn',
         'colorPicker',
         'status',
+        'result',
+        'resultTitle',
+        'scores',
+        'nextRoundBtn',
+        'newGameBtn',
+      ],
+    },
+  },
+  flip7: {
+    title: 'Flip 7',
+    hook: 'window.__flip7',
+    suite: 'flip7',
+    specs: ['**/flip7.spec.ts'],
+    // The page's fixed ids (web/games/flip7/src/ui/render.ts IDS): the two screens (setup, table),
+    // the setup's fields, the seats, the controls, the taker picker and the result panel
+    // (docs/design/flip7.md §7).
+    pageShape: {
+      ids: [
+        'app',
+        'setup',
+        'seatCount',
+        'names',
+        'startBtn',
+        'table',
+        'roundLabel',
+        'seats',
+        'status',
+        'hitBtn',
+        'stayBtn',
+        'target',
+        'targetTitle',
+        'targetSeats',
         'result',
         'resultTitle',
         'scores',
