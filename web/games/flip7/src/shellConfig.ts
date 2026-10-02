@@ -42,6 +42,7 @@ import {
   type Opts,
   type PlayMode,
 } from './storage.ts';
+import { INITIAL_CUES } from './ui/sound.ts';
 import type { Flip7, FlipSeat, Raw } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -155,7 +156,7 @@ export const FLIP7_SHELL: ShellGameData<Flip7> = {
     winnerOf: (view) => (view.phase.kind === 'gameOver' ? asSeat(view.phase.winner) : null),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: { key: null } },
+  cues: { initial: INITIAL_CUES },
   home: {
     read: (store) => ({
       opts: readOpts(store),

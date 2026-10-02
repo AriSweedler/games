@@ -245,6 +245,44 @@ describe('what the boot and the sessions read back', () => {
     expect(FLIP7.table.reset(started.app.table, 'view')).toBe(started.app.table);
   });
 
+  test('a flip, a bust and a Flip 7 each cue once; a repaint cues nothing', () => {
+    const base = createGame(['Ari', 'Lavi'], mulberry32(4), () => NOW);
+    const num = (value: number, n = 1) =>
+      ({ id: `n${String(value)}-${String(n)}`, kind: 'number', value }) as const;
+    const dealt: State = { ...base, opening: 0, turn: 0 };
+    const at = (game: State): App => ({
+      ...seated('host', game),
+      shell: { ...seated('host', game).shell, cues: { key: null } },
+    });
+    const lined = (
+      line: ReadonlyArray<ReturnType<typeof num>>,
+      status: 'active' | 'busted' | 'flip7' = 'active',
+    ): State => ({
+      ...dealt,
+      seats: dealt.seats.map((s, i) => (i === 0 ? { ...s, line, status } : s)),
+    });
+    const cuesOf = (prev: State, next: State): ReadonlyArray<unknown> =>
+      FLIP7.table
+        .rendered(at(next), viewFor(prev, 0), ctx)
+        .effects.filter((e) => e.type === 'fx')
+        .map((e) => (e as { cue: string }).cue);
+    expect(cuesOf(dealt, lined([num(5)]))).toEqual(['flip']);
+    expect(cuesOf(lined([num(5)]), lined([num(5), num(5, 2)], 'busted'))).toEqual(['flip', 'bust']);
+    const six = lined([1, 2, 3, 4, 5, 6].map((v) => num(v)));
+    const seven = {
+      ...lined(
+        [1, 2, 3, 4, 5, 6, 7].map((v) => num(v)),
+        'flip7',
+      ),
+      phase: { kind: 'roundOver' },
+    } as const;
+    expect(cuesOf(six, seven)).toEqual(['flip', 'flip7', 'roundOver']);
+    // The position is remembered: the same view painted again plays nothing.
+    const once = FLIP7.table.rendered(at(lined([num(5)])), viewFor(dealt, 0), ctx);
+    expect(once.app.shell.cues.key).not.toBeNull();
+    expect(FLIP7.table.rendered(once.app, viewFor(dealt, 0), ctx).effects).toEqual([]);
+  });
+
   test('the game`s end plays the win online, once', () => {
     const game = createGame(['Ari', 'Lavi'], mulberry32(4), () => NOW);
     const before = seated('host', game);

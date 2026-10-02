@@ -56,6 +56,7 @@ import {
 import { action as actionFrame } from '../protocol.ts';
 import { FLIP7_BONUS, cardName, scoreLine } from '../engine/cards.ts';
 import { FLIP7_SHELL, asSeat, parseOpts, seatNames } from '../shellConfig.ts';
+import { cueKey, cuesBetween, type Cue, type CueState } from './sound.ts';
 import {
   EXTRA_NAME_PREFS,
   EXTRA_SEATS,
@@ -160,8 +161,8 @@ export type Flip7 = Readonly<{
   Mode: PlayMode;
   Screen: ScreenId;
   Timer: never;
-  Cue: 'win' | 'lose';
-  Cues: Readonly<{ key: string | null }>;
+  Cue: Cue;
+  Cues: CueState;
   Resume: never;
   Home: Home;
   Intent: TableIntent;
@@ -283,18 +284,30 @@ export const pauseFor = (local: boolean, prev: View | null, view: View): Pause |
   }
 };
 
-/** The paint's state side: the table is the screen while a view is up; the game's end plays the win or the loss once. */
+/**
+ * The paint's state side: the table is the screen while a view is up; the cues come from the
+ * change since `prev` (sound.ts `cuesBetween`: the cards that landed, a seat's fate, the round's
+ * end, the game's), once per position (`cueKey` against the shell's memory, so a re-sent frame
+ * plays nothing), and "your turn" when an online turn lands on my seat.
+ */
 const rendered = (app: App, prev: View | null): Step => {
   const view = app.shell.view;
   if (view === null) return pure(app);
-  const ended = view.phase.kind === 'gameOver' && prev !== null && prev.phase.kind !== 'gameOver';
-  const won = view.phase.kind === 'gameOver' && view.phase.winner === view.me;
-  const cue: ReadonlyArray<'win' | 'lose'> =
-    app.shell.role !== 'local' && ended ? [won ? 'win' : 'lose'] : [];
-  const pause = app.table.pause ?? pauseFor(app.shell.role === 'local', prev, view);
+  const local = app.shell.role === 'local';
+  const key = cueKey(view);
+  const fresh = prev !== null && key !== app.shell.cues.key;
+  const online = app.shell.role === 'host' || app.shell.role === 'guest';
+  const myTurnNow = online && fresh && isMyTurn(view) && !isMyTurn(prev);
+  const cues: ReadonlyArray<Cue> = fresh
+    ? [...cuesBetween(prev, view, local), ...(myTurnNow ? (['yourTurn'] as const) : [])]
+    : [];
+  const pause = app.table.pause ?? pauseFor(local, prev, view);
   return step(
-    { shell: { ...app.shell, screen: 'tableScreen' }, table: { ...app.table, pause } },
-    ...cue.map((c) => ({ type: 'fx', cue: c }) as const),
+    {
+      shell: { ...app.shell, cues: { key }, screen: 'tableScreen' },
+      table: { ...app.table, pause },
+    },
+    ...cues.map((cue) => ({ type: 'fx', cue }) as const),
   );
 };
 
