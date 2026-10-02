@@ -11,6 +11,8 @@ import {
   currentHand,
   deal,
   handOf,
+  mayCallOut,
+  mayCallUno,
   nextSeat,
   playableIds,
   seatAfter,
@@ -43,6 +45,7 @@ const scenario = (
     turn: 0,
     direction: 1,
     phase: { kind: 'turn' },
+    uno: null,
     note: '',
     ...rest,
   };
@@ -169,7 +172,7 @@ describe('playing a card (§3, §4)', () => {
     expect(next.color).toBe('blue');
     expect(next.turn).toBe(1);
     expect(idsOf(handOf(next, 0))).toEqual(['r7a']);
-    expect(next.note).toBe('P1 played blue 5.');
+    expect(next.note).toBe('P1 played blue 5. P1 is down to one card.');
   });
 
   test('a card that does not match is refused with a note and nothing moves', () => {
@@ -187,7 +190,7 @@ describe('playing a card (§3, §4)', () => {
     const game = scenario({ hands: [['rSa', 'r1a'], ['y1a'], ['y2a']], top: 'r5a' });
     const next = apply(game, { type: 'play', id: 'rSa' }, rng);
     expect(next.turn).toBe(2);
-    expect(next.note).toBe('P1 played red Skip: P2 is skipped.');
+    expect(next.note).toBe('P1 played red Skip: P2 is skipped. P1 is down to one card.');
   });
 
   test('Reverse turns the direction at three; at two it is a Skip', () => {
@@ -408,5 +411,111 @@ describe('a whole game plays out with a simple bot (every state consistent)', ()
       expect(handOf(end, winner)).toEqual([]);
       expect(end.hands.filter((h) => h.length === 0)).toHaveLength(1);
     });
+  });
+});
+
+describe('the UNO call (§7)', () => {
+  /** P1 at two cards to play on a red 5, P2 and P3 with plenty. */
+  const twoLeft = (over: Omit<Partial<Game>, 'hands'> = {}): Game =>
+    scenario({
+      hands: [
+        ['b5a', 'r7a'],
+        ['b1a', 'y2a', 'y3a'],
+        ['g1a', 'g2a'],
+      ],
+      top: 'r5a',
+      ...over,
+    });
+
+  test('a play down to one card opens the window; the next seat may call it out for two cards', () => {
+    const game = twoLeft();
+    expect(mayCallOut(game, 1)).toBe(false);
+    const down = apply(game, { type: 'play', id: 'b5a' }, rng);
+    expect(down.uno).toEqual({ seat: 0, called: false, open: true });
+    expect(down.note).toBe('P1 played blue 5. P1 is down to one card.');
+    expect([mayCallOut(down, 1), mayCallOut(down, 2), mayCallOut(down, 0)]).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    const caught = apply(down, { type: 'callOut', seat: 2 }, rng);
+    expect(handOf(caught, 0)).toHaveLength(3);
+    expect(caught.uno).toBeNull();
+    expect(caught.turn).toBe(1);
+    expect(caught.phase).toBe(down.phase);
+    expect(caught.note).toBe('P3 caught P1 without UNO: P1 draws two.');
+    expect(cardCount(caught)).toBe(cardCount(down));
+    expect(apply(caught, { type: 'callOut', seat: 2 }, rng).note).toBe(
+      'Nobody is down to one card.',
+    );
+  });
+
+  test('UNO called at two cards before the play, or after it while the window is open, stops the catch', () => {
+    const game = twoLeft();
+    expect([mayCallUno(game, 0), mayCallUno(game, 1)]).toEqual([true, false]);
+    const armed = apply(game, { type: 'uno', seat: 0 }, rng);
+    expect(armed.uno).toEqual({ seat: 0, called: true, open: false });
+    expect(armed.note).toBe('P1 calls UNO!');
+    expect(apply(armed, { type: 'uno', seat: 0 }, rng).note).toBe('You already called UNO.');
+    const down = apply(armed, { type: 'play', id: 'b5a' }, rng);
+    expect(down.uno).toEqual({ seat: 0, called: true, open: true });
+    expect(down.note).toBe('P1 played blue 5. P1 calls UNO!');
+    expect(mayCallOut(down, 1)).toBe(false);
+    const refused = apply(down, { type: 'callOut', seat: 1 }, rng);
+    expect(refused.uno).toBe(down.uno);
+    expect(refused.note).toBe('P1 called UNO in time.');
+
+    const late = apply(game, { type: 'play', id: 'b5a' }, rng);
+    expect(mayCallUno(late, 0)).toBe(true);
+    const said = apply(late, { type: 'uno', seat: 0 }, rng);
+    expect(said.uno).toEqual({ seat: 0, called: true, open: true });
+    expect(mayCallOut(said, 1)).toBe(false);
+    expect(apply(said, { type: 'uno', seat: 0 }, rng).note).toBe('You already called UNO.');
+  });
+
+  test('the window shuts once the next seat has played or drawn, and a seat cannot call itself out', () => {
+    const down = apply(twoLeft(), { type: 'play', id: 'b5a' }, rng);
+    expect(apply(down, { type: 'callOut', seat: 0 }, rng).note).toBe(
+      'You cannot call yourself out.',
+    );
+    const drew = apply(down, { type: 'draw' }, rng);
+    expect(drew.uno).toBeNull();
+    const played = apply(down, { type: 'play', id: 'b1a' }, rng);
+    expect(played.hands[1]).toHaveLength(2);
+    expect(played.uno).toBeNull();
+    expect(mayCallOut(played, 2)).toBe(false);
+  });
+
+  test('a wild down to one card keeps the window open through its colour; a call not followed by a one-card play lapses', () => {
+    const wild = scenario({ hands: [['W1', 'r7a'], ['y1a', 'y2a'], ['g1a']], top: 'r5a' });
+    const down = apply(wild, { type: 'play', id: 'W1' }, rng);
+    expect(down.phase.kind).toBe('color');
+    expect(down.uno).toEqual({ seat: 0, called: false, open: true });
+    const named = apply(down, { type: 'color', color: 'green' }, rng);
+    expect(named.uno).toEqual({ seat: 0, called: false, open: true });
+    expect(mayCallOut(named, 1)).toBe(true);
+    const caught = apply(named, { type: 'callOut', seat: 1 }, rng);
+    expect(handOf(caught, 0)).toHaveLength(3);
+
+    const armed = apply(twoLeft(), { type: 'uno', seat: 0 }, rng);
+    const drew = apply(armed, { type: 'draw' }, rng);
+    expect(drew.uno).toBeNull();
+    expect(mayCallUno(twoLeft({ phase: { kind: 'gameOver', winner: 1 } }), 0)).toBe(false);
+  });
+
+  test('the last card wins outright and clears the window; UNO at three cards or off the turn is refused', () => {
+    const down = apply(twoLeft(), { type: 'play', id: 'b5a' }, rng);
+    expect(apply(down, { type: 'uno', seat: 1 }, rng).note).toBe('Not at one card yet.');
+    const three = scenario({ hands: [['b5a', 'r7a', 'g1a'], ['y1a']], top: 'r5a' });
+    expect(apply(three, { type: 'uno', seat: 0 }, rng).note).toBe('Not at one card yet.');
+    const last = scenario({
+      hands: [['r7a'], ['y1a', 'y2a']],
+      top: 'r5a',
+      uno: { seat: 0, called: false, open: true },
+    });
+    const won = apply(last, { type: 'play', id: 'r7a' }, rng);
+    expect(won.phase).toEqual({ kind: 'gameOver', winner: 0 });
+    expect(won.uno).toBeNull();
+    expect(apply(won, { type: 'callOut', seat: 1 }, rng).note).toBe('Nobody is down to one card.');
   });
 });

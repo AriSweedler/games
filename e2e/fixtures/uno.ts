@@ -158,6 +158,7 @@ export const unoPosition = (
       turn: p.turn ?? 0,
       direction: 1,
       phase: { kind: 'turn' },
+      uno: null,
       note: '',
     },
     startedAt: 0,

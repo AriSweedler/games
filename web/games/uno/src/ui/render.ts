@@ -4,7 +4,9 @@
 // seat's name and card count (the turn lit), the names strip (`#myName`, `#oppName`: the seat
 // after mine, `#oppDot`), the direction, the top card and the colour in play, my hand as tiles (a
 // playable one lit, the rest dimmed; nothing lit off my turn), Draw, Pass after a drawn card, the
-// colour picker for my wild, the status line, and the result sheet (one round is the game: the
+// colour picker for my wild, the UNO button while I may call (at two cards on my turn, or my
+// window still open) and Call out UNO while another seat is at one card without the call (§7;
+// both off my turn too), the status line, and the result sheet (one round is the game: the
 // winner, the cards every other seat still held, Play again). The base pack is plain tiles: a
 // colour and a glyph.
 import {
@@ -143,6 +145,8 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   });
   setDisabled(requireId(doc, 'drawBtn'), !(mine && v.phase === 'turn'));
   toggleClass(requireId(doc, 'passBtn'), 'hidden', !(mine && v.phase === 'drawn'));
+  toggleClass(requireId(doc, 'unoBtn'), 'hidden', !v.canUno);
+  toggleClass(requireId(doc, 'callOutBtn'), 'hidden', !v.canCallOut);
   toggleClass(requireId(doc, 'colorPicker'), 'hidden', !(mine && v.phase === 'color'));
   setText(requireId(doc, 'statusText'), statusText(v));
   const over = v.phase === 'gameOver';
@@ -232,6 +236,8 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
     [
       ['drawBtn', { type: 'act', action: { type: 'draw' } }],
       ['passBtn', { type: 'act', action: { type: 'pass' } }],
+      ['unoBtn', { type: 'act', action: { type: 'uno' } }],
+      ['callOutBtn', { type: 'act', action: { type: 'callOut' } }],
       ['rsAgainBtn', { type: 'act', action: { type: 'again' } }],
       ['rsLeaveBtn', { type: 'leave/request' }],
       ['leaveBtn', { type: 'leave/request' }],

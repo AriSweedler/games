@@ -6,8 +6,11 @@
 // draw, pass on a drawn card, deal again once the game is won) and returns the next state with a
 // one-line note of what happened for the paint. The
 // randomness (the shuffles) comes in as an `Rng` so a test scripts a whole game and the e2e
-// seeds one. Not here (§8, the MVP's edges): the UNO call and its penalty, the Wild Draw Four
-// challenge, stacking; a card played is final (the paint confirms nothing).
+// seeds one. §7's UNO call is here too: a seat at two cards may call UNO before it plays, or
+// right after its play leaves it one card; until another seat has played or drawn, any other
+// seat may call it out (`callOut`), and a seat caught without the call draws two. Not here (§7's
+// follow-ups): the Wild Draw Four challenge, stacking; a card played is final (the paint
+// confirms nothing).
 import type { Rng } from '../../../../shared/lib/rng.ts';
 import { shuffle } from '../../../../shared/lib/shuffle.ts';
 import {
@@ -38,6 +41,13 @@ export type Phase =
   /** One hand is empty: its player has won the game. */
   | Readonly<{ kind: 'gameOver'; winner: number }>;
 
+/**
+ * §7: the UNO call. `seat` is the seat it concerns; `called` once it has said UNO (before its
+ * play, at two cards, or after it); `open` from the play that left it one card until another seat
+ * has played or drawn: while open and not called, any other seat may call it out for two cards.
+ */
+export type UnoCall = Readonly<{ seat: number; called: boolean; open: boolean }>;
+
 export type Game = Readonly<{
   names: ReadonlyArray<string>;
   hands: ReadonlyArray<Cards>;
@@ -51,6 +61,8 @@ export type Game = Readonly<{
   turn: number;
   direction: Direction;
   phase: Phase;
+  /** The UNO call in the air (§7), or null. */
+  uno: UnoCall | null;
   /** What just happened, for the status line. */
   note: string;
 }>;
@@ -61,7 +73,11 @@ export type Intent =
   | Readonly<{ type: 'draw' }>
   | Readonly<{ type: 'pass' }>
   /** Play again: a fresh deal for the same seats, once the game is won. */
-  | Readonly<{ type: 'again' }>;
+  | Readonly<{ type: 'again' }>
+  /** §7: `seat` calls UNO, at two cards on its turn or while its window is open. */
+  | Readonly<{ type: 'uno'; seat: number }>
+  /** §7: `seat` calls out the seat whose window is open without the call; that seat draws two. */
+  | Readonly<{ type: 'callOut'; seat: number }>;
 
 /** A card that is never dealt: the fallback where a pile the engine keeps non-empty is read. */
 export const NO_CARD: Card = { id: '', kind: 'number', color: 'red', value: 0 };
@@ -199,8 +215,28 @@ const resolve = (game: Game, card: Card, by: string, rng: Rng): Game => {
 const win = (game: Game, winner: number): Game => ({
   ...game,
   phase: { kind: 'gameOver', winner },
+  uno: null,
   note: `${nameOf(game, winner)} wins!`,
 });
+
+/** The UNO window shut (another seat acted, or the penalty landed); the same game when none was open. */
+const closed = (game: Game): Game => (game.uno === null ? game : { ...game, uno: null });
+
+/** §7: `seat` has called UNO for its current or coming one-card hand. */
+const armed = (game: Game, seat: number): boolean =>
+  game.uno !== null && game.uno.seat === seat && game.uno.called;
+
+/** §7: may `seat` call UNO now: at two cards on its turn, or while its own window is open; not twice. */
+export const mayCallUno = (game: Game, seat: number): boolean => {
+  if (armed(game, seat)) return false;
+  if (game.uno !== null && game.uno.open && game.uno.seat === seat) return true;
+  const acting = game.phase.kind === 'turn' || game.phase.kind === 'drawn';
+  return seat === game.turn && acting && handOf(game, seat).length === 2;
+};
+
+/** §7: may `seat` call out the seat at one card: a window open, the call not made, and not its own. */
+export const mayCallOut = (game: Game, seat: number): boolean =>
+  game.uno !== null && game.uno.open && !game.uno.called && game.uno.seat !== seat;
 
 /**
  * §3: a fresh game. Seven cards each from a shuffled deck; the first card of the rest opens the
@@ -283,6 +319,7 @@ export const deal = (names: ReadonlyArray<string>, rng: Rng): Game =>
       turn: 0,
       direction: 1,
       phase: { kind: 'turn' },
+      uno: null,
       note: '',
     },
     rng,
@@ -301,14 +338,23 @@ const play = (game: Game, id: string, rng: Rng): Game => {
   if (!playableOn(card, topOf(game), game.color))
     return refuse(game, `${kindName(card)} does not match.`);
   const by = nameOf(game, game.turn);
+  const left = hand.length - 1;
+  // §7: a play down to one card opens the window (the call made before it counts); any other
+  // play, this seat's or another's, closes whatever was open.
+  const uno: UnoCall | null =
+    left === 1 ? { seat: game.turn, called: armed(game, game.turn), open: true } : null;
   const played: Game = {
     ...game,
     hands: game.hands.map((h, i) => (i === game.turn ? without(h, id) : h)),
     discard: [...game.discard, card],
     color: isWild(card) ? game.color : (card.color ?? game.color),
+    uno,
   };
-  if ((played.hands[game.turn] ?? []).length === 0) return win(played, game.turn);
-  return resolve(played, card, by, rng);
+  if (left === 0) return win(played, game.turn);
+  const resolved = resolve(played, card, by, rng);
+  if (uno === null) return resolved;
+  const tail = uno.called ? `${by} calls UNO!` : `${by} is down to one card.`;
+  return { ...resolved, note: `${resolved.note} ${tail}` };
 };
 
 const chooseColor = (game: Game, color: Color, rng: Rng): Game => {
@@ -335,7 +381,7 @@ const drawOne = (game: Game, rng: Rng): Game => {
   if (game.phase.kind !== 'turn') return refuse(game, 'Not now.');
   const by = nameOf(game, game.turn);
   const before = currentHand(game).length;
-  const dealt = give(game, game.turn, 1, rng);
+  const dealt = give(closed(game), game.turn, 1, rng);
   const hand = currentHand(dealt);
   const card = hand[hand.length - 1];
   if (hand.length === before || card === undefined) {
@@ -349,7 +395,31 @@ const drawOne = (game: Game, rng: Rng): Game => {
 const pass = (game: Game): Game => {
   if (game.phase.kind !== 'drawn') return refuse(game, 'Draw first.');
   const by = nameOf(game, game.turn);
-  return withTurn(game, nextSeat(game), `${by} keeps the card and passes.`);
+  return withTurn(closed(game), nextSeat(game), `${by} keeps the card and passes.`);
+};
+
+/** §7: `seat` calls UNO: armed for its coming play at two cards, or its open window answered. */
+const callUno = (game: Game, seat: number): Game => {
+  if (!mayCallUno(game, seat)) {
+    return refuse(game, armed(game, seat) ? 'You already called UNO.' : 'Not at one card yet.');
+  }
+  const open = game.uno?.seat === seat && game.uno.open;
+  return { ...game, uno: { seat, called: true, open }, note: `${nameOf(game, seat)} calls UNO!` };
+};
+
+/** §7: `seat` catches the seat at one card without the call: two cards to it, the window shut. */
+const callOut = (game: Game, seat: number, rng: Rng): Game => {
+  const call = game.uno;
+  if (!call?.open) return refuse(game, 'Nobody is down to one card.');
+  if (call.seat === seat) return refuse(game, 'You cannot call yourself out.');
+  if (call.called) return refuse(game, `${nameOf(game, call.seat)} called UNO in time.`);
+  const caught = nameOf(game, call.seat);
+  const dealt = give(game, call.seat, 2, rng);
+  return {
+    ...dealt,
+    uno: null,
+    note: `${nameOf(game, seat)} caught ${caught} without UNO: ${caught} draws two.`,
+  };
 };
 
 const again = (game: Game, rng: Rng): Game => {
@@ -370,6 +440,10 @@ export const apply = (game: Game, intent: Intent, rng: Rng): Game => {
       return pass(game);
     case 'again':
       return again(game, rng);
+    case 'uno':
+      return callUno(game, intent.seat);
+    case 'callOut':
+      return callOut(game, intent.seat, rng);
     default: {
       const never: never = intent;
       return never;

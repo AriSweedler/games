@@ -140,7 +140,8 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
       </div>`,
   table: `      <!-- TABLE (docs/design/uno.md §9): every seat with its card count (the turn lit), the names
            strip (me, the seat after me and its connection), the pile with the colour in play, my
-           hand, Draw and Pass, the colour picker for my wild, the status line. -->
+           hand, Draw and Pass, UNO and Call out UNO (§7, shown to the seats they apply to), the
+           colour picker for my wild, the status line. -->
       <div id="tableScreen" class="hidden">
         <div class="topbar">
           <div class="row tight">
@@ -176,6 +177,8 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
         <div class="controls">
           <button class="btn btn-secondary grow" id="drawBtn">Draw</button>
           <button class="btn btn-secondary grow hidden" id="passBtn">Keep it, pass</button>
+          <button class="btn btn-primary grow hidden" id="unoBtn">UNO!</button>
+          <button class="btn btn-secondary grow hidden" id="callOutBtn">Call out UNO</button>
         </div>
       </div>`,
   endgame: `      <!-- ENDGAME: the shell's fifth screen, which this page never shows: a round and the game end
