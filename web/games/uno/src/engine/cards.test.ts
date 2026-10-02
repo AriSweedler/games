@@ -7,8 +7,6 @@ import {
   isWild,
   makeDeck,
   playableOn,
-  pointsOf,
-  pointsOfHand,
   without,
   type Card,
 } from './cards.ts';
@@ -49,27 +47,6 @@ describe('the deck (docs/design/uno.md §2)', () => {
       expect(c.color).toBeNull();
       expect(c.value).toBeNull();
     });
-  });
-
-  test('the whole deck scores 1,240 points (§6)', () => {
-    // 4 colours x (0 + 2 x (1+...+9)) = 4 x 90 = 360; 24 action cards x 20 = 480; 8 wilds x 50 = 400.
-    expect(pointsOfHand(deck)).toBe(360 + 480 + 400);
-  });
-});
-
-describe('points (§6)', () => {
-  test('a number is its face, an action 20, a wild 50', () => {
-    expect(pointsOf(card({ kind: 'number', color: 'red', value: 7 }))).toBe(7);
-    expect(pointsOf(card({ kind: 'number', color: 'red', value: 0 }))).toBe(0);
-    expect(pointsOf(card({ kind: 'skip', color: 'blue' }))).toBe(20);
-    expect(pointsOf(card({ kind: 'reverse', color: 'blue' }))).toBe(20);
-    expect(pointsOf(card({ kind: 'draw2', color: 'blue' }))).toBe(20);
-    expect(pointsOf(card({ kind: 'wild' }))).toBe(50);
-    expect(pointsOf(card({ kind: 'wild4' }))).toBe(50);
-  });
-
-  test('a number card with no value counts zero (never built by makeDeck)', () => {
-    expect(pointsOf(card({ kind: 'number', color: 'red' }))).toBe(0);
   });
 });
 

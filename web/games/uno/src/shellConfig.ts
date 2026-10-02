@@ -120,7 +120,7 @@ export const UNO_SHELL: ShellGameData<Uno> = {
   },
   engine: {
     create: (players, opts, rng, now) => createState(seatNames(opts.seatCount, players), rng, now),
-    apply: (game, seat, act, rng) => applyAction(game, seat, act, rng),
+    apply: applyAction,
     viewFor,
     decodeState,
     over: (view) => view.phase === 'gameOver',
@@ -134,7 +134,8 @@ export const UNO_SHELL: ShellGameData<Uno> = {
   result: {
     keyOf: (view) => String(view.startedAt),
     playersOf: (view) => view.names,
-    scoreOf: (view) => view.scores.map(String).join('–'),
+    // One round is the game (the owner, 2026-10-02): the score is the cards each seat still held.
+    scoreOf: (view) => view.counts.map(String).join('–'),
     winnerOf: (view) => (view.winner === null ? null : (view.winner as Seat)),
   },
   frames: { lobby, state, toast, action, join },

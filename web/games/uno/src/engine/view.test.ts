@@ -45,10 +45,7 @@ const table = (over: Partial<Game> = {}): State => ({
     turn: 0,
     direction: 1,
     phase: { kind: 'turn' },
-    scores: [0, 0, 0],
-    target: 500,
-    round: 1,
-    note: 'Round 1: Ann starts.',
+    note: 'Ann starts.',
     ...over,
   },
 });
@@ -64,21 +61,22 @@ describe('createState', () => {
 
 describe('applyAction', () => {
   test('a seat out of turn is refused; Next round may come from any seat', () => {
-    expect(applyAction(table(), 1, { type: 'draw' }, mulberry32(1))).toEqual({
+    expect(applyAction(table(), 1, { type: 'draw' }, mulberry32(1), () => 0)).toEqual({
       ok: false,
       error: NOT_YOUR_TURN_MSG,
     });
-    const over = table({ phase: { kind: 'roundOver', winner: 0, gained: 10 } });
-    const res = applyAction(over, 2, { type: 'nextRound' }, mulberry32(1));
-    expect(res.ok && res.value.game.round).toBe(2);
+    const over = table({ phase: { kind: 'gameOver', winner: 0 } });
+    const res = applyAction(over, 2, { type: 'again' }, mulberry32(1), () => 99);
+    expect(res.ok && res.value.startedAt).toBe(99);
+    expect(res.ok && res.value.game.phase.kind).not.toBe('gameOver');
   });
 
   test("the engine's refusal (only the note rewritten) is the error; a play is the next state", () => {
-    expect(applyAction(table(), 0, { type: 'play', id: 'b2a' }, mulberry32(1))).toEqual({
+    expect(applyAction(table(), 0, { type: 'play', id: 'b2a' }, mulberry32(1), () => 0)).toEqual({
       ok: false,
       error: 'blue 2 does not match.',
     });
-    const res = applyAction(table(), 0, { type: 'play', id: 'r7a' }, mulberry32(1));
+    const res = applyAction(table(), 0, { type: 'play', id: 'r7a' }, mulberry32(1), () => 0);
     expect(res.ok && res.value.game.turn).toBe(1);
     expect(res.ok && res.value.startedAt).toBe(42);
   });
@@ -104,10 +102,8 @@ describe('viewFor', () => {
     const drawn = table({ phase: { kind: 'drawn', card: R7 } });
     expect(viewFor(drawn, 0).drawn).toEqual(R7);
     expect(viewFor(drawn, 1).drawn).toBeNull();
-    const over = viewFor(table({ phase: { kind: 'roundOver', winner: 2, gained: 30 } }), 0);
-    expect([over.winner, over.gained]).toEqual([2, 30]);
     const won = viewFor(table({ phase: { kind: 'gameOver', winner: 1 } }), 0);
-    expect([won.winner, won.gained, won.phase]).toEqual([1, 0, 'gameOver']);
+    expect([won.winner, won.phase]).toEqual([1, 'gameOver']);
   });
 });
 
@@ -126,10 +122,9 @@ describe('legalActions', () => {
     expect(legalActions(viewFor(table({ phase: { kind: 'color', card: WILD } }), 0))).toHaveLength(
       4,
     );
-    const over = table({ phase: { kind: 'roundOver', winner: 0, gained: 9 } });
-    expect(legalActions(viewFor(over, 0))).toEqual([{ type: 'nextRound' }]);
-    expect(legalActions(viewFor(over, 2))).toEqual([{ type: 'nextRound' }]);
-    expect(legalActions(viewFor(table({ phase: { kind: 'gameOver', winner: 0 } }), 0))).toEqual([]);
+    const over = table({ phase: { kind: 'gameOver', winner: 0 } });
+    expect(legalActions(viewFor(over, 0))).toEqual([{ type: 'again' }]);
+    expect(legalActions(viewFor(over, 2))).toEqual([{ type: 'again' }]);
   });
 });
 
@@ -144,7 +139,6 @@ describe('the decoders', () => {
     const phases: ReadonlyArray<Game['phase']> = [
       { kind: 'drawn', card: R7 },
       { kind: 'color', card: WILD },
-      { kind: 'roundOver', winner: 1, gained: 5 },
       { kind: 'gameOver', winner: 1 },
     ];
     phases.forEach((phase) => {
@@ -159,7 +153,7 @@ describe('the decoders', () => {
       { type: 'color', color: 'blue' },
       { type: 'draw' },
       { type: 'pass' },
-      { type: 'nextRound' },
+      { type: 'again' },
     ];
     intents.forEach((intent) => {
       expect(decodeAction(intent)).toEqual({ ok: true, value: intent });

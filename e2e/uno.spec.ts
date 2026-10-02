@@ -41,11 +41,11 @@ test('a seeded two-seat game: the curtain, the hand, a play and the curtain for 
   );
   await unoReveal(page);
 
-  // The seat's table: round 1, its own tiles (seven, or more where the opening card made it draw),
+  // The seat's table: nobody out, its own tiles (seven, or more where the opening card made it draw),
   // the pile, the playable tiles lit and enabled, the others dark.
   const dealt = await requireView(page);
   expect(dealt.names).toEqual([...NAMES]);
-  expect(dealt).toMatchObject({ round: 1, scores: [0, 0], winner: null });
+  expect(dealt).toMatchObject({ winner: null });
   expect(dealt.names[dealt.turn]).toBe(firstName);
   expect(dealt.hand.length).toBe(dealt.counts[dealt.seat]);
   expect(dealt.counts.reduce((n, c) => n + c, 0)).toBeGreaterThanOrEqual(14);

@@ -3,8 +3,10 @@
 // config (shellConfig.ts `UNO_SHELL` completed here as `UNO`), and the table's own intents. Every
 // role plays through `act`: pass-and-play and the host apply the action to the engine and
 // broadcast each seat its own view, a guest sends one `action` frame and waits for its view. In
-// pass-and-play the curtain comes up whenever the turn moves to another seat, and the round's
-// result is everyone's (no curtain). Pure: the shuffles and the clock come in through `Ctx`.
+// pass-and-play the curtain comes up whenever the turn moves to another seat, and the game's
+// result is everyone's (no curtain). One round is the game (the owner, 2026-10-02): the first
+// empty hand wins, and Play again deals the same seats anew. Pure: the shuffles and the clock come
+// in through `Ctx`.
 import {
   NOT_CONNECTED_MSG,
   andThen as then,
@@ -137,7 +139,7 @@ const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
 const refuse = (app: App, message: string): Step => step(app, toast(message));
 
-/** The cues for the change from `prev` to `next` as `role` hears it: a card played, a draw, a round won or lost. */
+/** The cues for the change from `prev` to `next`: a card played, a draw, the game won or lost. */
 export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
   if (next.winner !== null && prev.winner === null)
     return [next.winner === next.seat ? 'win' : 'lose'];
@@ -147,7 +149,7 @@ export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
 
 /** One key per position, so a re-sent frame plays nothing. */
 const cueKey = (v: View): string =>
-  `${String(v.startedAt)}:${String(v.round)}:${String(v.drawCount)}:${v.top.id}:${String(v.turn)}:${v.phase}`;
+  `${String(v.startedAt)}:${String(v.drawCount)}:${v.top.id}:${String(v.turn)}:${v.phase}`;
 
 /**
  * The state side of a paint: the table is the screen while a view is held; the cues come from the
@@ -185,15 +187,13 @@ const reset = (table: Table, at: TableReset): Table => {
   }
 };
 
-/** Whose turn it is, or null once the round is over (the result is everyone's). */
-const actorOf = (game: State): number | null => {
-  const kind = game.game.phase.kind;
-  return kind === 'roundOver' || kind === 'gameOver' ? null : game.game.turn;
-};
+/** Whose turn it is, or null once the game is won (the result is everyone's). */
+const actorOf = (game: State): number | null =>
+  game.game.phase.kind === 'gameOver' ? null : game.game.turn;
 
 /**
- * `localBroadcast`'s seat: the actor's view while the round is on, the phone holder's once it is
- * over; the curtain comes up when the phone must change hands and the incoming seat has not lifted
+ * `localBroadcast`'s seat: the actor's view while the game is on, the phone holder's once it is
+ * won; the curtain comes up when the phone must change hands and the incoming seat has not lifted
  * it this turn.
  */
 const viewer: ShellConfig<Uno>['local']['viewer'] = (app, game) => {
@@ -224,13 +224,13 @@ export const UNO: ShellConfig<Uno> = {
 export const initialShell: Shell = shellInitial(UNO);
 export const initialApp: App = { shell: initialShell, table: initialTable };
 
-/** Pass-and-play: the seat whose turn it is acts (any seat deals the next round); a new round lowers the curtain for its first player. */
+/** Pass-and-play: the seat whose turn it is acts (any seat deals again); a new game lowers the curtain for its first player. */
 const localAct = (app: App, action: Action, ctx: Ctx): Step => {
   const game = app.shell.game;
   if (game === null) return pure(app);
-  const res = applyAction(game, game.game.turn, action, ctx.rng);
+  const res = applyAction(game, game.game.turn, action, ctx.rng, ctx.now);
   if (!res.ok) return refuse(app, res.error);
-  const fresh = res.value.game.round !== game.game.round;
+  const fresh = action.type === 'again';
   return localBroadcast(
     withShell(app, { game: res.value, revealed: fresh ? null : app.shell.revealed }),
     false,
@@ -247,7 +247,7 @@ const act = (app: App, action: Action, ctx: Ctx): Step => {
     case 'host': {
       const game = app.shell.game;
       if (game === null) return pure(app);
-      const res = applyAction(game, 0, action, ctx.rng);
+      const res = applyAction(game, 0, action, ctx.rng, ctx.now);
       if (!res.ok) return refuse(app, res.error);
       return broadcast(withShell(app, { game: res.value }), ctx, UNO);
     }

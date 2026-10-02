@@ -3,7 +3,6 @@ import { describe, expect, test } from 'vitest';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
 import { COLORS, idsOf, makeDeck, type Card, type Cards } from './cards.ts';
 import {
-  DEFAULT_TARGET,
   HAND_SIZE,
   MAX_PLAYERS,
   apply,
@@ -44,9 +43,6 @@ const scenario = (
     turn: 0,
     direction: 1,
     phase: { kind: 'turn' },
-    scores: names.map(() => 0),
-    target: DEFAULT_TARGET,
-    round: 1,
     note: '',
     ...rest,
   };
@@ -64,8 +60,8 @@ describe('deal (§3)', () => {
     expect(
       new Set([...game.hands.flat(), ...game.draw, ...game.discard].map((c) => c.id)).size,
     ).toBe(108);
-    expect(game.round).toBe(1);
-    expect(game.scores).toEqual([0, 0, 0]);
+    expect(game.phase.kind).not.toBe('gameOver');
+    expect(game.note).toMatch(/^(Ari starts\.|The first card)/);
   });
 
   test('twelve players, the largest table: 84 cards dealt, the opener, a stock of 23', () => {
@@ -332,42 +328,40 @@ describe('drawing (§3)', () => {
   });
 });
 
-describe('the round and the game (§5, §6)', () => {
-  test('going out ends the round; the winner takes the others points', () => {
+describe('the game (§5): one round, the first empty hand wins', () => {
+  test('going out wins the game at once; nothing more is played', () => {
     const game = scenario({ hands: [['r1a'], ['y1a', 'ySa'], ['W1']], top: 'r5a' });
     const over = apply(game, { type: 'play', id: 'r1a' }, rng);
-    expect(over.phase).toEqual({ kind: 'roundOver', winner: 0, gained: 1 + 20 + 50 });
-    expect(over.scores).toEqual([71, 0, 0]);
-    expect(over.note).toBe('P1 goes out and takes 71 points.');
+    expect(over.phase).toEqual({ kind: 'gameOver', winner: 0 });
+    expect(over.note).toBe('P1 wins!');
     expect(playableIds(over)).toEqual([]);
     expect(apply(over, { type: 'draw' }, rng).note).toBe('Not now.');
   });
 
-  test('going out on an action card scores before the action; a wild out needs no colour', () => {
-    const game = scenario({ hands: [['W1'], ['y1a']], top: 'r5a' });
-    const over = apply(game, { type: 'play', id: 'W1' }, rng);
-    expect(over.phase.kind).toBe('roundOver');
-    expect(over.scores).toEqual([1, 0]);
+  test('going out on an action card or a wild wins before the action; a wild out needs no colour', () => {
+    const wild = apply(
+      scenario({ hands: [['W1'], ['y1a']], top: 'r5a' }),
+      { type: 'play', id: 'W1' },
+      rng,
+    );
+    expect(wild.phase).toEqual({ kind: 'gameOver', winner: 0 });
+    const skip = apply(
+      scenario({ hands: [['rSa'], ['y1a']], top: 'r5a' }),
+      { type: 'play', id: 'rSa' },
+      rng,
+    );
+    expect(skip.phase).toEqual({ kind: 'gameOver', winner: 0 });
   });
 
-  test('the next round deals again, keeps the scores, counts the round', () => {
+  test('play again deals a fresh game for the same seats; refused while a game is on', () => {
     const game = scenario({ hands: [['r1a'], ['y1a']], top: 'r5a', names: ['Ari', 'Bea'] });
     const over = apply(game, { type: 'play', id: 'r1a' }, rng);
-    const next = apply(over, { type: 'nextRound' }, mulberry32(9));
-    expect(next.round).toBe(2);
-    expect(next.scores).toEqual([1, 0]);
+    const next = apply(over, { type: 'again' }, mulberry32(9));
+    expect(next.phase.kind).not.toBe('gameOver');
     expect(next.hands.map((h) => h.length)).toEqual([HAND_SIZE, HAND_SIZE]);
     expect(cardCount(next)).toBe(108);
     expect(next.names).toEqual(['Ari', 'Bea']);
-    expect(apply(next, { type: 'nextRound' }, rng).note).toBe('The round is not over.');
-  });
-
-  test('reaching the target ends the game', () => {
-    const game = scenario({ hands: [['r1a'], ['F1']], top: 'r5a', scores: [460, 0], target: 500 });
-    const over = apply(game, { type: 'play', id: 'r1a' }, rng);
-    expect(over.phase).toEqual({ kind: 'gameOver', winner: 0 });
-    expect(over.scores).toEqual([510, 0]);
-    expect(over.note).toBe('P1 wins the game with 510 points.');
+    expect(apply(next, { type: 'again' }, rng).note).toBe('The game is not over.');
   });
 });
 
@@ -387,8 +381,6 @@ describe('a whole game plays out with a simple bot (every state consistent)', ()
         const own = currentHand(game).find((c) => c.color !== null)?.color ?? COLORS[0];
         return apply(game, { type: 'color', color: own }, r);
       }
-      case 'roundOver':
-        return apply(game, { type: 'nextRound' }, r);
       case 'gameOver':
         return game;
       default: {
@@ -398,21 +390,23 @@ describe('a whole game plays out with a simple bot (every state consistent)', ()
     }
   };
 
-  test('two, three and five players to 200 points, never losing a card', () => {
-    [2, 3, 5].forEach((n) => {
+  test('two, three, five and twelve players play to the first empty hand, never losing a card', () => {
+    [2, 3, 5, 12].forEach((n) => {
       const r = mulberry32(100 + n);
       const names = Array.from({ length: n }, (_, i) => `S${String(i)}`);
-      const end = Array.from({ length: 20000 }).reduce<Game>(
+      const end = Array.from({ length: 5000 }).reduce<Game>(
         (game) => {
           if (game.phase.kind === 'gameOver') return game;
           const next = step(game, r);
           expect(cardCount(next)).toBe(108);
           return next;
         },
-        deal(names, r, 200),
+        deal(names, r),
       );
       expect(end.phase.kind).toBe('gameOver');
-      expect(Math.max(...end.scores)).toBeGreaterThanOrEqual(200);
+      const winner = end.phase.kind === 'gameOver' ? end.phase.winner : -1;
+      expect(handOf(end, winner)).toEqual([]);
+      expect(end.hands.filter((h) => h.length === 0)).toHaveLength(1);
     });
   });
 });

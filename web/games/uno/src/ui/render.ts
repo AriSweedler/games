@@ -4,8 +4,9 @@
 // seat's name and card count (the turn lit), the names strip (`#myName`, `#oppName`: the seat
 // after mine, `#oppDot`), the direction, the top card and the colour in play, my hand as tiles (a
 // playable one lit, the rest dimmed; nothing lit off my turn), Draw, Pass after a drawn card, the
-// colour picker for my wild, the status line, and the result sheet (the scores; Next round or the
-// game's winner). The base pack is plain tiles: a colour and a glyph.
+// colour picker for my wild, the status line, and the result sheet (one round is the game: the
+// winner, the cards every other seat still held, Play again). The base pack is plain tiles: a
+// colour and a glyph.
 import {
   closestFrom,
   dataOf,
@@ -88,11 +89,20 @@ export const seatsHtml = (v: View): string =>
     )
     .join('');
 
-const scoresHtml = (v: View): string =>
+/** "1 card", "5 cards". */
+export const cardsText = (n: number): string => `${String(n)} ${n === 1 ? 'card' : 'cards'}`;
+
+/** One result row: a seat's name and the cards it still held. */
+type ResultRow = Readonly<{ name: string; seat: number; left: number }>;
+
+/** The result sheet's rows: the winner first, then every other seat with the cards it still held. */
+export const resultRowsHtml = (v: View): string =>
   v.names
+    .map((name, seat): ResultRow => ({ name, seat, left: v.counts[seat] ?? 0 }))
+    .toSorted((a: ResultRow, b: ResultRow) => a.left - b.left)
     .map(
-      (name, seat) =>
-        safeHtml`<li class="score-row${seat === v.winner ? ' winner' : ''}"><span>${name}</span><strong>${String(v.scores[seat] ?? 0)}</strong></li>`
+      (row: ResultRow) =>
+        safeHtml`<li class="score-row${row.seat === v.winner ? ' winner' : ''}"><span>${row.name}</span><strong>${row.seat === v.winner ? 'Out!' : cardsText(row.left)}</strong></li>`
           .markup,
     )
     .join('');
@@ -101,19 +111,15 @@ const nameAt = (v: View, seat: number): string => v.names[seat] ?? '';
 
 /** The status line: whose turn, or the round's end; the engine's note of what just happened first. */
 export const statusText = (v: View): string => {
-  if (v.phase === 'roundOver' || v.phase === 'gameOver') return v.note;
+  if (v.phase === 'gameOver') return v.note;
   const whose = v.turn === v.seat ? 'Your turn' : `${nameAt(v, v.turn)}’s turn`;
   const ask = v.turn === v.seat && v.phase === 'color' ? ' · name a colour' : '';
   return `${v.note} ${whose}${ask}.`.trim();
 };
 
-/** The result sheet's title: the game's winner, or who went out and what they took. */
-export const resultTitle = (v: View): string => {
-  const name = v.winner === null ? '' : nameAt(v, v.winner);
-  return v.phase === 'gameOver'
-    ? `${name} wins the game`
-    : `${name} goes out · +${String(v.gained)}`;
-};
+/** The result sheet's title: the winner, or "You win!" on the winner's own phone. */
+export const resultTitle = (v: View): string =>
+  v.winner === v.seat ? 'You win!' : `${v.winner === null ? '' : nameAt(v, v.winner)} wins!`;
 
 const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const mine = v.turn === v.seat;
@@ -139,12 +145,11 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   toggleClass(requireId(doc, 'passBtn'), 'hidden', !(mine && v.phase === 'drawn'));
   toggleClass(requireId(doc, 'colorPicker'), 'hidden', !(mine && v.phase === 'color'));
   setText(requireId(doc, 'statusText'), statusText(v));
-  const over = v.phase === 'roundOver' || v.phase === 'gameOver';
+  const over = v.phase === 'gameOver';
   paintSheet(doc, 'resultOverlay', over && app.table.curtain === null);
   if (over) {
     setText(requireId(doc, 'rsTitle'), resultTitle(v));
-    setHtml(requireId(doc, 'rsScore'), trustedHtml(scoresHtml(v)));
-    toggleClass(requireId(doc, 'rsNextBtn'), 'hidden', v.phase !== 'roundOver');
+    setHtml(requireId(doc, 'rsScore'), trustedHtml(resultRowsHtml(v)));
   }
 };
 
@@ -227,7 +232,7 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
     [
       ['drawBtn', { type: 'act', action: { type: 'draw' } }],
       ['passBtn', { type: 'act', action: { type: 'pass' } }],
-      ['rsNextBtn', { type: 'act', action: { type: 'nextRound' } }],
+      ['rsAgainBtn', { type: 'act', action: { type: 'again' } }],
       ['rsLeaveBtn', { type: 'leave/request' }],
       ['leaveBtn', { type: 'leave/request' }],
       ['soundBtn', { type: 'sound/toggle' }],

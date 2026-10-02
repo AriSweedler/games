@@ -3,8 +3,8 @@
 // `View` (its hand, the others' card counts), and an action arrives with the seat that sent it.
 // `State` wraps the engine's `Game` with the deal's clock (the finished game's key in the device's
 // history). `applyAction` refuses a play out of turn and turns the engine's refusal (the state
-// with only its note rewritten) into an error the shell toasts; Next round may come from any
-// seat, since the round is over for everyone. The decoders are the trust boundary for the wire
+// with only its note rewritten) into an error the shell toasts; Play again may come from any
+// seat, since the game is over for everyone, and restarts the deal's clock. The decoders are the trust boundary for the wire
 // (a guest's action, the host's view) and the save (docs/ARCHITECTURE.md "Module boundaries").
 import {
   arrayOf,
@@ -49,15 +49,10 @@ export type View = Readonly<{
   turn: number;
   direction: 1 | -1;
   phase: PhaseKind;
-  /** The seat that went out (`roundOver`, `gameOver`), else null. */
+  /** The seat that went out and won (`gameOver`), else null. */
   winner: number | null;
-  /** The points the round's winner took (`roundOver`), else 0. */
-  gained: number;
   /** The card I just drew that plays (`drawn`, my turn only), else null. */
   drawn: Card | null;
-  scores: ReadonlyArray<number>;
-  target: number;
-  round: number;
   note: string;
   drawCount: number;
   startedAt: number;
@@ -83,11 +78,13 @@ export const applyAction = (
   seat: number,
   action: Action,
   rng: Rng,
+  now: () => number,
 ): Result<State, string> => {
   const game = state.game;
-  if (action.type !== 'nextRound' && seat !== game.turn) return err(NOT_YOUR_TURN_MSG);
+  if (action.type !== 'again' && seat !== game.turn) return err(NOT_YOUR_TURN_MSG);
   const next = apply(game, action, rng);
-  return next.phase === game.phase ? err(next.note) : ok({ ...state, game: next });
+  if (next.phase === game.phase) return err(next.note);
+  return ok({ game: next, startedAt: action.type === 'again' ? now() : state.startedAt });
 };
 
 export const viewFor = (state: State, seat: number): View => {
@@ -104,12 +101,8 @@ export const viewFor = (state: State, seat: number): View => {
     turn: game.turn,
     direction: game.direction,
     phase: phase.kind,
-    winner: phase.kind === 'roundOver' || phase.kind === 'gameOver' ? phase.winner : null,
-    gained: phase.kind === 'roundOver' ? phase.gained : 0,
+    winner: phase.kind === 'gameOver' ? phase.winner : null,
     drawn: phase.kind === 'drawn' && mine ? phase.card : null,
-    scores: game.scores,
-    target: game.target,
-    round: game.round,
     note: game.note,
     drawCount: game.draw.length,
     startedAt: state.startedAt,
@@ -119,7 +112,8 @@ export const viewFor = (state: State, seat: number): View => {
 
 /** What a guest may send: the engine's five intents. */
 export const legalActions = (view: View): ReadonlyArray<Action> => {
-  if (view.seat !== view.turn) return view.phase === 'roundOver' ? [{ type: 'nextRound' }] : [];
+  if (view.phase === 'gameOver') return [{ type: 'again' }];
+  if (view.seat !== view.turn) return [];
   switch (view.phase) {
     case 'turn':
       return [...view.playable.map((id): Action => ({ type: 'play', id })), { type: 'draw' }];
@@ -127,10 +121,6 @@ export const legalActions = (view: View): ReadonlyArray<Action> => {
       return [...view.playable.map((id): Action => ({ type: 'play', id })), { type: 'pass' }];
     case 'color':
       return COLORS.map((color): Action => ({ type: 'color', color }));
-    case 'roundOver':
-      return [{ type: 'nextRound' }];
-    case 'gameOver':
-      return [];
   }
 };
 
@@ -152,7 +142,7 @@ export const decodeAction: Decoder<Action> = taggedUnion('type', {
   color: object({ type: literal('color'), color }),
   draw: object({ type: literal('draw') }),
   pass: object({ type: literal('pass') }),
-  nextRound: object({ type: literal('nextRound') }),
+  again: object({ type: literal('again') }),
 });
 
 export const decodeView: Decoder<View> = object({
@@ -164,13 +154,9 @@ export const decodeView: Decoder<View> = object({
   color,
   turn: seat,
   direction: literal(1, -1),
-  phase: literal('turn', 'drawn', 'color', 'roundOver', 'gameOver'),
+  phase: literal('turn', 'drawn', 'color', 'gameOver'),
   winner: nullable(seat),
-  gained: integer(0),
   drawn: nullable(decodeCard),
-  scores: arrayOf(integer(0)),
-  target: integer(1),
-  round: integer(1),
   note: string,
   drawCount: integer(0),
   startedAt: integer(0),
@@ -181,7 +167,6 @@ const decodePhase: Decoder<Phase> = taggedUnion('kind', {
   turn: object({ kind: literal('turn') }),
   drawn: object({ kind: literal('drawn'), card: decodeCard }),
   color: object({ kind: literal('color'), card: decodeCard }),
-  roundOver: object({ kind: literal('roundOver'), winner: seat, gained: integer(0) }),
   gameOver: object({ kind: literal('gameOver'), winner: seat }),
 });
 
@@ -194,9 +179,6 @@ const decodeGame: Decoder<Game> = object({
   turn: seat,
   direction: literal(1, -1),
   phase: decodePhase,
-  scores: arrayOf(integer(0)),
-  target: integer(1),
-  round: integer(1),
   note: string,
 });
 
