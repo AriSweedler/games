@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- head with two pedipalps -->
+  <circle cx="50" cy="22" r="7"/>
+  <line x1="46" y1="16" x2="43" y2="10"/>
+  <line x1="54" y1="16" x2="57" y2="10"/>
+  <!-- neck and the shoulder bar the legs radiate from -->
+  <line x1="50" y1="29" x2="50" y2="36"/>
+  <line x1="40" y1="36" x2="60" y2="36"/>
+  <!-- egg-shaped abdomen with its band and spinneret -->
+  <path d="M50 40C62 40 70 50 70 61 70 75 60 84 50 84 40 84 30 75 30 61 30 50 38 40 50 40Z"/>
+  <line x1="31" y1="58" x2="69" y2="58"/>
+  <line x1="50" y1="84" x2="50" y2="89"/>
+  <!-- right legs, front to back -->
+  <polyline points="60,36 72,18 86,10"/>
+  <polyline points="60,37 80,26 92,34"/>
+  <polyline points="60,39 80,44 91,58"/>
+  <polyline points="60,40 76,58 86,78"/>
+  <!-- left legs, front to back -->
+  <polyline points="40,36 28,18 14,10"/>
+  <polyline points="40,37 20,26 8,34"/>
+  <polyline points="40,39 20,44 9,58"/>
+  <polyline points="40,40 24,58 14,78"/>
+</svg>
