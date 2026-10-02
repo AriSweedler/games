@@ -2,14 +2,16 @@
 // (`window.__uno.view()`, hands private), the pass-and-play start over the shell's (two to four
 // names, the Pass the phone select), and one turn played through the hook (`window.__uno.act`) as a
 // player would: a number card where one plays (no colour to name, no turn kept), else whatever
-// plays, else a draw and then the drawn card or a pass, so the turn moves on.
+// plays, else a draw and then the drawn card or a pass, so the turn moves on. A hand-made position
+// goes in through `window.__uno.setup` (`unoPosition`, `unoSetup`), as briscola's does.
 import { expect, type Page } from '@playwright/test';
 
-import type { View } from '../../web/games/uno/src/engine/view.ts';
+import { findCard, makeDeck, type Card } from '../../web/games/uno/src/engine/cards.ts';
+import type { State, View } from '../../web/games/uno/src/engine/view.ts';
 import type { Viewport } from './geometry.ts';
-import { reveal, startLocal } from './shell.ts';
+import { DEFAULT_NAMES, reveal, startLocal } from './shell.ts';
 
-export type { View };
+export type { State, View };
 
 /** The seat's view the page holds, or null before a table is up. */
 export const readView = (page: Page): Promise<View | null> =>
@@ -116,4 +118,72 @@ const playUntilMoved = async (page: Page, turn: number, left: number): Promise<v
 export const unoPlayTurn = async (page: Page): Promise<void> => {
   const { turn } = await requireView(page);
   await playUntilMoved(page, turn, 12);
+};
+
+// ---- a hand-made position -------------------------------------------------------------------------
+
+const DECK = makeDeck();
+
+/** A card of the deck by its id (cards.ts: the colour's letter, the value or the kind's letter, the copy: `r5a`, `bSb`, `W1`); a typo in a spec is a test bug and throws. */
+export const unoCard = (id: string): Card => {
+  const card = findCard(DECK, id);
+  if (card === undefined) throw new Error(`${id} is not an UNO card`);
+  return card;
+};
+
+/**
+ * A pass-and-play position for `unoSetup`: the hands by card id (seat order), the discard pile's
+ * top (a coloured card: its colour is the one in play), whose turn (seat 0 unless said), phase
+ * `turn`, play clockwise, the rest of the deck as the draw pile.
+ */
+export const unoPosition = (
+  p: Readonly<{
+    hands: ReadonlyArray<ReadonlyArray<string>>;
+    top: string;
+    turn?: number;
+    names?: ReadonlyArray<string>;
+  }>,
+): State => {
+  const hands = p.hands.map((ids) => ids.map(unoCard));
+  const top = unoCard(p.top);
+  if (top.color === null) throw new Error(`${p.top} is a wild: the top card names the colour`);
+  const used = new Set([top.id, ...hands.flat().map((card) => card.id)]);
+  return {
+    game: {
+      names: p.names ?? [...DEFAULT_NAMES],
+      hands,
+      draw: DECK.filter((card) => !used.has(card.id)),
+      discard: [top],
+      color: top.color,
+      turn: p.turn ?? 0,
+      direction: 1,
+      phase: { kind: 'turn' },
+      note: '',
+    },
+    startedAt: 0,
+  };
+};
+
+/**
+ * Seat `state` through the hook (the shell's `position/load`: pass and play only, the phone left
+ * with the seat to move, no curtain); resolves with that seat's view once the page shows it.
+ */
+export const unoSetup = async (page: Page, state: State): Promise<View> => {
+  // The harness has no DOM types (tsconfig.node.json): the hook is called by source, as briscola's is.
+  await page.evaluate(`window.__uno.setup(${JSON.stringify(state)})`);
+  const seated = (counts: ReadonlyArray<number>, turn: number, top: string | undefined): string =>
+    JSON.stringify([counts, turn, top]);
+  const want = seated(
+    state.game.hands.map((hand) => hand.length),
+    state.game.turn,
+    state.game.discard.at(-1)?.id,
+  );
+  await expect
+    .poll(async () => {
+      const v = await readView(page);
+      return v === null ? 'none' : seated(v.counts, v.turn, v.top.id);
+    })
+    .toBe(want);
+  await expect(page.locator('#curtainOverlay')).toBeHidden();
+  return requireView(page);
 };

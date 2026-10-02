@@ -6,6 +6,7 @@
 // reads the state back and plays the rest. On `pages` alone: this is about the page.
 import type { Page } from '@playwright/test';
 
+import { flip7RigBust } from './fixtures/flip7.ts';
 import { pagePath } from './fixtures/site.ts';
 import { expect, test } from './fixtures/two-players.ts';
 
@@ -136,22 +137,7 @@ test('a bust waits for Continue: the card and the points lost, the seat greyed a
   await page.locator('#localBtn').click();
   await page.locator('#curtainBtn').click();
   // A hand-made position through the hook: Ari holds a 5 and a 9, the next card is another 5.
-  await page.evaluate(`(() => {
-    const f = window.__flip7;
-    const g = f.game();
-    const n = (id, value) => ({ id, kind: 'number', value });
-    const used = ['n5-1', 'n9-1', 'n5-2', 'n3-1'];
-    f.setup({
-      ...g,
-      opening: 0,
-      turn: 0,
-      phase: { kind: 'turn' },
-      flip3: null,
-      pending: [],
-      seats: g.seats.map((s, i) => ({ ...s, status: 'active', line: i === 0 ? [n('n5-1', 5), n('n9-1', 9)] : [n('n3-1', 3)] })),
-      draw: [...g.draw.filter((c) => !used.includes(c.id)), n('n5-2', 5)],
-    });
-  })()`);
+  await flip7RigBust(page);
   await expect(page.locator('#mySeat .seat-name')).toHaveText('Ari');
   await page.locator('#hitBtn').click();
   await expect(page.locator('#pauseOverlay')).toBeVisible();
