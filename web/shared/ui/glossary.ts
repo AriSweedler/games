@@ -154,7 +154,10 @@ const ruleHtml = (item: RuleItem, glossary: Glossary): string => {
 /** A list of groups rather than of rules: the first entry carries `rules`. */
 const isGrouped = (
   list: ReadonlyArray<RuleItem> | ReadonlyArray<RuleGroup>,
-): list is ReadonlyArray<RuleGroup> => list.length > 0 && 'rules' in (list[0] ?? {});
+): list is ReadonlyArray<RuleGroup> => {
+  const first = list[0];
+  return first !== undefined && 'rules' in first;
+};
 
 /**
  * One `<li class="rules-group" data-group="<id>">` per group: its `<h3>` and a nested
