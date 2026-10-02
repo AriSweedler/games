@@ -40,7 +40,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer as createNetServer } from 'node:net';
 import { resolve } from 'node:path';
 
-import { chromium, type Browser, type Page } from '@playwright/test';
+import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { PeerServer } from 'peer';
 
 import { DESKTOP, PHONE, type Viewport } from '../../e2e/fixtures/geometry.ts';
@@ -2153,6 +2153,28 @@ export const pageUrl = (harness: Harness, game: Game): string =>
 
 export type Captured = Readonly<{ golden: Golden; errors: ReadonlyArray<string> }>;
 
+/**
+ * The media features every capture pins, so a golden holds the same bytes on every host. The owner's
+ * Mac runs with Reduce transparency on, which Chromium reports as `prefers-reduced-transparency:
+ * reduce` and Hive's theme answers by hiding the tiles' sheen and the bugs' engraving layers; CI's
+ * Linux reports no preference, so a golden recorded here failed there (PR #24, 2026-10-02).
+ * Playwright's context options cover the first four but not that one, and one CDP call replaces
+ * the whole list, so all five go through CDP together, at Playwright's own defaults.
+ */
+const MEDIA_FEATURES: ReadonlyArray<Readonly<{ name: string; value: string }>> = [
+  { name: 'prefers-color-scheme', value: 'light' },
+  { name: 'prefers-reduced-motion', value: 'no-preference' },
+  { name: 'forced-colors', value: 'none' },
+  { name: 'prefers-contrast', value: 'no-preference' },
+  { name: 'prefers-reduced-transparency', value: 'no-preference' },
+];
+
+const pinMedia = async (context: BrowserContext, page: Page): Promise<void> => {
+  // The session stays attached for the page's life: detaching it clears the override.
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Emulation.setEmulatedMedia', { features: [...MEDIA_FEATURES] });
+};
+
 /** Drive one game at one viewport in a fresh context; `errors` are the page's uncaught exceptions. */
 export const capture = async (
   browser: Browser,
@@ -2165,6 +2187,7 @@ export const capture = async (
   await context.addInitScript({ content: `${seedScript(SEED)}\n${clockScript(EPOCH)}` });
   await routeOffline(context);
   const page = await context.newPage();
+  await pinMedia(context, page);
   const errors: string[] = [];
   page.on('pageerror', (e) => {
     errors.push(e.message);
