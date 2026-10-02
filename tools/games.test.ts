@@ -25,6 +25,7 @@ import {
   SHELL_GAMES,
   SOLO,
   SOLO_PAGES,
+  UNLISTED_PAGES,
 } from './games.ts';
 
 describe('the games registry', () => {
@@ -390,7 +391,7 @@ describe('the games registry', () => {
     });
   });
 
-  test('the solo pages: the reaction game, a row with a title, a hook, a suite, its spec and its ids; never a game', () => {
+  test('the solo pages: the reaction game, a row with a title, a hook, a suite, its spec and its ids; never a game; unlisted', () => {
     expect(SOLO_PAGES).toEqual(['rps']);
     expect(Object.keys(SOLO)).toEqual(SOLO_PAGES);
     expect(SOLO.rps).toMatchObject({
@@ -398,7 +399,9 @@ describe('the games registry', () => {
       hook: 'window.__rps',
       suite: 'rps',
       specs: ['**/rps.spec.ts'],
+      listed: false,
     });
+    expect(UNLISTED_PAGES).toEqual(['rps']);
     expect(SOLO.rps.pageShape.ids).toEqual(
       expect.arrayContaining(['app', 'counter', 'counterFace', 'buddy', 'islandSlot', 'techUpBtn']),
     );
@@ -412,7 +415,9 @@ describe('the games registry', () => {
       ...HOOKS,
       rps: 'window.__rps',
     });
-    expect(LANDING_PAGES).toEqual([...GAMES, 'rps']);
+    // The reaction game is unlisted: the landing pages are the games alone.
+    expect(LANDING_PAGES).toEqual([...GAMES]);
+    expect(LANDING_PAGES).not.toContain('rps');
   });
 
   test('pins every page hook, read off the rows', () => {
@@ -428,7 +433,7 @@ describe('the games registry', () => {
     });
   });
 
-  test('the landing hrefs are games/<g>/ in LANDING_PAGES order: the games, then the solo pages', () => {
+  test('the landing hrefs are games/<g>/ in LANDING_PAGES order: the games, then the listed solo pages (none today)', () => {
     expect(LANDING_HREFS).toEqual([
       'games/gin-rummy/',
       'games/fidice/',
@@ -437,8 +442,8 @@ describe('the games registry', () => {
       'games/uno/',
       'games/flip7/',
       'games/hive/',
-      'games/rps/',
     ]);
+    expect(LANDING_HREFS).not.toContain('games/rps/');
   });
 
   test('sheshbesh is an alias of backgammon: a game folder, never a game or a landing link', () => {
@@ -516,7 +521,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
       fidice: ['curtain', 'rules-fit', 'cues', 'stepper', 'pauses'],
       backgammon: ['rules-fit', 'pauses'],
       briscola: ['curtain', 'rules-fit', 'pauses'],
-      uno: ['seat-names', 'curtain', 'pauses'],
+      uno: ['curtain', 'pauses'],
       flip7: [],
       hive: ['pauses'],
     });

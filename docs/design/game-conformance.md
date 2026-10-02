@@ -59,7 +59,7 @@ Found broken: ✗. Meets the rule: ✓. A declared gap is a ✗ with its follow-
 | fidice     | ✓          | ✓           | ✗ `#seatsSel` select    | ✓                          | ✗ 2130px         | ✗ no pause                 | ✗ SHELL_CUES alone (M9)       | ✓       | ✓      | ✗ no scrim (0)               |
 | backgammon | ✓          | ✓           | ✓ (two seats)           | ✓                          | ✗ 1146px         | ✗ turn gate only           | ✓                             | ✓       | ✓      | — (hides nothing; 0.78)      |
 | briscola   | ✓          | ✓           | ✓ 2-4                   | ✓ 4 inputs                 | ✗ 1109px         | ✗ no pause on a trick      | ✓                             | ✓       | ✓      | ✗ 0.78 by design, hand face down |
-| uno        | ✓ (since the shell page) | ✓ | ✓ 2-12                 | ✗ 4 inputs at 12           | ✓                | ✗ no pause on a penalty    | ✓                             | ✓       | ✓      | ✗ hand shows through         |
+| uno        | ✓ (since the shell page) | ✓ | ✓ 2-12                 | ✓ 12 inputs (since #32)    | ✓                | ✗ no pause on a penalty    | ✓                             | ✓       | ✓      | ✗ hand shows through         |
 | flip7      | ✓          | ✓           | ✓ 2-12                  | ✓ 12 inputs                | ✓                | ✓ bust, frozen, flip7      | ✓ (since #29)                 | ✓       | ✓      | — (hides nothing; 0)         |
 | hive       | ✓          | ✓           | ✓ (two seats)           | ✓                          | ✓                | ✗ no pause at the end      | ✓                             | ✓       | ✓      | — (no curtain)               |
 
@@ -75,8 +75,6 @@ for players, no Rules tab, no opponents' counts, no pause after a bust, no sound
 
 Each is a `gaps` row in `tools/games.ts`; closing one is the fix plus deleting the row.
 
-- UNO `seat-names`: the shell-seat-names lane paints one input per seat; delete the row when it
-  lands so the guard bites.
 - UNO and fidice `curtain` (0 opaque, the hand and the cups show through): the scrim lane paints
   `.overlay.curtain` opaque in `shell.css`; delete both rows when it lands. Briscola's is 78%
   terracotta by design (theme.css, design §5.4) with the hand face down: the guard needs a
