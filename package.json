@@ -34,6 +34,7 @@
     "test:e2e:rps": "E2E_SUITE=rps npm run test:e2e",
     "test:e2e:uno": "E2E_SUITE=uno npm run test:e2e",
     "test:e2e:flip7": "E2E_SUITE=flip7 npm run test:e2e",
+    "test:e2e:hive": "E2E_SUITE=hive npm run test:e2e",
     "test:e2e:site": "E2E_SUITE=site npm run test:e2e",
     "test:deployed": "E2E_TARGET=deployed npm run test:e2e -- --grep \"@online|@relay\"",
     "check": "npm run typecheck && npm run lint && npm test && npm run test:site",

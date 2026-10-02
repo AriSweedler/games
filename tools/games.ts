@@ -161,12 +161,13 @@ export type ShellSpec = Readonly<{
  * it through e2e/fixtures/player.ts PAGE_QUERY). A game here without a SHELL row, or a row in
  * e2e/fixtures/online-games.ts, is a type error. GAMES order.
  */
-export type ShellGame = 'gin-rummy' | 'fidice' | 'backgammon' | 'briscola';
+export type ShellGame = 'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'hive';
 export const SHELL_GAMES: ReadonlyArray<ShellGame> = [
   'gin-rummy',
   'fidice',
   'backgammon',
   'briscola',
+  'hive',
 ];
 
 /** One shell row per shell game; REGISTRY carries each as its `shell`. */
@@ -241,6 +242,23 @@ export const SHELL: Readonly<Record<ShellGame, ShellSpec>> = {
     localFields: [['localPlayersSel', '2']],
     // The reveal and "Continue online": the handoff is offered under the curtain at two seats (D17).
     curtainButtons: 2,
+    firstCurtain: 'Pass the phone to {name}',
+  },
+  hive: {
+    heading: 'Hive',
+    shareTitle: 'Hive',
+    tabs: ['Play', 'Rules', 'About'],
+    modes: ['Online', 'Pass the phone'],
+    hostFields: [],
+    // shellConfig.ts `hostRoomMsg`: only the host's `lobby` reply carries the host's name.
+    hostAnswered: /^Connected — waiting for .+ to start$/,
+    connDot: '#oppDot',
+    // shellConfig.ts LOCAL_NAMES: White, then Black.
+    localNames: ['Ari', 'Lavi'],
+    // No field beyond the names: Hive seats two and has no option.
+    localFields: [],
+    // The reveal alone ("Show the board"): the handoff is the table's 🌐 (#handoffBtn), never the curtain's.
+    curtainButtons: 1,
     firstCurtain: 'Pass the phone to {name}',
   },
 };
@@ -377,6 +395,39 @@ export const REGISTRY: Readonly<Record<Game, GameSpec>> = {
     },
     contractFloors: { ts: 35, markup: 40 },
     shell: SHELL.briscola,
+  },
+  hive: {
+    title: 'Hive',
+    hook: 'window.__hive',
+    suite: 'hive',
+    // Its own spec (e2e/hive.spec.ts: pass the phone through the shell page); the shell specs play
+    // it as they play every shell game.
+    specs: ['**/hive.spec.ts'],
+    storage: { saveKey: 'hiveMP_v1', prefix: 'hive_' },
+    debug: 0,
+    // Briscola-shaped (docs/design/hive.md §7): the shell's screens, the table's fixed slots (the
+    // board, the two hands, the status line, the result sheet), the guest's name card and the same
+    // empty rules slots.
+    pageShape: {
+      ids: [
+        'app',
+        'homeScreen',
+        'hostWaitScreen',
+        'guestWaitScreen',
+        'tableScreen',
+        'endgameScreen',
+        'board',
+        'whiteHand',
+        'blackHand',
+        'statusText',
+        'resultOverlay',
+        'toast',
+        ...GUEST_NAME_IDS,
+      ],
+      rulesSlots: true,
+    },
+    contractFloors: { ts: 20, markup: 30 },
+    shell: SHELL.hive,
   },
 };
 

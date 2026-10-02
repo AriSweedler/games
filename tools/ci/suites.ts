@@ -66,9 +66,10 @@ const SHELL_SPECS: ReadonlyArray<string> = ['**/shell-*.spec.ts'];
  * The engine-only games (docs/design/hive.md §6): a folder under web/games/ holding a game's rules
  * engine and its tests before the game has a page. Its suite rides the `game` matrix job like a
  * page's (its unit tests under coverage) and has no e2e half, no registry row and no landing card;
- * the page row moves the game to tools/games.ts SOLO_PAGES or REGISTRY and deletes it here.
+ * the page row moves the game to tools/games.ts SOLO_PAGES or REGISTRY and deletes it here (Hive
+ * was the first, docs/design/hive.md §6, until its page row registered it; none at present).
  */
-export const ENGINE_ONLY = ['hive'] as const satisfies ReadonlyArray<GameSuite>;
+export const ENGINE_ONLY = [] as const satisfies ReadonlyArray<GameSuite>;
 
 /** A game suite with a page: a game's or a solo page's. */
 type PageSuite = Exclude<GameSuite, (typeof ENGINE_ONLY)[number]>;
@@ -817,22 +818,26 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
     e2e: gameE2e('flip7'),
   },
   hive: {
-    // Hive's rules and pure engine before its page (docs/design/hive.md §6): an engine-only game
-    // (ENGINE_ONLY) on the `game` matrix job, with no e2e half until the page row gives it one.
+    // Hive (docs/design/hive.md), a shell game since its page row: its colocated tests, the
+    // engine's positions and bot games, the page's reducer and painters' helpers.
     unit: ['web/games/hive/**/*.test.ts'],
     standalone: [],
     browser: false,
     needsBuild: false,
     coverage: {
-      include: ['web/games/hive/src/engine/**/*.ts'],
+      include: ['web/games/hive/src/**/*.ts'],
       // Measured at the engine's landing (lines/functions/statements/branches): 97.8/100/98.4/93.7
       // over hand-built positions for every bug and rule and three seeded bot games (engine.test.ts,
       // hex.test.ts, pieces.test.ts; the unreached lines are the exhaustive switches' `never` arms
-      // and hex.ts's fallbacks for an index that is always in range).
+      // and hex.ts's fallbacks for an index that is always in range). The include covers the whole
+      // of src/ since the page row; the engine row binds what was measured, the paint and main.ts
+      // are e2e/hive.spec.ts's and the shell specs'.
       thresholds: {
         'web/games/hive/src/engine/**': { lines: 95, functions: 95, statements: 95, branches: 90 },
       },
     },
+    // Hive's own spec (e2e/hive.spec.ts, pass the phone through the shell page) and its describes of the shell specs (`@hive`).
+    e2e: gameE2e('hive'),
   },
   site: {
     unit: [
@@ -931,12 +936,12 @@ export const isGameSuite = (suite: Suite): suite is GameSuite =>
 /** The game suites in job order: the values of the two matrix jobs' `strategy.matrix.suite`. */
 export const GAME_SUITES: ReadonlyArray<GameSuite> = SUITE_NAMES.filter(isGameSuite);
 
-/** The rows every game gets: its folder, its parity oracles, its specs and its style goldens. A solo page's specs are its row's, spelled whole. */
+/** The rows every game gets: its folder, its parity oracles, its specs and its style goldens. Its own specs are its row's, spelled whole (Hive's is `e2e/hive.spec.ts`, no `hive-*`). */
 const gameRules = (game: PageSuite): ReadonlyArray<Rule> => {
   const folder = FOLDER_OF[game];
-  const ownSpecs = isSoloPage(folder)
-    ? SOLO[folder].specs.map((glob) => glob.replace(/^\*\*\//, 'e2e/'))
-    : [`e2e/${game}-*.spec.ts`];
+  const ownSpecs = (isSoloPage(folder) ? SOLO[folder].specs : REGISTRY[folder].specs).map((glob) =>
+    glob.replace(/^\*\*\//, 'e2e/'),
+  );
   return [
     {
       globs: [`web/games/${folder}/**`],
@@ -1042,11 +1047,17 @@ export const RULES: ReadonlyArray<Rule> = [
   {
     // One describe per shell game (every game since M5 of docs/design/fidice-shell-adoption.md),
     // each played by that game's e2e job through its tag (every game row claims the files, each
-    // inverting the others' tags): a spec change runs the four jobs, a change under
+    // inverting the others' tags): a spec change runs the five jobs, a change under
     // web/games/<g>/** runs e2e-<g> with its describes (gameRules), and web/shared/** runs
     // everything (above). No game-e2e job runs another game's describes.
     globs: ['e2e/shell-*.spec.ts'],
-    runs: [e2eJob('gin'), e2eJob('fidice'), e2eJob('backgammon'), e2eJob('briscola')],
+    runs: [
+      e2eJob('gin'),
+      e2eJob('fidice'),
+      e2eJob('backgammon'),
+      e2eJob('briscola'),
+      e2eJob('hive'),
+    ],
     why: "the shared shell specs: a describe per shell game, each run by that game's e2e job through its tag",
   },
   ...gameRules('gin'),
@@ -1083,8 +1094,9 @@ export const RULES: ReadonlyArray<Rule> = [
   ...gameRules('rps'),
   ...gameRules('uno'),
   ...gameRules('flip7'),
+  ...gameRules('hive'),
   // An engine-only game (ENGINE_ONLY): no page, so nothing of it is built or smoked.
-  ...ENGINE_ONLY.map((game): Rule => ({
+  ...(ENGINE_ONLY as ReadonlyArray<GameSuite>).map((game): Rule => ({
     globs: [`web/games/${game}/**`],
     runs: [game, 'site', 'harness'],
     why: 'an engine with no page yet: its suite, the ratchet over web/ and the suite accounting',

@@ -647,6 +647,52 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.trick-cards .who',
     '#endgameScreen h1',
   ],
+  // Hive (docs/design/hive.md §7; page.ts, ui/render.ts): after the shell's 43, the home's subtitle
+  // and the names box, the table's top bar (the names strip, the connection dot), the board and
+  // its cells (empty, White's, Black's, lit, the letter and a stack's badge), the two hands and
+  // their tiles (playable, picked, spent, the count), the status line, the controls and the result
+  // sheet's note.
+  hive: [
+    ...SHELL_SELECTORS,
+    '.masthead .subtitle',
+    '.card-box',
+    '.topbar',
+    '.names-strip',
+    '#myName',
+    '#oppName',
+    '.names-strip .vs',
+    '#oppDot',
+    '.conn-dot.on',
+    '.board',
+    '.board svg.hive',
+    '.hex polygon',
+    '.hex.empty polygon',
+    '.hex.w polygon',
+    '.hex.b polygon',
+    '.hex.lit polygon',
+    '.hex.picked polygon',
+    '.hex .letter',
+    '.hex.w .letter',
+    '.hex.b .letter',
+    '.hex .badge',
+    '.hand',
+    '.hand.turn',
+    '.hand-tile',
+    '.hand-tile.w',
+    '.hand-tile.b',
+    '.hand-tile.playable',
+    '.hand-tile.picked',
+    '.hand-tile.spent',
+    '.hand-tile .count',
+    '.hand-tile .letter',
+    '.status-line',
+    '.controls',
+    '#passBtn',
+    '#resignBtn',
+    '#againBtn',
+    '.result-note',
+    '#endgameScreen h1',
+  ],
 };
 
 // ---- the golden --------------------------------------------------------------------------------------
@@ -1003,6 +1049,13 @@ const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
     localModeShot: 'shell home: play tab, pass the phone',
     curtainShot: 'shell local: round 1, curtain up',
     // No pass-the-phone field beyond the names (the host card's terms apply, D7).
+    localValues: {},
+  },
+  hive: {
+    submenuShot: null,
+    localModeShot: 'home: play tab, pass the phone',
+    curtainShot: 'local: started, curtain up',
+    // Two players, no field beyond the names.
     localValues: {},
   },
 };
@@ -1698,6 +1751,46 @@ const driveBriscola = async (page: Page, shot: Shot): Promise<void> => {
   await snap('home: after the games');
 };
 
+/** Hive's seat to move plays its first legal action through the hook (`__hive.legal()` -> `__hive.act(a)`). */
+const HIVE_STEP = `(() => { const h = window.__hive; const a = h.legal()[0]; if (a) h.act(a); })()`;
+
+/**
+ * Hive (docs/design/hive.md §7), after the shell (driveShell, which started a two-player game under
+ * the curtain): the empty board with White's hand lit, a tile picked and the origin lit, the tile
+ * placed and the curtain for Black, Black's board, then the rules and history sheets over the
+ * table.
+ */
+const driveHive = async (page: Page, shot: Shot): Promise<void> => {
+  await driveShell(page, shot, 'hive');
+
+  // ---- the first turn ----
+  await click(page, '#curtainBtn');
+  await shot('local: started, the empty board');
+  await click(page, '#whiteHand .hand-tile[data-bug="ant"]');
+  await visible(page, '#board .hex.lit');
+  await shot('local: a tile picked, the origin lit');
+  await click(page, '#board .hex.lit');
+  await visible(page, '#curtainOverlay');
+  await shot('local: a tile placed, curtain for the other seat');
+  await click(page, '#curtainBtn');
+  await shot('local: the second seat to play');
+  await page.evaluate(HIVE_STEP);
+  await visible(page, '#curtainOverlay');
+  await click(page, '#curtainBtn');
+  await shot('local: two tiles down');
+
+  // ---- the sheets over the table ----
+  await click(page, '#rulesBtnGame');
+  await shot('table: rules sheet');
+  await page.keyboard.press('Escape');
+  await click(page, '#historyBtn');
+  await shot('table: history sheet');
+  await page.keyboard.press('Escape');
+  await click(page, '#leaveBtn');
+  await visible(page, '#homeScreen');
+  await shot('home: after the game');
+};
+
 /** A game's walk; fidice's takes the page's URL to reopen it on its shell path. */
 type Driver = (page: Page, shot: Shot, url: string) => Promise<void>;
 
@@ -1706,6 +1799,7 @@ const DRIVERS: Readonly<Record<Game, Driver>> = {
   fidice: driveFidice,
   backgammon: driveBackgammon,
   briscola: driveBriscola,
+  hive: driveHive,
 };
 
 // ---- the harness -------------------------------------------------------------------------------------

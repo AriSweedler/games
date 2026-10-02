@@ -7,6 +7,7 @@ import { STORAGE_KEYS as BACKGAMMON_KEYS } from '../web/games/backgammon/src/sto
 import { STORAGE_KEYS as BRISCOLA_KEYS } from '../web/games/briscola/src/storage.ts';
 import { STORAGE_KEYS as FIDICE_KEYS } from '../web/games/fidice/src/storage.ts';
 import { STORAGE_KEYS as GIN_KEYS } from '../web/games/gin-rummy/src/storage.ts';
+import { STORAGE_KEYS as HIVE_KEYS } from '../web/games/hive/src/storage.ts';
 import {
   ALIASES,
   GAMES,
@@ -24,8 +25,8 @@ import {
 } from './games.ts';
 
 describe('the games registry', () => {
-  test('lists the four built games in landing order; the two migrated ones have a legacy page', () => {
-    expect(GAMES).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola']);
+  test('lists the five built games in landing order; the two migrated ones have a legacy page', () => {
+    expect(GAMES).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola', 'hive']);
     expect(Object.keys(REGISTRY)).toEqual(GAMES);
     expect(LEGACY_GAMES).toEqual(['gin-rummy', 'fidice']);
   });
@@ -182,6 +183,49 @@ describe('the games registry', () => {
           firstCurtain: 'Pass the phone to {name}',
         },
       },
+      hive: {
+        title: 'Hive',
+        hook: 'window.__hive',
+        suite: 'hive',
+        specs: ['**/hive.spec.ts'],
+        storage: { saveKey: 'hiveMP_v1', prefix: 'hive_' },
+        debug: 0,
+        pageShape: {
+          ids: [
+            'app',
+            'homeScreen',
+            'hostWaitScreen',
+            'guestWaitScreen',
+            'tableScreen',
+            'endgameScreen',
+            'board',
+            'whiteHand',
+            'blackHand',
+            'statusText',
+            'resultOverlay',
+            'toast',
+            'guestSeatName',
+            'guestNameInput',
+            'guestRenameBtn',
+            'guestNameNote',
+          ],
+          rulesSlots: true,
+        },
+        contractFloors: { ts: 20, markup: 30 },
+        shell: {
+          heading: 'Hive',
+          shareTitle: 'Hive',
+          tabs: ['Play', 'Rules', 'About'],
+          modes: ['Online', 'Pass the phone'],
+          hostFields: [],
+          hostAnswered: /^Connected — waiting for .+ to start$/,
+          connDot: '#oppDot',
+          localNames: ['Ari', 'Lavi'],
+          localFields: [],
+          curtainButtons: 1,
+          firstCurtain: 'Pass the phone to {name}',
+        },
+      },
     });
   });
 
@@ -189,7 +233,7 @@ describe('the games registry', () => {
     // The shell specs (e2e/shell-*.spec.ts) iterate SHELL_GAMES and read the save and the
     // preference keys through the storage row, so every row carries both.
     expect(SHELL_GAMES).toEqual(GAMES);
-    expect(SHELL_GAMES).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola']);
+    expect(SHELL_GAMES).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola', 'hive']);
     SHELL_GAMES.forEach((game) => {
       expect(REGISTRY[game].shell).toBe(SHELL[game]);
     });
@@ -214,6 +258,7 @@ describe('the games registry', () => {
     pin(REGISTRY.fidice.storage, FIDICE_KEYS);
     pin(REGISTRY.backgammon.storage, BACKGAMMON_KEYS);
     pin(REGISTRY.briscola.storage, BRISCOLA_KEYS);
+    pin(REGISTRY.hive.storage, HIVE_KEYS);
   });
 
   test('pins every page title, read off the rows', () => {
@@ -223,6 +268,7 @@ describe('the games registry', () => {
       fidice: "Fidice — one-cup liar's dice",
       backgammon: 'Sheshbesh — backgammon',
       briscola: 'Briscola — cards',
+      hive: 'Hive',
       rps: 'Rock Paper Scissors',
       uno: 'UNO',
       flip7: 'Flip 7',
@@ -279,6 +325,7 @@ describe('the games registry', () => {
       fidice: 'window.__fidice',
       backgammon: 'window.__backgammon',
       briscola: 'window.__briscola',
+      hive: 'window.__hive',
       'ui-sandbox': 'window.__uiSandbox',
     });
   });
@@ -289,6 +336,7 @@ describe('the games registry', () => {
       'games/fidice/',
       'games/backgammon/',
       'games/briscola/',
+      'games/hive/',
       'games/rps/',
       'games/uno/',
       'games/flip7/',

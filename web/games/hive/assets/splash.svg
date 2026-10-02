@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Hive's link-preview card (docs/design/link-previews.md): a quiet cluster of white and black
+       hexagonal tiles on the shared felt, one amber accent, the name. tools/splash.ts renders it to
+       web/public/games/hive/splash.png. -->
+  <rect width="1200" height="630" fill="#0f2a1c" />
+  <g transform="translate(330 315)">
+    <g fill="#f1e9d6" stroke="#cbbf9f" stroke-width="3">
+      <polygon points="0,-70 60.6,-35 60.6,35 0,70 -60.6,35 -60.6,-35" />
+      <polygon points="121.2,-70 181.8,-35 181.8,35 121.2,70 60.6,35 60.6,-35" transform="translate(0 0)" />
+      <polygon points="-60.6,35 0,70 0,140 -60.6,175 -121.2,140 -121.2,70" />
+    </g>
+    <g fill="#2b2a2e" stroke="#57555c" stroke-width="3">
+      <polygon points="-121.2,-70 -60.6,-35 -60.6,35 -121.2,70 -181.8,35 -181.8,-35" />
+      <polygon points="60.6,35 121.2,70 121.2,140 60.6,175 0,140 0,70" />
+      <polygon points="-60.6,-175 0,-140 0,-70 -60.6,-35 -121.2,-70 -121.2,-140" />
+    </g>
+    <text x="0" y="14" text-anchor="middle" font-family="Georgia, serif" font-size="56" font-weight="700" fill="#2a2418">Q</text>
+    <text x="-121.2" y="14" text-anchor="middle" font-family="Georgia, serif" font-size="56" font-weight="700" fill="#f1e9d6">A</text>
+    <text x="121.2" y="14" text-anchor="middle" font-family="Georgia, serif" font-size="56" font-weight="700" fill="#2a2418">S</text>
+    <text x="60.6" y="119" text-anchor="middle" font-family="Georgia, serif" font-size="56" font-weight="700" fill="#f1e9d6">B</text>
+    <text x="-60.6" y="119" text-anchor="middle" font-family="Georgia, serif" font-size="56" font-weight="700" fill="#2a2418">G</text>
+    <text x="-60.6" y="-91" text-anchor="middle" font-family="Georgia, serif" font-size="56" font-weight="700" fill="#f1e9d6">G</text>
+  </g>
+  <text x="640" y="300" font-family="Georgia, serif" font-size="140" font-weight="700" fill="#d9a441">Hive</text>
+  <text x="644" y="372" font-family="Helvetica, Arial, sans-serif" font-size="40" fill="#e8e1cf">Place and move the bugs.</text>
+  <text x="644" y="428" font-family="Helvetica, Arial, sans-serif" font-size="40" fill="#e8e1cf">Surround the Queen.</text>
+</svg>

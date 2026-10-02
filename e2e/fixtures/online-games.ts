@@ -3,7 +3,7 @@
 // half (the join seen, the start, the opening both tables show) and the table half (the curtain's
 // words, the snapshot two tables must agree on, the saves, the handoff under the curtain, the
 // glossary), what a spec must ask the game itself once the connection has done its part, over the
-// game's own fixtures (e2e/fixtures/gin.ts, backgammon.ts, briscola.ts, fidice.ts). A game without
+// game's own fixtures (e2e/fixtures/gin.ts, backgammon.ts, briscola.ts, fidice.ts, hive.ts). A game without
 // a row is a type error here. Its own file because those fixtures import e2e/fixtures/shell.ts
 // (import-x/no-cycle). The connection itself is here too: what every online spec opens with before
 // it asks the game anything.
@@ -36,6 +36,14 @@ import {
 } from './fidice.ts';
 import type { Viewport } from './geometry.ts';
 import { ginPassUpcard, ginStartLocal, readTable } from './gin.ts';
+import {
+  requireView as requireHive,
+  hiveKey,
+  hivePlayTurn,
+  hiveReveal,
+  hiveSnapshot,
+  hiveStartLocal,
+} from './hive.ts';
 import { invitePath, newPlayer, openGame, type GameHooks, type Player } from './player.ts';
 import {
   DEFAULT_NAMES,
@@ -487,12 +495,90 @@ const briscola: ShellDriver = {
   },
 };
 
+/**
+ * Hive (docs/design/hive.md §7), a two-seat shell game: the host starts from the waiting room and
+ * both tables come up with no curtain and an empty board; the whole game through
+ * `window.__hive.view()` (nothing is hidden).
+ */
+const hive: ShellDriver = {
+  ...shellOnline,
+  // ui/render.ts `paintCurtain`: the other seat, told to look away.
+  curtainSub: (_first, other) => `${other}, look away`,
+  // `#myName` is "<name> · White|Black" (ui/render.ts `paintTable`).
+  seatNames: {
+    me: '#myName',
+    meText: (name) => new RegExp(`^${escapeRegExp(name)} · (White|Black)$`),
+    seated: '#guestSeatName',
+  },
+  start: async (host, guest) => {
+    await hostStarts(host, guest);
+    await expect(host.locator('#curtainOverlay')).toBeHidden();
+    await expect(guest.locator('#curtainOverlay')).toBeHidden();
+  },
+  snapshot: hiveSnapshot,
+  agree: async (host, guest) => {
+    const table = hiveKey(await requireHive(host));
+    await expect.poll(() => hiveSnapshot(guest)).toBe(table);
+    return table;
+  },
+  expectOpening: async (host, guest) => {
+    // Both tables agree on the start: the host is White (seat 0) and the guest Black, the board
+    // empty, White to place first; each board shows the one cell White may place on.
+    const opening = await requireHive(host);
+    expect(opening).toMatchObject({ seat: 0, game: { turn: 'white', result: null, board: {} } });
+    expect(opening.names).toEqual([...ONLINE_NAMES]);
+    expect(opening.placements.length).toBeGreaterThan(0);
+    await expect.poll(() => hiveSnapshot(guest)).toBe(hiveKey(opening));
+    const theirs = await requireHive(guest);
+    expect(theirs).toMatchObject({ seat: 1, game: { turn: 'white' }, placements: [] });
+    await expect(host.locator('#board .hex')).toHaveCount(1);
+    await expect(guest.locator('#board .hex')).toHaveCount(1);
+    await expect(host.locator('#whiteHand .hand-tile.playable')).toHaveCount(5);
+    await expect(guest.locator('#blackHand .hand-tile.playable')).toHaveCount(0);
+  },
+  // The host's save carries the room's one term (protocol.ts `Room`) and the game, White to move.
+  hostSave: { seatCount: 2, game: { game: { turn: 'white' } } },
+  localSave: { game: { game: { turn: 'white' } } },
+  table: '#board .hex',
+  curtainOffer: {
+    title:
+      "the offer is the table's alone: the curtain carries none; after a placement the next seat reveals and takes it",
+    // White places its first tile (through the hook); the phone goes to Black under the curtain.
+    toCurtain: async (page) => {
+      await hiveReveal(page);
+      await hivePlayTurn(page);
+      await expect(page.locator('#curtainOverlay')).toBeVisible();
+    },
+    take: async (page) => {
+      await reveal(page);
+      return takeOffer(page, 'hive');
+    },
+  },
+  // The Rules and About copy (ui/rules.ts GLOSSARY): "hive" in the About copy lands on the One
+  // hive rule; the goal's "Queen" names the Queen rule, the Beetle's "hive" the One hive rule.
+  glossary: {
+    aboutTerm: 'hive',
+    aboutRule: 'hive',
+    innerFrom: 'goal',
+    innerTo: 'queen',
+    deepLink: 'goal',
+    overlayFrom: 'beetle',
+    overlayTo: 'hive',
+    openRulesOverTable: async (page, url, viewport) => {
+      await hiveStartLocal(page, url, viewport);
+      await hiveReveal(page);
+      await page.locator('#rulesBtnGame').click();
+    },
+  },
+};
+
 /** Every game's row, in GAMES order. */
 export const SHELL_DRIVERS: Readonly<Record<ShellGame, ShellDriver>> = {
   'gin-rummy': gin,
   fidice,
   backgammon,
   briscola,
+  hive,
 };
 
 /**

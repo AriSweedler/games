@@ -28,12 +28,13 @@ test('parseContract reads the six-column class rows and skips the header, its ru
 test('a shell row applies to every shell game (fidice among them since M5 of fidice-shell-adoption.md) when the shell sheet styles it, and to the games whose theme it names otherwise (dry-round-2.md G3)', () => {
   const rows = parseContract(TABLE);
   const scoped = (
-    game: 'gin-rummy' | 'fidice' | 'backgammon' | 'briscola',
+    game: 'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'hive',
   ): ReadonlyArray<string> => rowsFor(rows, game).map((row) => row.owner);
   expect(ownersOf('gin-rummy')).toEqual(['gin-rummy', 'shared', 'shell']);
   expect(ownersOf('fidice')).toEqual(['fidice', 'shared', 'shell']);
   expect(ownersOf('backgammon')).toEqual(['backgammon', 'shared', 'shell']);
   expect(ownersOf('briscola')).toEqual(['briscola', 'shared', 'shell']);
+  expect(ownersOf('hive')).toEqual(['hive', 'shared', 'shell']);
   expect(scoped('gin-rummy')).toEqual(['gin-rummy', 'shared', 'shell', 'shell']);
   expect(scoped('backgammon')).toEqual(['shared', 'shell', 'shell']);
   // The `on off` row names gin's and backgammon's themes alone: briscola's and fidice's pages get
@@ -41,5 +42,13 @@ test('a shell row applies to every shell game (fidice among them since M5 of fid
   expect(scoped('briscola')).toEqual(['shared', 'shell']);
   expect(scoped('fidice')).toEqual(['fidice', 'shared', 'shell']);
   expect(rowsFor(rows, 'fidice').map((row) => row.names)).toEqual([['app'], ['hidden'], ['pulse']]);
-  expect(OWNERS).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola', 'shared', 'shell']);
+  expect(OWNERS).toEqual([
+    'gin-rummy',
+    'fidice',
+    'backgammon',
+    'briscola',
+    'hive',
+    'shared',
+    'shell',
+  ]);
 });

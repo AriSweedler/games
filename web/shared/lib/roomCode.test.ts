@@ -28,7 +28,7 @@ import {
   BRISCOLA_PEER_PREFIX,
 } from './roomCode.ts';
 
-const GAMES: ReadonlyArray<Game> = ['gin-rummy', 'fidice', 'backgammon', 'briscola'];
+const GAMES: ReadonlyArray<Game> = ['gin-rummy', 'fidice', 'backgammon', 'briscola', 'hive'];
 
 describe('frozen literals (byte for byte what the legacy pages hold)', () => {
   test('gin', () => {

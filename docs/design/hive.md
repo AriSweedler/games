@@ -162,15 +162,29 @@ and resigning. Three seeded random bot games of up to 200 turns check every turn
 off the legal lists, every tile is kept, the hive is one group, the Queen is down by the fourth
 tile and only Beetles stand above the ground.
 
-There is no page yet, so Hive is an engine-only game in tools/ci/suites.ts (`ENGINE_ONLY`): its
-suite rides the `game` matrix job like a page's and has no e2e half, and it has no registry row, no
-landing card and no smoke. The page row moves it out of `ENGINE_ONLY` into tools/games.ts.
+Hive was the first engine-only game in tools/ci/suites.ts (`ENGINE_ONLY`) until its page row
+(§7) registered it in tools/games.ts as a shell game: its suite now has both halves (the unit tests
+under coverage, e2e/hive.spec.ts and its `@hive` describes of the shell specs), a landing card and
+the smoke.
 
-## 7. Next rows
+## 7. The page
 
-- The page: the hive drawn as hexes that pan and zoom with the hive, the hands as two trays, a tap
-  to pick a tile and a tap on a highlighted hex to place or move it, the Rules tab (§5), a
-  resign/draw button (the draw by agreement or repetition of §4.8).
-- Online seats through the shared shell (docs/design/shared-shell.md), as the owner asked of every
-  multiplayer game: the page lands as a shell game in tools/games.ts REGISTRY rather than a solo
-  page, with the engine's state as the wire format.
+web/games/hive/, a shell game (docs/design/shared-shell.md) from the start, as the owner asked of
+every multiplayer game: page.ts composed by tools/shell-markup.ts into index.html, two modes
+(Online and Pass the phone), the tabs Play, Rules (§5) and About, two seats and no option (White is
+seat 0, the host or the first name; Black seat 1). The table (ui/render.ts) is the names strip, an
+SVG board that fits itself to the hive (ui/board.ts: pointy-top axial hexes, a `g.hex` per occupied
+hex plus the hexes the picked tile may reach, the origin alone on an empty board), the two hands as
+trays of tiles with their counts, Pass when the seat must, Resign while the game is on, and the
+status line. A tap on a hand tile lights its placements, a tap on a tile already down lights its
+moves, a tap on a lit hex plays (ui/state.ts `tap/hex`); the engine's refusal is a toast.
+
+Pass the phone keeps the shell's curtain as the pause between turns (the owner: "understand what
+happened before proceeding"): nothing is hidden, but the curtain names whose turn it is and carries
+the last move, and one tap shows the board. The end is a sheet over the final board (the winner or
+the draw, the engine's note) whose Continue leaves the board on show with Play again beside it.
+Online, the host holds the state (engine/view.ts `State`) and both seats get the same view, the
+whole game, over the two-seat protocol (protocol.ts: the room's one term is `seatCount: 2`).
+
+Not yet: a draw button (§4.8: by agreement or repetition; the engine has no draw intent), pan and
+zoom by gesture (the board fits itself instead), tile art beyond the letter.
