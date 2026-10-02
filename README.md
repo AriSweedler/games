@@ -57,6 +57,8 @@ connected, a toast says "Connected directly" or "Connected via relay".
 
 ## Develop
 
+`AGENT.md` is the contract for adding or changing a game, every rule with its why; read it first.
+
 Node 22 (`.nvmrc`). TypeScript, ESLint (typescript-eslint strict, eslint-plugin-functional, import-x
 boundaries), Prettier, vitest and Playwright, all pinned exactly in `package.json`.
 
