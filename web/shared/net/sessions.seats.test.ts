@@ -770,6 +770,27 @@ describe('HostSession over four seats', () => {
   });
 });
 
+describe('HostSession over twelve seats (the largest table: UNO and Flip 7, 2026-10-02)', () => {
+  test('eleven guests take seats 1 to 11 in the order they connect, each welcomed with its seat; a twelfth guest is held, not seated', () => {
+    const w = world({ seats: true });
+    startHost(w, cell(hostCtx()), { capacity: 12 });
+    w.broker.flush();
+    const table = guests(w, ROOM, 11);
+    expect(table.map((g) => heard(g.party))).toEqual(
+      Array.from({ length: 11 }, (_, i) => [welcome(i + 1)]),
+    );
+    const mark = w.log.length;
+    table[10]?.conn.send(join('Kai'));
+    w.broker.flush();
+    expect(w.since(mark)).toEqual([['frame', join('Kai'), 11]]);
+    const spare = party(w, undefined);
+    w.broker.flush();
+    connectFrom(spare, ROOM);
+    w.broker.flush();
+    expect(spare.received).toEqual([]);
+  });
+});
+
 describe('HostSession at capacity 2 with an N-seat codec', () => {
   test('one slot: welcome with seat 1, frames and the loss logged with one argument by the default recorder, a third peer held then full; a smaller capacity is read as 2', () => {
     const w = world();

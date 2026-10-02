@@ -34,6 +34,7 @@ test('a shell row applies to every shell game (fidice among them since M5 of fid
   expect(ownersOf('fidice')).toEqual(['fidice', 'shared', 'shell']);
   expect(ownersOf('backgammon')).toEqual(['backgammon', 'shared', 'shell']);
   expect(ownersOf('briscola')).toEqual(['briscola', 'shared', 'shell']);
+  expect(ownersOf('uno')).toEqual(['uno', 'shared', 'shell']);
   expect(ownersOf('hive')).toEqual(['hive', 'shared', 'shell']);
   expect(scoped('gin-rummy')).toEqual(['gin-rummy', 'shared', 'shell', 'shell']);
   expect(scoped('backgammon')).toEqual(['shared', 'shell', 'shell']);
@@ -47,6 +48,7 @@ test('a shell row applies to every shell game (fidice among them since M5 of fid
     'fidice',
     'backgammon',
     'briscola',
+    'uno',
     'hive',
     'shared',
     'shell',

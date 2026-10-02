@@ -21,7 +21,8 @@ import {
 } from './cards.ts';
 
 export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 10;
+/** The owner, 2026-10-02: "uno caps out at 12"; 12 × 7 = 84 of the 108 cards leaves a stock of 23. */
+export const MAX_PLAYERS = 12;
 export const HAND_SIZE = 7;
 /** §6: the first player to reach this many points wins the game. */
 export const DEFAULT_TARGET = 500;

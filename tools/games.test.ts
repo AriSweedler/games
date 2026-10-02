@@ -8,6 +8,7 @@ import { STORAGE_KEYS as BRISCOLA_KEYS } from '../web/games/briscola/src/storage
 import { STORAGE_KEYS as FIDICE_KEYS } from '../web/games/fidice/src/storage.ts';
 import { STORAGE_KEYS as GIN_KEYS } from '../web/games/gin-rummy/src/storage.ts';
 import { STORAGE_KEYS as HIVE_KEYS } from '../web/games/hive/src/storage.ts';
+import { STORAGE_KEYS as UNO_KEYS } from '../web/games/uno/src/storage.ts';
 import {
   ALIASES,
   GAMES,
@@ -25,8 +26,8 @@ import {
 } from './games.ts';
 
 describe('the games registry', () => {
-  test('lists the five built games in landing order; the two migrated ones have a legacy page', () => {
-    expect(GAMES).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola', 'hive']);
+  test('lists the six built games in landing order; the two migrated ones have a legacy page', () => {
+    expect(GAMES).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola', 'uno', 'hive']);
     expect(Object.keys(REGISTRY)).toEqual(GAMES);
     expect(LEGACY_GAMES).toEqual(['gin-rummy', 'fidice']);
   });
@@ -183,6 +184,51 @@ describe('the games registry', () => {
           firstCurtain: 'Pass the phone to {name}',
         },
       },
+      uno: {
+        title: 'UNO',
+        hook: 'window.__uno',
+        suite: 'uno',
+        specs: ['**/uno.spec.ts'],
+        storage: { saveKey: 'unoMP_v1', prefix: 'uno_' },
+        debug: 0,
+        pageShape: {
+          ids: [
+            'app',
+            'homeScreen',
+            'hostWaitScreen',
+            'guestWaitScreen',
+            'tableScreen',
+            'endgameScreen',
+            'seats',
+            'topCard',
+            'colorDot',
+            'hand',
+            'drawBtn',
+            'statusText',
+            'resultOverlay',
+            'toast',
+            'guestSeatName',
+            'guestNameInput',
+            'guestRenameBtn',
+            'guestNameNote',
+          ],
+          rulesSlots: true,
+        },
+        contractFloors: { ts: 20, markup: 30 },
+        shell: {
+          heading: 'UNO',
+          shareTitle: 'UNO',
+          tabs: ['Play', 'Rules', 'About'],
+          modes: ['Online', 'Pass the phone'],
+          hostFields: [],
+          hostAnswered: /^Connected — waiting for .+ to deal$/,
+          connDot: '#oppDot',
+          localNames: ['Ari', 'Lavi'],
+          localFields: [['localPlayersCount', '2']],
+          curtainButtons: 1,
+          firstCurtain: 'Pass the phone to {name}',
+        },
+      },
       hive: {
         title: 'Hive',
         hook: 'window.__hive',
@@ -233,7 +279,7 @@ describe('the games registry', () => {
     // The shell specs (e2e/shell-*.spec.ts) iterate SHELL_GAMES and read the save and the
     // preference keys through the storage row, so every row carries both.
     expect(SHELL_GAMES).toEqual(GAMES);
-    expect(SHELL_GAMES).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola', 'hive']);
+    expect(SHELL_GAMES).toEqual(['gin-rummy', 'fidice', 'backgammon', 'briscola', 'uno', 'hive']);
     SHELL_GAMES.forEach((game) => {
       expect(REGISTRY[game].shell).toBe(SHELL[game]);
     });
@@ -258,6 +304,7 @@ describe('the games registry', () => {
     pin(REGISTRY.fidice.storage, FIDICE_KEYS);
     pin(REGISTRY.backgammon.storage, BACKGAMMON_KEYS);
     pin(REGISTRY.briscola.storage, BRISCOLA_KEYS);
+    pin(REGISTRY.uno.storage, UNO_KEYS);
     pin(REGISTRY.hive.storage, HIVE_KEYS);
   });
 
@@ -277,23 +324,14 @@ describe('the games registry', () => {
     });
   });
 
-  test('the solo pages: the reaction game, UNO and Flip 7, a row each with a title, a hook, a suite, its spec and its ids; never a game', () => {
-    expect(SOLO_PAGES).toEqual(['rps', 'uno', 'flip7']);
+  test('the solo pages: the reaction game and Flip 7, a row each with a title, a hook, a suite, its spec and its ids; never a game', () => {
+    expect(SOLO_PAGES).toEqual(['rps', 'flip7']);
     expect(SOLO.flip7).toMatchObject({
       title: 'Flip 7',
       hook: 'window.__flip7',
       suite: 'flip7',
       specs: ['**/flip7.spec.ts'],
     });
-    expect(SOLO.uno).toMatchObject({
-      title: 'UNO',
-      hook: 'window.__uno',
-      suite: 'uno',
-      specs: ['**/uno.spec.ts'],
-    });
-    expect(SOLO.uno.pageShape.ids).toEqual(
-      expect.arrayContaining(['app', 'setup', 'curtain', 'table', 'hand', 'drawBtn']),
-    );
     expect(Object.keys(SOLO)).toEqual(SOLO_PAGES);
     expect(SOLO.rps).toMatchObject({
       title: 'Rock Paper Scissors',
@@ -313,10 +351,9 @@ describe('the games registry', () => {
     expect(PAGE_HOOKS).toEqual({
       ...HOOKS,
       rps: 'window.__rps',
-      uno: 'window.__uno',
       flip7: 'window.__flip7',
     });
-    expect(LANDING_PAGES).toEqual([...GAMES, 'rps', 'uno', 'flip7']);
+    expect(LANDING_PAGES).toEqual([...GAMES, 'rps', 'flip7']);
   });
 
   test('pins every page hook, read off the rows', () => {
@@ -325,6 +362,7 @@ describe('the games registry', () => {
       fidice: 'window.__fidice',
       backgammon: 'window.__backgammon',
       briscola: 'window.__briscola',
+      uno: 'window.__uno',
       hive: 'window.__hive',
       'ui-sandbox': 'window.__uiSandbox',
     });
@@ -336,9 +374,9 @@ describe('the games registry', () => {
       'games/fidice/',
       'games/backgammon/',
       'games/briscola/',
+      'games/uno/',
       'games/hive/',
       'games/rps/',
-      'games/uno/',
       'games/flip7/',
     ]);
   });

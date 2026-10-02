@@ -771,19 +771,20 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
     e2e: gameE2e('rps'),
   },
   uno: {
-    // UNO pass-and-play (docs/design/uno.md §7): a solo page on the matrix jobs like a game.
+    // UNO (docs/design/uno.md), a shell game since its N-seat sessions: its colocated tests, the
+    // engine's positions and whole bot games, the page's reducer and painters.
     unit: ['web/games/uno/**/*.test.ts'],
     standalone: [],
     browser: false,
     needsBuild: false,
     coverage: {
-      include: ['web/games/uno/src/engine/**/*.ts', 'web/games/uno/src/ui/state.ts'],
+      include: ['web/games/uno/src/**/*.ts'],
       // Measured at the page's landing (lines/functions/statements/branches): the engine
       // 94.4/100/95.1/86.2 over hand-built positions, seeded deals and whole bot games
       // (engine.test.ts; the unreached lines are the exhaustive switches' `never` arms and the
       // never-dealt sentinel's branches), the screens reducer 91.7/100/93.3/96.0 (state.test.ts;
-      // the `never` arm). The paint (ui/render.ts) and main.ts have no unit test: e2e/uno.spec.ts
-      // drives them.
+      // the `never` arm). The include covers the whole of src/ since the shell registration; the
+      // rows bind what was measured, the paint and main.ts are e2e/uno.spec.ts's and the shell specs'.
       thresholds: {
         'web/games/uno/src/engine/**': { lines: 92, functions: 95, statements: 92, branches: 84 },
         'web/games/uno/src/ui/state.ts': { lines: 90, functions: 95, statements: 90, branches: 90 },
@@ -936,7 +937,7 @@ export const isGameSuite = (suite: Suite): suite is GameSuite =>
 /** The game suites in job order: the values of the two matrix jobs' `strategy.matrix.suite`. */
 export const GAME_SUITES: ReadonlyArray<GameSuite> = SUITE_NAMES.filter(isGameSuite);
 
-/** The rows every game gets: its folder, its parity oracles, its specs and its style goldens. Its own specs are its row's, spelled whole (Hive's is `e2e/hive.spec.ts`, no `hive-*`). */
+/** The rows every game gets: its folder, its parity oracles, its specs and its style goldens. Its own specs are its row's, spelled whole (UNO's is `e2e/uno.spec.ts`, no `uno-*`; Hive's `e2e/hive.spec.ts`). */
 const gameRules = (game: PageSuite): ReadonlyArray<Rule> => {
   const folder = FOLDER_OF[game];
   const ownSpecs = (isSoloPage(folder) ? SOLO[folder].specs : REGISTRY[folder].specs).map((glob) =>
@@ -1056,6 +1057,7 @@ export const RULES: ReadonlyArray<Rule> = [
       e2eJob('fidice'),
       e2eJob('backgammon'),
       e2eJob('briscola'),
+      e2eJob('uno'),
       e2eJob('hive'),
     ],
     why: "the shared shell specs: a describe per shell game, each run by that game's e2e job through its tag",

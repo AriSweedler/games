@@ -37,6 +37,7 @@ const DRIVERS: Readonly<Record<OnlineGame, Driver>> = {
   fidice: shellDriver('fidice'),
   backgammon: shellDriver('backgammon'),
   briscola: shellDriver('briscola'),
+  uno: shellDriver('uno'),
   hive: shellDriver('hive'),
 };
 

@@ -3,7 +3,7 @@
 // half (the join seen, the start, the opening both tables show) and the table half (the curtain's
 // words, the snapshot two tables must agree on, the saves, the handoff under the curtain, the
 // glossary), what a spec must ask the game itself once the connection has done its part, over the
-// game's own fixtures (e2e/fixtures/gin.ts, backgammon.ts, briscola.ts, fidice.ts, hive.ts). A game without
+// game's own fixtures (e2e/fixtures/gin.ts, backgammon.ts, briscola.ts, fidice.ts, uno.ts, hive.ts). A game without
 // a row is a type error here. Its own file because those fixtures import e2e/fixtures/shell.ts
 // (import-x/no-cycle). The connection itself is here too: what every online spec opens with before
 // it asks the game anything.
@@ -60,6 +60,14 @@ import {
 import type { Project } from './site.ts';
 import { WEBRTC_TIMEOUT } from './timeouts.ts';
 import { hostRoom, joinByCode, type Players } from './two-players.ts';
+import {
+  requireView as requireUno,
+  unoKey,
+  unoPlayTurn,
+  unoReveal,
+  unoSnapshot,
+  unoStartLocal,
+} from './uno.ts';
 
 /** What the online specs ask of any game once host and guest have opened their pages. */
 export type OnlineDriver = Readonly<{
@@ -496,6 +504,84 @@ const briscola: ShellDriver = {
 };
 
 /**
+ * UNO (docs/design/uno.md), briscola's N-seat shape: the host deals from the waiting room and both
+ * tables come up with no curtain; the seat's view through `window.__uno.view()` (hands private).
+ */
+const uno: ShellDriver = {
+  ...shellOnline,
+  // ui/render.ts `paintCurtain`: everyone but the seat taking the phone, told to look away.
+  curtainSub: (_first, other) => `${other}, look away`,
+  seatNames: { me: '#myName', meText: (name) => name, seated: '#guestSeatName' },
+  start: async (host, guest) => {
+    await hostStarts(host, guest);
+    await expect(host.locator('#curtainOverlay')).toBeHidden();
+    await expect(guest.locator('#curtainOverlay')).toBeHidden();
+  },
+  snapshot: unoSnapshot,
+  agree: async (host, guest) => {
+    const table = unoKey(await requireUno(host));
+    await expect.poll(() => unoSnapshot(guest)).toBe(table);
+    return table;
+  },
+  expectOpening: async (host, guest) => {
+    // Both tables agree on the deal: the host is seat 0 and the guest seat 1, round 1, nobody
+    // scored, the same card on the pile; each hand is the count the other table shows for it.
+    const opening = await requireUno(host);
+    expect(opening).toMatchObject({ round: 1, seat: 0, scores: [0, 0], winner: null });
+    expect(opening.names).toEqual([...ONLINE_NAMES]);
+    expect(['turn', 'color']).toContain(opening.phase);
+    await expect.poll(() => unoSnapshot(guest)).toBe(unoKey(opening));
+    const theirs = await requireUno(guest);
+    expect(theirs).toMatchObject({ round: 1, seat: 1, turn: opening.turn, top: opening.top });
+    expect(opening.hand).toHaveLength(opening.counts[0] ?? -1);
+    expect(theirs.hand).toHaveLength(opening.counts[1] ?? -1);
+    await expect(host.locator('#hand .tile')).toHaveCount(opening.hand.length);
+    await expect(guest.locator('#hand .tile')).toHaveCount(theirs.hand.length);
+    await expect(host.locator('#topCard')).toBeVisible();
+    await expect(guest.locator('#topCard')).toBeVisible();
+  },
+  // The host's save carries the room's one term (protocol.ts `Opts`) and the game at round 1.
+  hostSave: { seatCount: 2, game: { game: { round: 1 } } },
+  localSave: { game: { game: { round: 1 } } },
+  table: '#hand .tile',
+  curtainOffer: {
+    title:
+      "the offer is the table's alone: the curtain carries none; after a play the next seat reveals and takes it",
+    // The first seat plays its turn (through the hook); the phone goes to the other seat under the curtain.
+    toCurtain: async (page) => {
+      await unoReveal(page);
+      await unoPlayTurn(page);
+      await expect(page.locator('#curtainOverlay')).toBeVisible();
+    },
+    take: async (page) => {
+      await reveal(page);
+      return takeOffer(page, 'uno');
+    },
+  },
+  // The Rules and About copy (ui/rules.ts GLOSSARY): "wild" in the About copy lands on the Wild
+  // rule; the goal's "score" names the points, the points' "wilds" the Wild rule.
+  glossary: {
+    aboutTerm: 'wild',
+    aboutRule: 'wild',
+    innerFrom: 'goal',
+    innerTo: 'points',
+    deepLink: 'goal',
+    overlayFrom: 'points',
+    overlayTo: 'wild',
+    openRulesOverTable: async (page, url, viewport) => {
+      await unoStartLocal(page, url, viewport);
+      await unoReveal(page);
+      if (await page.locator('#rulesBtnGame').isVisible())
+        await page.locator('#rulesBtnGame').click();
+      else {
+        await page.locator('#menuBtn').click();
+        await page.locator('#menuRulesBtn').click();
+      }
+    },
+  },
+};
+
+/**
  * Hive (docs/design/hive.md §7), a two-seat shell game: the host starts from the waiting room and
  * both tables come up with no curtain and an empty board; the whole game through
  * `window.__hive.view()` (nothing is hidden).
@@ -578,6 +664,7 @@ export const SHELL_DRIVERS: Readonly<Record<ShellGame, ShellDriver>> = {
   fidice,
   backgammon,
   briscola,
+  uno,
   hive,
 };
 

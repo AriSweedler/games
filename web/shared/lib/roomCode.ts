@@ -6,7 +6,7 @@
 import { err, ok, type Result } from './result.ts';
 import type { Rng } from './rng.ts';
 
-export type Game = 'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'hive';
+export type Game = 'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'uno' | 'hive';
 
 export type RoomCodeSpec = Readonly<{
   /** Characters a generated code is drawn from. */
@@ -44,6 +44,11 @@ export const BRISCOLA_CODE_ALPHABET = GIN_CODE_ALPHABET;
 export const BRISCOLA_CODE_LENGTH = GIN_CODE_LENGTH;
 export const BRISCOLA_CODE_LENGTH_ERROR = GIN_CODE_LENGTH_ERROR;
 
+// UNO (docs/design/uno.md §9): gin's alphabet and length again, under its own prefix.
+export const UNO_PEER_PREFIX = 'uno-';
+export const UNO_CODE_ALPHABET = GIN_CODE_ALPHABET;
+export const UNO_CODE_LENGTH = GIN_CODE_LENGTH;
+export const UNO_CODE_LENGTH_ERROR = GIN_CODE_LENGTH_ERROR;
 // Hive (docs/design/hive.md §7): gin's alphabet and length again, under its own prefix.
 export const HIVE_PEER_PREFIX = 'hive-';
 export const HIVE_CODE_ALPHABET = GIN_CODE_ALPHABET;
@@ -78,6 +83,13 @@ export const ROOM_CODE: Readonly<Record<Game, RoomCodeSpec>> = {
     peerPrefix: BRISCOLA_PEER_PREFIX,
     peerCase: 'upper',
     lengthError: BRISCOLA_CODE_LENGTH_ERROR,
+  },
+  uno: {
+    alphabet: UNO_CODE_ALPHABET,
+    length: UNO_CODE_LENGTH,
+    peerPrefix: UNO_PEER_PREFIX,
+    peerCase: 'upper',
+    lengthError: UNO_CODE_LENGTH_ERROR,
   },
   hive: {
     alphabet: HIVE_CODE_ALPHABET,
@@ -119,6 +131,11 @@ const TYPED_CODE: Readonly<Record<Game, (raw: string) => string>> = {
       .toUpperCase()
       .replace(/[^A-Z]/g, '')
       .slice(0, BRISCOLA_CODE_LENGTH),
+  uno: (raw) =>
+    raw
+      .toUpperCase()
+      .replace(/[^A-Z]/g, '')
+      .slice(0, UNO_CODE_LENGTH),
   hive: (raw) =>
     raw
       .toUpperCase()

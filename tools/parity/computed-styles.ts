@@ -647,6 +647,64 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.trick-cards .who',
     '#endgameScreen h1',
   ],
+  // UNO (docs/design/uno.md; page.ts, ui/render.ts): after the shell's 43, the home's subtitle and
+  // the names box, the table's top bar (the names strip, the direction, the connection dot), the
+  // seats row (the seat to move, mine), the pile (the draw count, the top card, the colour in
+  // play), the colour picker, the status line, the hand's tiles by colour and kind (lit, dimmed),
+  // the controls and the result sheet's score rows.
+  uno: [
+    ...SHELL_SELECTORS,
+    '.masthead .subtitle',
+    '.card-box',
+    '.topbar',
+    '.names-strip',
+    '#myName',
+    '#oppName',
+    '.direction',
+    '#oppDot',
+    '.conn-dot.on',
+    '.seats',
+    '.seat',
+    '.seat.current',
+    '.seat.mine',
+    '.seat-name',
+    '.seat-count',
+    '.pile',
+    '.draw-pile',
+    '#drawCount',
+    '.top-card',
+    '.top-card .tile',
+    '.color-dot',
+    '.color-dot[data-color="red"]',
+    '.color-dot[data-color="yellow"]',
+    '.color-dot[data-color="green"]',
+    '.color-dot[data-color="blue"]',
+    '.color-picker',
+    '.color-picker .swatch',
+    '.swatch[data-color="red"]',
+    '.swatch[data-color="blue"]',
+    '.status-line',
+    '.hand',
+    '.hand .tile',
+    '.tile span',
+    '.tile.playable',
+    '.tile.dim',
+    '.tile[data-color="red"]',
+    '.tile[data-color="yellow"]',
+    '.tile[data-color="green"]',
+    '.tile[data-color="blue"]',
+    '.tile[data-color="wild"]',
+    '.tile[data-kind="number"]',
+    '.tile[data-kind="skip"]',
+    '.tile[data-kind="wild4"]',
+    '.controls',
+    '#drawBtn',
+    '#passBtn',
+    '.score-list',
+    '.score-row',
+    '.score-row.winner',
+    '#endgameScreen h1',
+  ],
   // Hive (docs/design/hive.md §7; page.ts, ui/render.ts): after the shell's 43, the home's subtitle
   // and the names box, the table's top bar (the names strip, the connection dot), the board and
   // its cells (empty, White's, Black's, lit, the letter and a stack's badge), the two hands and
@@ -1051,6 +1109,13 @@ const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
     // No pass-the-phone field beyond the names (the host card's terms apply, D7).
     localValues: {},
   },
+  uno: {
+    submenuShot: null,
+    localModeShot: 'home: play tab, pass the phone',
+    curtainShot: 'local: dealt, curtain up',
+    // Two players: the stepper's hidden count, already at its default (setField leaves it).
+    localValues: { localPlayersCount: '2' },
+  },
   hive: {
     submenuShot: null,
     localModeShot: 'home: play tab, pass the phone',
@@ -1060,11 +1125,13 @@ const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
   },
 };
 
-/** An input is filled; a select has its option chosen. */
+/** An input is filled; a select has its option chosen; a field already at the value is left (UNO's stepper keeps its count in a hidden input). */
 const setField = async (page: Page, id: string, value: string): Promise<void> => {
   const field = page.locator(`#${id}`);
   // A string expression, as READ_SCRIPT is: this file is node-side and has no DOM types.
   const tag = await page.evaluate<string>(`document.getElementById(${JSON.stringify(id)}).tagName`);
+  const now = await page.evaluate<string>(`document.getElementById(${JSON.stringify(id)}).value`);
+  if (now === value) return;
   if (tag === 'SELECT') await field.selectOption(value);
   else await field.fill(value);
 };
@@ -1751,6 +1818,86 @@ const driveBriscola = async (page: Page, shot: Shot): Promise<void> => {
   await snap('home: after the games');
 };
 
+/**
+ * One step of UNO's seat to move through the hook (`__uno.view()` -> `__uno.act(a)`): a colour
+ * named, else a number card that plays, else any card that plays, else a draw or a pass; true once
+ * the turn has left `turn` (or the round is over).
+ */
+const UNO_STEP = `((turn) => {
+  const u = window.__uno;
+  const v = u.view();
+  if (v === null || v.turn !== turn || v.phase === 'roundOver' || v.phase === 'gameOver') return true;
+  if (v.phase === 'color') { u.act({ type: 'color', color: 'red' }); return false; }
+  const n = v.hand.find((c) => c.kind === 'number' && v.playable.includes(c.id));
+  const id = n ? n.id : v.playable[0];
+  if (id !== undefined) u.act({ type: 'play', id });
+  else u.act({ type: v.phase === 'drawn' ? 'pass' : 'draw' });
+  return false;
+})`;
+
+/** UNO's seat to move plays its turn out through the hook, at most twelve steps. */
+const unoPlayTurn = async (page: Page): Promise<void> => {
+  const turn = await page.evaluate<number>('window.__uno.view().turn');
+  const step = async (left: number): Promise<void> => {
+    if (await page.evaluate<boolean>(`${UNO_STEP}(${String(turn)})`)) return;
+    if (left === 0) throw new Error(`uno: seat ${String(turn)} kept the turn`);
+    await step(left - 1);
+  };
+  await step(12);
+};
+
+/**
+ * UNO (docs/design/uno.md), after the shell (driveShell, which dealt a two-player game under the
+ * curtain): the seat's hand, a turn played through the hook and the curtain for the other seat, the
+ * second seat's hand, the rules and history sheets over the table, then a three-seat and a
+ * four-seat table dealt for the seats row in its other shapes.
+ */
+const driveUno = async (page: Page, shot: Shot): Promise<void> => {
+  const reveal = async (): Promise<void> => {
+    if (await page.locator('#curtainOverlay').isVisible()) await click(page, '#curtainBtn');
+  };
+  const leaveTable = async (): Promise<void> => {
+    await click(page, '#leaveBtn');
+    await visible(page, '#homeScreen');
+  };
+  await driveShell(page, shot, 'uno');
+
+  // ---- the first turn ----
+  await click(page, '#curtainBtn');
+  await shot('local: dealt, my hand');
+  await unoPlayTurn(page);
+  await visible(page, '#curtainOverlay');
+  await shot('local: a turn played, curtain for the other seat');
+  await click(page, '#curtainBtn');
+  await shot('local: the second seat to play');
+
+  // ---- the sheets over the table ----
+  await click(page, '#rulesBtnGame');
+  await shot('table: rules sheet');
+  await page.keyboard.press('Escape');
+  await click(page, '#historyBtn');
+  await shot('table: history sheet');
+  await page.keyboard.press('Escape');
+  await leaveTable();
+
+  // ---- three and four seats: the seats row in its other shapes ----
+  await click(page, '#localPlayersCountInc');
+  await fill(page, '#p3NameInput', 'Cara');
+  await click(page, '#localBtn');
+  await visible(page, '#curtainOverlay');
+  await reveal();
+  await shot('local 3p: dealt');
+  await leaveTable();
+  await click(page, '#localPlayersCountInc');
+  await fill(page, '#p4NameInput', 'Dan');
+  await click(page, '#localBtn');
+  await visible(page, '#curtainOverlay');
+  await reveal();
+  await shot('local 4p: dealt');
+  await leaveTable();
+  await shot('home: after the games');
+};
+
 /** Hive's seat to move plays its first legal action through the hook (`__hive.legal()` -> `__hive.act(a)`). */
 const HIVE_STEP = `(() => { const h = window.__hive; const a = h.legal()[0]; if (a) h.act(a); })()`;
 
@@ -1799,6 +1946,7 @@ const DRIVERS: Readonly<Record<Game, Driver>> = {
   fidice: driveFidice,
   backgammon: driveBackgammon,
   briscola: driveBriscola,
+  uno: driveUno,
   hive: driveHive,
 };
 
