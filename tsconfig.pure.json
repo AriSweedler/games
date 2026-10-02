@@ -46,6 +46,8 @@
     "web/shared/ui/keyed*.ts",
     "web/shared/ui/stories*.ts",
     "web/shared/ui/history*.ts",
-    "web/shared/ui/recentGames*.ts"
+    "web/shared/ui/recentGames*.ts",
+    // The number stepper's binder and painter (web/shared/ui/stepper.ts): DOM, as home.ts is.
+    "web/shared/ui/stepper*.ts"
   ]
 }

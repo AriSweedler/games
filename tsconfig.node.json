@@ -76,6 +76,8 @@
     "web/games/gin-rummy/src/**/*.ts",
     "web/games/backgammon/src/**/*.ts",
     "web/games/briscola/src/**/*.ts",
+    // UNO's shell tree (docs/design/uno.md §9), as briscola's: its DOM modules follow the globs below out.
+    "web/games/uno/src/**/*.ts",
     "web/raw-imports.d.ts",
     "web/shared/edge/storage.ts",
     "web/shared/edge/prefs.ts",
@@ -105,6 +107,7 @@
     "web/shared/ui/stories*.ts",
     "web/shared/ui/history*.ts",
     "web/shared/ui/recentGames*.ts",
+    "web/shared/ui/stepper*.ts",
     "web/games/*/src/ui/render*.ts",
     "web/games/*/src/ui/home*.ts",
     "web/games/*/src/ui/local*.ts",

@@ -2,13 +2,19 @@
 // `ids.ts`; §5 B1): what the shared painters and binders (shellPaint.ts, curtain.ts, and the home
 // binder B2 brings) reach by id, and what the shell reducer's screens and waiting rooms are. Every
 // page (web/games/gin-rummy/index.html, web/games/fidice/index.html, web/games/backgammon/index.html,
-// web/games/briscola/index.html) carries every one of them, under these exact ids; test/dist/shell-ids.test.ts asserts it on the built pages, so a page that
+// web/games/briscola/index.html, web/games/uno/index.html) carries every one of them, under these exact ids; test/dist/shell-ids.test.ts asserts it on the built pages, so a page that
 // renames one fails the site suite before a painter fails at boot. Ids a game alone has (gin's
 // scorer, backgammon's board, the menu sheet) are not here. Pure: a list, importable from node.
 import type { Game } from '../lib/roomCode.ts';
 
 /** The games whose page is the shell's markup: every game, since M5 of docs/design/fidice-shell-adoption.md (GAMES order). */
-export const SHELL_GAMES: ReadonlyArray<Game> = ['gin-rummy', 'fidice', 'backgammon', 'briscola'];
+export const SHELL_GAMES: ReadonlyArray<Game> = [
+  'gin-rummy',
+  'fidice',
+  'backgammon',
+  'briscola',
+  'uno',
+];
 
 export const SHELL_IDS: ReadonlyArray<string> = [
   // The page root and the screens (`SCREENS` in each game's ui/state.ts names these five).

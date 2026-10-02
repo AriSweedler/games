@@ -5,6 +5,7 @@ import { COLORS, idsOf, makeDeck, type Card, type Cards } from './cards.ts';
 import {
   DEFAULT_TARGET,
   HAND_SIZE,
+  MAX_PLAYERS,
   apply,
   cardCount,
   cardName,
@@ -65,6 +66,15 @@ describe('deal (§3)', () => {
     ).toBe(108);
     expect(game.round).toBe(1);
     expect(game.scores).toEqual([0, 0, 0]);
+  });
+
+  test('twelve players, the largest table: 84 cards dealt, the opener, a stock of 23', () => {
+    expect(MAX_PLAYERS).toBe(12);
+    const names = Array.from({ length: MAX_PLAYERS }, (_, i) => `P${String(i + 1)}`);
+    const game = deal(names, mulberry32(4));
+    expect(game.hands.map((h) => h.length)).toEqual(names.map(() => HAND_SIZE));
+    expect(game.draw.length + game.discard.length).toBe(108 - 84);
+    expect(cardCount(game)).toBe(108);
   });
 
   test('the opener is never a Wild Draw Four, over many shuffles; its colour is the active one', () => {
