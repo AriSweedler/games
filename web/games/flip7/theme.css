@@ -1,30 +1,106 @@
 /* Flip 7 (docs/design/flip7.md §8): the shell's home, waiting rooms, curtain and sheets
    (web/shared/styles/shell.css over tokens.css, the seat count its shared stepper) with nothing
-   of its own but the accent, then the
-   table. The table puts this phone's seat in the foreground (its cards large, at the bottom) and
-   every other seat in a background grid above it: up to four across at phone width, so eleven
-   opponents make three rows, the cards shrinking with the count (`#others[data-count]`) while the
-   names and scores stay legible. Every card is face up, a plain tile coloured by its kind (the
-   base pack is deliberately plain); `data-card` names each one for a flip to find. A busted seat
-   greys out and stays until the next deal. Sideways and wide, the grid takes more columns
-   (body[data-layout], docs/design/layout-buckets.md). Prettier formats this file. */
+   of its own but the accent, then the table, which has a palette of its own (the owner,
+   2026-10-02: "flip7 colorscheme is no good. Do better there"): the `--f7-*` tokens below, over
+   the shell's dark chrome. The table is a warm, deep felt with a soft vignette so the cards pop;
+   the seats sit on it as translucent slabs. Every card is face up: a number card's face takes its
+   value's hue, a thirteen-step rainbow from 0 (grey) through violet, indigo, blue, teal, green,
+   lime, yellow, amber, orange, red and crimson to 12 (magenta), each with a cream numeral at 4.5:1
+   or better and its border tinted lighter by the same hue, so a glance tells 7 from 11; the action
+   cards differ from the numbers by the shape of their colour (Freeze an icy pale blue with a dark
+   glyph, Flip Three a bright orange, Second Chance a rose) and the modifiers (+2 … +10, ×2) are a
+   gold family. The table puts this phone's seat in the foreground (its cards large, at the bottom)
+   and every other seat in a background grid above it, up to four across at phone width, the cards
+   shrinking with the count (`#others[data-count]`) while the names and scores stay legible; the
+   two differ by scale and a subtle dimming, not by colour. A busted seat washes to a desaturated
+   grey under a red badge and stays until the next deal; a Flip 7 glows gold.
+
+   The motion (src/ui/motion.ts): a dealt card turns face-up where it lies (`.tile.dealt`: its back,
+   then its face, `--i` its place in the paint's stagger), the card that busts its seat lands red
+   once turned (`.tile.bust-card`) and the line washes grey after (`.seat.busting`), a fresh Flip 7
+   swells gold (`.seat.flip7-now`), the scores come up a row at a time (`.scores li.reveal`), and
+   the pause sheet rises only after the beat (`#pauseOverlay`), so what happened is read before
+   Continue is offered. Every duration is a `--f7-*-ms` on the root, written by motion.ts
+   `writeClock` from its one table so the TS and the CSS agree; the reduced-motion block here
+   carries the same stills as its `REDUCED_DURATIONS` for a page the script has not reached.
+   Sideways and wide, the grid takes more columns (body[data-layout], docs/design/layout-buckets.md).
+   Prettier formats this file. */
 :root {
   --accent: #e8c547;
   --accent-dark: #c9a52c;
   --emphasis: var(--accent);
-  --num: #3b6fd8;
-  --num-text: #fff;
-  --mod: #e8c547;
-  --mod-text: #241d05;
-  --act: #d64578;
-  --act-text: #fff;
-  --second: #3fa66b;
+
+  /* ---- the table's palette ---- */
+  --f7-felt-1: #4b6137;
+  --f7-felt-2: #2c4129;
+  --f7-felt-3: #172015;
+  --f7-felt: radial-gradient(
+    ellipse at 50% 18%,
+    var(--f7-felt-1) 0%,
+    var(--f7-felt-2) 52%,
+    var(--f7-felt-3) 100%
+  );
+  --f7-vignette: inset 0 0 120px rgb(0 0 0 / 45%);
+  --f7-seat: rgb(8 16 10 / 42%);
+  --f7-seat-edge: rgb(255 255 255 / 7%);
+  --f7-ink: #fff6e0;
+  --f7-back: #1d2a44;
+  --f7-back-edge: #46608f;
+  /* The number faces, 0 to 12: each at 4.5:1 or better against --f7-ink. */
+  --f7-n0: #596069;
+  --f7-n1: #6b3fb3;
+  --f7-n2: #4149b5;
+  --f7-n3: #2b67c9;
+  --f7-n4: #107b79;
+  --f7-n5: #287f3f;
+  --f7-n6: #517a10;
+  --f7-n7: #846d00;
+  --f7-n8: #a26200;
+  --f7-n9: #c14d0c;
+  --f7-n10: #c62d2d;
+  --f7-n11: #a01a45;
+  --f7-n12: #a3238e;
+  /* The action cards and the modifiers: dark glyphs on light faces. */
+  --f7-freeze: #cfe9f5;
+  --f7-freeze-ink: #0d3b55;
+  --f7-flip3: #f07a1f;
+  --f7-flip3-ink: #2b1300;
+  --f7-second: #ee6fa3;
+  --f7-second-ink: #3b0a22;
+  --f7-mod: #e2b53a;
+  --f7-mod-ink: #2a1e00;
+  --f7-gold: #f5c84a;
+  --f7-gold-glow: rgb(245 200 74 / 55%);
+  --f7-danger: #e0443f;
+  --f7-danger-glow: rgb(224 68 63 / 60%);
+
+  /* ---- the sizes ---- */
   --tile-h: 52px;
   --tile-w: 40px;
   --tile-font: 1.15rem;
   --mini-h: 30px;
   --mini-w: 22px;
   --mini-font: 0.8rem;
+
+  /* ---- the clock (motion.ts DURATIONS; writeClock overwrites these inline) ---- */
+  --f7-flip-ms: 360ms;
+  --f7-gap-ms: 140ms;
+  --f7-land-ms: 280ms;
+  --f7-beat-ms: 720ms;
+  --f7-row-ms: 260ms;
+  --f7-row-gap-ms: 90ms;
+  --f7-glow-ms: 900ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --f7-flip-ms: 1ms;
+    --f7-gap-ms: 0ms;
+    --f7-land-ms: 1ms;
+    --f7-beat-ms: 300ms;
+    --f7-row-ms: 1ms;
+    --f7-row-gap-ms: 0ms;
+    --f7-glow-ms: 1ms;
+  }
 }
 
 /* ---- the home: the third to twelfth names under the shared stepper ---- */
@@ -47,6 +123,8 @@
   padding: 10px 12px 16px;
   min-height: 100dvh;
   box-sizing: border-box;
+  background: var(--f7-felt);
+  box-shadow: var(--f7-vignette);
 }
 #tableScreen.hidden {
   display: none;
@@ -119,26 +197,36 @@
   --mini-font: 0.62rem;
 }
 .seat {
-  background: var(--card);
+  background: var(--f7-seat);
   border-radius: var(--radius-inner);
   padding: 8px 10px;
   display: grid;
   gap: 6px;
-  border: 2px solid transparent;
+  border: 2px solid var(--f7-seat-edge);
   min-width: 0;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 25%);
 }
+/* The background: the same slab, smaller and a shade dimmer. */
 .others .seat {
   padding: 6px 7px;
   gap: 4px;
-  opacity: 0.88;
+  opacity: 0.82;
 }
 .seat.current {
   border-color: var(--go);
   opacity: 1;
 }
+/* The bust: a desaturated grey wash over the line, the red badge above it. */
 .seat.status-busted .line {
-  filter: grayscale(1);
-  opacity: 0.45;
+  filter: grayscale(1) brightness(0.7);
+  opacity: 0.5;
+}
+/* The Flip 7: a gold ring and glow around the seat. */
+.seat.status-flip7 {
+  border-color: var(--f7-gold);
+  box-shadow:
+    0 0 0 1px var(--f7-gold),
+    0 0 22px var(--f7-gold-glow);
 }
 .seat-head {
   display: flex;
@@ -184,24 +272,28 @@
   white-space: nowrap;
 }
 .status-busted .seat-status {
-  background: var(--danger);
+  background: var(--f7-danger);
   color: #fff;
 }
 .status-flip7 .seat-status {
-  background: var(--go);
-  color: var(--go-text);
+  background: var(--f7-gold);
+  color: var(--f7-mod-ink);
 }
 .line {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   min-height: var(--mini-h);
+  perspective: 600px;
 }
 .seat.me .line {
   gap: 6px;
   min-height: var(--tile-h);
 }
+/* A card: its face (`--face`) and its ink, the border the face's own hue lightened. */
 .tile {
+  --face: var(--f7-n0);
+  --ink: var(--f7-ink);
   min-width: var(--mini-w);
   height: var(--mini-h);
   padding: 0 3px;
@@ -211,38 +303,239 @@
   place-items: center;
   font-weight: 800;
   font-size: var(--mini-font);
-  background: var(--num);
-  color: var(--num-text);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 40%);
+  background: var(--face);
+  color: var(--ink);
+  border: 1px solid color-mix(in oklab, var(--face), white 32%);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 45%);
+  transform-style: preserve-3d;
 }
 .seat.me .tile {
   min-width: var(--tile-w);
   height: var(--tile-h);
   padding: 0 8px;
   border-radius: 8px;
+  border-width: 2px;
   font-size: var(--tile-font);
+}
+.tile[data-value='0'] {
+  --face: var(--f7-n0);
+}
+.tile[data-value='1'] {
+  --face: var(--f7-n1);
+}
+.tile[data-value='2'] {
+  --face: var(--f7-n2);
+}
+.tile[data-value='3'] {
+  --face: var(--f7-n3);
+}
+.tile[data-value='4'] {
+  --face: var(--f7-n4);
+}
+.tile[data-value='5'] {
+  --face: var(--f7-n5);
+}
+.tile[data-value='6'] {
+  --face: var(--f7-n6);
+}
+.tile[data-value='7'] {
+  --face: var(--f7-n7);
+}
+.tile[data-value='8'] {
+  --face: var(--f7-n8);
+}
+.tile[data-value='9'] {
+  --face: var(--f7-n9);
+}
+.tile[data-value='10'] {
+  --face: var(--f7-n10);
+}
+.tile[data-value='11'] {
+  --face: var(--f7-n11);
+}
+.tile[data-value='12'] {
+  --face: var(--f7-n12);
 }
 .tile[data-kind='plus'],
 .tile[data-kind='times2'] {
-  background: var(--mod);
-  color: var(--mod-text);
+  --face: var(--f7-mod);
+  --ink: var(--f7-mod-ink);
 }
-.tile[data-kind='freeze'],
+.tile[data-kind='freeze'] {
+  --face: var(--f7-freeze);
+  --ink: var(--f7-freeze-ink);
+}
 .tile[data-kind='flip3'] {
-  background: var(--act);
-  color: var(--act-text);
+  --face: var(--f7-flip3);
+  --ink: var(--f7-flip3-ink);
 }
 .tile[data-kind='second'] {
-  background: var(--second);
-  color: #fff;
+  --face: var(--f7-second);
+  --ink: var(--f7-second-ink);
 }
 .seat.me {
   margin-top: auto;
-  border-color: var(--card-2);
+  border-color: rgb(255 255 255 / 14%);
 }
 .seat.me.current {
   border-color: var(--go);
 }
+
+/* ---- the motion (src/ui/motion.ts) ---- */
+
+/* A dealt card turns where it lies: its back for the first half, its face for the second. */
+.tile.dealt {
+  animation: f7-flip var(--f7-flip-ms) cubic-bezier(0.4, 0, 0.2, 1)
+    calc(var(--i, 0) * var(--f7-gap-ms)) both;
+}
+@keyframes f7-flip {
+  0% {
+    transform: rotateY(0deg) translateY(-4px);
+    background: var(--f7-back);
+    border-color: var(--f7-back-edge);
+    color: transparent;
+  }
+  49.9% {
+    transform: rotateY(90deg) translateY(-8px) scale(1.08);
+    background: var(--f7-back);
+    border-color: var(--f7-back-edge);
+    color: transparent;
+  }
+  50% {
+    transform: rotateY(-90deg) translateY(-8px) scale(1.08);
+    background: var(--face);
+    border-color: color-mix(in oklab, var(--face), white 32%);
+    color: var(--ink);
+  }
+  100% {
+    transform: rotateY(0deg) translateY(0) scale(1);
+    background: var(--face);
+    border-color: color-mix(in oklab, var(--face), white 32%);
+    color: var(--ink);
+  }
+}
+/* The card that busts its seat: once turned, it lands red and stays ringed. */
+.tile.bust-card {
+  animation:
+    f7-flip var(--f7-flip-ms) cubic-bezier(0.4, 0, 0.2, 1) calc(var(--i, 0) * var(--f7-gap-ms)) both,
+    f7-bust-land var(--f7-land-ms) ease-out calc(var(--i, 0) * var(--f7-gap-ms) + var(--f7-flip-ms))
+      both;
+}
+@keyframes f7-bust-land {
+  0% {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 45%);
+  }
+  40% {
+    transform: translateY(3px) scale(1.1);
+    box-shadow: 0 0 0 4px var(--f7-danger);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow:
+      0 0 0 3px var(--f7-danger),
+      0 0 18px var(--f7-danger-glow);
+  }
+}
+/* A fresh bust: the line stays in colour through the landing, then washes grey. */
+.seat.status-busted.busting .line {
+  filter: none;
+  opacity: 1;
+  animation: f7-wash var(--f7-land-ms) ease-in var(--f7-beat-ms) both;
+}
+@keyframes f7-wash {
+  to {
+    filter: grayscale(1) brightness(0.7);
+    opacity: 0.5;
+  }
+}
+/* A fresh Flip 7: the gold swells round the seat and runs along its seven cards. */
+.seat.flip7-now {
+  animation: f7-glow var(--f7-glow-ms) ease-out var(--f7-flip-ms) both;
+}
+@keyframes f7-glow {
+  0% {
+    box-shadow: 0 0 0 0 var(--f7-gold);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px var(--f7-gold),
+      0 0 48px var(--f7-gold-glow);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px var(--f7-gold),
+      0 0 22px var(--f7-gold-glow);
+  }
+}
+.seat.flip7-now .tile {
+  animation: f7-shine 480ms ease-out calc(var(--f7-flip-ms) + var(--n, 0) * 70ms) both;
+}
+/* The seventh card is new to the paint: it turns first, then shines with the rest. */
+.seat.flip7-now .tile.dealt {
+  animation:
+    f7-flip var(--f7-flip-ms) cubic-bezier(0.4, 0, 0.2, 1) calc(var(--i, 0) * var(--f7-gap-ms)) both,
+    f7-shine 480ms ease-out
+      calc(var(--i, 0) * var(--f7-gap-ms) + var(--f7-flip-ms) + var(--n, 0) * 70ms) both;
+}
+.seat.flip7-now .tile:nth-child(2) {
+  --n: 1;
+}
+.seat.flip7-now .tile:nth-child(3) {
+  --n: 2;
+}
+.seat.flip7-now .tile:nth-child(4) {
+  --n: 3;
+}
+.seat.flip7-now .tile:nth-child(5) {
+  --n: 4;
+}
+.seat.flip7-now .tile:nth-child(6) {
+  --n: 5;
+}
+.seat.flip7-now .tile:nth-child(n + 7) {
+  --n: 6;
+}
+@keyframes f7-shine {
+  40% {
+    transform: translateY(-6px);
+    box-shadow:
+      0 0 0 2px var(--f7-gold),
+      0 6px 14px var(--f7-gold-glow);
+  }
+}
+/* The pause sheet rises after the beat: the card's turn and its landing are read first. */
+#pauseOverlay:not(.hidden) {
+  animation: f7-fade-in 200ms ease-out var(--f7-beat-ms) both;
+}
+#pauseOverlay:not(.hidden) .pause-sheet {
+  animation: f7-rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--f7-beat-ms) both;
+}
+@keyframes f7-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes f7-rise {
+  from {
+    transform: translateY(24px) scale(0.98);
+    opacity: 0;
+  }
+}
+/* The round's end: the panel comes up after the beat, its rows one by one. */
+.result:not(.hidden) {
+  animation: f7-fade-in 240ms ease-out var(--f7-beat-ms) both;
+}
+.scores li.reveal {
+  animation: f7-row-in var(--f7-row-ms) cubic-bezier(0.2, 0.8, 0.2, 1)
+    calc(var(--f7-beat-ms) + var(--i, 0) * var(--f7-row-gap-ms)) both;
+}
+@keyframes f7-row-in {
+  from {
+    transform: translateX(-12px);
+    opacity: 0;
+  }
+}
+
 .status-line {
   min-height: 1.4em;
   text-align: center;
@@ -259,9 +552,18 @@
   min-height: 52px;
   font-size: 1.1rem;
 }
+/* Hit, the in-game call: the accent gold under dark ink (the start buttons stay the shell's --go). */
+.btn-primary {
+  background: var(--accent);
+  color: var(--f7-mod-ink);
+}
+.btn-primary:hover {
+  background: var(--accent-dark);
+}
 .target,
 .result {
-  background: var(--card);
+  background: var(--f7-seat);
+  border: 2px solid var(--f7-seat-edge);
   border-radius: var(--radius-inner);
   padding: 14px;
   display: flex;
@@ -305,7 +607,7 @@
   display: flex;
   justify-content: space-between;
   padding: 6px 10px;
-  background: var(--card-2);
+  background: rgb(255 255 255 / 6%);
   border-radius: 8px;
 }
 

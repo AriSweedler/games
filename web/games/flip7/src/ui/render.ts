@@ -4,11 +4,15 @@
 // sheets) and ui/home.ts's; the table is this game's: every seat's line as plain tiles with its
 // status and what it would bank, the seat acting lit, Hit and Stay for the seat whose turn it is,
 // the taker picker for the seat that flipped an action card, and the scores with Next round (the
-// host's) or Play again once a round or the game is over.
+// host's) or Play again once a round or the game is over. The anticipation is ui/motion.ts's: the
+// table the last paint left is read back before the seats repaint, and the cards, busts, Flip 7s
+// and scores new to this paint carry the classes theme.css animates (`dealt`, `bust-card`,
+// `busting`, `flip7-now`, `reveal`); the clock they run on is written on the root once at bind.
 import {
   closestFrom,
   dataOf,
   listenId,
+  queryAllIn,
   requireId,
   safeHtml,
   setAttr,
@@ -22,6 +26,7 @@ import {
   type PageLike,
   type SafeHtml,
 } from '../../../../shared/edge/dom.ts';
+import { reducedMotion } from '../../../../shared/edge/motion.ts';
 import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
@@ -41,6 +46,14 @@ import { lineScore } from '../engine/engine.ts';
 import { actorOf, nameOf, type Seat, type Status, type View } from '../engine/index.ts';
 import { aboutHtml } from './about.ts';
 import { bindHome, paintHome } from './home.ts';
+import {
+  NO_MOMENTS,
+  durationsFor,
+  moments,
+  readPainted,
+  writeClock,
+  type Moments,
+} from './motion.ts';
 import { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
 import { SCREENS, handoffLabel, listNames, myTurn, type App, type Intent } from './state.ts';
 
@@ -107,21 +120,37 @@ const toggleHandoffUnderCurtain = (doc: DocumentLike, v: View | null): void => {
 
 // ---- the table ------------------------------------------------------------------------------
 
-/** One card, face up: its kind's colour and its value; `data-card` is its id, so a flip can find the card it deals. */
-const tile = (card: Card): SafeHtml =>
-  safeHtml`<span class="tile" data-kind="${card.kind}" data-card="${card.id}" aria-label="${cardName(card)}">${cardName(card)}</span>`;
+/** A number card's value for its face's hue (`.tile[data-value]`); an action or modifier has none. */
+const valueOf = (card: Card): string =>
+  card.kind === 'number' && card.value !== null ? String(card.value) : '';
+
+/**
+ * One card, face up: its kind (and a number's value) for its face's colour; `data-card` is its id.
+ * A card new to this paint turns face-up where it lies (`dealt`, `--i` its place in the stagger),
+ * red when it is the one that busted its seat (`bust-card`).
+ */
+const tile = (card: Card, m: Moments): SafeHtml => {
+  const k = m.dealt.get(card.id);
+  const name = cardName(card);
+  if (k === undefined)
+    return safeHtml`<span class="tile" data-kind="${card.kind}" data-value="${valueOf(card)}" data-card="${card.id}" aria-label="${name}">${name}</span>`;
+  const stagger = `--i: ${String(k)}`;
+  return m.bustCards.has(card.id)
+    ? safeHtml`<span class="tile dealt bust-card" style="${stagger}" data-kind="${card.kind}" data-value="${valueOf(card)}" data-card="${card.id}" aria-label="${name}">${name}</span>`
+    : safeHtml`<span class="tile dealt" style="${stagger}" data-kind="${card.kind}" data-value="${valueOf(card)}" data-card="${card.id}" aria-label="${name}">${name}</span>`;
+};
 
 /**
  * One seat: its name, its status badge, its total and this round's line score, and its cards; a
  * busted seat stays on the table greyed out with its Bust badge until the next deal. The foreground
  * seat (this phone's) and the background ones share the markup; the theme sizes them (`.seat.me`,
- * `.others .seat`).
+ * `.others .seat`). `m` names the cards and moments new to this paint (NO_MOMENTS for a still).
  */
-export const seatHtml = (seat: Seat, index: number, v: View): SafeHtml => {
+export const seatHtml = (seat: Seat, index: number, v: View, m: Moments = NO_MOMENTS): SafeHtml => {
   const label = STATUS_LABEL[seat.status];
   const tiles: SafeHtml = {
     kind: 'safe-html',
-    markup: seat.line.map((card) => tile(card).markup).join(''),
+    markup: seat.line.map((card) => tile(card, m).markup).join(''),
   };
   return safeHtml`<div class="seat-head"><span class="seat-name">${seat.name}</span>${label === '' ? safeHtml`` : safeHtml`<span class="seat-status">${label}</span>`}<span class="seat-score" title="Total">${String(v.scores[index] ?? 0)}</span><span class="seat-bank" title="This round">+${String(lineScore(seat))}</span></div><div class="line">${tiles}</div>`;
 };
@@ -130,8 +159,14 @@ export const seatHtml = (seat: Seat, index: number, v: View): SafeHtml => {
 const seatClass = (seat: Seat, index: number, v: View): string =>
   `seat${actorOf(v) === index && v.phase.kind !== 'roundOver' ? ' current' : ''} status-${seat.status}`;
 
+/** The moments that are the seat's own this paint: the grey wash of a fresh bust, the gold of a fresh Flip 7. */
+const markMoments = (el: Element, index: number, m: Moments): void => {
+  toggleClass(el, 'busting', m.busting.has(index));
+  toggleClass(el, 'flip7-now', m.flip7.has(index));
+};
+
 /** The other seats in seat order from the one after mine, each a small card row in the background grid. */
-const paintOthers = (el: Element, v: View): void => {
+const paintOthers = (el: Element, v: View, m: Moments): void => {
   const n = v.seats.length;
   const order = Array.from({ length: n - 1 }, (_, k) => (v.me + 1 + k) % n);
   setAttr(el, 'data-count', String(order.length));
@@ -142,31 +177,39 @@ const paintOthers = (el: Element, v: View): void => {
         const seat = v.seats[i];
         return seat === undefined
           ? ''
-          : safeHtml`<li class="${seatClass(seat, i, v)}" data-seat="${String(i)}">${seatHtml(seat, i, v)}</li>`
+          : safeHtml`<li class="${seatClass(seat, i, v)}" data-seat="${String(i)}">${seatHtml(seat, i, v, m)}</li>`
               .markup;
       })
       .join(''),
   });
+  queryAllIn(el, '.seat[data-seat]').forEach((li) => {
+    markMoments(li, Number(dataOf(li, 'seat')), m);
+  });
 };
 
 /** This phone's own seat in the foreground. */
-const paintMine = (el: Element, v: View): void => {
+const paintMine = (el: Element, v: View, m: Moments): void => {
   const seat = v.seats[v.me];
   if (seat === undefined) return;
   setAttr(el, 'class', `${seatClass(seat, v.me, v)} me`);
   setAttr(el, 'data-seat', String(v.me));
-  setHtml(el, seatHtml(seat, v.me, v));
+  setHtml(el, seatHtml(seat, v.me, v, m));
+  markMoments(el, v.me, m);
 };
 
-const paintScores = (el: Element, v: View): void => {
+/** The round's scores: a row a seat; the rows come up one by one (`reveal`, `--i`) the paint the panel rises. */
+const paintScores = (el: Element, v: View, reveal: boolean): void => {
   setHtml(el, {
     kind: 'safe-html',
     markup: v.seats
-      .map(
-        (seat, i) =>
-          safeHtml`<li><span>${seat.name}</span><strong>${String(v.scores[i] ?? 0)}</strong></li>`
-            .markup,
-      )
+      .map((seat, i) => {
+        const name = seat.name;
+        const total = String(v.scores[i] ?? 0);
+        return reveal
+          ? safeHtml`<li class="reveal" style="${`--i: ${String(i)}`}"><span>${name}</span><strong>${total}</strong></li>`
+              .markup
+          : safeHtml`<li><span>${name}</span><strong>${total}</strong></li>`.markup;
+      })
       .join(''),
   });
 };
@@ -216,8 +259,10 @@ const paintTable = (doc: DocumentLike, app: App): void => {
     requireId(doc, 'roundLabel'),
     v.opening > 0 ? `Round ${String(v.round)} · dealing` : `Round ${String(v.round)}`,
   );
-  paintOthers(requireId(doc, 'others'), v);
-  paintMine(requireId(doc, 'mySeat'), v);
+  // What this paint adds to the table the last one left: read before the seats repaint.
+  const m = moments(readPainted(doc), v);
+  paintOthers(requireId(doc, 'others'), v, m);
+  paintMine(requireId(doc, 'mySeat'), v, m);
   const turn = v.phase.kind === 'turn';
   const hit = requireId(doc, 'hitBtn');
   const stay = requireId(doc, 'stayBtn');
@@ -235,7 +280,7 @@ const paintTable = (doc: DocumentLike, app: App): void => {
         ? `${nameOf(v, v.phase.winner)} wins the game`
         : `Round ${String(v.round)} over`,
     );
-    paintScores(requireId(doc, 'scores'), v);
+    paintScores(requireId(doc, 'scores'), v, m.scores);
   }
   toggleClass(requireId(doc, 'nextRoundBtn'), 'hidden', v.phase.kind !== 'roundOver' || !mine);
   toggleClass(
@@ -276,6 +321,8 @@ const SHEETS: ReadonlyArray<Sheet<Intent>> = [
 ];
 
 export const bindAll = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
+  // The animations' clock, once: the design's numbers, or the reduced-motion stills.
+  writeClock(doc, durationsFor(reducedMotion()));
   bindHome(doc, dispatch);
   bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
   bindButtons(doc, dispatch, [
