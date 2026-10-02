@@ -63,8 +63,11 @@ export default defineConfig({
     rolldownOptions: {
       input: pageInputs(),
       output: {
+        // The landing page's own bundle (web/main.ts, the search bar) goes under shared/assets/
+        // too: on games.sweedler.com the Worker fetches `/shared/…` in place, while a file at the
+        // root would fall through to its games/ mapping (infra/games-proxy/worker.ts mapPath).
         entryFileNames: (chunk) =>
-          chunk.name === 'index' ? 'app-[hash].js' : 'games/[name]/app-[hash].js',
+          chunk.name === 'index' ? 'shared/assets/landing-[hash].js' : 'games/[name]/app-[hash].js',
         chunkFileNames: 'shared/assets/[name]-[hash].js',
         assetFileNames: 'shared/assets/[name]-[hash][extname]',
       },

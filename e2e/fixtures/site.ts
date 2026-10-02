@@ -146,6 +146,8 @@ export const PAGE_ONLY_SPECS: ReadonlyArray<string> = [
   '**/shell-local.spec.ts',
   // UI Sandbox's device sweep: about the page's frame and map, not the origin.
   '**/ui-sandbox.spec.ts',
+  // The landing page's search bar under an emulated keyboard: about the page alone.
+  '**/landing-search.spec.ts',
 ];
 
 /** The specs a project leaves out: the page-only ones on every project but `pages`. */

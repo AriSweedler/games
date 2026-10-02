@@ -1,6 +1,8 @@
 // docs/MIGRATION.md step 4: the switch to a built dist/ is provably zero-diff. The landing page is
-// byte-identical to web/index.html (Vite leaves it alone with cssMinify off; a future Vite that
-// reformats it will fail here and the owner decides). Step 7 cut fidice over and step 13 gin-rummy:
+// web/index.html byte for byte, except for its one module script (web/main.ts, the search bar):
+// Vite puts the hashed `shared/assets/landing-[hash].js` and its modulepreload links where the source tag was and
+// leaves the rest alone with cssMinify off (a future Vite that reformats it will fail here and the
+// owner decides). Step 7 cut fidice over and step 13 gin-rummy:
 // each games/<g>/index.html is Vite's module page (never the legacy bundle), its app-[hash].js sits
 // beside it, its CSS under shared/assets/, every page preloads the chunk they all share, and every
 // asset a page references exists; no shared/ice.js is emitted. legacy/** stays in the repo as the
@@ -52,14 +54,62 @@ const SOLO_ASSETS: Readonly<Record<(typeof SOLO_PAGES)[number], ReadonlyArray<st
   flip7: [],
 };
 
+/** The landing page's one script tag, as web/index.html spells it. */
+const LANDING_SOURCE_TAG = '<script type="module" src="./main.ts"></script>';
+/**
+ * What Vite writes in its place (the lines it indents by two): the hashed bundle, under
+ * shared/assets/ so the Worker serves it in place (vite.config.ts entryFileNames), then a
+ * modulepreload link per shared chunk the bundle imports (web/shared/edge/dom.ts and the keyed
+ * slot, split out because the game pages import them too).
+ */
+const LANDING_BUILT_TAGS =
+  /^ {2}<script type="module" crossorigin src="\.\/(shared\/assets\/landing-[\w-]+\.js)"><\/script>\n(?: {2}<link rel="modulepreload" crossorigin href="\.\/shared\/assets\/[\w-]+\.js">\n)*/m;
+
 describeDist('dist parity with legacy/ and web/', (root) => {
-  test('index.html (the landing page) is byte-identical to web/index.html', () => {
-    expect(readDist(root, 'index.html')).toBe(
-      readFileSync(resolve(REPO_ROOT, 'web', 'index.html'), 'utf8'),
-    );
-    expect(sha256(resolve(root.dir, 'index.html'))).toBe(
-      sha256(resolve(REPO_ROOT, 'web', 'index.html')),
-    );
+  test('index.html (the landing page) is web/index.html with its module script built, byte-identical otherwise', () => {
+    const source = readFileSync(resolve(REPO_ROOT, 'web', 'index.html'), 'utf8');
+    expect(source.split(LANDING_SOURCE_TAG), 'one script tag in the source').toHaveLength(2);
+    const built = readDist(root, 'index.html');
+    const match = LANDING_BUILT_TAGS.exec(built);
+    expect(match, 'the hashed script where the source tag was').not.toBeNull();
+    const [tags = '', bundle = ''] = match ?? [];
+    expect(built.replace(tags, `${LANDING_SOURCE_TAG}\n`)).toBe(source);
+    expect(distHasFile(root, bundle), bundle).toBe(true);
+    expect(distHasFile(root, `${bundle}.map`)).toBe(true);
+    expect(built).not.toContain('main.ts');
+  });
+
+  test('the landing page carries the search bar above the grid, and every card a name the search reads', () => {
+    const source = readFileSync(resolve(REPO_ROOT, 'web', 'index.html'), 'utf8');
+    const form = source.indexOf('<form id="searchForm" class="search" role="search">');
+    const grid = source.indexOf('<div id="grid" class="grid">');
+    expect(form).toBeGreaterThan(-1);
+    expect(grid).toBeGreaterThan(form);
+    const input = /<input id="q" [^>]*>/.exec(source)?.[0] ?? '';
+    ['type="search"', 'autocomplete="off"', 'enterkeyhint="go"'].forEach((attr) => {
+      expect(input, attr).toContain(attr);
+    });
+    expect(source).toContain('<button id="clearBtn" type="button"');
+    expect(source).toContain('<div id="results" class="grid results"');
+    const cards = source.match(/<a class="card" [^>]*>.*?<\/a>/g) ?? [];
+    expect(cards.length).toBeGreaterThan(0);
+    cards.forEach((card) => {
+      expect(card).toMatch(/<span class="name">[^<]+<\/span>/);
+    });
+  });
+
+  test('each alias (tools/games.ts ALIASES) is a name the search finds: its game card carries it as its name or in data-aliases', () => {
+    const source = readFileSync(resolve(REPO_ROOT, 'web', 'index.html'), 'utf8');
+    Object.entries(ALIASES).forEach(([alias, game]) => {
+      const card = new RegExp(`<a class="card" href="games/${game}/"([^>]*)>(.*?)</a>`).exec(
+        source,
+      );
+      expect(card, `a card for ${game}`).not.toBeNull();
+      const [, attrs = '', inner = ''] = card ?? [];
+      const name = /<span class="name">([^<]*)<\/span>/.exec(inner)?.[1] ?? '';
+      const aliases = /data-aliases="([^"]*)"/.exec(attrs)?.[1] ?? '';
+      expect(`${name} ${aliases}`.toLowerCase().split(/\s+/), alias).toContain(alias);
+    });
   });
 
   test('.nojekyll from web/public lands at the root of the tree', () => {
@@ -345,12 +395,15 @@ describeDist('dist parity with legacy/ and web/', (root) => {
     ALIAS_PAGES.forEach(({ alias, page }) => {
       expect(files.filter((file) => file.startsWith(`games/${alias}/`))).toEqual([page]);
     });
-    // Root-level files: the landing page, .nojekyll and (once it has a script) the landing's own
-    // app-[hash].js with its map. Nothing else may sit beside them.
+    // Root-level files: the landing page and .nojekyll. Nothing else may sit beside them: the
+    // landing's own bundle lives under shared/assets/ (vite.config.ts entryFileNames), where the
+    // Worker serves it in place.
     const stray = files
       .filter((file) => !file.includes('/'))
-      .filter((file) => !['.nojekyll', 'index.html'].includes(file))
-      .filter((file) => !/^app-[\w-]+\.js(\.map)?$/.test(file));
+      .filter((file) => !['.nojekyll', 'index.html'].includes(file));
     expect(stray).toEqual([]);
+    expect(files.filter((file) => /^shared\/assets\/landing-[\w-]+\.js$/.test(file))).toHaveLength(
+      1,
+    );
   });
 });

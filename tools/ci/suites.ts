@@ -866,7 +866,13 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
     // Every page on both origins, the computed-style goldens (two viewports per game), and UI
     // Sandbox's device sweep (the frame's corners and the safe-area map on every catalogued phone).
     e2e: {
-      files: ['**/smoke.spec.ts', '**/computed-styles.spec.ts', '**/ui-sandbox.spec.ts'],
+      files: [
+        '**/smoke.spec.ts',
+        '**/computed-styles.spec.ts',
+        '**/ui-sandbox.spec.ts',
+        // The landing page's search bar (web/main.ts): about the page, on `pages` alone.
+        '**/landing-search.spec.ts',
+      ],
       otherTags: [],
     },
   },
@@ -1115,7 +1121,9 @@ export const RULES: ReadonlyArray<Rule> = [
     why: 'the transport contract',
   },
   {
-    globs: ['web/index.html', 'web/games/sheshbesh/**', 'web/games/ui-sandbox/**'],
+    // web/main.ts is the landing page's boot (its search bar); web/shared/lib/fuzzy.ts, the
+    // matcher under it, is shared code and runs everything like the rest of web/shared.
+    globs: ['web/index.html', 'web/main.ts', 'web/games/sheshbesh/**', 'web/games/ui-sandbox/**'],
     runs: ['site', 'e2e-site'],
     why: 'the landing page and the alias stub: dist parity and the smoke',
   },
@@ -1125,7 +1133,12 @@ export const RULES: ReadonlyArray<Rule> = [
     why: 'the site guards themselves',
   },
   {
-    globs: ['e2e/smoke.spec.ts', 'e2e/computed-styles.spec.ts', 'e2e/ui-sandbox.spec.ts'],
+    globs: [
+      'e2e/smoke.spec.ts',
+      'e2e/computed-styles.spec.ts',
+      'e2e/ui-sandbox.spec.ts',
+      'e2e/landing-search.spec.ts',
+    ],
     runs: ['e2e-site'],
     why: 'the site specs themselves',
   },
