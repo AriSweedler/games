@@ -55,6 +55,7 @@ import {
   rememberName,
   reveal,
   roomOpen,
+  startLocal,
   takeOffer,
 } from './shell.ts';
 import type { Project } from './site.ts';
@@ -581,6 +582,85 @@ const uno: ShellDriver = {
   },
 };
 
+/** Flip 7's table as its hook reads it (web/games/flip7/main.ts `view`): every seat's line is public. */
+type Flip7View = Readonly<{
+  me: number;
+  round: number;
+  turn: number;
+  opening: number;
+  drawCount: number;
+  phase: Readonly<{ kind: string }>;
+  seats: ReadonlyArray<Readonly<{ name: string; line: ReadonlyArray<unknown>; status: string }>>;
+  scores: ReadonlyArray<number>;
+}>;
+const readFlip7 = (page: Page): Promise<Flip7View | null> =>
+  page.evaluate<Flip7View | null>('window.__flip7.view()');
+/** What both Flip 7 tables must agree on: the round, whose move, every line, the scores, the deck. */
+const flip7Key = (v: Flip7View | null): string =>
+  v === null
+    ? 'none'
+    : JSON.stringify([v.round, v.turn, v.opening, v.phase, v.seats, v.scores, v.drawCount]);
+const flip7Snapshot = async (page: Page): Promise<string> => flip7Key(await readFlip7(page));
+
+const flip7: ShellDriver = {
+  ...shellOnline,
+  // web/games/flip7/src/ui/render.ts CURTAIN_SUB: every card is face up, nobody looks away.
+  curtainSub: () => 'Every card is face up: everyone can watch.',
+  seatNames: { me: '#myName', meText: (name) => name, seated: '#guestSeatName' },
+  // The host deals from the waiting room; both tables come up with no curtain (online).
+  start: async (host, guest) => {
+    await hostStarts(host, guest);
+    await expect(host.locator('#curtainOverlay')).toBeHidden();
+    await expect(guest.locator('#curtainOverlay')).toBeHidden();
+  },
+  snapshot: flip7Snapshot,
+  agree: async (host, guest) => {
+    const table = await flip7Snapshot(host);
+    await expect.poll(() => flip7Snapshot(guest)).toBe(table);
+    return table;
+  },
+  expectOpening: async (host, guest) => {
+    // Round 1, the opening deal: the host is seat 0 and deals to itself first, the guest is seat 1;
+    // Hit is the host's alone.
+    const opening = await readFlip7(host);
+    expect(opening).toMatchObject({ round: 1, me: 0, turn: 0, opening: 2 });
+    expect(opening?.seats.map((s) => s.name)).toEqual([...ONLINE_NAMES]);
+    await expect.poll(() => flip7Snapshot(guest)).toBe(flip7Key(opening));
+    expect(await readFlip7(guest)).toMatchObject({ round: 1, me: 1, turn: 0 });
+    await expect(host.locator('#hitBtn')).toBeVisible();
+    await expect(guest.locator('#hitBtn')).toBeHidden();
+  },
+  hostSave: { seatCount: 2, game: { round: 1 } },
+  localSave: { game: { round: 1 } },
+  table: '#seats .seat',
+  curtainOffer: {
+    title:
+      "the curtain's Continue online takes the offer too, with the phone about to change hands",
+    // The first player's curtain is up as the game starts: the reveal and, at two seats, the handoff.
+    toCurtain: () => Promise.resolve(),
+    take: async (page) => {
+      await page.locator('#curtainHandoffBtn').click();
+      return roomOpen(page, 'flip7');
+    },
+  },
+  // ui/about.ts, ui/rules.ts, ui/glossary.ts: "bank" in the About copy lands on the turn rule;
+  // Freeze names banking, Second Chance names the bust.
+  glossary: {
+    aboutTerm: 'bank',
+    aboutRule: 'turn',
+    innerFrom: 'freeze',
+    innerTo: 'turn',
+    deepLink: 'goal',
+    overlayFrom: 'second',
+    overlayTo: 'bust',
+    openRulesOverTable: async (page, url, viewport) => {
+      await startLocal(page, url, viewport);
+      await reveal(page);
+      await page.locator('#rulesBtnGame').click();
+    },
+  },
+};
+
 /**
  * Hive (docs/design/hive.md §7), a two-seat shell game: the host starts from the waiting room and
  * both tables come up with no curtain and an empty board; the whole game through
@@ -665,6 +745,7 @@ export const SHELL_DRIVERS: Readonly<Record<ShellGame, ShellDriver>> = {
   backgammon,
   briscola,
   uno,
+  flip7,
   hive,
 };
 

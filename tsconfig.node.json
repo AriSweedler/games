@@ -78,6 +78,7 @@
     "web/games/briscola/src/**/*.ts",
     // UNO's shell tree (docs/design/uno.md §9), as briscola's: its DOM modules follow the globs below out.
     "web/games/uno/src/**/*.ts",
+    "web/games/flip7/src/**/*.ts",
     // Hive's shell tree (docs/design/hive.md §7), as briscola's: its DOM modules follow the globs below out.
     "web/games/hive/src/**/*.ts",
     "web/raw-imports.d.ts",

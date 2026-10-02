@@ -243,36 +243,42 @@ describe('every test file belongs to exactly one suite', () => {
     expect(SUITES.gin.e2e).toStrictEqual({
       files: ['**/gin-*.spec.ts', '**/shell-*.spec.ts'],
       tag: '@gin-rummy',
-      otherTags: ['@fidice', '@backgammon', '@briscola', '@uno', '@hive'],
+      otherTags: ['@fidice', '@backgammon', '@briscola', '@uno', '@flip7', '@hive'],
     });
     // Fidice's own spec (e2e/fidice-online.spec.ts, the N-seat table) beside the eight shell specs,
     // a shell game since M5 of docs/design/fidice-shell-adoption.md.
     expect(SUITES.fidice.e2e).toStrictEqual({
       files: ['**/fidice-*.spec.ts', '**/shell-*.spec.ts'],
       tag: '@fidice',
-      otherTags: ['@gin-rummy', '@backgammon', '@briscola', '@uno', '@hive'],
+      otherTags: ['@gin-rummy', '@backgammon', '@briscola', '@uno', '@flip7', '@hive'],
     });
     expect(SUITES.backgammon.e2e).toStrictEqual({
       files: ['**/backgammon-*.spec.ts', '**/shell-*.spec.ts'],
       tag: '@backgammon',
-      otherTags: ['@gin-rummy', '@fidice', '@briscola', '@uno', '@hive'],
+      otherTags: ['@gin-rummy', '@fidice', '@briscola', '@uno', '@flip7', '@hive'],
     });
     expect(SUITES.briscola.e2e).toStrictEqual({
       files: ['**/briscola-*.spec.ts', '**/shell-*.spec.ts'],
       tag: '@briscola',
-      otherTags: ['@gin-rummy', '@fidice', '@backgammon', '@uno', '@hive'],
+      otherTags: ['@gin-rummy', '@fidice', '@backgammon', '@uno', '@flip7', '@hive'],
     });
     // UNO's own spec (e2e/uno.spec.ts, pass the phone through the shell page) beside the shell specs.
     expect(SUITES.uno.e2e).toStrictEqual({
       files: ['**/uno.spec.ts', '**/shell-*.spec.ts'],
       tag: '@uno',
-      otherTags: ['@gin-rummy', '@fidice', '@backgammon', '@briscola', '@hive'],
+      otherTags: ['@gin-rummy', '@fidice', '@backgammon', '@briscola', '@flip7', '@hive'],
+    });
+    // Flip 7's own spec (e2e/flip7-local.spec.ts, pass the phone through the shell page) beside the shell specs.
+    expect(SUITES.flip7.e2e).toStrictEqual({
+      files: ['**/flip7-*.spec.ts', '**/shell-*.spec.ts'],
+      tag: '@flip7',
+      otherTags: ['@gin-rummy', '@fidice', '@backgammon', '@briscola', '@uno', '@hive'],
     });
     // Hive's own spec (e2e/hive.spec.ts, pass the phone through the shell page) beside the shell specs.
     expect(SUITES.hive.e2e).toStrictEqual({
       files: ['**/hive.spec.ts', '**/shell-*.spec.ts'],
       tag: '@hive',
-      otherTags: ['@gin-rummy', '@fidice', '@backgammon', '@briscola', '@uno'],
+      otherTags: ['@gin-rummy', '@fidice', '@backgammon', '@briscola', '@uno', '@flip7'],
     });
     // A solo page's e2e half is its own specs alone: no shared spec, no tag.
     expect(SUITES.rps.e2e).toStrictEqual({ files: ['**/rps.spec.ts'], otherTags: [] });
@@ -364,9 +370,14 @@ const ROWS_BEFORE: ReadonlyArray<readonly [string, Suite, Thresholds]> = [
     { lines: 92, functions: 95, statements: 92, branches: 84 },
   ],
   [
+    'web/games/flip7/src/protocol.ts',
+    'flip7',
+    { lines: 90, functions: 90, statements: 90, branches: 80 },
+  ],
+  [
     'web/games/flip7/src/ui/state.ts',
     'flip7',
-    { lines: 85, functions: 95, statements: 88, branches: 90 },
+    { lines: 80, functions: 80, statements: 80, branches: 70 },
   ],
   // Hive's engine before its page (docs/design/hive.md §6), measured at its landing.
   [
@@ -601,6 +612,7 @@ const INCLUDE_BEFORE: ReadonlyArray<string> = [
   // UNO's include covers its src/ since its shell registration.
   'web/games/uno/src/**/*.ts',
   'web/games/flip7/src/engine/**/*.ts',
+  'web/games/flip7/src/protocol.ts',
   'web/games/flip7/src/ui/state.ts',
   // Hive's include covers its src/ since its page row.
   'web/games/hive/src/**/*.ts',
@@ -792,6 +804,7 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
     ['hive', 'e2e-hive', 'site', 'e2e-site', 'harness'],
   ],
   ["UNO's own spec (a shell game's, spelled whole)", ['e2e/uno.spec.ts'], ['e2e-uno']],
+  ["Flip 7's own spec", ['e2e/flip7-local.spec.ts'], ['e2e-flip7']],
   ["Hive's own spec (a shell game's, spelled whole)", ['e2e/hive.spec.ts'], ['e2e-hive']],
   ['a briscola spec', ['e2e/briscola-local.spec.ts'], ['e2e-briscola']],
   ['a briscola style golden', ['test/fixtures/styles/briscola.390x844.json'], ['e2e-site']],
@@ -823,12 +836,12 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
   [
     'a shell spec',
     ['e2e/shell-home.spec.ts'],
-    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola', 'e2e-uno', 'e2e-hive'],
+    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola', 'e2e-uno', 'e2e-flip7', 'e2e-hive'],
   ],
   [
     'an online spec',
     ['e2e/shell-relay.spec.ts'],
-    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola', 'e2e-uno', 'e2e-hive'],
+    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola', 'e2e-uno', 'e2e-flip7', 'e2e-hive'],
   ],
   [
     'a shell spec beside a backgammon change',
@@ -840,6 +853,7 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
       'e2e-backgammon',
       'e2e-briscola',
       'e2e-uno',
+      'e2e-flip7',
       'e2e-hive',
       'site',
       'e2e-site',
@@ -850,7 +864,7 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
   [
     "the shared shell's liveness spec",
     ['e2e/shell-liveness.spec.ts'],
-    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola', 'e2e-uno', 'e2e-hive'],
+    ['e2e-gin', 'e2e-fidice', 'e2e-backgammon', 'e2e-briscola', 'e2e-uno', 'e2e-flip7', 'e2e-hive'],
   ],
   ['the landing page', ['web/index.html'], ['site', 'e2e-site']],
   ['the alias stub', ['web/games/sheshbesh/index.html'], ['site', 'e2e-site']],

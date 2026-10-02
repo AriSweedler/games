@@ -72,15 +72,51 @@ round when the round ends). During the opening deal the one button reads "Deal t
 The base pack is plain by design: a tile is its text on a colour per kind (blue numbers, yellow
 modifiers, pink actions, green Second Chance). Packs with real art are a follow-up.
 
-Not in the MVP (follow-ups, each a row): the shared shell with online seats; sound; persistence
-of a game across a reload; a "pass the phone" curtain is not needed here, since nothing is hidden.
+Not in the MVP (follow-ups, each a row): sound beyond the shell's; the card-flip animation (§8
+leaves the hooks).
 
-## 8. Tests
+## 8. On the shared shell: pass the phone or online, two to twelve
+
+The owner (2026-10-02): "Any multiplayer game must necessarily also have a multiplayer component via
+the shell", "the ruleset to teach players should be as short as possible, ideally fitting on 1
+screen", "flip7 caps out at 12", "In the multiplayer lobby you must have your hand closer and all
+the other players hands kinda more in the background", "as people bust, grey out their deals, but
+don't move on. When you the player bust, you need to confirm before proceeding."
+
+- **The shell.** Flip 7 is a shell game (tools/games.ts `SHELL.flip7`, `REGISTRY.flip7`; the page
+  composed from `page.ts`): the shell's home with Online and Pass the phone, the host and join
+  cards, the shared players stepper (two to twelve), the Rules and About tabs; the shell's waiting
+  rooms, curtain, resume and leave. The look is the shell's with Flip 7's accent alone.
+- **Online.** Every card is face up, so nothing is hidden: the host deals and holds the game, every
+  seat is sent its view (the whole table, the draw pile cut to its count), and each seat's Hit,
+  Stay or give goes to the host as an action frame that `engine/index.ts` `applyAction` checks
+  against the seat that sent it (the turn's seat hits or stays, the seat that flipped an action card
+  gives it, the host deals the next round). The welcome and lobby frames carry the table's seats.
+- **One phone.** The curtain rises once, for the first player; after it the table follows whoever
+  must act.
+- **The table.** This phone's seat in the foreground (its cards large, at the bottom), every other
+  seat a smaller row in a background grid above (up to four across at phone width: eleven
+  opponents are three rows, the cards shrinking with the count), each seat's name, status, total
+  and this round's score always shown, the seat to play lit. Each card carries `data-card` so the
+  flip row can find a dealt card in place. A busted seat greys out and keeps its line (the bust
+  card included) until the next deal: the engine leaves every line on the table at the round's end
+  and discards them when the next round is dealt.
+- **The pause.** When a seat busts, is frozen or flips 7, the table shows what happened (the card
+  and the points lost, the points banked, the bonus) and waits for Continue; nothing moves on that
+  phone until then. Online the pause is the phone's own seat's; on one phone, any seat's. The
+  round's end is the scores with Next round (the host's, or the phone's).
+- **Rules.** The Rules tab is eight one-line items (the goal, the turn, the bust, Flip 7 and the
+  four special kinds), one phone screen at 390x844; this document is the long form.
+
+## 9. Tests
 
 `npm run test:flip7`: the deck's composition and the scoring rule, the opening deal and a Freeze
 inside it, hitting, busting and the Second Chance save, staying, the round's end by every route,
 the Flip 7 bonus, each action card's taker rules including the only-active-seat case and an action
 drawn inside a Flip Three, the reshuffle, the dealer rotation, the target and the shared-top rule,
 and a careful bot that plays whole games of two, three and six seats to 200 with the card count
-checked at every step. The page reducer's screens are pinned in `state.test.ts`;
-`e2e/flip7.spec.ts` plays a seeded game through the page.
+checked at every step. The shell adapter's turn authority and decoders are pinned in
+`engine/index.test.ts`, the wire in `protocol.test.ts`, the reducer (the curtain once, the pause and
+its Continue, the host's and the guest's moves) in `ui/state.test.ts`; `e2e/flip7-local.spec.ts`
+plays a seeded game, a twelve-seat table and a bust with its Continue through the page, and the
+shell specs' `@flip7` describes play the shell's flows.

@@ -705,6 +705,53 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.score-row.winner',
     '#endgameScreen h1',
   ],
+  // Flip 7 (docs/design/flip7.md §8): after the shell's, the home panel's stepper, then the table:
+  // the topbar's names strip, the round row, the background grid and this phone's seat in the
+  // foreground with their lines and the tiles by kind, the seat to play and a busted one, the
+  // status line, Hit and Stay, the taker picker and the result.
+  flip7: [
+    ...SHELL_SELECTORS,
+    '.masthead .subtitle',
+    '.field',
+    '.field-label',
+    '.stepper',
+    '.btn-block',
+    '#tableScreen .topbar',
+    '#tableScreen .names',
+    '#myName',
+    '#oppName',
+    '.round-row',
+    '.seats',
+    '.others',
+    '.others .seat',
+    '.seat',
+    '.seat.me',
+    '.seat.current',
+    '.seat.me .seat-name::after',
+    '.seat.status-busted .line',
+    '.seat.me .tile',
+    '.seat-head',
+    '.seat-name',
+    '.seat-score',
+    '.seat-bank',
+    '.seat-status',
+    '.line',
+    '.tile',
+    '.tile[data-kind="number"]',
+    '.tile[data-kind="plus"]',
+    '.tile[data-kind="times2"]',
+    '.tile[data-kind="freeze"]',
+    '.tile[data-kind="flip3"]',
+    '.tile[data-kind="second"]',
+    '.status-line',
+    '.controls',
+    '.controls .btn',
+    '.target',
+    '.choices',
+    '.result',
+    '.scores',
+    '.scores li',
+  ],
   // Hive (docs/design/hive.md §7; page.ts, ui/render.ts): after the shell's 43, the home's subtitle
   // and the names box, the table's top bar (the names strip, the connection dot), the board and
   // its cells (empty, White's, Black's, lit, the letter and a stack's badge), the two hands and
@@ -1114,6 +1161,13 @@ const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
     localModeShot: 'home: play tab, pass the phone',
     curtainShot: 'local: dealt, curtain up',
     // Two players: the stepper's hidden count, already at its default (setField leaves it).
+    localValues: { localPlayersCount: '2' },
+  },
+  flip7: {
+    submenuShot: null,
+    localModeShot: 'home: play tab, pass the phone',
+    curtainShot: 'local: dealt, curtain up',
+    // Two players: the stepper's hidden count, already at its default.
     localValues: { localPlayersCount: '2' },
   },
   hive: {
@@ -1898,6 +1952,30 @@ const driveUno = async (page: Page, shot: Shot): Promise<void> => {
   await shot('home: after the games');
 };
 
+/**
+ * Flip 7 (docs/design/flip7.md §8), after the shell (driveShell, which dealt a two-player game
+ * under the curtain): the curtain lifted onto the opening deal, the deal played out by hand to the
+ * first Hit and Stay, the rules sheet over the table, then the seeded policy through the hook to
+ * the round's end (the scores and Next round).
+ */
+const driveFlip7 = async (page: Page, shot: Shot): Promise<void> => {
+  await page.waitForFunction('typeof window.__flip7 === "object"');
+  await driveShell(page, shot, 'flip7');
+  await click(page, '#curtainBtn');
+  await shot('local: the opening deal');
+  await click(page, '#hitBtn');
+  await click(page, '#hitBtn');
+  await shot('local: dealt, hit or stay');
+  await click(page, '#rulesBtnGame');
+  await shot('table: rules sheet');
+  await page.keyboard.press('Escape');
+  await page.evaluate(
+    `(() => { const f = window.__flip7; for (let i = 0; i < 400; i += 1) { const v = f.view(); if (v === null || v.phase.kind === 'roundOver' || v.phase.kind === 'gameOver') return; const [a] = f.legal().filter((x) => x.type !== 'hit' || v.seats[v.me].line.length < 3); f.act(a ?? f.legal()[0]); } })()`,
+  );
+  await visible(page, '#result');
+  await shot('round over: the scores');
+};
+
 /** Hive's seat to move plays its first legal action through the hook (`__hive.legal()` -> `__hive.act(a)`). */
 const HIVE_STEP = `(() => { const h = window.__hive; const a = h.legal()[0]; if (a) h.act(a); })()`;
 
@@ -1947,6 +2025,7 @@ const DRIVERS: Readonly<Record<Game, Driver>> = {
   backgammon: driveBackgammon,
   briscola: driveBriscola,
   uno: driveUno,
+  flip7: driveFlip7,
   hive: driveHive,
 };
 

@@ -14,6 +14,7 @@ export const SHELL_GAMES: ReadonlyArray<Game> = [
   'backgammon',
   'briscola',
   'uno',
+  'flip7',
   'hive',
 ];
 

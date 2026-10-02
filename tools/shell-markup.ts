@@ -19,6 +19,7 @@ import { format, getFileInfo, resolveConfig } from 'prettier';
 import { BACKGAMMON_PAGE } from '../web/games/backgammon/page.ts';
 import { BRISCOLA_PAGE } from '../web/games/briscola/page.ts';
 import { FIDICE_PAGE } from '../web/games/fidice/page.ts';
+import { FLIP7_PAGE } from '../web/games/flip7/page.ts';
 import { GIN_PAGE } from '../web/games/gin-rummy/page.ts';
 import { HIVE_PAGE } from '../web/games/hive/page.ts';
 import { UNO_PAGE } from '../web/games/uno/page.ts';
@@ -48,6 +49,7 @@ export const PAGES: Readonly<Record<ShellGame, ShellPage>> = {
   briscola: BRISCOLA_PAGE,
   fidice: FIDICE_PAGE,
   uno: UNO_PAGE,
+  flip7: FLIP7_PAGE,
   hive: HIVE_PAGE,
 };
 

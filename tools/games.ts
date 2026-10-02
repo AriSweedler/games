@@ -45,8 +45,8 @@ export const TOOL_NAMES: ReadonlyArray<ToolName> = Object.keys(TOOLS) as Readonl
  * is not a `Game` (ROOM_CODE, the online drivers and the computed-style oracle key on that union).
  * The reaction game is the first. A name here without a SOLO row is a type error.
  */
-export type SoloPage = 'rps' | 'flip7';
-export const SOLO_PAGES: ReadonlyArray<SoloPage> = ['rps', 'flip7'];
+export type SoloPage = 'rps';
+export const SOLO_PAGES: ReadonlyArray<SoloPage> = ['rps'];
 
 /** The pages smoke opens: every game, every solo page, every tool page and the landing page. */
 export type PageName = Game | SoloPage | ToolName | 'landing';
@@ -161,13 +161,15 @@ export type ShellSpec = Readonly<{
  * it through e2e/fixtures/player.ts PAGE_QUERY). A game here without a SHELL row, or a row in
  * e2e/fixtures/online-games.ts, is a type error. GAMES order.
  */
-export type ShellGame = 'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'uno' | 'hive';
+export type ShellGame =
+  'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'uno' | 'flip7' | 'hive';
 export const SHELL_GAMES: ReadonlyArray<ShellGame> = [
   'gin-rummy',
   'fidice',
   'backgammon',
   'briscola',
   'uno',
+  'flip7',
   'hive',
 ];
 
@@ -261,6 +263,23 @@ export const SHELL: Readonly<Record<ShellGame, ShellSpec>> = {
     localFields: [['localPlayersCount', '2']],
     // The reveal alone ("Show my hand"): the handoff is the table's 🌐 (#handoffBtn), never the curtain's.
     curtainButtons: 1,
+    firstCurtain: 'Pass the phone to {name}',
+  },
+  flip7: {
+    heading: 'Flip 7',
+    shareTitle: 'Flip 7',
+    tabs: ['Play', 'Rules', 'About'],
+    modes: ['Online', 'Pass the phone'],
+    hostFields: [],
+    // shellConfig.ts `hostRoomMsg`: only the host's `lobby` reply carries the host's name.
+    hostAnswered: /^Connected — waiting for .+ to deal$/,
+    connDot: '#oppDot',
+    // The first two of shellConfig.ts LOCAL_NAMES; the third to twelfth are the page's.
+    localNames: ['Ari', 'Lavi'],
+    // The one field: the players stepper's hidden count (web/shared/ui/stepper.ts), two to twelve.
+    localFields: [['localPlayersCount', '2']],
+    // The reveal and "Continue online" (two seats): every card is face up, so the curtain rises once.
+    curtainButtons: 2,
     firstCurtain: 'Pass the phone to {name}',
   },
   hive: {
@@ -450,6 +469,43 @@ export const REGISTRY: Readonly<Record<Game, GameSpec>> = {
     contractFloors: { ts: 20, markup: 30 },
     shell: SHELL.uno,
   },
+  flip7: {
+    title: 'Flip 7',
+    hook: 'window.__flip7',
+    suite: 'flip7',
+    // Its own spec (e2e/flip7-local.spec.ts: a seeded game, a twelve-seat table, a bust and its
+    // Continue); the shell specs play it as they play every shell game.
+    specs: ['**/flip7-*.spec.ts'],
+    storage: { saveKey: 'flip7MP_v1', prefix: 'flip7_' },
+    debug: 0,
+    // The composed shell page's screens, the table's fixed slots (page.ts: the background grid,
+    // this phone's seat, Hit and Stay, the taker picker, the result panel, the pause), the guest's
+    // name card and the two empty rules slots.
+    pageShape: {
+      ids: [
+        'app',
+        'homeScreen',
+        'hostWaitScreen',
+        'guestWaitScreen',
+        'tableScreen',
+        'endgameScreen',
+        'seats',
+        'others',
+        'mySeat',
+        'hitBtn',
+        'stayBtn',
+        'target',
+        'result',
+        'pauseOverlay',
+        'continueBtn',
+        'toast',
+        ...GUEST_NAME_IDS,
+      ],
+      rulesSlots: true,
+    },
+    contractFloors: { ts: 10, markup: 30 },
+    shell: SHELL.flip7,
+  },
   hive: {
     title: 'Hive',
     hook: 'window.__hive',
@@ -536,38 +592,6 @@ export const SOLO: Readonly<Record<SoloPage, SoloSpec>> = {
         'islandSlot',
         'resetBtn',
         'soundBtn',
-      ],
-    },
-  },
-  flip7: {
-    title: 'Flip 7',
-    hook: 'window.__flip7',
-    suite: 'flip7',
-    specs: ['**/flip7.spec.ts'],
-    // The page's fixed ids (web/games/flip7/src/ui/render.ts IDS): the two screens (setup, table),
-    // the setup's fields, the seats, the controls, the taker picker and the result panel
-    // (docs/design/flip7.md §7).
-    pageShape: {
-      ids: [
-        'app',
-        'setup',
-        'seatCount',
-        'names',
-        'startBtn',
-        'table',
-        'roundLabel',
-        'seats',
-        'status',
-        'hitBtn',
-        'stayBtn',
-        'target',
-        'targetTitle',
-        'targetSeats',
-        'result',
-        'resultTitle',
-        'scores',
-        'nextRoundBtn',
-        'newGameBtn',
       ],
     },
   },
