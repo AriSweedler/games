@@ -12,6 +12,7 @@ import { STORAGE_KEYS as HIVE_KEYS } from '../web/games/hive/src/storage.ts';
 import { STORAGE_KEYS as UNO_KEYS } from '../web/games/uno/src/storage.ts';
 import {
   ALIASES,
+  CONFORMANCE,
   GAMES,
   HOOKS,
   LANDING_HREFS,
@@ -446,6 +447,90 @@ describe('the games registry', () => {
       expect(GAMES, `${alias} is an alias, not a game`).not.toContain(alias);
       expect(LANDING_HREFS).not.toContain(`games/${alias}/`);
       expect(existsSync(resolve(import.meta.dirname, '..', 'web', 'games', game)), game).toBe(true);
+    });
+  });
+});
+
+describe('the conformance declarations (docs/design/game-conformance.md)', () => {
+  test('one row per shell game: the seat range, the pauses, the cues and the CSS floor', () => {
+    expect(Object.keys(CONFORMANCE)).toEqual([...SHELL_GAMES]);
+    const rows = Object.fromEntries(
+      SHELL_GAMES.map((game) => {
+        const { seats, pauses, cues, cssFloor, hides } = CONFORMANCE[game];
+        return [game, { seats, pauses, cues, cssFloor, hides }];
+      }),
+    );
+    expect(rows).toEqual({
+      'gin-rummy': {
+        seats: { min: 2, max: 2 },
+        pauses: [],
+        cues: ['knockGood', 'gin', 'bad', 'neutral', 'oppStock', 'oppDiscard'],
+        cssFloor: 160,
+        hides: true,
+      },
+      fidice: { seats: { min: 1, max: 6 }, pauses: [], cues: [], cssFloor: 190, hides: true },
+      backgammon: {
+        seats: { min: 2, max: 2 },
+        pauses: [],
+        cues: ['roll', 'doubles', 'place', 'hit', 'bearOff', 'double'],
+        cssFloor: 130,
+        hides: false,
+      },
+      briscola: {
+        seats: { min: 2, max: 4 },
+        pauses: [],
+        cues: ['start.deal', 'move.play', 'draw.stock', 'good.trick.small'],
+        cssFloor: 145,
+        hides: true,
+      },
+      uno: {
+        seats: { min: 2, max: 12 },
+        pauses: [],
+        cues: ['play', 'draw', 'penalty', 'deal'],
+        cssFloor: 80,
+        hides: true,
+      },
+      flip7: {
+        seats: { min: 2, max: 12 },
+        pauses: ['bust', 'frozen', 'flip7'],
+        cues: ['flip', 'bust', 'freeze', 'stay', 'deal'],
+        cssFloor: 72,
+        hides: false,
+      },
+      hive: {
+        seats: { min: 2, max: 2 },
+        pauses: [],
+        cues: ['place', 'move'],
+        cssFloor: 78,
+        hides: false,
+      },
+    });
+  });
+
+  test('the declared gaps, by rule: the audit table of docs/design/game-conformance.md', () => {
+    const gaps = Object.fromEntries(
+      SHELL_GAMES.map((game) => [game, CONFORMANCE[game].gaps.map((g) => g.rule)]),
+    );
+    expect(gaps).toEqual({
+      'gin-rummy': ['rules-fit', 'pauses'],
+      fidice: ['curtain', 'rules-fit', 'cues', 'stepper', 'pauses'],
+      backgammon: ['rules-fit', 'pauses'],
+      briscola: ['curtain', 'rules-fit', 'pauses'],
+      uno: ['seat-names', 'curtain', 'pauses'],
+      flip7: [],
+      hive: ['pauses'],
+    });
+  });
+
+  test("every seat range is the shell config's shape (min <= max, two or more) and every gap names a follow-up", () => {
+    SHELL_GAMES.forEach((game) => {
+      const { seats, gaps, cssFloor } = CONFORMANCE[game];
+      expect(seats.min).toBeLessThanOrEqual(seats.max);
+      expect(seats.max).toBeGreaterThanOrEqual(2);
+      expect(cssFloor).toBeGreaterThan(0);
+      gaps.forEach((gap) => {
+        expect(gap.followUp.length).toBeGreaterThan(20);
+      });
     });
   });
 });

@@ -126,6 +126,9 @@ export const PAGE_ONLY_SPECS: ReadonlyArray<string> = [
   '**/flip7-local.spec.ts',
   // Hive pass-and-play: a game through the shell page, about the page alone.
   '**/hive.spec.ts',
+  // The game conformance suite's browser half: every shell game's home, stepper and Rules tab at a
+  // phone, about the page alone.
+  '**/shell-conformance.spec.ts',
   // Three contexts and a computer over the N-seat sessions, plus Solo and Watch: about the seats.
   '**/fidice-online.spec.ts',
   '**/gin-drag-discard.spec.ts',
