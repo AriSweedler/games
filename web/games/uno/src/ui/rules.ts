@@ -1,7 +1,7 @@
 // The Rules tab and the in-game rules sheet (docs/design/uno.md §9; the owner, 2026-10-02: "the
 // ruleset to teach players should be as short as possible, ideally fitting on 1 screen"): the
-// goal, the turn and the special cards, one line each; one round is the game, so no points (the
-// owner: "UNO should only be single round games"); the long form is docs/design/uno.md. The About
+// goal, the turn, the special cards and the UNO call (§7), one line each; one round is the game, so
+// no points (the owner: "UNO should only be single round games"); the long form is docs/design/uno.md. The About
 // copy names the page. Both are static, filled once at boot (render.ts `renderRules`).
 import {
   linkJargon,
@@ -38,6 +38,11 @@ export const RULES: ReadonlyArray<RuleItem> = [
     id: 'wild4',
     heading: 'Wild Draw Four +4',
     body: 'Name the colour; the next player draws four and misses a turn.',
+  },
+  {
+    id: 'uno',
+    heading: 'UNO!',
+    body: 'Tap UNO as you play down to one card. Caught without it before the next player moves: draw two.',
   },
 ];
 
