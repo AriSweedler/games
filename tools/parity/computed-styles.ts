@@ -1953,10 +1953,52 @@ const driveUno = async (page: Page, shot: Shot): Promise<void> => {
 };
 
 /**
+ * One stretch of Flip 7's seeded policy through the hook (`__flip7.legal()` -> `__flip7.act(a)`):
+ * the seat to play hits to three cards, then stays; a Freeze or Flip Three goes to the first
+ * choice. In-page, so a stretch costs one round trip. A bust, a freeze or a Flip 7 raises the pause
+ * (ui/state.ts `pauseFor`), under which `act` is a no-op until Continue: the stretch stops there,
+ * for the driver's tap, and at the round's or the game's end (the pause first: a Flip 7 ends the
+ * round under its own pause, which is continued before the scores are shot). Returns 'pause',
+ * 'over' or 'spent' (the step budget gone).
+ */
+const FLIP7_STRETCH = `(() => {
+  const f = window.__flip7;
+  for (let n = 0; n < 400; n += 1) {
+    if (!document.getElementById('pauseOverlay').classList.contains('hidden')) return 'pause';
+    const v = f.view();
+    if (v === null || v.phase.kind === 'roundOver' || v.phase.kind === 'gameOver') return 'over';
+    const acts = f.legal();
+    const [a] = acts.filter((x) => x.type !== 'hit' || v.seats[v.me].line.length < 3);
+    f.act(a ?? acts[0]);
+  }
+  return 'spent';
+})()`;
+
+/**
+ * The seeded policy to the round's end through the pauses: each stretch ends at a pause or the
+ * result, and a pause is continued as a player would, by its button (the first one shot: the sheet
+ * over the table). Pass-and-play pauses for any seat (ui/state.ts `pauseFor`), so the walk sees
+ * every bust and freeze the seeded deal raises. At most twelve pauses: a two-seat round has far
+ * fewer.
+ */
+const fastForwardFlip7 = async (page: Page, shot: Shot): Promise<void> => {
+  const run = async (left: number, pauses: number): Promise<void> => {
+    const at = await page.evaluate<string>(FLIP7_STRETCH);
+    if (at === 'over') return;
+    if (at !== 'pause' || left === 0) throw new Error(`flip7: the round did not end (${at})`);
+    if (pauses === 0) await shot('local: the pause, Continue');
+    await click(page, '#continueBtn');
+    await run(left - 1, pauses + 1);
+  };
+  await run(12, 0);
+};
+
+/**
  * Flip 7 (docs/design/flip7.md §8), after the shell (driveShell, which dealt a two-player game
  * under the curtain): the curtain lifted onto the opening deal, the deal played out by hand to the
  * first Hit and Stay, the rules sheet over the table, then the seeded policy through the hook to
- * the round's end (the scores and Next round).
+ * the round's end, each pause continued by its button on the way (the first one shot), and the
+ * result (the scores and Next round).
  */
 const driveFlip7 = async (page: Page, shot: Shot): Promise<void> => {
   await page.waitForFunction('typeof window.__flip7 === "object"');
@@ -1969,9 +2011,7 @@ const driveFlip7 = async (page: Page, shot: Shot): Promise<void> => {
   await click(page, '#rulesBtnGame');
   await shot('table: rules sheet');
   await page.keyboard.press('Escape');
-  await page.evaluate(
-    `(() => { const f = window.__flip7; for (let i = 0; i < 400; i += 1) { const v = f.view(); if (v === null || v.phase.kind === 'roundOver' || v.phase.kind === 'gameOver') return; const [a] = f.legal().filter((x) => x.type !== 'hit' || v.seats[v.me].line.length < 3); f.act(a ?? f.legal()[0]); } })()`,
-  );
+  await fastForwardFlip7(page, shot);
   await visible(page, '#result');
   await shot('round over: the scores');
 };
