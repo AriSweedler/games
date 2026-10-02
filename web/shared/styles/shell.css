@@ -944,6 +944,19 @@ body[data-flip='1'] {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* The pass-and-play seat names (web/shared/markup/seatNames.ts, web/shared/ui/seatNames.ts; the
+   owner, 2026-10-02: "more than 4 players should paint properly"): one input per seat the stepper
+   allows, two to a row, the seats past the count hidden so the grid holds no empty cells. */
+.seat-names {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.seat-names .hidden {
+  display: none;
+}
 .stepper-num {
   min-width: 2ch;
   text-align: center;

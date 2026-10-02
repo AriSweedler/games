@@ -42,7 +42,7 @@ export const unoKey = (v: View | null): string =>
 
 export const unoSnapshot = async (page: Page): Promise<string> => unoKey(await readView(page));
 
-/** The pass-and-play names by seat count: the shell's two, then the page's third and fourth. */
+/** The pass-and-play names by seat count: the shell's two, then one per seat up to twelve. */
 export type LocalNames = readonly [string, string, ...string[]];
 
 /** The Pass the phone stepper raised from its two to `count` seats, one tap of its + a seat. */
@@ -56,7 +56,7 @@ export const unoLocalSeats = async (page: Page, count: number): Promise<void> =>
 };
 
 /**
- * Pass the phone between `names` (two to four) at `viewport`: the shell's start with the seat count
+ * Pass the phone between `names` (two to twelve) at `viewport`: the shell's start with the seat count
  * stepped up and the extra names filled; resolves with the table up and the first curtain over it.
  */
 export const unoStartLocal = (
@@ -66,12 +66,15 @@ export const unoStartLocal = (
   names: LocalNames = ['Ann', 'Bob'],
 ): Promise<void> =>
   startLocal(page, url, viewport, [names[0], names[1]], async (p) => {
-    const [, , p3, p4] = names;
-    if (p3 === undefined) return;
+    const extra = names.slice(2);
+    if (extra.length === 0) return;
     await unoLocalSeats(p, names.length);
-    await expect(p.locator('#moreNames')).toBeVisible();
-    await p.locator('#p3NameInput').fill(p3);
-    if (p4 !== undefined) await p.locator('#p4NameInput').fill(p4);
+    await extra.reduce<Promise<void>>(async (prev, name, i) => {
+      await prev;
+      const input = p.locator(`#p${String(i + 3)}NameInput`);
+      await expect(input).toBeVisible();
+      await input.fill(name);
+    }, Promise.resolve());
   });
 
 export const unoReveal = reveal;

@@ -111,6 +111,7 @@
     "web/shared/ui/history*.ts",
     "web/shared/ui/recentGames*.ts",
     "web/shared/ui/stepper*.ts",
+    "web/shared/ui/seatNames*.ts",
     "web/games/*/src/ui/render*.ts",
     "web/games/*/src/ui/home*.ts",
     "web/games/*/src/ui/local*.ts",
