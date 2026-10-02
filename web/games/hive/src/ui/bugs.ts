@@ -112,8 +112,10 @@ const num = (n: number): string => n.toFixed(4).replace(/\.?0+$/, '');
  */
 export const bugHtml = (bug: Bug, c: Point): string => {
   const { cx, cy, scale } = BUG_FIT[bug];
-  const href = `#${symbolId(bug)}`;
   const transform = `translate(${num(c.x)} ${num(c.y)}) scale(${num(scale)}) translate(${num(-cx)} ${num(-cy)})`;
   const d = ENGRAVE / scale;
-  return `<g class="bug" data-bug="${bug}" transform="${transform}" stroke-width="${num(LINE / scale)}"><use class="rim" href="${href}" stroke-width="${num((LINE + 2 * RIM) / scale)}"/><use class="shade" href="${href}" transform="translate(${num(-d * 0.8)} ${num(-d)})"/><use class="gleam" href="${href}" transform="translate(${num(d * 0.8)} ${num(d)})"/><use class="ink" href="${href}"/></g>`;
+  // A `<use>` of a symbol fills the whole viewport unless sized: 100 by 100 maps the art 1:1.
+  const layer = (cls: string, extra: string): string =>
+    `<use class="${cls}" href="#${symbolId(bug)}" width="100" height="100"${extra}/>`;
+  return `<g class="bug" data-bug="${bug}" transform="${transform}" stroke-width="${num(LINE / scale)}">${layer('rim', ` stroke-width="${num((LINE + 2 * RIM) / scale)}"`)}${layer('shade', ` transform="translate(${num(-d * 0.8)} ${num(-d)})"`)}${layer('gleam', ` transform="translate(${num(d * 0.8)} ${num(d)})"`)}${layer('ink', '')}</g>`;
 };
