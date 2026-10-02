@@ -2181,6 +2181,10 @@ const leaveFinish = <G extends ShellTypes>(app: ShellApp<G>, cfg: ShellConfig<G>
         rotationHintShown: false,
         // `leave/confirmed` dropped the lock: the page is upright-free again until the next tap.
         orientationLocked: false,
+        // The shell's own sheet, open at the leave, goes with the table: the home has no sheet
+        // (shellPaint.ts `paintScreen` puts every overlay away there; this keeps the next paint
+        // from bringing the rules back over it).
+        rulesOpen: false,
       },
       table: cfg.table.reset(app.table, 'leave'),
     },

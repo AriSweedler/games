@@ -124,6 +124,7 @@ describe('every test file belongs to exactly one suite', () => {
       'e2e/shell-local.spec.ts',
       'e2e/shell-online.spec.ts',
       'e2e/shell-relay.spec.ts',
+      'e2e/shell-result.spec.ts',
       'e2e/shell-resume.spec.ts',
     ]);
     const tags = E2E_SUITES.flatMap((s) => {

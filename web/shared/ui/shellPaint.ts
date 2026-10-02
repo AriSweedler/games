@@ -41,9 +41,20 @@ import type { Role, SeatState, ShellState, ShellTypes } from './shell.ts';
 
 export type Dispatch<I> = (intent: I) => void;
 
+/** The home screen's id, the first of every shell game's `SCREENS` (shell.ts `ScreenId`). */
+export const HOME_SCREEN = 'homeScreen';
+
+/** Every sheet and the curtain: each `.overlay` in the body (page.html places them as body children, so one list finds a game's and the shell's alike; `paintGate` reads the same). */
+const OVERLAYS = '.overlay';
+
 /**
  * `showScreen(id)`: every screen but `current` gets `hidden`; the body locks to the viewport
- * (`fixed-screen`) at `fixedOn`, the table in both games.
+ * (`fixed-screen`) at `fixedOn`, the table in both games. The home has no sheet (shell.ts
+ * `rules/show`: at home the Rules tab is the rules), yet a game paints its own sheets with its
+ * table, which it skips without a view: Hive's result sheet stayed over the home after Leave the
+ * table (the owner, 2026-10-02). So the switch to the home puts every overlay away itself; the
+ * paints that follow show again only what their flags say, and the leave reset those (shell.ts
+ * `leaveFinish`).
  */
 export const paintScreen = (
   doc: PageLike,
@@ -55,6 +66,10 @@ export const paintScreen = (
     toggleClass(requireId(doc, id), 'hidden', id !== current);
   });
   toggleClass(doc.body, 'fixed-screen', current === fixedOn);
+  if (current !== HOME_SCREEN) return;
+  queryAllIn(doc.body, OVERLAYS).forEach((el) => {
+    toggleClass(el, 'hidden', true);
+  });
 };
 
 /** A waiting room's status line and whether it pulses (`app.hostStatus`, `app.guestStatus`). */
@@ -297,8 +312,7 @@ export const GATE_ID = 'turnGate';
 export const GATE_KEEP_ID = 'turnGateKeepBtn';
 /** "Go sideways": the Android lock from the gate's own tap (`gate/turn`); shown only where the device can lock (`canLock` below), so an iPhone's gate keeps its one control. */
 export const GATE_GO_ID = 'turnGateGoBtn';
-/** Every overlay the gate covers: each `.overlay` in the body wherever it sits (page.html places every sheet and the curtain as body children; one nested deeper would only be set inert under an inert parent, harmless), the gate itself filtered out below. */
-const OVERLAYS = '.overlay';
+// Every overlay the gate covers is `OVERLAYS` (above) wherever it sits (one nested deeper would only be set inert under an inert parent, harmless), the gate itself filtered out below.
 /** The gate's two texts (`#turnGateTitle`, `#turnGateSub`), written by `paintGate` where a page's words follow its orientation live. */
 const GATE_TITLE_ID = 'turnGateTitle';
 const GATE_SUB_ID = 'turnGateSub';
