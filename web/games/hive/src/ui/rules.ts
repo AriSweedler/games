@@ -23,7 +23,7 @@ export const GLOSSARY: Glossary = [
   { rule: 'slide', terms: ['slide', 'slides'] },
 ];
 
-export const RULES: ReadonlyArray<RuleItem> = [
+export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
   {
     id: 'goal',
     heading: 'Goal',
@@ -63,7 +63,7 @@ export const RULES: ReadonlyArray<RuleItem> = [
   },
 ];
 
-export const rulesItemsHtml = (): string => rulesListHtml(RULES, GLOSSARY);
+export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);
 
 const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
   'Eleven bugs a side on a board that grows as you play: place them around the hive and move them along it, and the first Queen surrounded on all six sides loses. That is Hive, for two.',

@@ -654,3 +654,217 @@ export const LANDING_TOOL_HREFS: ReadonlyArray<string> = TOOL_NAMES.map((t) => `
  * page and its `Game` row land separately from this alias.
  */
 export const ALIASES: Readonly<Record<string, string>> = { sheshbesh: 'backgammon' };
+
+// ---- the conformance declarations (docs/design/game-conformance.md) -----------------------------
+
+/**
+ * The rules AGENT.md holds every shell game to, as the conformance suite names them in a failure
+ * (`<game>: <rule>: <what to fix>`): `shell-home` (the home is the shell's: page.ts composes it),
+ * `online-mode` (Online is a mode), `stepper` (the player count is the shared stepper at the
+ * game's bounds), `seat-names` (pass and play shows one name input per seat the stepper counts),
+ * `rules-fit` (the Rules tab fits 390x844 with no scroll), `seats-on-table` (every seat's name and
+ * public state on the table), `pauses` (every consequential event waits for Continue), `cues` (a
+ * sound cue per key moment, over SHELL_CUES), `landing` (the card, the README row, the splash),
+ * `tables` (a row in every per-game table: ROOM_CODE, SHELL, REGISTRY, ids.ts SHELL_GAMES) and
+ * `curtain` (the pass-and-play curtain hides the table: an opaque scrim, or the table hidden under
+ * it; the owner found UNO's hand showing through "Pass the phone to Lavi", 2026-10-02).
+ */
+export type ConformanceRule =
+  | 'shell-home'
+  | 'online-mode'
+  | 'stepper'
+  | 'seat-names'
+  | 'rules-fit'
+  | 'seats-on-table'
+  | 'pauses'
+  | 'cues'
+  | 'landing'
+  | 'tables'
+  | 'curtain';
+
+/** A rule a game is known not to meet yet, with the follow-up that closes it: the suite marks the case fixme, naming both. */
+export type ConformanceGap = Readonly<{ rule: ConformanceRule; followUp: string }>;
+
+/** What the conformance suite (test/shared/conformance.test.ts, test/dist/game-conformance.test.ts, e2e/shell-conformance.spec.ts) checks a game against. */
+export type ConformanceSpec = Readonly<{
+  /**
+   * The seat range the player count steps over (AGENT.md "The player count is the shared
+   * stepper"): the game's shellConfig.ts `seats {min, max}`, pinned here so a page's stepper, its
+   * name inputs and its config cannot drift apart. A two-seat game has no stepper (min = max).
+   */
+  seats: Readonly<{ min: number; max: number }>;
+  /**
+   * The `Pause.kind`s the game's ui/state.ts raises (AGENT.md "Understand what happened before
+   * proceeding"), each cleared by `continue/click`; the suite pins each kind against the source.
+   * Empty only with a `pauses` gap declared below.
+   */
+  pauses: ReadonlyArray<string>;
+  /**
+   * The game's own cue names in src/ui/sound.ts beyond SHELL_CUES (AGENT.md "Every key moment has
+   * a sound cue, once"); null while the game has no sound table (a `cues` gap declared below).
+   */
+  cues: ReadonlyArray<string> | null;
+  /**
+   * How many class names the game's built CSS must yield (test/dist/class-contract.test.ts), set
+   * about a tenth under the measurement at declaration so an extraction that finds nothing fails
+   * at the game's own size rather than a floor lowered for the smallest game (the orchestrator,
+   * 2026-10-02: two lanes lowered the shared floor 100 -> 80 -> 75).
+   */
+  cssFloor: number;
+  /**
+   * Whether the pass-and-play curtain hides a hand (gin, fidice, briscola, UNO), so its scrim must
+   * be opaque or the table hidden under it (`curtain`); false where nothing is hidden and the
+   * curtain only names the starter or rises once (Sheshbesh, Flip 7; AGENT.md "Hidden hands").
+   */
+  hides: boolean;
+  /** The rules the game is known to miss, each with its follow-up; the suite reports them as fixme, never as green. */
+  gaps: ReadonlyArray<ConformanceGap>;
+}>;
+
+/** The shell's two proper seats and no stepper: gin, Sheshbesh and Hive seat two. */
+const TWO_SEATS = { min: 2, max: 2 } as const;
+
+/** One conformance row per shell game, pinned by tools/games.test.ts; a shell game without a row is a type error. */
+export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
+  'gin-rummy': {
+    seats: TWO_SEATS,
+    pauses: [],
+    cues: ['knockGood', 'gin', 'bad', 'neutral', 'oppStock', 'oppDiscard'],
+    cssFloor: 160,
+    hides: true,
+    gaps: [
+      {
+        rule: 'rules-fit',
+        followUp:
+          'the Rules tab scrolls at 390x844 (1099px tall, 2026-10-02): cut RULES_ITEMS to the goal, the turn and one line per special case',
+      },
+      {
+        rule: 'pauses',
+        followUp:
+          'a knock or gin shows both hands, the layoffs and the deadwood until Continue (AGENT.md table); ui/state.ts has no `pause`',
+      },
+    ],
+  },
+  fidice: {
+    seats: { min: 1, max: 6 },
+    pauses: [],
+    cues: [],
+    cssFloor: 190,
+    hides: true,
+    gaps: [
+      {
+        rule: 'curtain',
+        followUp:
+          'the curtain overlay has no scrim (0 opaque) over the cups; the scrim lane paints .overlay.curtain in shell.css: delete this row when it lands',
+      },
+      {
+        rule: 'rules-fit',
+        followUp:
+          'the Rules tab scrolls at 390x844 (2130px tall, 2026-10-02): cut RULES_ITEMS to the goal, the turn and one line per special case',
+      },
+      {
+        rule: 'cues',
+        followUp:
+          'src/ui/sound.ts spreads SHELL_CUES and nothing of its own; fidice-shell-adoption.md M9 adds the roll, the bid, the call and the reveal',
+      },
+      {
+        rule: 'stepper',
+        followUp:
+          'the host card seats by a <select> (#seatsSel); the stepper lands with docs/design/fidice-shell-adoption.md M6',
+      },
+      {
+        rule: 'pauses',
+        followUp: 'a call shows every cup until Continue; fidice-shell-adoption.md M6',
+      },
+    ],
+  },
+  backgammon: {
+    seats: TWO_SEATS,
+    pauses: [],
+    cues: ['roll', 'doubles', 'place', 'hit', 'bearOff', 'double'],
+    cssFloor: 130,
+    hides: false,
+    gaps: [
+      {
+        rule: 'rules-fit',
+        followUp:
+          'the Rules tab scrolls at 390x844 (1146px tall, 2026-10-02): cut RULES_ITEMS to the goal, the turn and one line per special case',
+      },
+      {
+        rule: 'pauses',
+        followUp:
+          'a hit or a checker borne off shows the roll and the move until Continue (AGENT.md table); ui/state.ts has no `pause`, the turn gate holds the handoff alone',
+      },
+    ],
+  },
+  briscola: {
+    seats: { min: 2, max: 4 },
+    pauses: [],
+    cues: ['start.deal', 'move.play', 'draw.stock', 'good.trick.small'],
+    cssFloor: 145,
+    hides: true,
+    gaps: [
+      {
+        rule: 'curtain',
+        followUp:
+          'the curtain is the terracotta at 78% by design (theme.css, design §5.4) with the hand face down; the guard needs a face-down check, or the scrim goes opaque',
+      },
+      {
+        rule: 'rules-fit',
+        followUp:
+          'the Rules tab scrolls at 390x844 (1109px tall, 2026-10-02): cut RULES_ITEMS to the goal, the turn and one line per special case',
+      },
+      {
+        rule: 'pauses',
+        followUp:
+          'a taken trick shows its cards and who took the points until Continue (AGENT.md table); ui/state.ts has no `pause`',
+      },
+    ],
+  },
+  uno: {
+    seats: { min: 2, max: 12 },
+    pauses: [],
+    cues: ['play', 'draw', 'penalty', 'deal'],
+    cssFloor: 80,
+    hides: true,
+    gaps: [
+      {
+        rule: 'seat-names',
+        followUp:
+          'the stepper reaches 12 while the pass-and-play panel has four name inputs; the shell-seat-names lane paints one per seat: delete this row when it lands so the guard bites',
+      },
+      {
+        rule: 'curtain',
+        followUp:
+          'the curtain overlay has no opaque scrim, so the hand shows through "Pass the phone to …"; the scrim lane paints .overlay.curtain in shell.css: delete this row when it lands',
+      },
+      {
+        rule: 'pauses',
+        followUp:
+          "a penalty drawn shows the card that caused it and the cards drawn until Continue (AGENT.md table): a `pause` in ui/state.ts, Flip 7's pauseFor the model",
+      },
+    ],
+  },
+  flip7: {
+    seats: { min: 2, max: 12 },
+    pauses: ['bust', 'frozen', 'flip7'],
+    cues: ['flip', 'bust', 'freeze', 'stay', 'deal'],
+    cssFloor: 72,
+    hides: false,
+    gaps: [],
+  },
+  hive: {
+    seats: TWO_SEATS,
+    pauses: [],
+    cues: ['place', 'move'],
+    cssFloor: 78,
+    hides: false,
+    gaps: [
+      {
+        rule: 'pauses',
+        followUp:
+          'a queen surrounded shows the hive until Continue (AGENT.md table); ui/state.ts has no `pause`',
+      },
+    ],
+  },
+};

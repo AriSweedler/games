@@ -901,6 +901,9 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
       'test/fixtures/legacy/manifest.test.ts',
       // The registry and the CI tooling (this table's own accounting among them).
       'tools/**/*.test.ts',
+      // The game conformance suite's source half (docs/design/game-conformance.md): every shell game
+      // against AGENT.md's rules, read off its sources and the registry; no build, no browser.
+      'test/game-conformance.test.ts',
     ],
     standalone: [],
     browser: false,
@@ -1010,6 +1013,12 @@ export const RULES: ReadonlyArray<Rule> = [
     globs: ['web/shared/example/**'],
     runs: ['shared'],
     why: 'the coin game: the replay driver self-test in shared; no game imports it',
+  },
+  {
+    // The conformance suite's source half reads every game's sources and the registry: harness.
+    globs: ['test/game-conformance.test.ts'],
+    runs: ['harness'],
+    why: 'the game conformance suite (source half): the registry and every game against AGENT.md, in harness',
   },
   {
     // The replay driver and the engine-test scaffolding (dry-round-2.md F3, F4): imported by the

@@ -6,7 +6,7 @@
 // row is checked against the tree so it cannot go stale. Runs on dist/ after the build (npm run test:site).
 import { expect, test } from 'vitest';
 
-import { REGISTRY } from '../../tools/games.ts';
+import { CONFORMANCE, type Game, REGISTRY } from '../../tools/games.ts';
 import {
   GAMES,
   OWNERS,
@@ -24,13 +24,13 @@ import { describeDist } from './dist.ts';
 
 const names = (rows: ReadonlyArray<Row>): ReadonlyArray<string> => rows.flatMap((r) => r.names);
 /**
- * How many class names the built CSS must yield; the per-game TypeScript and markup floors are
- * each game's `contractFloors` row in tools/games.ts (why a floor: so an extraction that silently
- * finds nothing fails here rather than passing the two orphan tests vacuously). Hive's one-screen
- * table styles the fewest (80 at its shell registration, the shared sheets included), so the
- * floor sits under it.
+ * How many class names the built CSS must yield: the game's own `cssFloor` in its CONFORMANCE row
+ * (tools/games.ts), so each game is guarded at its own size; the TypeScript and markup floors are
+ * its `contractFloors` row (why a floor: so an extraction that silently finds nothing fails here
+ * rather than passing the two orphan tests vacuously). The one shared floor sat under the smallest
+ * game and was lowered twice in a day (100 -> 80 -> 75) as smaller games registered.
  */
-const CSS_FLOOR = 75;
+const cssFloor = (game: Game): number => CONFORMANCE[game].cssFloor;
 /** Rows with a `Toggled by` and no `Styled in`: TS names the class, no rule is expected. */
 const behaviourOnly = (rows: ReadonlyArray<Row>): ReadonlyArray<Row> =>
   rows.filter((r) => r.toggledBy !== '' && r.styledIn === '');
@@ -73,7 +73,10 @@ describeDist('CSS <-> TS class contract', (root) => {
         expect(sheet).not.toMatch(OWN_SHEET);
       });
       expect(tsNames.length).toBeGreaterThan(floors.ts);
-      expect(css.length).toBeGreaterThan(CSS_FLOOR);
+      expect(
+        css.length,
+        `${game}: the built CSS yields ${String(css.length)} classes, under its cssFloor`,
+      ).toBeGreaterThan(cssFloor(game));
       expect(markup.length).toBeGreaterThan(floors.markup);
     });
 

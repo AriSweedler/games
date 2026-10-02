@@ -19,7 +19,7 @@ export const GLOSSARY: Glossary = [
   { rule: 'turn', terms: ['draws'] },
 ];
 
-export const RULES: ReadonlyArray<RuleItem> = [
+export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
   {
     id: 'goal',
     heading: 'Goal',
@@ -46,7 +46,7 @@ export const RULES: ReadonlyArray<RuleItem> = [
   },
 ];
 
-export const rulesItemsHtml = (): string => rulesListHtml(RULES, GLOSSARY);
+export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);
 
 const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
   'UNO for two to twelve: lay a card that matches the colour or the number, or a wild that names the colour, and be the first with an empty hand.',

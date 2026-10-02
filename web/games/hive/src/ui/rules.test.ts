@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
-import { RULES, aboutHtml, rulesItemsHtml } from './rules.ts';
+import { RULES_ITEMS, aboutHtml, rulesItemsHtml } from './rules.ts';
 
 describe('the rules', () => {
   test('short enough for one phone screen: nine one-line rules, under 150 words in all', () => {
-    expect(RULES.map((r) => r.id)).toEqual([
+    expect(RULES_ITEMS.map((r) => r.id)).toEqual([
       'goal',
       'place',
       'queen',
@@ -15,9 +15,9 @@ describe('the rules', () => {
       'hive',
       'slide',
     ]);
-    const words = RULES.flatMap((r) => `${r.heading} ${r.body}`.split(/\s+/));
+    const words = RULES_ITEMS.flatMap((r) => `${r.heading} ${r.body}`.split(/\s+/));
     expect(words.length).toBeLessThan(150);
-    expect(RULES.find((r) => r.id === 'goal')?.body).toContain('Surround the other Queen');
+    expect(RULES_ITEMS.find((r) => r.id === 'goal')?.body).toContain('Surround the other Queen');
   });
 
   test('the jargon links: the goal to the Queen, the Beetle to the hive, the About to the hive', () => {

@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
-import { RULES, aboutHtml, rulesItemsHtml } from './rules.ts';
+import { RULES_ITEMS, aboutHtml, rulesItemsHtml } from './rules.ts';
 
 describe('the rules', () => {
   test('short enough for one phone screen: eight one-line rules, no points, under 120 words in all', () => {
-    expect(RULES.map((r) => r.id)).toEqual([
+    expect(RULES_ITEMS.map((r) => r.id)).toEqual([
       'goal',
       'turn',
       'skip',
@@ -14,9 +14,9 @@ describe('the rules', () => {
       'wild4',
       'uno',
     ]);
-    const words = RULES.flatMap((r) => `${r.heading} ${r.body}`.split(/\s+/));
+    const words = RULES_ITEMS.flatMap((r) => `${r.heading} ${r.body}`.split(/\s+/));
     expect(words.length).toBeLessThan(120);
-    expect(RULES.find((r) => r.id === 'goal')?.body).toContain('Empty your hand to win');
+    expect(RULES_ITEMS.find((r) => r.id === 'goal')?.body).toContain('Empty your hand to win');
     expect(words.join(' ')).not.toMatch(/points|score|500/);
   });
 
