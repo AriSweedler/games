@@ -1019,7 +1019,8 @@ type ShellDrive = Readonly<{
   /** Shot after the tab tour returns to Play; null where the page has no submenu to show. */
   submenuShot: string | null;
   localModeShot: string;
-  curtainShot: string;
+  /** Shot with the first curtain up after Start; null where the game raises none (hive: SHELL `firstCurtain` null) and the table is on show at once. */
+  curtainShot: string | null;
   /** By id: SHELL[game].localFields names the fields, this gives each its value. */
   localValues: Readonly<Record<string, string>>;
 }>;
@@ -1054,7 +1055,8 @@ const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
   hive: {
     submenuShot: null,
     localModeShot: 'home: play tab, pass the phone',
-    curtainShot: 'local: started, curtain up',
+    // No curtain: driveHive shoots the table it returns to.
+    curtainShot: null,
     // Two players, no field beyond the names.
     localValues: {},
   },
@@ -1073,9 +1075,9 @@ const setField = async (page: Page, id: string, value: string): Promise<void> =>
  * The shell, driven the same way on every shell game (docs/design/shared-shell.md §6.4 D2,
  * dry-round-2.md I2): the home tabs in SHELL[game].tabs order and back to Play, a room opened on
  * the local broker and cancelled, the pass-and-play mode with both names and the game's own fields,
- * the start under the curtain. Returns with the curtain up; the game's driver plays on from there.
- * `shot` is the game's (backgammon's waits the flights out first), so the two per-game drivers keep
- * their wrappers.
+ * the start under the curtain. Returns with the curtain up (or, on a game that raises none, with
+ * the table on show); the game's driver plays on from there. `shot` is the game's (backgammon's
+ * waits the flights out first), so the two per-game drivers keep their wrappers.
  */
 const driveShell = async (page: Page, shot: Shot, game: ShellGame): Promise<void> => {
   const { tabs, localFields, hostFields } = SHELL[game];
@@ -1123,6 +1125,8 @@ const driveShell = async (page: Page, shot: Shot, game: ShellGame): Promise<void
     await setField(page, id, value);
   }, Promise.resolve());
   await click(page, '#localBtn');
+  await visible(page, '#tableScreen');
+  if (drive.curtainShot === null) return;
   await visible(page, '#curtainOverlay');
   await shot(drive.curtainShot);
 };
@@ -1755,28 +1759,26 @@ const driveBriscola = async (page: Page, shot: Shot): Promise<void> => {
 const HIVE_STEP = `(() => { const h = window.__hive; const a = h.legal()[0]; if (a) h.act(a); })()`;
 
 /**
- * Hive (docs/design/hive.md §7), after the shell (driveShell, which started a two-player game under
- * the curtain): the empty board with White's hand lit, a tile picked and the origin lit, the tile
- * placed and the curtain for Black, Black's board, then the rules and history sheets over the
- * table.
+ * Hive (docs/design/hive.md §7), after the shell (driveShell, which started a two-player game with
+ * no curtain: the table is on show at once): the empty board with White's hand lit, a tile picked
+ * and the origin lit, the tile placed and Black's board on show (no curtain between turns), two
+ * tiles down, then the rules and history sheets over the table.
  */
 const driveHive = async (page: Page, shot: Shot): Promise<void> => {
   await driveShell(page, shot, 'hive');
 
   // ---- the first turn ----
-  await click(page, '#curtainBtn');
   await shot('local: started, the empty board');
   await click(page, '#whiteHand .hand-tile[data-bug="ant"]');
   await visible(page, '#board .hex.lit');
   await shot('local: a tile picked, the origin lit');
   await click(page, '#board .hex.lit');
-  await visible(page, '#curtainOverlay');
-  await shot('local: a tile placed, curtain for the other seat');
-  await click(page, '#curtainBtn');
-  await shot('local: the second seat to play');
+  await visible(page, '#board .hex.w');
+  await visible(page, '#blackHand.turn');
+  await shot('local: a tile placed, the second seat to play');
   await page.evaluate(HIVE_STEP);
-  await visible(page, '#curtainOverlay');
-  await click(page, '#curtainBtn');
+  await visible(page, '#board .hex.b');
+  await visible(page, '#whiteHand.turn');
   await shot('local: two tiles down');
 
   // ---- the sheets over the table ----

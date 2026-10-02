@@ -1,13 +1,13 @@
 // Hive's fixtures (docs/design/hive.md §7): the seat's view read through the documented hook
 // (`window.__hive.view()`: the whole game, since nothing is hidden), the pass-and-play start over
-// the shell's (two names, the Pass the phone switch), and one turn played through the hook
-// (`window.__hive.legal()` -> `window.__hive.act(a)`) as a player would: the first legal action,
-// so the turn moves on.
+// the shell's (two names, the Pass the phone switch; no curtain: the table is on show at once),
+// and one turn played through the hook (`window.__hive.legal()` -> `window.__hive.act(a)`) as a
+// player would: the first legal action, so the turn moves on.
 import { expect, type Page } from '@playwright/test';
 
 import type { Action, View } from '../../web/games/hive/src/engine/view.ts';
 import type { Viewport } from './geometry.ts';
-import { reveal, startLocal } from './shell.ts';
+import { startLocal } from './shell.ts';
 
 export type { View };
 
@@ -30,15 +30,16 @@ export const hiveKey = (v: View | null): string =>
 
 export const hiveSnapshot = async (page: Page): Promise<string> => hiveKey(await readView(page));
 
-/** Pass the phone between two names at `viewport`: the shell's start; resolves with the table up and the first curtain over it. */
-export const hiveStartLocal = (
+/** Pass the phone between two names at `viewport`: the shell's start; resolves with the table up, White's view, no curtain. */
+export const hiveStartLocal = async (
   page: Page,
   url: string,
   viewport: Viewport,
   names: readonly [string, string] = ['Ann', 'Bob'],
-): Promise<void> => startLocal(page, url, viewport, [names[0], names[1]]);
-
-export const hiveReveal = reveal;
+): Promise<void> => {
+  await startLocal(page, url, viewport, [names[0], names[1]]);
+  await expect(page.locator('#curtainOverlay')).toBeHidden();
+};
 
 /** One action through the hook, as the seat holding the phone. */
 export const hiveAct = async (page: Page, action: Action): Promise<void> => {

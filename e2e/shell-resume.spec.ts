@@ -11,6 +11,7 @@ import { gamePath, invitePath } from './fixtures/player.ts';
 import {
   DEFAULT_NAMES,
   ONLINE_NAMES,
+  expectCurtainUp,
   joinedMsg,
   readSave,
   reopenedMsg,
@@ -126,7 +127,8 @@ SHELL_GAMES.forEach((game) => {
       await expect(page.locator('#resumeBtn')).toHaveText(resumeLabel.local(DEFAULT_NAMES));
       await page.locator('#resumeBtn').click();
       await expect(page.locator('#tableScreen')).toBeVisible();
-      await expect(page.locator('#curtainOverlay')).toBeVisible();
+      // The curtain names the mover again on a game that raises one; hive's table is just on show.
+      await expectCurtainUp(page, game);
       expect(await driver.snapshot(page)).toBe(before);
       // Pass and play opens no Peer.
       expect(await player.peerCalls()).toEqual([]);

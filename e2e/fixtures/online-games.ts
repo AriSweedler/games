@@ -40,7 +40,6 @@ import {
   requireView as requireHive,
   hiveKey,
   hivePlayTurn,
-  hiveReveal,
   hiveSnapshot,
   hiveStartLocal,
 } from './hive.ts';
@@ -98,7 +97,8 @@ export type ShellDriver = OnlineDriver &
   Readonly<{
     /**
      * The first curtain's sub line for the seat taking the phone (`first`) while the other looks
-     * away; backgammon's is the opening roll (two names, two dice), so a pattern.
+     * away; backgammon's is the opening roll (two names, two dice), so a pattern. Never read on a
+     * game that raises no curtain (hive; e2e/fixtures/shell.ts `hasCurtain`).
      */
     curtainSub: (first: string, other: string) => string | RegExp;
     seatNames: SeatNameCells;
@@ -112,13 +112,16 @@ export type ShellDriver = OnlineDriver &
     localSave: Readonly<Record<string, unknown>>;
     /** Something of the game itself a seated page shows: the hand's cards, the board (e2e/shell-liveness.spec.ts). */
     table: string;
-    /** The handoff offered while a curtain is up (e2e/shell-handoff.spec.ts, the case under the curtain). */
+    /**
+     * The handoff offered while a curtain is up (e2e/shell-handoff.spec.ts, the case under the
+     * curtain); on a game that raises none (hive) the case plays a turn and takes the table's.
+     */
     curtainOffer: Readonly<{
       /** The case, as its test is titled. */
       title: string;
-      /** From the first curtain of a fresh game to the curtain the case is about. */
+      /** From the first curtain of a fresh game to the curtain the case is about (or, with no curtain, past the first turn). */
       toCurtain: (page: Page) => Promise<void>;
-      /** Take the offer from under that curtain; resolves with the room's confirmed code. */
+      /** Take the offer from under that curtain (or from the table); resolves with the room's confirmed code. */
       take: (page: Page) => Promise<string>;
     }>;
     /**
@@ -497,13 +500,14 @@ const briscola: ShellDriver = {
 
 /**
  * Hive (docs/design/hive.md §7), a two-seat shell game: the host starts from the waiting room and
- * both tables come up with no curtain and an empty board; the whole game through
- * `window.__hive.view()` (nothing is hidden).
+ * both tables come up with an empty board; the whole game through `window.__hive.view()` (nothing
+ * is hidden). No curtain in either mode (SHELL `firstCurtain` null): pass and play shows White's
+ * table from Start and the view changes hands on screen.
  */
 const hive: ShellDriver = {
   ...shellOnline,
-  // ui/render.ts `paintCurtain`: the other seat, told to look away.
-  curtainSub: (_first, other) => `${other}, look away`,
+  // No curtain, so no sub line; never read (e2e/fixtures/shell.ts `hasCurtain`).
+  curtainSub: () => '',
   // `#myName` is "<name> · White|Black" (ui/render.ts `paintTable`).
   seatNames: {
     me: '#myName',
@@ -542,17 +546,13 @@ const hive: ShellDriver = {
   table: '#board .hex',
   curtainOffer: {
     title:
-      "the offer is the table's alone: the curtain carries none; after a placement the next seat reveals and takes it",
-    // White places its first tile (through the hook); the phone goes to Black under the curtain.
+      "the offer is the table's alone and no curtain is raised: after a placement the next seat takes it from the table",
+    // White places its first tile (through the hook); Black's view comes up on screen, no curtain.
     toCurtain: async (page) => {
-      await hiveReveal(page);
       await hivePlayTurn(page);
-      await expect(page.locator('#curtainOverlay')).toBeVisible();
+      await expect(page.locator('#curtainOverlay')).toBeHidden();
     },
-    take: async (page) => {
-      await reveal(page);
-      return takeOffer(page, 'hive');
-    },
+    take: (page) => takeOffer(page, 'hive'),
   },
   // The Rules and About copy (ui/rules.ts GLOSSARY): "hive" in the About copy lands on the One
   // hive rule; the goal's "Queen" names the Queen rule, the Beetle's "hive" the One hive rule.
@@ -566,7 +566,6 @@ const hive: ShellDriver = {
     overlayTo: 'hive',
     openRulesOverTable: async (page, url, viewport) => {
       await hiveStartLocal(page, url, viewport);
-      await hiveReveal(page);
       await page.locator('#rulesBtnGame').click();
     },
   },

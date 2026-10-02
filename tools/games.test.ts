@@ -222,8 +222,8 @@ describe('the games registry', () => {
           connDot: '#oppDot',
           localNames: ['Ari', 'Lavi'],
           localFields: [],
-          curtainButtons: 1,
-          firstCurtain: 'Pass the phone to {name}',
+          curtainButtons: 0,
+          firstCurtain: null,
         },
       },
     });

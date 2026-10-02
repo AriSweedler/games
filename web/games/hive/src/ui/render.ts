@@ -1,12 +1,14 @@
 // The paint (docs/design/hive.md §7): the App onto the composed shell page (page.ts) through the
 // DOM edge, and every control bound to an intent. The shell's half is web/shared/ui's (the screens,
-// the waiting rooms, the home tabs, the curtain, the sheets); the table is this file's: the names
-// strip (`#myName`, `#oppName`, `#oppDot`), the SVG board (one `g.hex` per cell: a hexagon in the
-// side's colour with the bug's letter, a count badge on a stack, `lit` where the picked tile may
-// go, `picked` on the tile in hand), the two hands as trays of tiles with their counts, Pass when
-// the seat must, Resign while the game is on, the status line, and the result sheet over the
-// final board (Continue leaves the board on show; Play again starts anew). The base pack is plain:
-// a tile is its colour and its letter.
+// the waiting rooms, the home tabs, the sheets; its curtain is composed but never raised, since
+// Hive hides nothing: ui/state.ts `viewer`); the table is this file's: the names strip (`#myName`,
+// `#oppName`, `#oppDot`), the SVG board (one `g.hex` per cell: a hexagon in the side's colour with
+// the bug's letter, a count badge on a stack, `lit` where the picked tile may go, `picked` on the
+// tile in hand; the viewBox fitted to the hive and its ring, ui/board.ts `fitCells`, so a pick
+// never rescales it), the two hands as trays of hexagonal tiles (the board's hexagon, the bug's
+// letter, the count left as a badge), Pass when the seat must, Resign while the game is on, the
+// status line, and the result sheet over the final board (Continue leaves the board on show; Play
+// again starts anew). The base pack is plain: a tile is its colour and its letter.
 import {
   closestFrom,
   dataOf,
@@ -22,7 +24,6 @@ import {
   type DocumentLike,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
-import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
 import { RULES_SLOT_IDS } from '../../../../shared/ui/glossary.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
@@ -41,7 +42,16 @@ import { stackAt, type Game } from '../engine/engine.ts';
 import { hexOf, keyOf, type Hex } from '../engine/hex.ts';
 import { BUG, BUGS, type Bug, type Side } from '../engine/pieces.ts';
 import { sideOf, turnSeat, winnerSeat, type Seat, type View } from '../engine/view.ts';
-import { cellsOf, centerOf, cornersOf, viewBoxAttr, viewBoxOf } from './board.ts';
+import {
+  HEX_H,
+  HEX_W,
+  cellsOf,
+  centerOf,
+  cornersOf,
+  fitCells,
+  viewBoxAttr,
+  viewBoxOf,
+} from './board.ts';
 import { bindHome, paintHome } from './home.ts';
 import { aboutHtml, rulesItemsHtml } from './rules.ts';
 import {
@@ -95,7 +105,10 @@ export const cellHtml = (game: Game, hex: Hex, lit: boolean, picked: boolean): s
   return `${safeHtml`<g class="${classes}" data-hex="${keyOf(hex)}" role="button" tabindex="0" aria-label="${label}"><polygon points="${cornersOf(c)}" />`.markup}${letter}${badge}</g>`;
 };
 
-/** The whole board as one SVG: the cells, the viewBox fitted to them. */
+/**
+ * The whole board as one SVG: the cells drawn (the hive and the lit hexes), the viewBox fitted to
+ * the hive and its ring (board.ts `fitCells`), the same box with the pick lit or cleared.
+ */
 export const boardHtml = (v: View, picked: Picked | null): string => {
   const lit = new Set(reachable(v, picked).map(keyOf));
   const cells = cellsOf(v.game.board, [...lit].map(hexOf));
@@ -103,10 +116,26 @@ export const boardHtml = (v: View, picked: Picked | null): string => {
   const inner = cells
     .map((hex) => cellHtml(v.game, hex, lit.has(keyOf(hex)), keyOf(hex) === pickedKey))
     .join('');
-  return `<svg class="hive" viewBox="${viewBoxAttr(viewBoxOf(cells))}" role="group" aria-label="The hive">${inner}</svg>`;
+  return `<svg class="hive" viewBox="${viewBoxAttr(viewBoxOf(fitCells(v.game.board)))}" role="group" aria-label="The hive">${inner}</svg>`;
 };
 
-/** One side's hand: a tile per bug with the count left, the placeable ones lit on the seat's turn. */
+/** A tray tile's own viewBox: one hex (board.ts HEX_W by HEX_H) about the origin. */
+export const TILE_VIEWBOX = [-HEX_W / 2, -HEX_H / 2, HEX_W, HEX_H]
+  .map((n) => n.toFixed(2))
+  .join(' ');
+
+/**
+ * A tray tile's face: the board's hexagon (`cornersOf`, the same inset, so the shape matches the
+ * board's cell by cell) with the bug's letter at its centre, in a viewBox of its own.
+ */
+export const tileHtml = (bug: Bug): string =>
+  `<svg class="tile" viewBox="${TILE_VIEWBOX}" aria-hidden="true"><polygon points="${cornersOf({ x: 0, y: 0 })}" />${safeHtml`<text class="letter" x="0" y="0.5">${letterOf(bug)}</text>`.markup}</svg>`;
+
+/**
+ * One side's hand: a hexagonal tile per bug (`tileHtml`) with the count left as a badge, the
+ * placeable ones lit on the seat's turn; any of them may be picked at any time (there is no hand
+ * order in Hive), the Queen alone when she must come down.
+ */
 export const handHtml = (v: View, side: Side, picked: Picked | null): string => {
   const mine = sideOf(v.seat) === side;
   const can = mine ? placeableNow(v) : new Set<Bug>();
@@ -121,8 +150,9 @@ export const handHtml = (v: View, side: Side, picked: Picked | null): string => 
     ]
       .filter((s) => s !== '')
       .join(' ');
-    return safeHtml`<button class="${classes}" type="button" data-bug="${bug}" data-side="${side}" aria-label="${BUG[bug].name}, ${String(left)} left"${can.has(bug) ? '' : ' disabled'}><span class="letter">${letterOf(bug)}</span><span class="count">${String(left)}</span></button>`
-      .markup;
+    const open = safeHtml`<button class="${classes}" type="button" data-bug="${bug}" data-side="${side}" aria-label="${BUG[bug].name}, ${String(left)} left"${can.has(bug) ? '' : ' disabled'}>`;
+    const count = safeHtml`<span class="count">${String(left)}</span>`;
+    return `${open.markup}${tileHtml(bug)}${count.markup}</button>`;
   }).join('');
 };
 
@@ -168,28 +198,11 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const over = v.game.result !== null;
   toggleClass(requireId(doc, 'againBtn'), 'hidden', !(over && app.table.resultSeen));
   setText(requireId(doc, 'statusText'), statusText(v));
-  paintSheet(doc, 'resultOverlay', over && !app.table.resultSeen && app.table.curtain === null);
+  paintSheet(doc, 'resultOverlay', over && !app.table.resultSeen);
   if (over) {
     setText(requireId(doc, 'rsTitle'), resultTitle(v));
     setText(requireId(doc, 'rsNote'), v.game.note);
   }
-};
-
-/** `#curtainOverlay`: the seat taking the phone, the other told to look away, what just happened. */
-const paintCurtain = (doc: DocumentLike, app: App): void => {
-  const seat = app.table.curtain;
-  const v = app.shell.view;
-  paintShellCurtain(
-    doc,
-    seat === null || v === null
-      ? null
-      : {
-          title: `Pass the phone to ${nameAt(v, seat)}`,
-          sub: `${nameAt(v, seat === 0 ? 1 : 0)}, look away`,
-          last: v.game.note,
-          button: 'Show the board',
-        },
-  );
 };
 
 const paintOverlays = (doc: DocumentLike, app: App): void => {
@@ -220,7 +233,7 @@ export const paint = (doc: PageLike, app: App): void => {
   paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
   paintShellWaiting(doc, app.shell);
   paintHome(doc, app);
-  paintCurtain(doc, app);
+  // No curtain to paint: the shell composed `#curtainOverlay` hidden and `viewer` never raises it.
   const game = app.shell.role === 'local' ? app.shell.game : null;
   paintShellHandoff(doc, game === null ? null : handoffLabel(game));
   const v = app.shell.view;
@@ -269,10 +282,9 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
   );
 };
 
-/** Every control of the page (home, curtain, table, sheets), once, at boot. */
+/** Every control of the page (home, table, sheets), once, at boot; the curtain's button is never shown, so it is not bound. */
 export const bindAll = (doc: PageLike, dispatch: Dispatch): void => {
   bindHome(doc, dispatch);
-  bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
   bindTable(doc, dispatch);
   bindSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'escape' } });
 };

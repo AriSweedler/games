@@ -39,7 +39,8 @@ const notes: ShellNotes = {
   rulesTabNote: ': ui/rules.ts fills both slots at boot (render.ts renderRules).',
   glossaryDoc: 'glossary-links.md',
   aboutClose: '',
-  curtainNote: ': the pause while the phone changes hands, the last move written on it.',
+  curtainNote:
+    ': composed by the shell, never raised: Hive hides nothing, so both players share the one screen (ui/state.ts `viewer`; the owner, 2026-10-02: "you don\'t need to pass the phone for turns").',
 };
 
 const look: ShellLook = {
