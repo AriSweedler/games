@@ -14,13 +14,14 @@ import {
   placeableBugs,
   placementHexes,
   queenAt,
+  spiderPaths,
   stackAt,
   tilesOn,
   type Board,
   type Game,
   type Intent,
 } from './engine.ts';
-import { ORIGIN, isConnected, keyOf, neighbours, type Hex } from './hex.ts';
+import { ORIGIN, distance, isConnected, keyOf, neighbours, sameHex, type Hex } from './hex.ts';
 import {
   BUG,
   BUGS,
@@ -198,6 +199,19 @@ describe('each bug moves its own way (§4.5-§4.6)', () => {
   test('the Spider walks exactly three hexes around the hive and never back', () => {
     const game = position({ '-1,0': ['wS'], '0,0': ['wQ'], '1,0': ['bQ'] });
     expect(keys(legalMoves(game, h(-1, 0)))).toEqual(['1,1', '2,-1']);
+  });
+
+  test('spiderPaths: the three hexes to each destination, one path a destination, stepping around the hive', () => {
+    const game = position({ '-1,0': ['wS'], '0,0': ['wQ'], '1,0': ['bQ'] });
+    const paths = spiderPaths(game, h(-1, 0));
+    expect([...paths.keys()].sort()).toEqual(['1,1', '2,-1']);
+    expect(paths.get('2,-1')).toEqual([h(0, -1), h(1, -1), h(2, -1)]);
+    expect(paths.get('1,1')).toEqual([h(-1, 1), h(0, 1), h(1, 1)]);
+    // Not a Spider, not the mover's, or the Queen in hand: no path.
+    expect(spiderPaths(game, h(0, 0)).size).toBe(0);
+    expect(spiderPaths({ ...game, turn: 'black' }, h(-1, 0)).size).toBe(0);
+    const queenUp = position({ '-1,0': ['wS'], '0,0': ['wA'], '1,0': ['bQ'] });
+    expect(spiderPaths(queenUp, h(-1, 0)).size).toBe(0);
   });
 
   test('the Soldier Ant goes anywhere around the hive it can slide to', () => {
@@ -382,5 +396,34 @@ describe('a seeded random bot game stays legal for 200 turns', () => {
       null,
       { kind: 'win', winner: 'white', by: 'surround' },
     ]);
+  });
+
+  test('every Spider move the bots made had a three-hex path around the hive: spiderPaths ends where legalMoves does', () => {
+    const spiderMoves = GAMES.flat().filter(
+      ({ before, intent }) =>
+        intent.type === 'move' && stackAt(before.board, intent.from).at(-1)?.bug === 'spider',
+    );
+    expect(spiderMoves.length).toBeGreaterThan(10);
+    spiderMoves.forEach(({ before, intent }) => {
+      if (intent.type !== 'move') return;
+      const paths = spiderPaths(before, intent.from);
+      expect([...paths.keys()].sort()).toEqual(keys(legalMoves(before, intent.from)));
+      const hive = occupied(before.board).filter((x) => !sameHex(x, intent.from));
+      paths.forEach((path, key) => {
+        expect(path).toHaveLength(3);
+        expect(keyOf(path[2] ?? ORIGIN)).toBe(key);
+        // A chain of single steps off the start, never a hex twice and never the start again.
+        const chain = [intent.from, ...path];
+        chain.slice(1).forEach((x, i) => {
+          expect(distance(chain[i] ?? ORIGIN, x)).toBe(1);
+        });
+        expect(new Set(chain.map(keyOf)).size).toBe(4);
+        // Every hex stepped on is empty and touches the hive the Spider left behind.
+        path.forEach((x) => {
+          expect(heightAt(before.board, x)).toBe(0);
+          expect(neighbours(x).some((n) => hive.some((c) => sameHex(c, n)))).toBe(true);
+        });
+      });
+    });
   });
 });

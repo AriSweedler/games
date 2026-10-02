@@ -17,6 +17,7 @@ import {
   scale,
   sharedNeighbours,
   walkEnds,
+  walks,
   type Hex,
 } from './hex.ts';
 
@@ -136,5 +137,24 @@ describe('walking the hive', () => {
     const two = walkEnds(ORIGIN, 2, neighbours);
     expect(two.some((x) => sameHex(x, ORIGIN))).toBe(false);
     expect(keys(two)).toEqual(keys([...ring(ORIGIN, 1), ...ring(ORIGIN, 2)]));
+  });
+
+  test('each walk is the hexes stepped on, in order, each a step from the last, none twice; the ends are walkEnds', () => {
+    expect(walks(ORIGIN, 0, neighbours)).toEqual([[]]);
+    expect(walks(ORIGIN, 1, neighbours)).toEqual(neighbours(ORIGIN).map((n) => [n]));
+    const three = walks(ORIGIN, 3, neighbours);
+    // Six first steps, five onward (never back to the start), then four or five: 6 * 5 * (4|5).
+    expect(three.length).toBeGreaterThan(6 * 5 * 4);
+    expect(three.length).toBeLessThanOrEqual(6 * 5 * 5);
+    three.forEach((path) => {
+      expect(path).toHaveLength(3);
+      expect(new Set([ORIGIN, ...path].map(keyOf)).size).toBe(4);
+      [ORIGIN, ...path].slice(1).forEach((x, i) => {
+        expect(distance([ORIGIN, ...path][i] ?? ORIGIN, x)).toBe(1);
+      });
+    });
+    expect(keys(walkEnds(ORIGIN, 3, neighbours))).toEqual(
+      keys(dedupe(three.map((path) => path[2] ?? ORIGIN))),
+    );
   });
 });
