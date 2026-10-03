@@ -175,6 +175,10 @@ label {
 .row + .row {
   margin-top: 10px;
 }
+/* The topbar's two button rows (web/shared/markup/topbar.ts): the icon buttons closer than a form row's fields. */
+.row.tight {
+  gap: 6px;
+}
 .grow {
   flex: 1;
 }
@@ -1128,6 +1132,18 @@ body[data-flip='1'] {
 }
 .seat-names .hidden {
   display: none;
+}
+
+/* The table's names strip (web/shared/markup/topbar.ts topbarHtml; docs/design/dry-review-2026-10.md
+   §7 row 14): the two names and the other seat's dot on one line between the topbar's buttons,
+   clipped rather than wrapped. A theme adds its weight and size (uno), its centring (hive). */
+.names-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .stepper-num {
   min-width: 2ch;

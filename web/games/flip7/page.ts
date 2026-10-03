@@ -14,6 +14,7 @@ import {
 } from '../../shared/markup/shell.ts';
 import { seatNamesHtml } from '../../shared/markup/seatNames.ts';
 import { seatedHostFields, stepperHtml } from '../../shared/markup/stepper.ts';
+import { topbarHtml } from '../../shared/markup/topbar.ts';
 
 /** Both steppers' bounds and first value: two to twelve players (the owner, 2026-10-02). */
 const PLAYERS = { label: 'Players', min: 2, max: 12, value: 2, noun: 'players' } as const;
@@ -57,39 +58,7 @@ ${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
            marked data-you. Hit and Stay show for the seat whose turn it is, the taker picker for the
            seat that flipped an action card, the scores when a round ends. -->
       <div id="tableScreen" class="hidden">
-        <div class="topbar">
-          <div class="row tight">
-            <button class="icon-btn" id="leaveBtn" title="Leave" aria-label="Leave">✕</button>
-            <button
-              class="icon-btn hidden"
-              id="handoffBtn"
-              title="Continue online"
-              aria-label="Continue online"
-            >
-              🌐
-            </button>
-          </div>
-          <div class="names">
-            <span id="myName">You</span>
-            <span class="conn-dot" id="oppDot"></span>
-            <span id="oppName">Opponent</span>
-          </div>
-          <div class="row tight">
-            <button class="icon-btn" id="rulesBtnGame" title="Rules" aria-label="Rules">📖</button>
-            <button class="icon-btn" id="historyBtn" title="Recent games" aria-label="Recent games">
-              📜
-            </button>
-            <button
-              class="icon-btn"
-              id="soundBtn"
-              title="Sound &amp; vibration"
-              aria-label="Sound"
-              aria-pressed="true"
-            >
-              🔊
-            </button>
-          </div>
-        </div>
+${topbarHtml({ dot: 'between', titles: { leave: 'Leave', history: 'Recent games' }, indent: '        ' })}
 
         <div class="round-row">
           <span id="roundLabel">Round 1</span>

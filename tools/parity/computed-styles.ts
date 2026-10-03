@@ -718,7 +718,7 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.stepper',
     '.btn-block',
     '#tableScreen .topbar',
-    '#tableScreen .names',
+    '#tableScreen .names-strip',
     '#myName',
     '#oppName',
     '.round-row',

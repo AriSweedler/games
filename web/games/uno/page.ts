@@ -18,6 +18,7 @@ import {
 } from '../../shared/markup/shell.ts';
 import { seatNamesHtml } from '../../shared/markup/seatNames.ts';
 import { seatedHostFields, stepperHtml } from '../../shared/markup/stepper.ts';
+import { topbarHtml } from '../../shared/markup/topbar.ts';
 
 const copy: ShellCopy = {
   localNote:
@@ -60,23 +61,11 @@ ${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
            hand, Draw and Pass, UNO and Call out UNO (§7, shown to the seats they apply to), the
            colour picker for my wild, the status line. -->
       <div id="tableScreen" class="hidden">
-        <div class="topbar">
-          <div class="row tight">
-            <button class="icon-btn" id="leaveBtn" title="Leave the table" aria-label="Leave the table">✕</button>
-            <button class="icon-btn hidden" id="handoffBtn" title="Continue online" aria-label="Continue online">🌐</button>
-          </div>
-          <div class="names-strip">
-            <span id="myName">You</span>
-            <span class="direction" id="direction" aria-label="Direction of play">↻</span>
-            <span id="oppName">Opponent</span>
-            <span class="conn-dot" id="oppDot"></span>
-          </div>
-          <div class="row tight">
-            <button class="icon-btn" id="rulesBtnGame" title="Rules" aria-label="Rules">📖</button>
-            <button class="icon-btn" id="historyBtn" title="History" aria-label="History">📜</button>
-            <button class="icon-btn" id="soundBtn" title="Sound &amp; vibration" aria-label="Sound" aria-pressed="true">🔊</button>
-          </div>
-        </div>
+${topbarHtml({
+  dot: 'last',
+  between: '<span class="direction" id="direction" aria-label="Direction of play">↻</span>',
+  indent: '        ',
+})}
         <ul class="seats" id="seats" aria-label="Cards in each hand"></ul>
         <div class="pile">
           <div class="draw-pile" aria-label="Draw pile"><span id="drawCount">0</span></div>

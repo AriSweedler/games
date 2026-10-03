@@ -59,6 +59,11 @@ classes), and `{{block}}` lines for a game's own markup (head, table, endgame, i
 options); `shell.ts` (`renderShell`, pure, held at 100%) fills them from a game's
 `web/games/<g>/page.ts`, and `tools/shell-markup.ts --write` composes the committed
 `web/games/<g>/index.html`, through Prettier where `.prettierignore` leaves the page to it.
+Beside the renderer, the pieces a game's own blocks compose instead of spelling: `stepper.ts`
+(`stepperHtml`, `seatedHostFields`), `seatNames.ts` (`seatNamesHtml`) and `topbar.ts`
+(`topbarHtml({ dot, between, titles })`: the table's five shell buttons around the names strip for
+the pages whose strip is the two names and the other seat's dot, uno's and Flip 7's;
+docs/design/dry-review-2026-10.md §7 row 14).
 `test/dist/shell-markup.test.ts` pins each committed page to the render and the partials' ids, plus
 the ones `BLOCK_IDS` and `SCREEN_IDS` say the options, table and endgame blocks place, to
 `SHELL_IDS` here. The painters above reach the document by those ids, so the markup they expect and
