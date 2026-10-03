@@ -15,6 +15,7 @@
 import { bootShell } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import { browserStore } from '../../shared/edge/storage.ts';
+import { paintSound } from '../../shared/ui/shellPaint.ts';
 import { legalActions, type Action, type View } from './src/engine/index.ts';
 import { createFx } from './src/fx.ts';
 import { GuestSession } from './src/net/guest.ts';
@@ -22,7 +23,7 @@ import { HostSession } from './src/net/host.ts';
 import { isGuestFrame } from './src/protocol.ts';
 import { STORAGE_KEYS, soundEnabled } from './src/storage.ts';
 import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
-import { bindAll, paint, paintSound, toastMarks } from './src/ui/render.ts';
+import { bindAll, paint, toastMarks } from './src/ui/render.ts';
 import { watchSafeArea } from './src/safeArea.ts';
 import {
   BACKGAMMON,
@@ -42,7 +43,7 @@ bootShell<Backgammon, App>({
   game: { hook: '__backgammon', title: 'Sheshbesh', debug: 0 },
   sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },
   reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
-  // The Kapará toast wears `hit` (`toastMarks`); `paintSound` adds `aria-pressed` to the shared paint.
+  // The Kapará toast wears `hit` (`toastMarks`); the shared `paintSound`.
   paint: {
     paint,
     bindAll,

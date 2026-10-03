@@ -2,13 +2,8 @@
 // ruleset to teach players should be as short as possible, ideally fitting on 1 screen"): the
 // goal, the turn, the special cards and the UNO call (§7), one line each; one round is the game, so
 // no points (the owner: "UNO should only be single round games"); the long form is docs/design/uno.md. The About
-// copy names the page. Both are static, filled once at boot (render.ts `renderRules`).
-import {
-  linkJargon,
-  rulesListHtml,
-  type Glossary,
-  type RuleItem,
-} from '../../../../shared/ui/glossary.ts';
+// copy names the page. Both are static, filled once at boot (web/shared/ui/shellPaint.ts `renderCopy`).
+import { rulesListHtml, type Glossary, type RuleItem } from '../../../../shared/ui/glossary.ts';
 
 /**
  * The words linked to their rule (docs/design/glossary-links.md): "wild" in the About copy and the
@@ -48,10 +43,7 @@ export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
 
 export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);
 
-const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
+export const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
   'UNO for two to twelve: lay a card that matches the colour or the number, or a wild that names the colour, and be the first with an empty hand.',
   'Pass one phone around the table (a curtain hides each hand while the phone changes hands), or open a table online and send the link: every phone shows its own hand.',
 ];
-
-export const aboutHtml = (): string =>
-  linkJargon(ABOUT_PARAGRAPHS.map((p) => `<p>${p}</p>`).join('\n'), GLOSSARY);

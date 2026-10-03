@@ -22,6 +22,7 @@ import {
   paintSheet,
   paintSound,
   paintWaiting,
+  renderCopy,
   seatLabel,
   seatListHtml,
   seatListKey,
@@ -402,14 +403,36 @@ describe('showToast / hideToast', () => {
 });
 
 describe('paintSound', () => {
-  test('the glyph and the tooltip', () => {
+  test('the glyph, the tooltip and the pressed state', () => {
     const p = page();
     paintSound(p.doc, false);
     expect(p.get('soundBtn').text()).toBe('🔇');
     expect(p.get('soundBtn').attr('title')).toBe('Sound & vibration off');
+    expect(p.get('soundBtn').attr('aria-pressed')).toBe('false');
     paintSound(p.doc, true);
     expect(p.get('soundBtn').text()).toBe('🔊');
     expect(p.get('soundBtn').attr('title')).toBe('Sound & vibration on');
+    expect(p.get('soundBtn').attr('aria-pressed')).toBe('true');
+  });
+});
+
+describe('renderCopy', () => {
+  const copyPage = (): FakePage =>
+    fakePage([...pageEls(), fakeEl('rulesList'), fakeEl('rulesOverlayList'), fakeEl('aboutCopy')]);
+
+  test('the rules into both slots and the About copy into #aboutCopy', () => {
+    const p = copyPage();
+    renderCopy(p.doc, { rules: '<li id="rule-goal">Goal</li>', about: '<p>About</p>' });
+    expect(p.get('rulesList').text()).toBe('<li id="rule-goal">Goal</li>');
+    expect(p.get('rulesOverlayList').text()).toBe('<li id="rule-goal">Goal</li>');
+    expect(p.get('aboutCopy').text()).toBe('<p>About</p>');
+  });
+
+  test('the rules alone leave #aboutCopy as it was', () => {
+    const p = copyPage();
+    renderCopy(p.doc, { rules: '<li id="rule-goal">Goal</li>' });
+    expect(p.get('rulesOverlayList').text()).toBe('<li id="rule-goal">Goal</li>');
+    expect(p.get('aboutCopy').text()).toBe('');
   });
 });
 

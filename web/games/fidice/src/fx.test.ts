@@ -10,7 +10,7 @@ import { SHELL_CUES, isCueId } from '../../../shared/lib/sound/cues.ts';
 import { fontByName, resolveSound } from '../../../shared/lib/sound/fonts.ts';
 import { createFx } from './fx.ts';
 import { STORAGE_KEYS } from './storage.ts';
-import { CUES, INITIAL_CUES } from './ui/sound.ts';
+import { CUES } from './ui/sound.ts';
 
 describe('the table', () => {
   test('the four rows are the shared SHELL_CUES, byte for byte, and nothing else yet (D11)', () => {
@@ -26,7 +26,6 @@ describe('the table', () => {
       expect(isCueId(CUES[event].cue)).toBe(true);
       expect(resolveSound(fontByName('default'), CUES[event].cue).kind).toBe('synth');
     });
-    expect(INITIAL_CUES).toEqual({ key: null });
   });
 });
 

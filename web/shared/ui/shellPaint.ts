@@ -27,15 +27,18 @@ import {
   readValue,
   requireId,
   setAttr,
+  setHtml,
   setText,
   setValue,
   targetIdOf,
   toggleClass,
+  trustedHtml,
   type DocumentLike,
   type Element,
   type PageLike,
 } from '../edge/dom.ts';
 import { NAME_MAX } from '../lib/protocol.ts';
+import { RULES_SLOT_IDS } from './glossary.ts';
 import { ensureKeyed } from './keyed.ts';
 import type { Role, SeatState, ShellState, ShellTypes, ToastKind } from './shell.ts';
 
@@ -270,11 +273,30 @@ export const hideToast = (doc: DocumentLike): void => {
   toggleClass(requireId(doc, 'toast'), 'show', false);
 };
 
-/** `fx.renderToggle()`: `#soundBtn`'s glyph and tooltip (backgammon adds `aria-pressed` in its wrapper). */
+/** `fx.renderToggle()`: `#soundBtn`'s glyph, tooltip and pressed state (it is a toggle; every game's wrapper added `aria-pressed` until docs/design/shell-hoist.md row N). */
 export const paintSound = (doc: DocumentLike, enabled: boolean): void => {
   const btn = requireId(doc, 'soundBtn');
   setText(btn, enabled ? '🔊' : '🔇');
   setAttr(btn, 'title', enabled ? 'Sound & vibration on' : 'Sound & vibration off');
+  setAttr(btn, 'aria-pressed', enabled ? 'true' : 'false');
+};
+
+/**
+ * The static copy a shell game renders once at boot (`bootShell.hooks.render`): `rules`, the
+ * game's `rulesListHtml` items, into both rules slots (`RULES_SLOT_IDS`: the Rules tab's and the
+ * in-game sheet's, so the two copies cannot drift), and `about`, the game's `aboutHtml`, into
+ * `#aboutCopy`. A page that shows the table alone (gin's stories) passes the rules only. Backgammon
+ * keys both slots on its ruleset instead (ui/render.ts `renderRules`).
+ */
+export const renderCopy = (
+  doc: DocumentLike,
+  copy: Readonly<{ rules: string; about?: string }>,
+): void => {
+  const rules = trustedHtml(copy.rules);
+  RULES_SLOT_IDS.forEach((id) => {
+    setHtml(requireId(doc, id), rules);
+  });
+  if (copy.about !== undefined) setHtml(requireId(doc, 'aboutCopy'), trustedHtml(copy.about));
 };
 
 /**

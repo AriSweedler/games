@@ -1,6 +1,6 @@
 // The rules list on the shell path (docs/design/fidice-shell-adoption.md §7 D12): the one source
 // both slots render from (`#rulesList` on the Rules tab and `#rulesOverlayList` over the table,
-// render.ts `renderRules`), so the two copies cannot drift. The prose is the legacy rules tab's
+// web/shared/ui/shellPaint.ts `renderCopy`), so the two copies cannot drift. The prose is the legacy rules tab's
 // (src/view/screens/rules.ts, the bundle's words), cut into six items with the panel headings as
 // their headings; the strategy list still reads the shipped computers' names and blurbs off the
 // registry. Each item carries an id: the anchor a glossary link lands on

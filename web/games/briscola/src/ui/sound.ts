@@ -167,9 +167,6 @@ export const VOICES = {
  * on the last event's id (and the game it belongs to), so a re-sent frame plays nothing. Here
  * rather than in state.ts because the shell config starts the shell with it.
  */
-export type CueState = Readonly<{ key: string | null }>;
-export const INITIAL_CUES: CueState = { key: null };
-
 /** The device's seat and side (`View.me`), null before a view; pass-and-play hears the winner's side (§4 "who hears what"). */
 export type Listener = Readonly<{ idx: Seat; side: Side }>;
 

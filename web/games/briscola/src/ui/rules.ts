@@ -1,6 +1,6 @@
 // The rules list (docs/design/briscola-rules.md §2, in a player's words), the one source both slots
-// render from (`#rulesList` on the home tab and `#rulesOverlayList` over the table, render.ts
-// `renderRules`), so the two copies cannot drift. Each item carries an id: the anchor a glossary
+// render from (`#rulesList` on the home tab and `#rulesOverlayList` over the table, web/shared/ui/shellPaint.ts
+// `renderCopy`), so the two copies cannot drift. Each item carries an id: the anchor a glossary
 // link lands on (docs/design/glossary-links.md; ui/glossary.ts names the words that mean each
 // rule). Plain English (D23), with the Italian words the page keeps: briscola, the card names,
 // mano. Six short items, one or two sentences each (the owner, 2026-09-25: "see if you can shorten

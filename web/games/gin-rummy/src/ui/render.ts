@@ -72,8 +72,6 @@ import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
-import { aboutHtml } from './about.ts';
-import { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
 import { canDropDiscard, handoffLabel, SCREENS, type App, type Intent } from './state.ts';
 
 export type { PageLike };
@@ -83,19 +81,6 @@ export { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
 // The shell painters both games share (docs/design/shared-shell.md §4.4, moved in B1) under the
 // names main.ts, stories/boot.ts and the tests always imported them by.
 export { hideToast, paintSound, showToast } from '../../../../shared/ui/shellPaint.ts';
-
-/** Fill both rules slots from ui/rules.ts (once, at boot). */
-export const renderRules = (doc: DocumentLike): void => {
-  const markup = trustedHtml(rulesItemsHtml());
-  RULES_SLOT_IDS.forEach((id) => {
-    setHtml(requireId(doc, id), markup);
-  });
-};
-
-/** Fill `#aboutCopy` from ui/about.ts (once, at boot), its jargon linked to the rules. */
-export const renderAbout = (doc: DocumentLike): void => {
-  setHtml(requireId(doc, 'aboutCopy'), trustedHtml(aboutHtml()));
-};
 
 // ---- the shell (web/shared/ui/shellPaint.ts, each over the App's slice it reads) ------------------
 

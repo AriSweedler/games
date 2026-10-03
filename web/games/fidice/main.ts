@@ -14,6 +14,8 @@ import { bootShell } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import { browserNetDeps } from '../../shared/edge/netDeps.ts';
 import { browserStore } from '../../shared/edge/storage.ts';
+import { aboutHtml } from '../../shared/ui/glossary.ts';
+import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import type { Rng } from '../../shared/lib/rng.ts';
 import { Controller } from './src/app/controller.ts';
 import { browserEffects } from './src/app/effects.ts';
@@ -30,7 +32,9 @@ import { isGuestFrame } from './src/protocol.ts';
 import { STORAGE_KEYS, soundEnabled } from './src/storage.ts';
 import { bindHelpFold } from './src/ui/helpFold.ts';
 import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
-import { bindAll, paint, paintSound, renderAbout, renderRules } from './src/ui/render.ts';
+import { GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
+import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
+import { bindAll, paint } from './src/ui/render.ts';
 import {
   guestContextOf,
   hostContextOf,
@@ -143,7 +147,7 @@ const bootShellPath = (): void => {
     // The shell's four cues alone until M9 (plan §7 D11); muted by default on a coarse pointer (the boot's fallback).
     sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },
     reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
-    // `paintSound` adds `aria-pressed` to the shared paint; the toast wears no marks.
+    // the shared `paintSound`; the toast wears no marks.
     paint: {
       paint,
       bindAll,
@@ -171,8 +175,10 @@ const bootShellPath = (): void => {
       // paragraphs behind a tap on the step's title).
       render: () => {
         injectDiceStyles();
-        renderRules(document);
-        renderAbout(document);
+        renderCopy(document, {
+          rules: rulesItemsHtml(),
+          about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY),
+        });
         bindHelpFold(document);
       },
       // `act` through the reducer; `view` my view; `setup` seats a position for e2e (pass the

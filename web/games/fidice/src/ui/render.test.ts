@@ -9,8 +9,11 @@ import { describe, expect, test } from 'vitest';
 import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
 import { byId, fakeDocument, fire, serialize } from '../../../../shared/edge/dom.fake.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
+import { aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { renderCopy } from '../../../../shared/ui/shellPaint.ts';
 import { asRank } from '../domain/hands.ts';
 import type { Intent as OldIntent } from '../view/types.ts';
+import { ABOUT_PARAGRAPHS } from './about.ts';
 import { fidicePage, type FidicePage } from './page.fake.ts';
 import {
   MOUNT_IDS,
@@ -20,14 +23,12 @@ import {
   paintHandoff,
   paintNames,
   paintScreen,
-  paintSound,
   paintTable,
   paintWaiting,
-  renderAbout,
-  renderRules,
   uiOf,
   type PageLike,
 } from './render.ts';
+import { GLOSSARY, rulesItemsHtml } from './rules.ts';
 import {
   DEFAULT_OPTS,
   SCREENS,
@@ -152,18 +153,17 @@ const recorder = (): Readonly<{ intents: Intent[]; dispatch: (i: Intent) => void
 };
 
 describe('the static markup rendered at boot', () => {
-  test('renderRules fills both slots with the same list; renderAbout the About copy', () => {
+  test('renderCopy fills both slots with the same list and the About copy', () => {
     const p = fidicePage(MARKUP);
-    renderRules(p.doc);
+    renderCopy(p.doc, { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) });
     expect(p.get('rulesList').text()).toContain('<li id="rule-goal">');
     expect(p.get('rulesOverlayList').text()).toBe(p.get('rulesList').text());
-    renderAbout(p.doc);
     expect(p.get('aboutCopy').text()).toContain('Kezar Lake');
   });
 });
 
 describe('the shell painters over the App', () => {
-  test('paintScreen shows one of the six screens and locks the body on the table; paintSound writes the glyph and aria-pressed', () => {
+  test('paintScreen shows one of the six screens and locks the body on the table', () => {
     const p = fidicePage(MARKUP);
     paintScreen(p.doc, initialApp);
     SCREENS.forEach((id) => {
@@ -173,11 +173,6 @@ describe('the shell painters over the App', () => {
     paintScreen(p.doc, hosted());
     expect(p.get('tableScreen').hidden()).toBe(false);
     expect(p.body.hasClass('fixed-screen')).toBe(true);
-    paintSound(p.doc, false);
-    expect(p.get('soundBtn').text()).toBe('🔇');
-    expect(p.get('soundBtn').attr('aria-pressed')).toBe('false');
-    paintSound(p.doc, true);
-    expect(p.get('soundBtn').attr('aria-pressed')).toBe('true');
   });
 
   test('paintWaiting lists the host, the guest seats and the room`s computers with the host`s controls', () => {

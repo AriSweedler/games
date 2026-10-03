@@ -26,6 +26,7 @@ import {
   joinedMsg,
   type Player,
   type ShellGameData,
+  INITIAL_CUE_MEMORY,
 } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../shared/net/host.ts';
@@ -60,7 +61,6 @@ import {
   readP4Name,
   type PlayMode,
 } from './storage.ts';
-import { INITIAL_CUES } from './ui/sound.ts';
 import type { Briscola, Raw } from './ui/state.ts';
 
 export type Opts = GameOptions;
@@ -227,7 +227,7 @@ export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
     winnerOf: (view) => view.result?.winner ?? null,
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUES },
+  cues: { initial: INITIAL_CUE_MEMORY },
   home: {
     // This page's own keys: the seat count (the default when unreadable) on the fixed terms, the card pack, the language pack, the beat's speed, the third and fourth names.
     read: (store) => {

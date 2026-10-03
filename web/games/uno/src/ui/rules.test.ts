@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
-import { RULES_ITEMS, aboutHtml, rulesItemsHtml } from './rules.ts';
+import { aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { ABOUT_PARAGRAPHS, GLOSSARY, RULES_ITEMS, rulesItemsHtml } from './rules.ts';
 
 describe('the rules', () => {
   test('short enough for one phone screen: eight one-line rules, no points, under 120 words in all', () => {
@@ -25,6 +26,6 @@ describe('the rules', () => {
     expect(html).toContain('<li id="rule-goal">');
     expect(html).toMatch(/id="rule-turn">.*data-rule="wild"/);
     expect(html).toMatch(/id="rule-draw2">.*data-rule="turn"/);
-    expect(aboutHtml()).toContain('data-rule="wild"');
+    expect(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY)).toContain('data-rule="wild"');
   });
 });

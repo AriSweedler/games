@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import {
   JARGON_CLASS,
+  aboutHtml,
   linkJargon,
   ruleAnchor,
   ruleFromHash,
@@ -156,6 +157,17 @@ describe('rulesListHtml over groups', () => {
       `<li id="rule-goal" class="rule-card"><span class="rule-art" aria-hidden="true">${ART}</span><span class="rule-copy"><strong>Goal:</strong> Build a ${link('melds', 'set')}.</span></li>`,
     );
     expect(rulesListHtml([], GLOSSARY)).toBe('');
+  });
+});
+
+describe('aboutHtml', () => {
+  test("one <p> per paragraph, the jargon linked once across the whole copy: the second paragraph's repeat stays plain", () => {
+    const glossary: Glossary = [{ rule: 'knock', terms: ['knock'] }];
+    const html = aboutHtml(['You knock to end a hand.', 'A knock scores.'], glossary);
+    expect(html).toBe(
+      `<p>You ${link('knock', 'knock')} to end a hand.</p>\n<p>A knock scores.</p>`,
+    );
+    expect(aboutHtml([], glossary)).toBe('');
   });
 });
 

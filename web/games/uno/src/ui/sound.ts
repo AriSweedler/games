@@ -10,7 +10,6 @@
 // may voice `neutral.skip` apart from `neutral.reverse` and the default font plays both as the
 // plain notice. Nothing else in the game names a sound.
 import { SHELL_CUES, type CueSpec } from '../../../../shared/lib/sound/cues.ts';
-import type { CueMemory } from '../../../../shared/ui/shell.ts';
 import type { Kind } from '../engine/cards.ts';
 import type { View } from '../engine/view.ts';
 
@@ -52,9 +51,6 @@ export const CUES: Readonly<Record<Cue | 'tap', CueSpec>> = {
   penalty: { cue: 'bad.penalty', buzz: [60, 40, 60] },
   deal: { cue: 'start.deal', buzz: [30, 40, 30] },
 };
-
-export type CueState = CueMemory;
-export const INITIAL_CUES: CueState = { key: null };
 
 /** The row a card just laid plays: a number is a plain play, each action card its own notice. */
 const PLAY_CUE: Readonly<Record<Kind, Cue>> = {

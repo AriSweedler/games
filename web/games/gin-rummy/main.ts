@@ -14,6 +14,8 @@ import { bootShell, type BootCtx } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import type { ShareNavigatorLike } from '../../shared/edge/share.ts';
 import { browserStore, type Store } from '../../shared/edge/storage.ts';
+import { aboutHtml } from '../../shared/ui/glossary.ts';
+import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { bestLayoffActions, legalActions } from './src/engine/index.ts';
 import type { Action } from './src/engine/types.ts';
 import { createFx } from './src/fx.ts';
@@ -22,11 +24,14 @@ import { HostSession } from './src/net/host.ts';
 import { isGuestFrame } from './src/protocol.ts';
 import { createScorer, type Scorer, type SpeechRecognizerLike } from './src/scorer/main.ts';
 import { STORAGE_KEYS, migrateCardBack, soundEnabled } from './src/storage.ts';
+import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
+import { GLOSSARY } from './src/ui/glossary.ts';
 import { badCardBackMsg, isCardBack, type CardBack } from './src/cardBack.ts';
 import { formatMap, mapOf } from './src/sandbox.ts';
 import { slotHandView } from './src/ui/hand/SlotHandView.ts';
 import { fillNameInputs, fillP2NameInput, renderSandbox, setCodeInput } from './src/ui/home.ts';
-import { bindAll, fmtTime, paint, paintSound, renderAbout, renderRules } from './src/ui/render.ts';
+import { bindAll, fmtTime, paint } from './src/ui/render.ts';
+import { rulesItemsHtml } from './src/ui/rules.ts';
 import {
   guestContextOf,
   hostContextOf,
@@ -174,8 +179,10 @@ const boot = (): void => {
       // The static markup and the Score Counter's screen before the binders; its controls bound after them.
       render: (ctx) => {
         page.__scorer = bootScorer(ctx);
-        renderRules(document);
-        renderAbout(document);
+        renderCopy(document, {
+          rules: rulesItemsHtml(),
+          about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY),
+        });
         renderSandbox(document);
       },
       bind: () => {

@@ -76,6 +76,7 @@ import {
   type Step as SharedStep,
   type TableReset,
   type TimerId as SharedTimerId,
+  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { decide, emptyMemories, type Memories } from '../bots/brain.ts';
@@ -118,7 +119,7 @@ import {
   type Save,
   type Store,
 } from '../storage.ts';
-import { INITIAL_CUES, type Cue, type CueState } from './sound.ts';
+import { type Cue } from './sound.ts';
 
 // The shell's strings and helpers the tests and painters import from here, as the other games do.
 export {
@@ -163,7 +164,6 @@ export {
 } from '../shellConfig.ts';
 // ui/home.ts paints the tabs and modes from the lists storage.ts decodes; ui/ may not import storage.ts.
 export { DEFAULT_PLAY_MODE, HOME_TABS, type ExtraSeat, type HomeTab, type PlayMode };
-export { INITIAL_CUES, type CueState };
 
 // ---- the state ---------------------------------------------------------------------------------
 
@@ -233,7 +233,7 @@ export type Fidice = Readonly<{
   Screen: ScreenId;
   Timer: GameTimer;
   Cue: Cue;
-  Cues: CueState;
+  Cues: CueMemory;
   Resume: never;
   Home: Home;
   Intent: TableIntent;

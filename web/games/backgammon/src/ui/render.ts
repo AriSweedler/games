@@ -108,17 +108,18 @@ import {
   paintHandoff as paintShellHandoff,
   paintScreen as paintShellScreen,
   paintSheet,
-  paintSound as paintShellSound,
   paintWaiting as paintShellWaiting,
   showToast as showShellToast,
   type Sheet,
   type ToastMarks,
 } from '../../../../shared/ui/shellPaint.ts';
+import { aboutHtml } from '../../../../shared/ui/glossary.ts';
 import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
-import { aboutHtml } from './about.ts';
+import { ABOUT_PARAGRAPHS } from './about.ts';
+import { GLOSSARY } from './glossary.ts';
 import { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
 import { SCREENS, handoffLabel, rollModalOpen, type App, type Intent } from './state.ts';
 
@@ -144,7 +145,7 @@ export const renderRules = (doc: DocumentLike, variant: ShippedVariant): void =>
 
 /** `#aboutCopy` for `variant` (ui/about.ts): the same words, linked to that ruleset's rules. */
 export const renderAbout = (doc: DocumentLike, variant: ShippedVariant): void => {
-  renderKeyed(doc, 'aboutCopy', variant, () => aboutHtml(variant));
+  renderKeyed(doc, 'aboutCopy', variant, () => aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY[variant]));
 };
 
 /** The rules the player is looking at: the game in play's, else the home screen's choice; the About copy follows. */
@@ -175,12 +176,6 @@ export const toastMarks = (message: string): ToastMarks => ({
 /** `toast(msg)`'s DOM half: the text, the `hit` mark and the `show` class; main.ts keeps the hide timer. */
 export const showToast = (doc: DocumentLike, message: string): void => {
   showShellToast(doc, message, toastMarks(message));
-};
-
-/** `fx.renderToggle()`: `#soundBtn`'s glyph, tooltip and pressed state (it is a toggle). */
-export const paintSound = (doc: DocumentLike, enabled: boolean): void => {
-  paintShellSound(doc, enabled);
-  setAttr(requireId(doc, 'soundBtn'), 'aria-pressed', enabled ? 'true' : 'false');
 };
 
 /**

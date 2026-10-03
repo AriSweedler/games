@@ -136,6 +136,15 @@ export const linkJargon = (
     { html, linked: [] },
   ).html;
 
+/**
+ * The About panel's markup: one `<p>` per paragraph, the jargon linked to the rules across the
+ * whole copy at once (a word's first occurrence alone, so a game's name in the second paragraph
+ * stays plain; `linkJargon` never links inside a tag, so the `<p>`s are safe). Every shell game's
+ * `aboutCopy` (docs/design/shell-hoist.md row N); a game with rulesets passes the ruleset's glossary.
+ */
+export const aboutHtml = (paragraphs: ReadonlyArray<string>, glossary: Glossary): string =>
+  linkJargon(paragraphs.map((p) => `<p>${p}</p>`).join('\n'), glossary);
+
 /** The class of a rule that carries art: a panel, the art tile at its left (shell.css `.rule-card`). */
 const CARD_CLASS = 'rule-card';
 

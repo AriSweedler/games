@@ -1489,6 +1489,8 @@ export const guestNameAmong = (raw: string, taken: ReadonlyArray<string>): strin
  * (dry-round-2.md §2E) and sharing only this rule.
  */
 export type CueMemory = Readonly<{ key: string | null }>;
+/** The memory before any paint: no position played for yet, so the first view's key is fresh. Every game's `cues.initial` (gin spreads it under its `turnKey`). */
+export const INITIAL_CUE_MEMORY: CueMemory = { key: null };
 /** `key` against the memory: `fresh` when it names a new position; the memory keyed on it either way. */
 export const fresh = (
   mem: CueMemory,

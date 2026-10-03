@@ -10,7 +10,7 @@
 // completes this record: they use its own helpers, and a value import both ways would be a cycle.
 // Every literal here was ui/state.ts's before the move; the constants and helpers the tests
 // import are re-exported there.
-import type { ShellGameData } from '../../../shared/ui/shell.ts';
+import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
 import {
   applyAction,
   createGame,
@@ -38,7 +38,6 @@ import {
   readVariant,
   type PlayMode,
 } from './storage.ts';
-import { INITIAL_CUES } from './ui/sound.ts';
 import type { Backgammon } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -123,7 +122,7 @@ export const BACKGAMMON_SHELL: ShellGameData<Backgammon> = {
     winnerOf: (view) => matchWinner(view.match),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUES },
+  cues: { initial: INITIAL_CUE_MEMORY },
   home: {
     // This page's own keys: the options and the curtain mode (defaults when unreadable).
     read: (store) => {

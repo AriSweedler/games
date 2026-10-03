@@ -12,6 +12,8 @@
 import { bootShell } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import { browserStore, type Store } from '../../shared/edge/storage.ts';
+import { aboutHtml } from '../../shared/ui/glossary.ts';
+import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { badCardPackMsg, isCardPackFor } from '../../shared/lib/cards/packs.ts';
 import { badLanguageMsg, isLanguagePack } from '../../shared/lib/lang/packs.ts';
 import { SUIT_SPRITE_SVG } from '../../shared/ui/cardFace.ts';
@@ -22,8 +24,11 @@ import { GuestSession } from './src/net/guest.ts';
 import { HostSession } from './src/net/host.ts';
 import { isEphemeral, isGuestFrame } from './src/protocol.ts';
 import { DECK_KIND, STORAGE_KEYS, soundEnabled } from './src/storage.ts';
+import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
+import { GLOSSARY } from './src/ui/glossary.ts';
 import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
-import { bindAll, paint, paintSound, renderAbout, renderRules } from './src/ui/render.ts';
+import { bindAll, paint } from './src/ui/render.ts';
+import { rulesItemsHtml } from './src/ui/rules.ts';
 import {
   guestContextOf,
   hostContextOf,
@@ -77,7 +82,7 @@ const boot = (): void => {
     game: { hook: '__briscola', title: 'Briscola', debug: 0 },
     sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },
     reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
-    // `paintSound` adds `aria-pressed` to the shared paint; the toast wears no marks.
+    // the shared `paintSound`; the toast wears no marks.
     paint: {
       paint,
       bindAll,
@@ -103,8 +108,10 @@ const boot = (): void => {
       render: () => {
         document.body.insertAdjacentHTML('afterbegin', SUIT_SPRITE_SVG);
         document.body.insertAdjacentHTML('afterbegin', IMPACT_SPRITE_SVG);
-        renderRules(document);
-        renderAbout(document);
+        renderCopy(document, {
+          rules: rulesItemsHtml(),
+          about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY),
+        });
       },
       // `act` through the reducer; `view` my view; `events` its event stream (the sounds' and the
       // history's one source); `setup` seats a position for e2e and stories (pass-and-play only: the

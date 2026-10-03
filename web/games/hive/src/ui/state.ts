@@ -53,6 +53,7 @@ import {
   type ShellState,
   type Step as SharedStep,
   type TableReset,
+  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import {
@@ -97,15 +98,13 @@ import {
   type Save,
   type Store,
 } from '../storage.ts';
-import { INITIAL_CUES, type Cue, type CueState } from './sound.ts';
+import { type Cue } from './sound.ts';
 
 export {
   DEFAULT_PLAY_MODE,
   HIVE_HINTS,
   HIVE_MOTION,
   HOME_TABS,
-  INITIAL_CUES,
-  type CueState,
   type Hints,
   type HomeTab,
   type Motion,
@@ -207,7 +206,7 @@ export type Hive = Readonly<{
   Screen: ScreenId;
   Timer: never;
   Cue: Cue;
-  Cues: CueState;
+  Cues: CueMemory;
   Resume: never;
   Home: Home;
   Intent: TableIntent;

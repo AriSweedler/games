@@ -80,6 +80,8 @@ import {
   type Step as SharedStep,
   type TableReset,
   type TimerId as SharedTimerId,
+  INITIAL_CUE_MEMORY,
+  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { eventEffects } from '../../../../shared/ui/eventEffects.ts';
@@ -139,7 +141,7 @@ import {
   type Save,
   type Store,
 } from '../storage.ts';
-import { INITIAL_CUES, phraseOf, type Cue, type CueState } from './sound.ts';
+import { phraseOf, type Cue } from './sound.ts';
 
 // The shell's strings and helpers the tests and painters import from here, as the other games do.
 export {
@@ -186,7 +188,6 @@ export {
   type LanguagePackName,
   type PlayMode,
 };
-export { INITIAL_CUES, type CueState };
 
 // ---- the state ---------------------------------------------------------------------------------
 
@@ -249,7 +250,7 @@ export type Briscola = Readonly<{
   Screen: ScreenId;
   Timer: 'settle' | 'tip' | 'intent';
   Cue: Cue;
-  Cues: CueState;
+  Cues: CueMemory;
   Resume: never;
   Home: Home;
   Intent: TableIntent;
@@ -907,7 +908,7 @@ const commit = (app: App, cardId: string, ctx: Context): Step =>
 /** Play again after a decided game: a fresh deal for the same players and terms, the deal passed to the next seat (`replayGame`); the guest waits for the host's. */
 const replayDecided = (app: App, game: State, ctx: Context): Step => {
   const fresh = replayGame(game, ctx.rng, ctx.now);
-  const reset = withShell(app, { cues: INITIAL_CUES });
+  const reset = withShell(app, { cues: INITIAL_CUE_MEMORY });
   switch (app.shell.role) {
     case 'local':
       return localBroadcast(
