@@ -2575,7 +2575,8 @@
         ".hand.hidden-cards .card": null,
         ".hand.inert": null,
         ".overlay": "61049a550572",
-        ".overlay.curtain": "61049a550572"
+        ".overlay.curtain": "61049a550572",
+        ".overlay.curtain .btn-ghost": "e829d7a4692f"
       }
     },
     {
@@ -2600,6 +2601,7 @@
         ".hand.inert": "a97a8c6a0cf5",
         ".overlay": "9cf8895f5c96",
         ".overlay.curtain": "9cf8895f5c96",
+        ".overlay.curtain .btn-ghost": "0a67a9eaaa76",
         ".play": "53d4ed2e8df6",
         ".play .card": "1d7421bd5da0",
         ".play .who": "06973fbefda2",
@@ -2615,7 +2617,8 @@
         ".hand.hidden-cards .card": null,
         ".hand.inert": null,
         ".overlay": "61049a550572",
-        ".overlay.curtain": "61049a550572"
+        ".overlay.curtain": "61049a550572",
+        ".overlay.curtain .btn-ghost": "e829d7a4692f"
       }
     },
     {
@@ -2630,6 +2633,7 @@
         ".my-tricks .card.chip": "535ad540a381",
         ".overlay": "9cf8895f5c96",
         ".overlay.curtain": "9cf8895f5c96",
+        ".overlay.curtain .btn-ghost": "0a67a9eaaa76",
         ".play": null,
         ".play .card": null,
         ".play .who": null,
@@ -2649,7 +2653,8 @@
         ".hand.hidden-cards .card": null,
         ".hand.inert": null,
         ".overlay": "61049a550572",
-        ".overlay.curtain": "61049a550572"
+        ".overlay.curtain": "61049a550572",
+        ".overlay.curtain .btn-ghost": "e829d7a4692f"
       }
     },
     {
@@ -2721,6 +2726,7 @@
         ".my-tricks .card.chip": null,
         ".overlay": "9cf8895f5c96",
         ".overlay.curtain": "9cf8895f5c96",
+        ".overlay.curtain .btn-ghost": "0a67a9eaaa76",
         ".sc-points": "7be9044d5d46",
         ".score-cell.leading .sc-points": null,
         ".seat-taken .card.chip": null,
