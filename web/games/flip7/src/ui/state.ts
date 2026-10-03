@@ -1,6 +1,6 @@
 // Flip 7's reducer on the shared shell (docs/design/flip7.md §8; web/shared/ui/shell.ts): the shell
 // runs the home screen, the waiting rooms, the sessions, the curtain, the resume offer and the leave
-// flow; this file keeps the table's slice (the curtain, the third to sixth names) and its hooks.
+// flow; this file keeps the table's slice (the curtain, the pause) and its hooks.
 // Every card is face up, so online there is nothing to hide, only turn authority: the host deals
 // and holds the game, each seat's Hit, Stay or give goes to the host as an action frame and the
 // engine checks it against the seat that sent it (engine/index.ts `applyAction`); every seat is

@@ -1,8 +1,8 @@
 // Flip 7's shell page (docs/design/flip7.md §8): what tools/shell-markup.ts fills
 // web/shared/markup/shell/*.html with to compose ./index.html, which test/dist/shell-markup.test.ts
-// pins byte for byte. The residue here is the head, the two Players selects (two to twelve), the six
-// pass-and-play name inputs, the table (the topbar, the names strip, the round, every seat's line,
-// Hit and Stay, the taker picker, the round's scores) and the endgame screen the shell requires.
+// pins byte for byte. The residue here is the head, the two Players steppers (two to twelve), the
+// twelve pass-and-play name inputs, the table (the topbar, the names strip, the round, every seat's
+// line, Hit and Stay, the taker picker, the round's scores) and the endgame screen the shell requires.
 import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
 import {
   type ShellBlocks,

@@ -25,6 +25,7 @@ import {
   canHit,
   canStay,
   deal,
+  STATUSES,
   type Game,
   type Intent,
   type Pending,
@@ -33,6 +34,7 @@ import {
   type Status,
 } from './engine.ts';
 
+export { STATUSES };
 export type { Game, Intent, Phase, Seat, Status };
 
 /** A seat's name off anything with the seats: the state, or a view. */
@@ -116,7 +118,6 @@ export const isMyTurn = (view: View): boolean => actorOf(view) === view.me;
 // ---- the decoders (a save, the wire) ----------------------------------------------------------
 
 const KINDS: ReadonlyArray<Kind> = ['number', 'freeze', 'flip3', 'second', 'plus', 'times2'];
-const STATUSES: ReadonlyArray<Status> = ['active', 'stayed', 'frozen', 'busted', 'flip7'];
 const seatIndex = integer(0, MAX_SEAT);
 
 const card: Decoder<Card> = object({

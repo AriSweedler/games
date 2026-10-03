@@ -6,10 +6,10 @@
 // the listener's (`win`/`lose` online; pass-and-play hears the win, the phone being shared). The
 // ids are qualified (sound-fonts.md §2.1): the base cue the default font voices, then this game's
 // word (`bad.bust`, `great.flip7`), so a font voices a Flip 7 apart from any other triumph and the
-// default font plays the base. src/fx.ts is meant to play rows of this table and ui/state.ts
-// `rendered` to fire `cuesBetween` once per position (`cueKey`, the shell's `CueMemory`), never on
-// a repaint; until they do (docs/design/sounds.md "Follow-ups"), the shell's four rows alone sound.
-// Nothing else in the game names a sound.
+// default font plays the base. The boot's `shellFx` (web/shared/edge/cuePlayer.ts) plays rows of
+// `CUES` (shellConfig.ts `cues.table`); ui/state.ts `CUE_MACHINE` under the shell's `cueStep` fires
+// `cuesBetween` once per position (`cueKey`, the shell's `CueMemory`), never on a repaint. Nothing
+// else in the game names a sound.
 import { SHELL_CUES, type CueSpec } from '../../../../shared/lib/sound/cues.ts';
 import { numbersOf, type Card } from '../engine/cards.ts';
 import type { Seat as SeatState, Status } from '../engine/engine.ts';
