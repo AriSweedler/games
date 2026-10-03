@@ -93,7 +93,6 @@ const blocks: ShellBlocks = {
     '  <div id="tableScreen"><button id="leaveBtn"></button><button id="soundBtn"></button><button id="handoffBtn"></button><button id="rulesBtnGame"></button><button id="historyBtn"></button></div>',
   endgame: '  <div id="endgameScreen"></div>',
   curtainIcon: '',
-  curtainExtra: '',
   result: '',
   sheetsBefore: '\n<div id="own"></div>',
   sheetsAfter: '',
@@ -175,7 +174,6 @@ describe('renderShell', () => {
       extraPanels,
       extraScreens,
       curtainIcon,
-      curtainExtra,
       result,
       sheetsAfter,
       rulesIcon,
@@ -193,11 +191,10 @@ describe('renderShell', () => {
       extraPanels,
       extraScreens,
       curtainIcon,
-      curtainExtra,
       result,
       sheetsAfter,
       rulesIcon,
-    ]).toEqual(Array.from({ length: 15 }, () => ''));
+    ]).toEqual(Array.from({ length: 14 }, () => ''));
     expect(Object.keys(spelled).sort()).toEqual([
       'endgame',
       'head',

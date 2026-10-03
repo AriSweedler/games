@@ -89,9 +89,6 @@ ${topbarHtml({ dot: 'between', titles: { leave: 'Leave', history: 'Recent games'
         </div>
       </div>`,
   endgame: endgamePlaceholder('the game ends on the result panel over the table, with Play again.'),
-  curtainExtra: `        <button class="btn btn-ghost btn-block btn-sm" id="curtainHandoffBtn">
-          Continue online
-        </button>`,
   sheetsBefore: `
     <!-- PAUSE (the owner, 2026-10-02: "When you the player bust, you need to confirm before
          proceeding"): what just happened to a seat (a bust with the card and the points lost, a

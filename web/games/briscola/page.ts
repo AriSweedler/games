@@ -226,9 +226,6 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
         <h1>Game over</h1>
         <button class="btn btn-secondary btn-block" id="leaveBtn">Leave the table</button>
       </div>`,
-  curtainExtra: `        <button class="btn btn-ghost btn-block btn-sm" id="curtainHandoffBtn">
-          Continue online
-        </button>`,
   result: resultMarkup({
     note: 'the sheet over the dimmed table, where every game ends (design §5.1); Play again deals anew for the same players (the deal passes to the next seat).',
     sub: true,

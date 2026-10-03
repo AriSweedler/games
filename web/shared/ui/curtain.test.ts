@@ -11,6 +11,7 @@ const page = (): FakePage =>
     fakeEl('curtainSub'),
     fakeEl('curtainLast'),
     fakeEl('curtainBtn', { text: 'Show my cards' }),
+    fakeEl('curtainHandoffBtn', { classes: ['hidden'] }),
   ]);
 
 const TEXT: CurtainText = {
@@ -51,6 +52,22 @@ describe('paintCurtain', () => {
     expect(p.get('curtainTitle').text()).toBe('Pass the phone to Bob');
   });
 
+  test('the handoff button shows only while the curtain is up and the game says the hand-over can go online', () => {
+    const p = page();
+    paintCurtain(p.doc, TEXT);
+    expect(p.get('curtainHandoffBtn').hidden()).toBe(true);
+    paintCurtain(p.doc, TEXT, true);
+    expect(p.get('curtainHandoffBtn').hidden()).toBe(false);
+    paintCurtain(p.doc, TEXT, false);
+    expect(p.get('curtainHandoffBtn').hidden()).toBe(true);
+    // The curtain down puts the button away whatever the game says: the overlay hides it anyway,
+    // and the next curtain up decides afresh.
+    paintCurtain(p.doc, TEXT, true);
+    paintCurtain(p.doc, null, true);
+    expect(p.get('curtainOverlay').hidden()).toBe(true);
+    expect(p.get('curtainHandoffBtn').hidden()).toBe(true);
+  });
+
   test('a game whose button follows the view (gin, backgammon) paints its words', () => {
     const p = page();
     paintCurtain(p.doc, { ...TEXT, button: "I'm Bob — show my cards" });
@@ -69,6 +86,16 @@ describe('bindCurtain', () => {
     });
     p.get('curtainBtn').fire('click');
     expect(intents).toEqual([{ type: 'curtain/reveal' }]);
+  });
+
+  test('the handoff button dispatches the shell`s handoff/click', () => {
+    const p = page();
+    const intents: Intent<ShellTypes>[] = [];
+    bindCurtain<ShellTypes>(p.doc, (i) => {
+      intents.push(i);
+    });
+    p.get('curtainHandoffBtn').fire('click');
+    expect(intents).toEqual([{ type: 'handoff/click' }]);
   });
 
   test('with onReveal, one tap dispatches what it returns, in order, at that moment', () => {

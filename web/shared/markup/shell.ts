@@ -212,8 +212,6 @@ export type ShellBlocks = Readonly<{
   endgame?: string;
   /** The curtain sheet's first line (gin's phone emoji). */
   curtainIcon?: string;
-  /** The curtain sheet after `#curtainBtn` (backgammon's `#curtainHandoffBtn`). */
-  curtainExtra?: string;
   /**
    * The result sheet (docs/design/shell-hoist.md row G; `resultMarkup` below): where a game ends
    * over its table, placed by sheets.html before the rules sheet. A page whose game ends elsewhere
@@ -434,7 +432,6 @@ const BLOCK_DEFAULTS: Readonly<
   extraScreens: '',
   endgame: endgamePlaceholder('the game ends on the result sheet over the table.'),
   curtainIcon: '',
-  curtainExtra: '',
   result: '',
   sheetsBefore: '',
   sheetsAfter: '',

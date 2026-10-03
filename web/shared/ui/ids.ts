@@ -75,12 +75,13 @@ export const SHELL_IDS: ReadonlyArray<string> = [
   'historyList',
   'recentGames',
   'closeHistoryBtn',
-  // The pass-and-play curtain (curtain.ts).
+  // The pass-and-play curtain (curtain.ts), its "Continue online" button included.
   'curtainOverlay',
   'curtainTitle',
   'curtainSub',
   'curtainLast',
   'curtainBtn',
+  'curtainHandoffBtn',
   // The toast (shellPaint.ts `showToast`, toast.ts).
   'toast',
 ];
