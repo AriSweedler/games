@@ -4,8 +4,8 @@ import { apply, newGame, spiderPaths, type Game } from '../engine/engine.ts';
 import { keyOf, type Hex } from '../engine/hex.ts';
 import type { Bug } from '../engine/pieces.ts';
 import { viewFor, type View } from '../engine/view.ts';
-import { centerOf, type Hop } from './board.ts';
-import { boardHtml, cellHtml, stepsOf } from './render.ts';
+import { HEX_H, HEX_W, centerOf, type Hop } from './board.ts';
+import { TILE_VIEWBOX, boardHtml, cellHtml, liftHtml, stepsOf } from './render.ts';
 import type { Picked } from './state.ts';
 
 const h = (q: number, r: number): Hex => ({ q, r });
@@ -123,5 +123,28 @@ describe("the Spider's 1-2-3 as it moves", () => {
     expect(stepX(empty)).toBeCloseTo(centerOf(h(5, 5)).x, 1);
     const tile = cellHtml(after, to, false, false, 3);
     expect(stepX(tile)).toBeLessThan(centerOf(to).x);
+  });
+});
+
+describe('the lift over a dragged board tile', () => {
+  test('a nested svg on the cell’s box, the tray tile’s viewBox, the face drawn about its origin and no svg.tile inside', () => {
+    const c = centerOf(SPIDER);
+    const markup = liftHtml(game, SPIDER);
+    expect(markup.startsWith('<svg class="hex lift w"')).toBe(true);
+    expect(markup).toContain(`x="${(c.x - HEX_W / 2).toFixed(2)}"`);
+    expect(markup).toContain(`y="${(c.y - HEX_H / 2).toFixed(2)}"`);
+    expect(markup).toContain(`width="${HEX_W.toFixed(2)}" height="${HEX_H.toFixed(2)}"`);
+    expect(markup).toContain(`viewBox="${TILE_VIEWBOX}"`);
+    // The face about (0, 0): a nested `svg.tile` would sit at this origin, the hex's centre, and
+    // render half a hex off, clipped to a quarter (the ghost of PR #24).
+    expect(markup).not.toContain('class="tile"');
+    expect(markup.split('<svg').length - 1).toBe(1);
+    expect(markup).toContain('<polygon class="face"');
+    expect(markup).toContain('data-bug="spider"');
+    expect(markup.endsWith('</svg>')).toBe(true);
+  });
+
+  test('an empty hex has no lift', () => {
+    expect(liftHtml(game, h(5, 5))).toBe('');
   });
 });
