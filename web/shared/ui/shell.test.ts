@@ -170,6 +170,7 @@ const KEYS = {
   playMode: 'fake_playMode',
   soundFont: 'fake_soundFont',
   flipTable: 'fake_flipTable',
+  sound: 'fake_sound',
   recentGames: 'fake_recentGames',
   colour: 'fake_colour',
 } as const;
@@ -253,7 +254,14 @@ const FAKE: ShellConfig<Fake> = {
     action: (action) => ({ t: 'action', action }),
     join: (name) => ({ t: 'join', name }),
   },
-  cues: { initial: { seen: null } },
+  cues: {
+    initial: { seen: null },
+    table: {
+      tap: SHELL_CUES.tap,
+      yourTurn: SHELL_CUES.yourTurn,
+      ding: { cue: 'good.trick', buzz: 9 },
+    },
+  },
   table: {
     initial: { curtain: null, marks: [] },
     reset: (table, at) => ({ ...table, marks: [...table.marks, at] }),
@@ -315,6 +323,7 @@ const FAKE: ShellConfig<Fake> = {
     playMode: pref(KEYS.playMode, ['online', 'local']),
     soundFont: pref(KEYS.soundFont, SOUND_FONTS),
     flipTable: pref(KEYS.flipTable, ['on', 'off']),
+    sound: pref(KEYS.sound, ['on', 'off']),
     recentGames: {
       read: (store) => JSON.parse(store.get(KEYS.recentGames) ?? '[]') as ReadonlyArray<RecentGame>,
       append: (store, game) =>
@@ -576,7 +585,14 @@ const FAKE4: ShellConfig<Fake4> = {
     action: (action) => ({ t: 'action', action }),
     join: (name) => ({ t: 'join', name }),
   },
-  cues: { initial: { seen: null } },
+  cues: {
+    initial: { seen: null },
+    table: {
+      tap: SHELL_CUES.tap,
+      yourTurn: SHELL_CUES.yourTurn,
+      ding: { cue: 'good.trick', buzz: 9 },
+    },
+  },
   table: {
     initial: { curtain: null, marks: [] },
     reset: (table, at) => ({ ...table, marks: [...table.marks, at] }),

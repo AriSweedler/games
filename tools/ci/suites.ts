@@ -201,7 +201,7 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
       // shared/ui still 100/100/100/100 (phrase.ts, events.ts, eventEffects.ts each with a test
       // beside them, fonts.ts's ladder and cues.ts's decoder covered branch for branch); the edge
       // folder 99.76/99.44/99.79/97.02 before, 99.77/99.45/99.79/97.08 after (sound.ts's slot player
-      // and cuePlayer.ts's phrases each 100 on every metric; the games' fx.test.ts pins and suites
+      // and cuePlayer.ts's phrases each 100 on every metric; the games' table pins and suites
       // ran unchanged, a CueSpec row being a one-step phrase). Measured on main at b18a880 (old repo PR 102)
       // and this branch rebased onto it.
       // Re-measured when E2 (dry-round-2.md §5 Wave E) added the motion kernel edge/motion.ts (glide
@@ -303,7 +303,6 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
         'web/games/gin-rummy/src/stories/catalogue.ts',
         'web/games/gin-rummy/src/scorer/**/*.ts',
         'web/games/gin-rummy/src/net/**/*.ts',
-        'web/games/gin-rummy/src/fx.ts',
       ],
       // Who exercises what: the engine the parity suites and the replay; the protocol, storage and
       // pure ui/ and scorer/ helpers the wire-corpus, storage-capture and string-golden suites under
@@ -311,8 +310,8 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
       // them and the wire-corpus replay. Measured at the ratchet (lines/functions/statements/
       // branches): engine 99.8/99.3/98.7/95.8, engine algorithms 100/100/100/100, protocol
       // 100/100/100/100, storage 100/100/100/100, ui 99.8/99.5/99.1/93.7, scorer 100/100/97.9/88.5,
-      // net 100/100/99.2/96.2, fx 100/100/100/100 (since A4 the ~8-line wrapper over
-      // web/shared/edge/cuePlayer.ts, no branches; its wiring test keeps the row). Since the
+      // net 100/100/99.2/96.2 (fx.ts, once the ~8-line wrapper over web/shared/edge/cuePlayer.ts,
+      // is gone since shell-hoist A: the boot's `shellFx` plays the table shellConfig.ts names). Since the
       // shared-shell PR A2 protocol.ts is a wrapper over web/shared/lib/protocol.ts that measures
       // two lines (the skeleton's own test holds it at 100/100/100/100 inside the shared/lib row);
       // it still measures 100/100/100/100 through the wire-corpus, golden and session suites.
@@ -431,7 +430,6 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
           statements: 95,
           branches: 97,
         },
-        'web/games/gin-rummy/src/fx.ts': { lines: 95, functions: 95, statements: 95, branches: 97 },
       },
     },
     // Gin's own specs and its describes of the shell specs (`@gin-rummy`; the other games' left out).
@@ -456,7 +454,7 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
         'web/games/fidice/src/app/**/*.ts',
         'web/games/fidice/src/view/**/*.ts',
         // The shell path (docs/design/fidice-shell-adoption.md §4 M3, reachable behind `?shell=1`
-        // since M4): codec, protocol, storage, shellConfig, fx, flag, legal, the reducer with its
+        // since M4): codec, protocol, storage, shellConfig, flag, legal, the reducer with its
         // sound table and the painters (ui/{render,home,local,waiting,rules,about}.ts); net/shell/**
         // is under net/** above.
         'web/games/fidice/src/*.ts',
@@ -524,16 +522,16 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
         'web/games/backgammon/src/shellConfig.ts',
         'web/games/backgammon/src/ui/**/*.ts',
         'web/games/backgammon/src/net/**/*.ts',
-        'web/games/backgammon/src/fx.ts',
       ],
       // The engine (docs/design/backgammon-board.md §6): the table, scenario and seeded replay tests
       // beside it, the same targets as gin's engine and 100% lines for any algorithms file. The rest
       // of the page at measured minus 5/5/5/3 like gin's rows: the wire goldens and decoder tests
       // (protocol), the Map-backed store tests (storage), the reducer, builder, painter and page-fake
-      // suites (ui/**), the session scenarios over transport.fake.ts (net/**) and the cue table with
-      // the wrapper over the shared player (fx). Measured (lines/functions/statements/branches):
+      // suites (ui/**), the session scenarios over transport.fake.ts (net/**) and the cue table
+      // (ui/sound.test.ts; the wrapper over the shared player, fx.ts, is the boot's `shellFx` since
+      // shell-hoist A). Measured (lines/functions/statements/branches):
       // protocol 100/100/100/100, storage 100/100/100/100, ui 99.6/100/98.7/91.6, net
-      // 100/100/98.9/94.4, fx 100/100/100/100. Re-measured when the shared-shell extraction (A3)
+      // 100/100/98.9/94.4. Re-measured when the shared-shell extraction (A3)
       // moved the readers and writers both storage.ts spelled into web/shared/edge/prefs.ts: storage
       // still 100/100/100/100 (no branch left). Since A1 its net/ is the two wrappers over
       // web/shared/net (100 on every metric): the row is a small file's, like protocol's. Re-measured
@@ -628,12 +626,6 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
           statements: 95,
           branches: 97,
         },
-        'web/games/backgammon/src/fx.ts': {
-          lines: 95,
-          functions: 95,
-          statements: 95,
-          branches: 97,
-        },
       },
     },
     // Backgammon's own specs and its describes of the shell specs (`@backgammon`; the others' left out).
@@ -656,7 +648,6 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
         'web/games/briscola/src/shellConfig.ts',
         'web/games/briscola/src/ui/**/*.ts',
         'web/games/briscola/src/net/**/*.ts',
-        'web/games/briscola/src/fx.ts',
       ],
       // The engine (docs/design/briscola-rules.md §2): the 63 table positions, the view and decoder
       // suites and the seeded replay beside it. Measured at the PR (lines/functions/statements/
@@ -664,7 +655,7 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
       // engine floor of 94/94/93/92 that the design set as the least it may be. The *.algorithms.ts
       // row is a forward row: no such file yet (every rule fits map/filter/reduce), it binds the
       // first one to 100% lines.
-      // The page's rows (PR-4, backgammon's shape): protocol.ts, storage.ts, shellConfig.ts, fx.ts
+      // The page's rows (PR-4, backgammon's shape): protocol.ts, storage.ts, shellConfig.ts
       // and net/ each through the test beside them and state.test.ts; ui/ through state.test.ts
       // (whole games for 2, 3 and 4 seats through a tap policy, the settle beat, the curtain, the
       // match tally), table/history/motion/layout/home/local/render.test.ts over the page fake.
@@ -708,12 +699,6 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
           branches: 88,
         },
         'web/games/briscola/src/net/**': {
-          lines: 95,
-          functions: 95,
-          statements: 95,
-          branches: 97,
-        },
-        'web/games/briscola/src/fx.ts': {
           lines: 95,
           functions: 95,
           statements: 95,

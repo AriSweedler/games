@@ -2,14 +2,18 @@
 // tests, moved here once): a row of the injected table is one sequence from the font and the row's
 // buzz, another font re-voices the same event while the buzz stays the table's, a disabled player
 // buzzes nothing and warms nothing, and `toggle` persists through the injected callback, warming
-// and tapping when it turns on. The table here is the test's own; each game pins its real table
-// and the wiring of its key beside its fx.ts.
+// and tapping when it turns on. `shellFx` (docs/design/shell-hoist.md §4 A, once every game's
+// fx.ts) is the same player over a table and a sound preference: the toggle lands under the game's
+// key and reads back through the preference. The table here is the test's own; each game pins its
+// real table beside its ui/sound.ts.
 import { describe, expect, test } from 'vitest';
 
 import { SHELL_CUES, type CueId, type CueSpec as LibCueSpec } from '../lib/sound/cues.ts';
 import { fontByName, resolveCue, resolveSound, type SoundFontName } from '../lib/sound/fonts.ts';
 import { PHRASE_GAP_MS, joinBuzz, phraseMs, type Phrase } from '../lib/sound/phrase.ts';
-import { createCuePlayer, type CueSpec, type SoundState } from './cuePlayer.ts';
+import { createCuePlayer, shellFx, type CueSpec, type SoundState } from './cuePlayer.ts';
+import { soundPref } from './prefs.ts';
+import { createStore } from './storage.ts';
 import type { AudioCues, Note, OscillatorType } from './fx.ts';
 import { createSampleCache } from './sound.ts';
 
@@ -216,5 +220,40 @@ describe('createCuePlayer over phrases', () => {
     const off = world(false);
     off.player.warm('arcade');
     expect(off.calls).toEqual([]);
+  });
+});
+
+describe('shellFx', () => {
+  test("the shared player over a table and a sound preference: the toggle persists under the game's key and reads back through the preference", () => {
+    const { audio } = fakeAudio(false);
+    const map = new Map<string, string>();
+    const store = createStore({
+      getItem: (key) => map.get(key) ?? null,
+      setItem: (key, value) => map.set(key, value),
+      removeItem: (key) => map.delete(key),
+    });
+    const pref = soundPref('fake_sound');
+    const toggles: boolean[] = [];
+    const player = shellFx<Event, typeof store>(
+      CUES,
+      pref,
+    )({
+      audio,
+      sound: {
+        fetchBuffer: () => Promise.reject(new Error('no samples here')),
+        cache: createSampleCache(),
+      },
+      vibrate: () => undefined,
+      store,
+      onToggle: (on) => toggles.push(on),
+    });
+    expect(pref.enabled(store)).toBe(true);
+    player.toggle('default');
+    expect(store.readText('fake_sound')).toEqual({ ok: true, value: 'on' });
+    expect(pref.read(store)).toEqual({ ok: true, value: 'on' });
+    player.toggle('default');
+    expect(pref.read(store)).toEqual({ ok: true, value: 'off' });
+    expect(pref.enabled(store)).toBe(false);
+    expect(toggles).toEqual([true, false]);
   });
 });

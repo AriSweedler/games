@@ -13,6 +13,7 @@
 import type { Clock } from '../lib/clock.ts';
 import { inviteUrl } from '../lib/invite.ts';
 import type { RecentGame } from '../lib/recentGames.ts';
+import type { Phrase } from '../lib/sound/phrase.ts';
 import type { Rng } from '../lib/rng.ts';
 import { badSoundFontMsg, isSoundFont, type SoundFontName } from '../lib/sound/fonts.ts';
 import type { GuestEvents } from '../net/guest.ts';
@@ -51,7 +52,7 @@ import {
   type ToastMarks,
 } from '../ui/shellPaint.ts';
 import { createTimers, createToaster, type Toast } from '../ui/toast.ts';
-import type { CuePlayer, CuePlayerDeps } from './cuePlayer.ts';
+import { shellFx, type CuePlayer, type CuePlayerDeps } from './cuePlayer.ts';
 import {
   byId,
   listen,
@@ -387,7 +388,7 @@ export type HostOptionsOf = Readonly<{
 }>;
 export type GuestOptionsOf = Readonly<{ code: string; attempt: number }>;
 
-/** What a game's fx.ts `createFx` takes: the shared player's deps less the table and the persist it supplies. */
+/** What the boot hands `fx` (cuePlayer.ts `shellFx` by default): the shared player's deps less the table and the persist it supplies. */
 export type FxDepsOf<G extends BootTypes> = Omit<CuePlayerDeps<Cue<G>>, 'cues' | 'persist'> &
   Readonly<{ store: G['Store'] }>;
 
@@ -462,8 +463,21 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
     fillP2Name: (doc: DocumentLike, name: string, isDefault: boolean) => void;
     setCode: (doc: DocumentLike, value: string) => void;
   }>;
-  /** The game's fx.ts `createFx`: the shared cue player over its table and its sound key. */
-  fx: (deps: FxDepsOf<G>) => CuePlayer<Cue<G>>;
+  /**
+   * What the boot reads of the game's shell config (its `ShellConfig` constant, ui/state.ts): the
+   * cue table and the `sound` preference the default `fx` plays and persists through.
+   */
+  config: Readonly<{
+    cues: Readonly<{ table: Readonly<Record<Cue<G>, Phrase>> }>;
+    prefs: Readonly<{
+      sound: Readonly<{ write: (store: G['Store'], state: 'on' | 'off') => unknown }>;
+    }>;
+  }>;
+  /**
+   * The cue player over the boot's deps: cuePlayer.ts `shellFx(config.cues.table, config.prefs.sound)`
+   * unless a game passes its own (the boot test's fake records the deps).
+   */
+  fx?: (deps: FxDepsOf<G>) => CuePlayer<Cue<G>>;
   net: Readonly<{
     Host: new (deps: HostDepsOf<G>, opts: HostOptionsOf) => SessionLike<'host', HostFrameOf<G>>;
     Guest: new (
@@ -592,7 +606,8 @@ export const bootShell = <
   /** The legacy `toast(msg, ms)` with its 2.6 s default; a new toast restarts the one hide timer (backgammon's Kapará toast wears `hit`). */
   const toast = createToaster(doc, clock, undefined, cfg.paint.toastMarks);
 
-  const fx = cfg.fx({
+  const createFx = cfg.fx ?? shellFx(cfg.config.cues.table, cfg.config.prefs.sound);
+  const fx = createFx({
     audio,
     // The sample seam (docs/design/sound-fonts.md §3): a document-relative URL, so both origins serve it.
     sound: { fetchBuffer: fetchArrayBuffer(win), cache: createSampleCache() },

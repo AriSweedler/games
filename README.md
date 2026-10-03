@@ -498,9 +498,9 @@ web/shared/styles/           tokens.css (the shared palette, :root only), base.c
 web/shared/example/coin/     the coin game: the two-seat engine the shared replay driver is proved on (100% row; the shell's future fake)
 web/games/gin-rummy/         index.html, theme.css, main.ts, src/{engine,protocol.ts,storage.ts,net,ui,scorer}
 web/games/fidice/            index.html, theme.css, main.ts, MANIFEST.json, src/{assets,domain,bots,net,view,app}
-web/games/backgammon/        index.html, theme.css, main.ts, src/{engine,protocol.ts,storage.ts,fx.ts,net,ui,ui/board}
+web/games/backgammon/        index.html, theme.css, main.ts, src/{engine,protocol.ts,storage.ts,net,ui,ui/board}
 web/games/briscola/          index.html (composed from page.ts), theme.css, main.ts (bootShell alone), src/{engine,protocol.ts,
-                             storage.ts,shellConfig.ts,fx.ts,net,ui} (docs/design/briscola.md, briscola-rules.md, briscola-board.md)
+                             storage.ts,shellConfig.ts,net,ui} (docs/design/briscola.md, briscola-rules.md, briscola-board.md)
 assets/cards/<pack>/         a sourced card pack's pictures as supplied, with SOURCES.txt (napoletane: the owner's sheet); tools/card-packs.ts
                              cuts them into web/public/shared/cards/<pack>/ (docs/design/card-packs.md §5, §7)
 legacy/                      the pre-migration pages and shared/ice.js, verbatim; never served, never edited (legacy/README.md)

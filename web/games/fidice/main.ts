@@ -21,7 +21,6 @@ import { Controller } from './src/app/controller.ts';
 import { browserEffects } from './src/app/effects.ts';
 import { DICE_IMAGES } from './src/assets/diceImages.ts';
 import { adoptLegacyName, legacyInviteUrl, shellPathOn, withoutShellParam } from './src/flag.ts';
-import { createFx } from './src/fx.ts';
 import { legalActions } from './src/legal.ts';
 import { ClientSession } from './src/net/client.ts';
 import { HostSession } from './src/net/host.ts';
@@ -36,6 +35,7 @@ import { GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
 import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
 import { bindAll, paint } from './src/ui/render.ts';
 import {
+  FIDICE,
   guestContextOf,
   hostContextOf,
   initialApp,
@@ -155,7 +155,7 @@ const bootShellPath = (): void => {
       fillP2Name: fillP2NameInput,
       setCode: setCodeInput,
     },
-    fx: createFx,
+    config: FIDICE,
     net: { Host: ShellHostSession, Guest: ShellGuestSession, isGuestFrame, seats: true },
     legal: legalActions,
     deps: {},

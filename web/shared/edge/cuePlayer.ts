@@ -1,4 +1,4 @@
-// The cue player every game's fx.ts wraps (docs/design/shared-shell.md §5 A4): gin's legacy `fx`
+// The cue player every shell game plays through (docs/design/shared-shell.md §5 A4): gin's legacy `fx`
 // object (legacy/gin-rummy/index.html: sound + haptics, docs/MIGRATION.md step 12) moved here
 // verbatim from web/games/gin-rummy/src/fx.ts, with the two things a game owns injected: its cue
 // table (ui/sound.ts, event -> generic cue + buzz) and the persist of its sound preference
@@ -12,9 +12,10 @@
 // as the legacy `buzz` checked `this.enabled`. `toggle` flips and persists the preference, warms
 // the context and taps when turning on, then tells the page to repaint `#soundBtn` (`onToggle`, a
 // paint). `warm(font)` also fetches the table's samples in that font, so a phrase's later step is
-// decoded by its slot. A game's main.ts constructs the real deps through its fx.ts;
-// cuePlayer.test.ts records fakes over a table of its own, and each game's fx.test.ts pins its
-// table and the wiring.
+// decoded by its slot. `shellFx` is the wiring every game's fx.ts once spelled (shell-hoist.md
+// §4 A): the player over a config's cue table and its `sound` preference; the boot constructs the
+// real deps and calls it. cuePlayer.test.ts records fakes over a table of its own and pins the
+// wiring; each game's ui/sound.test.ts pins its table.
 import type { Buzz } from '../lib/sound/cues.ts';
 import { fontByName, type SoundFontName } from '../lib/sound/fonts.ts';
 import {
@@ -76,7 +77,7 @@ export const createCuePlayer = <E extends string>(deps: CuePlayerDeps<E>): CuePl
       placed.flatMap((p) => p.slots),
       deps.sound,
     );
-    // One row keeps its pattern byte for byte (the games' fx.test.ts pins); a run is joined.
+    // One row keeps its pattern byte for byte (the games' ui/sound.test.ts pin); a run is joined.
     buzz(rest.length === 0 ? sequenceOf(first).buzz : joinBuzz(placed));
   };
   const play = (event: E | 'tap', font: SoundFontName): void => {
@@ -112,3 +113,26 @@ export const createCuePlayer = <E extends string>(deps: CuePlayerDeps<E>): CuePl
     warm,
   };
 };
+
+/** What `shellFx` takes from the boot: the player's deps less the table and the persist it supplies, plus the store to persist to. */
+export type ShellFxDeps<E extends string, St> = Omit<CuePlayerDeps<E>, 'cues' | 'persist'> &
+  Readonly<{ store: St }>;
+
+/**
+ * The one wiring every game's `src/fx.ts` spelled (shell-hoist.md §4 A): the shared player over
+ * the config's cue table (`ShellConfig.cues.table`) and its `sound` preference (`ShellPrefs.sound`,
+ * prefs.ts `soundPref` under the game's own key). The boot calls the result with the real deps.
+ */
+export const shellFx =
+  <E extends string, St>(
+    cues: Readonly<Record<E | 'tap', Phrase>>,
+    pref: Readonly<{ write: (store: St, state: SoundState) => unknown }>,
+  ) =>
+  ({ store, ...deps }: ShellFxDeps<E, St>): CuePlayer<E> =>
+    createCuePlayer({
+      ...deps,
+      cues,
+      persist: (state) => {
+        pref.write(store, state);
+      },
+    });

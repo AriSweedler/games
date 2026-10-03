@@ -539,25 +539,6 @@ export const SHELL_STORE = shellStore<State, HostExtra, HomeTab>(STORAGE_KEYS, {
 export const { enabled: soundEnabled, write: writeSoundState } = SHELL_STORE.sound;
 `;
 
-const fxTs = (
-  title: string,
-): string => `// ${title}'s cue player: the shared one (web/shared/edge/cuePlayer.ts) over this game's cue table and
-// its sound key.
-import {
-  createCuePlayer,
-  type CuePlayer,
-  type CuePlayerDeps,
-} from '../../../shared/edge/cuePlayer.ts';
-import { writeSoundState, type Store } from './storage.ts';
-import { CUES, type Cue } from './ui/sound.ts';
-
-export type FxDeps = Omit<CuePlayerDeps<Cue>, 'cues' | 'persist'> & Readonly<{ store: Store }>;
-export type Fx = CuePlayer<Cue>;
-
-export const createFx = ({ store, ...deps }: FxDeps): Fx =>
-  createCuePlayer({ ...deps, cues: CUES, persist: (state) => writeSoundState(store, state) });
-`;
-
 const shellConfigTs = (
   slug: string,
   upper: string,
@@ -567,7 +548,7 @@ const shellConfigTs = (
 // (docs/design/${slug}.md §3; web/shared/ui/shell.ts \`ShellGameData\`): the id the table codes are
 // made for, the default names, the tabs, the two stored modes, the copy the shared flows paint, the
 // option codec (two seats, always), the engine adapters (engine/view.ts), the frame builders, the
-// cue memory's start and the shell's store. The table hooks and the rest of \`home\` are the
+// cue memory's start, the cue table and the shell's store. The table hooks and the rest of \`home\` are the
 // reducer's (ui/state.ts \`${upper}\`).
 import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
@@ -582,6 +563,7 @@ import {
   SHELL_STORE,
   type PlayMode,
 } from './storage.ts';
+import { CUES } from './ui/sound.ts';
 import type { ${pascal} } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -643,7 +625,7 @@ export const ${upper}_SHELL: ShellGameData<${pascal}> = {
     winnerOf: (view) => winnerSeat(view.game.result),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY },
+  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   home: { read: () => ({}) },
   prefs: SHELL_STORE,
 };
@@ -1448,6 +1430,7 @@ export const bindAll = (doc: PageLike, dispatch: Dispatch): void => {
 
 const mainTs = (
   slug: string,
+  upper: string,
   pascal: string,
   title: string,
   hook: string,
@@ -1464,7 +1447,6 @@ import { browserStore } from '../../shared/edge/storage.ts';
 import { aboutHtml } from '../../shared/ui/glossary.ts';
 import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { legalActions, type Action, type View } from './src/engine/view.ts';
-import { createFx } from './src/fx.ts';
 import { GuestSession } from './src/net/guest.ts';
 import { HostSession } from './src/net/host.ts';
 import { isGuestFrame } from './src/protocol.ts';
@@ -1479,6 +1461,7 @@ import {
   readHome,
   reduce,
   runEffect,
+  ${upper},
   type App,
   type ${pascal},
 } from './src/ui/state.ts';
@@ -1496,7 +1479,7 @@ bootShell<${pascal}, App>({
     fillP2Name: fillP2NameInput,
     setCode: setCodeInput,
   },
-  fx: createFx,
+  config: ${upper},
   net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
   legal: legalActions,
   deps: {},
@@ -1946,7 +1929,7 @@ export const generatedFiles = (spec: NewGameSpec): ReadonlyArray<GeneratedFile> 
   return [
     { path: `${g}/page.ts`, content: pageTs(n.slug, n.upper, n.title, spec.hidden) },
     { path: `${g}/theme.css`, content: themeCss(n.slug, n.title) },
-    { path: `${g}/main.ts`, content: mainTs(n.slug, n.pascal, n.title, n.hook) },
+    { path: `${g}/main.ts`, content: mainTs(n.slug, n.upper, n.pascal, n.title, n.hook) },
     { path: `${g}/assets/splash.svg`, content: splashSvg(n.slug, n.title) },
     { path: `${g}/src/engine/engine.ts`, content: engineTs(n.slug, n.title) },
     { path: `${g}/src/engine/engine.test.ts`, content: engineTestTs(n.slug, n.title) },
@@ -1956,7 +1939,6 @@ export const generatedFiles = (spec: NewGameSpec): ReadonlyArray<GeneratedFile> 
     { path: `${g}/src/net/host.ts`, content: hostTs(n.slug, n.title) },
     { path: `${g}/src/net/guest.ts`, content: guestTs(n.slug, n.title) },
     { path: `${g}/src/storage.ts`, content: storageTs(n.slug, n.title) },
-    { path: `${g}/src/fx.ts`, content: fxTs(n.title) },
     {
       path: `${g}/src/shellConfig.ts`,
       content: shellConfigTs(n.slug, n.upper, n.pascal, n.title),

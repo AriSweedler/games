@@ -13,7 +13,6 @@ import { browserStore } from '../../shared/edge/storage.ts';
 import { aboutHtml } from '../../shared/ui/glossary.ts';
 import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { legalActions, type Action, type View } from './src/engine/view.ts';
-import { createFx } from './src/fx.ts';
 import { GuestSession } from './src/net/guest.ts';
 import { HostSession } from './src/net/host.ts';
 import { isGuestFrame } from './src/protocol.ts';
@@ -23,6 +22,7 @@ import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts'
 import { bindAll, paint } from './src/ui/render.ts';
 import { ABOUT_PARAGRAPHS, GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
 import {
+  HIVE,
   guestContextOf,
   hostContextOf,
   initialApp,
@@ -46,7 +46,7 @@ bootShell<Hive, App>({
     fillP2Name: fillP2NameInput,
     setCode: setCodeInput,
   },
-  fx: createFx,
+  config: HIVE,
   net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
   legal: legalActions,
   deps: {},

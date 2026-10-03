@@ -138,7 +138,8 @@ one with the pause (`web/games/flip7/src/`). The shell's design is `docs/design/
 - `ui/state.ts`: the table slice and its reducer (the curtain, the pause, the game's intents);
   `ui/render.ts` paints it through `edge/dom.ts`; `ui/home.ts` the home's game-specific inputs;
   `ui/rules.ts`, `ui/glossary.ts`, `ui/about.ts` the two tabs; `ui/sound.ts` the cue table.
-- `fx.ts`: `createFx` over the shared cue player and the game's `sound` preference.
+- No `fx.ts`: the boot plays `shellConfig.cues.table` through the shared cue player (`shellFx`)
+  and persists the game's `sound` preference itself.
 - `main.ts`: the boot and no logic; the adapters constructed and injected; `window.__<g>` exposed.
 - `theme.css`: the game's rules over the shell's tokens; one accent.
 
@@ -197,8 +198,8 @@ file it names.
    terms the items link, the About copy.
 4. `src/ui/state.ts`: the table slice with the curtain, the pause for every consequential event,
    and the game's intents; its test pins the pause and its Continue.
-5. `src/ui/sound.ts` and `fx.ts`: the cue table over `SHELL_CUES` and the game's events; a test
-   pins the cue per intent.
+5. `src/ui/sound.ts`: the cue table over `SHELL_CUES` and the game's events, named as
+   `shellConfig.cues.table`; a test pins the cue per intent.
 6. `shellConfig.ts`, `protocol.ts`, `net/`, `storage.ts`, `ui/render.ts`, `ui/home.ts`, `main.ts`,
    `theme.css`, `page.ts`: copy the closest game and keep its tests; then
    `node --experimental-strip-types tools/shell-markup.ts --write`.

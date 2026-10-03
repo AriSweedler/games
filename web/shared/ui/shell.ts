@@ -747,6 +747,8 @@ export type ShellPrefs<G extends ShellTypes> = Readonly<{
   p2Name: Pref<G['Store'], string>;
   homeTab: Pref<G['Store'], Tab<G>>;
   playMode: Pref<G['Store'], PlayMode>;
+  /** The sound preference (prefs.ts `SOUND_STATES`): the boot's default fx persists `toggle` through it. */
+  sound: Pref<G['Store'], 'on' | 'off'>;
   soundFont: Pref<G['Store'], SoundFontName>;
   /** The far seat's flip (prefs.ts `FLIP_STATES`): `readHome` reads it as a boolean, `writeFlip` writes it. */
   flipTable: Pref<G['Store'], FlipState>;
@@ -916,7 +918,11 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
      */
     join: (name: string) => GuestFrameOf<G>;
   }>;
-  cues: Readonly<{ initial: G['Cues'] }>;
+  cues: Readonly<{
+    initial: G['Cues'];
+    /** The cue table (ui/sound.ts, event -> cue + buzz) the boot's default fx plays (cuePlayer.ts `shellFx`). */
+    table: Readonly<Record<Cue<G>, Phrase>>;
+  }>;
   table: Readonly<{
     initial: G['Table'];
     reset: (table: G['Table'], at: TableReset) => G['Table'];

@@ -19,7 +19,6 @@ import { badLanguageMsg, isLanguagePack } from '../../shared/lib/lang/packs.ts';
 import { SUIT_SPRITE_SVG } from '../../shared/ui/cardFace.ts';
 import IMPACT_SPRITE_SVG from './impact/impact-sprite.svg?raw';
 import { legalActions, type Action, type GameEvent, type View } from './src/engine/index.ts';
-import { createFx } from './src/fx.ts';
 import { GuestSession } from './src/net/guest.ts';
 import { HostSession } from './src/net/host.ts';
 import { isEphemeral, isGuestFrame } from './src/protocol.ts';
@@ -30,6 +29,7 @@ import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts'
 import { bindAll, paint } from './src/ui/render.ts';
 import { rulesItemsHtml } from './src/ui/rules.ts';
 import {
+  BRISCOLA,
   guestContextOf,
   hostContextOf,
   initialApp,
@@ -90,7 +90,7 @@ const boot = (): void => {
       fillP2Name: fillP2NameInput,
       setCode: setCodeInput,
     },
-    fx: createFx,
+    config: BRISCOLA,
     // `isEphemeral` names the live intent's lane, sent by both sides (briscola-battle.md §4.5).
     net: { Host: HostSession, Guest: GuestSession, isGuestFrame, isEphemeral, seats: true },
     legal: legalActions,

@@ -514,6 +514,8 @@ class FakeAudioContext {
 
 type Options = Readonly<{
   search?: string;
+  /** Pass no `fx`: the boot builds the shared player (`shellFx`) over `config.cues.table` and `config.prefs.sound`. */
+  defaultFx?: boolean;
   hash?: string;
   stored?: Readonly<Record<string, string>>;
   audio?: boolean;
@@ -956,7 +958,17 @@ const bootPage = (options: Options = {}) => {
         log.inputs.push(['code', value]);
       },
     },
-    fx,
+    ...(options.defaultFx === true ? {} : { fx }),
+    config: {
+      cues: {
+        table: {
+          tap: SHELL_CUES.tap,
+          yourTurn: SHELL_CUES.yourTurn,
+          ding: { cue: 'good.trick', buzz: 9 },
+        },
+      },
+      prefs: { sound: { write: (s, state) => s.writeText(SOUND_KEY, state) } },
+    },
     net: {
       Host: class extends FakeHost {
         constructor(deps: HostDepsOf<Fake>, opts: HostOptionsOf) {
@@ -1484,6 +1496,18 @@ describe('bootShell', () => {
     b.fxDeps.value?.vibrate([10, 20]);
     expect(b.log.buzzes).toEqual([[10, 20]]);
     expect(b.fxDeps.value?.store).toBe(b.store);
+  });
+
+  test("no `fx`: the shared player over `config.cues.table`, persisting through `config.prefs.sound` under the game's key (once each game's fx.ts)", () => {
+    const b = bootPage({ defaultFx: true, stored: { [SOUND_KEY]: 'off' } });
+    expect(b.fxDeps.value).toBeNull();
+    expect(b.log.sounds).toEqual([false]);
+    b.run([{ type: 'toggleSound' }]);
+    expect(b.store.readText(SOUND_KEY)).toEqual({ ok: true, value: 'on' });
+    expect(b.log.sounds).toEqual([false, true]);
+    b.run([{ type: 'toggleSound' }]);
+    expect(b.store.readText(SOUND_KEY)).toEqual({ ok: true, value: 'off' });
+    expect(b.log.sounds).toEqual([false, true, false]);
   });
 
   test("the sample seam: the page's fetch, the bytes on ok, a rejection naming the status and the URL otherwise", async () => {

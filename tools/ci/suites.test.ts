@@ -327,7 +327,9 @@ describe('every test file belongs to exactly one suite', () => {
 
 /**
  * The rows of vitest.config.ts the day before the partition (commit 21b085e), glob -> the suite
- * that owns it now and the figures. A row may ratchet up (edit both places), never down or out.
+ * that owns it now and the figures. A row may ratchet up (edit both places), never down or out,
+ * save a file that left the tree: the per-game `src/fx.ts` rows went with the boot's `shellFx`
+ * (docs/design/shell-hoist.md A); rps, not a shell game, keeps its own.
  */
 const ROWS_BEFORE: ReadonlyArray<readonly [string, Suite, Thresholds]> = [
   // The reaction game's rows (docs/design/rps-island.md): a solo page, measured at its landing.
@@ -512,11 +514,6 @@ const ROWS_BEFORE: ReadonlyArray<readonly [string, Suite, Thresholds]> = [
     { lines: 95, functions: 95, statements: 95, branches: 97 },
   ],
   [
-    'web/games/briscola/src/fx.ts',
-    'briscola',
-    { lines: 95, functions: 95, statements: 95, branches: 97 },
-  ],
-  [
     'web/games/backgammon/src/protocol.ts',
     'backgammon',
     { lines: 95, functions: 95, statements: 95, branches: 97 },
@@ -538,11 +535,6 @@ const ROWS_BEFORE: ReadonlyArray<readonly [string, Suite, Thresholds]> = [
   ],
   [
     'web/games/backgammon/src/net/**',
-    'backgammon',
-    { lines: 95, functions: 95, statements: 95, branches: 97 },
-  ],
-  [
-    'web/games/backgammon/src/fx.ts',
     'backgammon',
     { lines: 95, functions: 95, statements: 95, branches: 97 },
   ],
@@ -583,11 +575,6 @@ const ROWS_BEFORE: ReadonlyArray<readonly [string, Suite, Thresholds]> = [
   ],
   [
     'web/games/gin-rummy/src/net/**',
-    'gin',
-    { lines: 95, functions: 95, statements: 95, branches: 97 },
-  ],
-  [
-    'web/games/gin-rummy/src/fx.ts',
     'gin',
     { lines: 95, functions: 95, statements: 95, branches: 97 },
   ],
@@ -633,7 +620,7 @@ const INCLUDE_BEFORE: ReadonlyArray<string> = [
   'web/games/fidice/src/net/**/*.ts',
   'web/games/fidice/src/app/**/*.ts',
   'web/games/fidice/src/view/**/*.ts',
-  // Added by the fidice shell adoption's M3: codec, protocol, storage, shellConfig, fx, ui/.
+  // Added by the fidice shell adoption's M3: codec, protocol, storage, shellConfig, ui/.
   'web/games/fidice/src/*.ts',
   'web/games/fidice/src/ui/**/*.ts',
   'web/games/gin-rummy/src/engine/**/*.ts',
@@ -646,13 +633,11 @@ const INCLUDE_BEFORE: ReadonlyArray<string> = [
   'web/games/briscola/src/shellConfig.ts',
   'web/games/briscola/src/ui/**/*.ts',
   'web/games/briscola/src/net/**/*.ts',
-  'web/games/briscola/src/fx.ts',
   'web/games/backgammon/src/protocol.ts',
   'web/games/backgammon/src/storage.ts',
   'web/games/backgammon/src/shellConfig.ts',
   'web/games/backgammon/src/ui/**/*.ts',
   'web/games/backgammon/src/net/**/*.ts',
-  'web/games/backgammon/src/fx.ts',
   'web/games/gin-rummy/src/protocol.ts',
   'web/games/gin-rummy/src/storage.ts',
   'web/games/gin-rummy/src/shellConfig.ts',
@@ -661,7 +646,6 @@ const INCLUDE_BEFORE: ReadonlyArray<string> = [
   'web/games/gin-rummy/src/stories/catalogue.ts',
   'web/games/gin-rummy/src/scorer/**/*.ts',
   'web/games/gin-rummy/src/net/**/*.ts',
-  'web/games/gin-rummy/src/fx.ts',
   'infra/games-proxy/worker.ts',
   // Added by docs/design/rps-island.md: the island scoreboard's routes beside the Worker.
   'infra/games-proxy/rps-push.ts',
@@ -928,12 +912,12 @@ const CHANGES: ReadonlyArray<readonly [string, ReadonlyArray<string>, ReadonlyAr
   ['nothing at all', [], []],
   [
     'a gin change beside a docs change',
-    ['web/games/gin-rummy/src/fx.ts', 'README.md'],
+    ['web/games/gin-rummy/src/shellConfig.ts', 'README.md'],
     ['gin', 'e2e-gin', 'site', 'e2e-site', 'harness'],
   ],
   [
     'two games',
-    ['web/games/gin-rummy/src/fx.ts', 'web/games/fidice/src/fx.ts'],
+    ['web/games/gin-rummy/src/shellConfig.ts', 'web/games/fidice/src/shellConfig.ts'],
     ['gin', 'e2e-gin', 'site', 'e2e-site', 'harness', 'fidice', 'e2e-fidice'],
   ],
 ];
