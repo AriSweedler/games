@@ -84,6 +84,8 @@
     "web/raw-imports.d.ts",
     "web/shared/edge/storage.ts",
     "web/shared/edge/prefs.ts",
+    // The per-device settings table (settings.ts over prefs.ts): Hive's storage.ts and reducer read it.
+    "web/shared/edge/settings.ts",
     "web/shared/edge/fx.ts",
     "web/shared/edge/sound.ts",
     "web/shared/edge/cuePlayer.ts",

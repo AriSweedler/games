@@ -328,3 +328,85 @@ test("the Spider's path reads 1-2-3 over the aimed hex, and her move hops along 
   expect(after.game.board['-1,0']).toBeUndefined();
   expect(after.game.turn).toBe('black');
 });
+
+/**
+ * The crawl (the owner: "the tiles move too fast... have them move in little jumps (with an
+ * optional button to have them snap to the end result. Make this a config option)"): an Ant's
+ * move carries its cell hex by hex (`hopping` while it goes, cleared when it lands), the 🐌 in the
+ * topbar (a laptop's: a phone's is full, so the home's switch `#motionToggle` is the choice there)
+ * is pressed by default; a tap makes it ⚡ and the next tile snaps, with no transition run; the
+ * choice survives a reload (browser storage, settings.ts `hive_motion`). With HIVE_CRAWL_SHOTS set
+ * to a folder, three frames of the walk are saved there.
+ */
+test('every tile crawls hex by hex; the ⚡ snaps them; the choice survives a reload', async ({
+  phone,
+  project,
+}) => {
+  test.skip(project !== 'pages', 'about the page, not the origin');
+  const { page } = phone;
+  // On a phone the topbar is full, so its button is hidden and the home's switch (on by default) is the choice.
+  await hiveStartLocal(page, pagePath(project, 'hive'), PHONE, [...NAMES]);
+  const motion = page.locator('#motionBtn');
+  await expect(motion).toBeHidden();
+  await expect(motion).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#motionToggle')).toBeChecked();
+  // Both Queens down and White's Ant a leaf at (-1,0); White to move.
+  const placements = [
+    ['queen', { q: 0, r: 0 }, 1],
+    ['queen', { q: 1, r: 0 }, 0],
+    ['ant', { q: -1, r: 0 }, 1],
+    ['spider', { q: 2, r: 0 }, 0],
+  ] as const;
+  await placements.reduce(async (prev, [bug, to, seat]) => {
+    await prev;
+    await hiveAct(page, { type: 'place', bug, to });
+    await expect(page.locator('#myName')).toHaveText(seated(seat));
+  }, Promise.resolve());
+  // The Ant slides to the far side of the hive: a long way, one hop a hex.
+  const far = { q: 3, r: 0 };
+  const legal =
+    await page.evaluate<ReadonlyArray<{ type: string; to?: { q: number; r: number } }>>(
+      'window.__hive.legal()',
+    );
+  expect(legal.some((a) => a.type === 'move' && a.to?.q === far.q && a.to.r === far.r)).toBe(true);
+  await hiveAct(page, { type: 'move', from: { q: -1, r: 0 }, to: far });
+  const landed = page.locator('#board .hex[data-hex="3,0"]');
+  await expect(landed).toHaveClass(/hopping/);
+  const shots = process.env['HIVE_CRAWL_SHOTS'];
+  if (shots !== undefined) {
+    await [1, 2, 3].reduce(async (prev, i) => {
+      await prev;
+      await page.waitForTimeout(260);
+      await page.screenshot({ path: `${shots}/ant-crawl-${String(i)}.png` });
+    }, Promise.resolve());
+  }
+  // The transform is inline while it goes (the translate of a leg), then cleared with the class.
+  await expect(landed).toHaveAttribute('style', /translate/);
+  await expect(landed).not.toHaveClass(/hopping/, { timeout: 10_000 });
+  await expect(landed).not.toHaveAttribute('style', /translate|transition|animation/);
+  await expect(page.locator('#board .hex.trail')).toHaveCount(0);
+  expect((await requireView(page)).game.board['3,0']).toEqual([{ side: 'white', bug: 'ant' }]);
+
+  // On a laptop the button shows, 🐌 pressed; ⚡ and Black's Beetle snaps to where it lands: no class, no inline style.
+  await page.setViewportSize({ width: DESKTOP.width, height: DESKTOP.height });
+  await expect(motion).toBeVisible();
+  await expect(motion).toHaveText('🐌');
+  await motion.click();
+  await expect(motion).toHaveAttribute('aria-pressed', 'false');
+  await expect(motion).toHaveText('⚡');
+  await hiveAct(page, { type: 'place', bug: 'beetle', to: { q: 1, r: 1 } });
+  const snapped = page.locator('#board .hex[data-hex="1,1"]');
+  await expect(snapped).toHaveClass(/\bb\b/);
+  await expect(snapped).not.toHaveClass(/hopping/);
+  await expect(snapped).not.toHaveAttribute('style', /./);
+
+  // A reload: the choice is remembered on this device, on the home's switch too; the switch flips it back.
+  await page.reload();
+  await expect(page.locator('#homeScreen')).toBeVisible();
+  await expect(motion).toHaveAttribute('aria-pressed', 'false');
+  await expect(motion).toHaveText('⚡');
+  await expect(page.locator('#motionToggle')).not.toBeChecked();
+  await page.locator('#motionToggle').click();
+  await expect(page.locator('#motionToggle')).toBeChecked();
+  await expect(motion).toHaveAttribute('aria-pressed', 'true');
+});

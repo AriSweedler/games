@@ -104,6 +104,38 @@ export const flood = (
   return grow(new Map(starts.map((h) => [keyOf(h), h] as const)), starts);
 };
 
+/**
+ * The shortest route from `start` to `goal` through `step`, `start` first and `goal` last (the
+ * start alone when they are the same hex): a breadth-first search, each hex remembered with the
+ * hex it was first reached from, read back from the goal. Undefined when no route reaches it. The
+ * way an Ant walks round the hive to where it slides (the page crawls the tile along it).
+ */
+export const route = (
+  start: Hex,
+  goal: Hex,
+  step: (h: Hex) => ReadonlyArray<Hex>,
+): ReadonlyArray<Hex> | undefined => {
+  type Parents = ReadonlyMap<string, Hex | null>;
+  const grow = (parents: Parents, frontier: ReadonlyArray<Hex>): Parents | undefined => {
+    if (parents.has(keyOf(goal))) return parents;
+    if (frontier.length === 0) return undefined;
+    const reached = frontier.flatMap((h) => step(h).map((n) => [n, h] as const));
+    const next = reached.reduce<Parents>(
+      (acc, [n, from]) => (acc.has(keyOf(n)) ? acc : new Map([...acc, [keyOf(n), from]])),
+      parents,
+    );
+    const fresh = reached.map(([n]) => n).filter((n) => !parents.has(keyOf(n)));
+    return grow(next, dedupe(fresh));
+  };
+  const parents = grow(new Map([[keyOf(start), null]]), [start]);
+  if (parents === undefined) return undefined;
+  const back = (h: Hex, acc: ReadonlyArray<Hex>): ReadonlyArray<Hex> => {
+    const from = parents.get(keyOf(h));
+    return from === null || from === undefined ? [h, ...acc] : back(from, [h, ...acc]);
+  };
+  return back(goal, []);
+};
+
 /** One group: every hex reaches every other through neighbours in the set (none is one group too). */
 export const isConnected = (cells: ReadonlyArray<Hex>): boolean => {
   const first = cells[0];

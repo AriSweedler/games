@@ -116,7 +116,14 @@ const blocks: ShellBlocks = {
                 <input type="text" id="p2NameInput" class="grow" placeholder="Black" maxlength="20" autocomplete="off" />
               </div>
             </div>`,
-  playExtra: '',
+  playExtra: `          <!-- The tiles' motion (the owner: "have them move in little jumps (with an optional button to
+               have them snap to the end result. Make this a config option)"): the device's remembered
+               setting (web/shared/edge/settings.ts HIVE_MOTION), the same choice as the table's #motionBtn,
+               here for the phone whose topbar has no room for it (theme.css hides the button under 430px). -->
+          <label class="toggle-row" id="motionRow">
+            <input type="checkbox" id="motionToggle" checked />
+            <span>Tiles crawl along their path<br /><small class="muted">Off: they snap to where they land.</small></span>
+          </label>`,
   extraPanels: '',
   extraScreens: '',
   hostWaitList: '',
@@ -131,7 +138,9 @@ const blocks: ShellBlocks = {
       </div>`,
   table: `      <!-- TABLE (docs/design/hive.md §7): the names strip (me and my side, the other seat and
            its connection), Black's hand above the board and White's below, the SVG hive between
-           them (render.ts boardHtml: a g.hex per cell), Pass and Resign, the status line. -->
+           them (render.ts boardHtml: a g.hex per cell), Pass and Resign, the status line; in the
+           topbar, the tiles' motion (🐌 crawl / ⚡ snap: render.ts paintMotion, the device's remembered
+           setting) beside the sound. -->
       <div id="tableScreen" class="hidden">
         <div class="topbar">
           <div class="row tight">
@@ -148,6 +157,7 @@ const blocks: ShellBlocks = {
             <button class="icon-btn" id="rulesBtnGame" title="Rules" aria-label="Rules">📖</button>
             <button class="icon-btn" id="historyBtn" title="History" aria-label="History">📜</button>
             <button class="icon-btn" id="soundBtn" title="Sound &amp; vibration" aria-label="Sound" aria-pressed="true">🔊</button>
+            <button class="icon-btn" id="motionBtn" title="Tiles crawl" aria-label="Tiles crawl" aria-pressed="true">🐌</button>
           </div>
         </div>
         <div class="hand" id="blackHand" aria-label="Black’s tiles in hand"></div>

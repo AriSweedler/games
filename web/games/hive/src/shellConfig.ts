@@ -22,6 +22,7 @@ import {
   DEFAULT_PLAY_MODE,
   HOME_TABS,
   SHELL_STORE,
+  readMotion,
   type PlayMode,
 } from './storage.ts';
 import { INITIAL_CUES } from './ui/sound.ts';
@@ -91,6 +92,7 @@ export const HIVE_SHELL: ShellGameData<Hive> = {
   },
   frames: { lobby, state, toast, action, join },
   cues: { initial: INITIAL_CUES },
-  home: { read: () => ({}) },
+  // The tiles' motion, remembered per device (settings.ts): read at boot with the shell's keys.
+  home: { read: (store) => ({ motion: readMotion(store) }) },
   prefs: SHELL_STORE,
 };

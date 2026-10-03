@@ -82,7 +82,7 @@ describe("the Spider's 1-2-3 on a pick", () => {
 describe("the Spider's 1-2-3 as it moves", () => {
   const after = apply(game, { type: 'move', from: SPIDER, to });
   const landed: View = viewFor({ game: after, startedAt: 1 }, 1);
-  const hop: Hop = { key: 'k', from: SPIDER, path, reduced: false };
+  const hop: Hop = { key: 'k', bug: 'spider', side: 'white', from: SPIDER, path, reduced: false };
 
   test('the move was taken', () => {
     expect(after.turn).toBe('black');

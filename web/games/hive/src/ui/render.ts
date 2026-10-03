@@ -15,7 +15,9 @@
 // board tile for the ghost to clone (`paintDrag`, `liftHtml`). The Spider's 1-2-3: numerals
 // (`text.step`) on the three hexes of a picked Spider's path to the aimed hex (the lit hex the
 // pointer is over, or a drag's nearest), and, as her move lands, `trail` cells along the path while
-// the tile hops (ui/motion.ts `hopAlong`), once a position (`#board[data-hop]`).
+// the tile hops (ui/motion.ts `hopAlong`), once a position (`#board[data-hop]`). Every other tile
+// crawls the same way as it lands, hex by hex with no numerals, and a placement glides in from its
+// tray tile; `#motionBtn` (🐌 crawl, ⚡ snap: `paintMotion`) is the player's choice.
 import {
   addClass,
   closestFrom,
@@ -28,6 +30,7 @@ import {
   requireId,
   safeHtml,
   setAttr,
+  setChecked,
   setDisabled,
   setHtml,
   setText,
@@ -72,6 +75,7 @@ import { bindHome, paintHome } from './home.ts';
 import { hopAlong } from './motion.ts';
 import { aboutHtml, rulesItemsHtml } from './rules.ts';
 import {
+  HIVE_MOTION,
   SCREENS,
   handoffLabel,
   placeableNow,
@@ -79,6 +83,7 @@ import {
   type App,
   type Hop,
   type Intent,
+  type Motion,
   type Picked,
 } from './state.ts';
 
@@ -192,7 +197,8 @@ export const boardHtml = (
   const lit = new Set(reachable(v, picked).map(keyOf));
   const cells = cellsOf(v.game.board, [...lit].map(hexOf));
   const pickedKey = picked?.kind === 'hex' ? keyOf(picked.hex) : null;
-  const path = hop === null ? aimedPath(v, picked, aim) : hop.path;
+  // The Spider's way alone is drawn: another bug's crawl shows its own way, and a trail under an Ant's slide would clutter the hive.
+  const path = hop === null ? aimedPath(v, picked, aim) : hop.bug === 'spider' ? hop.path : [];
   const steps = numbered(path);
   const drawn = new Set(cells.map(keyOf));
   const trail = path.filter((hex) => !drawn.has(keyOf(hex)));
@@ -328,20 +334,25 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const lift = app.table.drag !== null && picked?.kind === 'hex' ? picked.hex : null;
   // The aim a Spider's path is numbered to: a drag's nearest lit hex while one stands, else the hex the pointer is over.
   const aim = app.table.drag !== null ? app.table.drag.over : app.table.aim;
-  // A Spider's move hops once: the board remembers the position it hopped on (`data-hop`), so a
-  // paint of the same position (an aim, a toast) draws the tile at rest and no trail.
+  // A tile that landed hops once: the board remembers the position it hopped on (`data-hop`), so
+  // a paint of the same position (an aim, a toast) draws the tile at rest and no trail.
   const board = requireId(doc, 'board');
   const hop = app.table.hop;
   const fresh = hop !== null && dataOf(board, 'hop') !== hop.key ? hop : null;
   setHtml(board, trustedHtml(boardHtml(v, picked, lift, aim, fresh)));
+  setHtml(requireId(doc, 'whiteHand'), trustedHtml(handHtml(v, 'white', picked)));
+  setHtml(requireId(doc, 'blackHand'), trustedHtml(handHtml(v, 'black', picked)));
   if (fresh !== null) {
     setAttr(board, 'data-hop', fresh.key);
-    hopAlong(board, fresh, () => {
+    // A placement glides in from the tray tile it came from (the hands are painted, so it is there).
+    const tray = queryIn(
+      requireId(doc, fresh.side === 'white' ? 'whiteHand' : 'blackHand'),
+      `.hand-tile[data-bug="${fresh.bug}"]`,
+    );
+    hopAlong(board, tray, fresh, () => {
       queryAllIn(board, '.hex.trail, text.step').forEach(removeElement);
     });
   }
-  setHtml(requireId(doc, 'whiteHand'), trustedHtml(handHtml(v, 'white', picked)));
-  setHtml(requireId(doc, 'blackHand'), trustedHtml(handHtml(v, 'black', picked)));
   paintDrag(doc, app, v);
   const turn = turnSeat(v.game);
   const mine = turn === v.seat;
@@ -384,6 +395,21 @@ export const paintSound = (doc: DocumentLike, enabled: boolean): void => {
   setAttr(requireId(doc, 'soundBtn'), 'aria-pressed', enabled ? 'true' : 'false');
 };
 
+/**
+ * The tiles' motion on both its controls: `#motionBtn`'s glyph, tooltip and pressed state (🐌
+ * pressed while the tiles crawl, ⚡ while they snap) and the home's `#motionToggle`, checked while
+ * they crawl.
+ */
+export const paintMotion = (doc: DocumentLike, motion: Motion): void => {
+  const btn = requireId(doc, 'motionBtn');
+  const crawl = motion === 'crawl';
+  setText(btn, crawl ? '🐌' : '⚡');
+  setAttr(btn, 'title', HIVE_MOTION.labels[motion]);
+  setAttr(btn, 'aria-label', HIVE_MOTION.labels[motion]);
+  setAttr(btn, 'aria-pressed', crawl ? 'true' : 'false');
+  setChecked(requireId(doc, 'motionToggle'), crawl);
+};
+
 export const paint = (doc: PageLike, app: App): void => {
   paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
   paintShellWaiting(doc, app.shell);
@@ -393,6 +419,7 @@ export const paint = (doc: PageLike, app: App): void => {
   paintShellHandoff(doc, game === null ? null : handoffLabel(game));
   const v = app.shell.view;
   if (v !== null) paintTable(doc, app, v);
+  paintMotion(doc, app.table.motion);
   paintOverlays(doc, app);
 };
 
@@ -429,6 +456,10 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
   };
   listenId(doc, 'whiteHand', 'click', pickHand);
   listenId(doc, 'blackHand', 'click', pickHand);
+  // The home's switch: either way it changes, the setting flips (the paint sets it back to the state).
+  listenId(doc, 'motionToggle', 'change', () => {
+    dispatch({ type: 'motion/toggle' });
+  });
   bindButtons(
     doc,
     dispatch,
@@ -441,6 +472,7 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['rsLeaveBtn', { type: 'leave/request' }],
       ['leaveBtn', { type: 'leave/request' }],
       ['soundBtn', { type: 'sound/toggle' }],
+      ['motionBtn', { type: 'motion/toggle' }],
       ['handoffBtn', { type: 'handoff/click' }],
       ['rulesBtnGame', { type: 'rules/open' }],
       ['historyBtn', { type: 'history/open' }],

@@ -389,10 +389,10 @@ label {
 }
 /* The Spider's 1-2-3 (render.ts `stepsOf`, `boardHtml`): a numeral on each hex of the picked
    Spider's path to the lit hex the pointer is over, centred on an empty hex and in a tile's upper
-   left; `trail` is an empty hex drawn only while the tile hops along its path (ui/motion.ts
-   `hopAlong`; the hopping cell's own transition is written inline), dashed so it reads as the way,
-   not a place to go (its `face` carries the light, its `sheen` is off). Neither takes the pointer:
-   a tap through them meets the board. */
+   left; `trail` is an empty hex drawn only while the Spider hops along her path (ui/motion.ts
+   `hopAlong`; every tile crawls, hex by hex, and the hopping cell's own transition is written
+   inline), dashed so it reads as the way, not a place to go (its `face` carries the light, its
+   `sheen` is off). Neither takes the pointer: a tap through them meets the board. */
 .hex .step {
   font-size: 7px;
   font-weight: 700;
@@ -420,6 +420,43 @@ label {
 }
 .hex.hopping {
   pointer-events: none;
+  /* The arc's scale is about the tile's own centre, not the viewBox's corner. */
+  transform-box: fill-box;
+  transform-origin: center;
+}
+/* The tiles' motion on the home (page.ts `playExtra`, render.ts `paintMotion`): a checkbox row, the
+   shape backgammon's menu uses; the table's #motionBtn is hidden on a phone, whose topbar is full
+   (the names strip is already tight at 390px), so the home row is the choice there. */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 4px 0;
+  font-size: 0.95rem;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.toggle-row input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+@media (max-width: 429px) {
+  #motionBtn {
+    display: none;
+  }
+}
+/* The arc over one hop (ui/motion.ts `carry`: the translate transition carries the hop, this
+   animation the lift and the swell at mid-hop, both off the cell's custom properties so the
+   numbers live in one place). The individual `translate` and `scale` compose with `transform`. */
+@keyframes hive-hop {
+  50% {
+    translate: 0 var(--hop-lift, -3px);
+    scale: var(--hop-scale, 1.08);
+  }
 }
 /* High contrast, or less transparency: the flat tiles and the ink alone. */
 @media (prefers-contrast: more), (prefers-reduced-transparency: reduce) {

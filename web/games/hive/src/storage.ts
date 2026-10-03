@@ -1,7 +1,9 @@
 // Hive's storage (docs/design/hive.md §7): the shared shell's keys under this game's prefix
 // (web/shared/edge/prefs.ts `shellStore`: the save of the game in progress, the names, the tab,
-// the mode, sound, the font, the finished games, the far seat's flip) and no key of its own: a
-// game for two has no option to remember. tools/games.ts REGISTRY pins the save key and the prefix.
+// the mode, sound, the font, the finished games, the far seat's flip) and one option of its own,
+// the tiles' motion (crawl or snap), a row of the shell's settings table (web/shared/edge/settings.ts
+// `HIVE_MOTION`, under `hive_motion`) read and written through it. tools/games.ts REGISTRY pins
+// the save key and the prefix.
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
 import {
   shellStore,
@@ -11,6 +13,12 @@ import {
   type PlayMode,
   type Save as ShellSave,
 } from '../../../shared/edge/prefs.ts';
+import {
+  HIVE_MOTION,
+  nextSetting,
+  readSetting,
+  writeSetting,
+} from '../../../shared/edge/settings.ts';
 import { literal, object } from '../../../shared/lib/json.ts';
 import { decodeState, type State } from './engine/view.ts';
 
@@ -28,6 +36,17 @@ export const STORAGE_KEYS = {
   recentGames: 'hive_recentGames',
   flipTable: 'hive_flipTable',
 } as const;
+
+/** The tiles' motion: `crawl` (one hop a hex, the default) or `snap` to where they land. */
+export type Motion = (typeof HIVE_MOTION.values)[number];
+export { HIVE_MOTION };
+/** The stored motion, or `crawl`. */
+export const readMotion = (store: Store): Motion => readSetting(store, HIVE_MOTION);
+export const writeMotion = (store: Store, motion: Motion): void => {
+  writeSetting(store, HIVE_MOTION, motion);
+};
+/** The other motion: what `#motionBtn` switches to. */
+export const nextMotion = (motion: Motion): Motion => nextSetting(HIVE_MOTION, motion);
 
 export const HOME_TABS = ['play', 'rules', 'about'] as const;
 export type HomeTab = (typeof HOME_TABS)[number];

@@ -5,6 +5,7 @@
 // Pure: the painter (render.ts) spells the markup from these numbers.
 import { occupied, type Board } from '../engine/engine.ts';
 import { ORIGIN, dedupe, keyOf, neighbours, type Hex } from '../engine/hex.ts';
+import type { Bug, Side } from '../engine/pieces.ts';
 
 /** A hex's circumradius in viewBox units; a hex is `2 * SIZE` tall and `SQRT3 * SIZE` wide. */
 export const SIZE = 10;
@@ -80,14 +81,22 @@ export const fitCells = (board: Board): ReadonlyArray<Hex> => {
 };
 
 /**
- * A Spider's move just landed (the owner: "the spider's moves must show the '1-2-3' when it
- * moves"): where it stood, the three hexes of its path (engine.ts `spiderPaths` on the position
- * it left, the destination last) and whether the page prefers reduced motion (one step then, not
- * three), keyed on the position so the paint hops the tile once (ui/motion.ts `hopAlong`). The
- * reducer (ui/state.ts `spiderHop`) writes it, the painter reads it; it lives here, with the
- * board's other pure geometry, so the hop module needs nothing of the reducer.
+ * A tile just landed (the owner: "have them move in little jumps"): which bug and whose, where it
+ * stood (null for a placement: the tray is its origin), the hexes of its way (engine.ts `pathOf`
+ * on the position it left, the destination last; a placement's is its hex alone) and whether the
+ * tile snaps instead (the page prefers reduced motion, or the player chose `snap`), keyed on the
+ * position so the paint crawls the tile once (ui/motion.ts `hopAlong`). The reducer (ui/state.ts
+ * `moveHop`) writes it, the painter reads it; it lives here, with the board's other pure
+ * geometry, so the hop module needs nothing of the reducer.
  */
-export type Hop = Readonly<{ key: string; from: Hex; path: ReadonlyArray<Hex>; reduced: boolean }>;
+export type Hop = Readonly<{
+  key: string;
+  bug: Bug;
+  side: Side;
+  from: Hex | null;
+  path: ReadonlyArray<Hex>;
+  reduced: boolean;
+}>;
 
 /** The hexes in `hexes`, keyed for a constant-time "is this one reachable". */
 export const keySet = (hexes: ReadonlyArray<Hex>): ReadonlySet<string> => new Set(hexes.map(keyOf));
