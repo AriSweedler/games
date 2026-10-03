@@ -10,7 +10,8 @@ read the owner asked for last ("Be a good developer"): §2 is every line of Flip
 engine, view adapter, table paint or theme, with the shell function it should have been; §3 every
 shell export with fewer than two callers; §4 every place two games still differ only in spelling;
 §5 judges the two findings handed in; §6 the new-game template; §7 the rows. Each finding has a
-file:line and a one-line fix. Nothing here changes code.
+file:line and a one-line fix. Nothing here changes code. §8, added 2026-10-03 once the sixteen rows
+had landed, is what they left and what a player sees differently.
 
 The owner's standard, as the rows were cut against it: the shell owns every shape that repeats; a
 game keeps its engine, its view adapters, its table paint and its theme, and reads as a short,
@@ -52,7 +53,8 @@ function from the engine's `State`/`View` to a value the shell or the paint read
 8. `tools/new-game/templates.ts` scaffolds a game as it looked before graphs 3-8: `SCREENS`,
    `paintConnDot`, `paintHandoff`, `hostContextOf`, a local `refuse`, no `paintShellChrome`, no
    `shellButtons`, no `seatedCopy` (§6). Every row in §7 lands in the template too, or the next
-   game starts a new DRY pass.
+   game starts a new DRY pass. (Record of the review: since #81 and #91 the template scaffolds the
+   post-hoist game and `tools/new-game.test.ts` pins that none of these tokens is in it.)
 
 ## 2. Flip 7, line by line
 
@@ -196,8 +198,8 @@ contract, not a leak. The rest, by what to do with them:
 
 | Export                                                                      | Callers                                  | Fix                                                                                                                                          |
 | --------------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `web/shared/ui/shellPaint.ts paintConnDot`                                  | 0 games (the template, `tools/ci/suites.ts`) | `paintShellChrome` paints the dot since graph 4: make it a local, fix the template (§6).                                                   |
-| `web/shared/ui/shellPaint.ts paintHandoff`, `paintScreen`                   | 0 games (the template; ui-sandbox)       | Same: locals of `paintShellChrome`.                                                                                                          |
+| `web/shared/ui/shellPaint.ts paintConnDot`                                  | 0 games (the template, `tools/ci/suites.ts`) | `paintShellChrome` paints the dot since graph 4: make it a local, fix the template (§6). Record of the review: landed in #81 (row 10). |
+| `web/shared/ui/shellPaint.ts paintHandoff`, `paintScreen`                   | 0 games (the template; ui-sandbox)       | Same: locals of `paintShellChrome`. Record of the review: landed in #81 (row 10).                                                    |
 | `web/shared/edge/prefs.ts extraNamePref`                                    | 1 (uno `storage.ts:45`)                  | uno moves to `extraNamePrefs` (2.4); `extraNamePref` becomes a local.                                                                        |
 | `web/shared/lib/name.ts versusOrList`                                       | 0 (tests only)                           | Row E's API nobody adopted: delete, or make `resumeLabel`'s two-name case read it.                                                           |
 | `web/shared/ui/shell.ts tableReset`, `userSeatOf`, `noSeatNames`, `rotationHintMsg`, `guestNameAmong` | 0 (internal to shell.ts; exported for tests) | Un-export; `shell.test.ts` reaches them through `reduceShell`.                                                                     |
@@ -219,8 +221,8 @@ contract, not a leak. The rest, by what to do with them:
 | `web/shared/ui/shell.ts cuesFor`                                              | hive `ui/state.ts`                    | Inline into hive, or make it `cueStep`'s (every game plays cues through `cueStep` but hive).                                                       |
 | `web/shared/ui/shell.ts localSeated`                                          | gin `ui/state.ts`                     | Keep: the shell calls it too; gin's call is the sandbox's.                                                                                         |
 | `web/shared/ui/shell.ts handoffable`                                          | fidice `shellConfig.ts`               | Keep: a config hook with one adopter is the design (graph 5).                                                                                      |
-| `web/shared/lib/seatedProtocol.ts seatingFault`                               | fidice `protocol.ts`                  | Fidice's protocol is the one not yet on `seatedProtocol` (§5.2): the fidice row removes the caller; then a local.                                  |
-| `web/shared/ui/shellPaint.ts seatRows`, `seatListHtml`, `seatListKey`         | fidice `ui/waiting.ts`                | Same row: fidice's waiting room is its own copy of `paintWaiting`.                                                                                 |
+| `web/shared/lib/seatedProtocol.ts seatingFault`                               | fidice `protocol.ts`                  | Fidice's protocol is the one not yet on `seatedProtocol` (§5.2): the fidice row removes the caller; then a local. Record of the review: #90 (row 15) removed the caller, so `seatingFault` has no game caller today and is still exported. |
+| `web/shared/ui/shellPaint.ts seatRows`, `seatListHtml`, `seatListKey`         | fidice `ui/waiting.ts`                | Same row: fidice's waiting room is its own copy of `paintWaiting`. Record of the review: after #90 fidice's `ui/waiting.ts` paints the statuses through `paintWaiting` and still reads the three list helpers for its humans' rows; the rest is §8's extra-rows hook. |
 | `web/shared/ui/home.ts bindClearDefault`                                      | gin `ui/home.ts`                      | Keep (gin's scorer inputs).                                                                                                                        |
 | `web/shared/ui/home.ts clearDefault`                                          | `web/shared/ui/seatNames.ts`          | Keep: shell-internal.                                                                                                                              |
 | `web/shared/edge/prefs.ts decodeFlipState`                                    | backgammon `storage.ts`               | Keep (the flip toggle).                                                                                                                            |
@@ -276,7 +278,10 @@ own `tableEffect` runner over `EXTRA_NAME_PREFS`, and `web/games/fidice/src/ui/r
 `bindShellSheets(doc, SHEETS, dispatch)` with no `escapeFallback`, so Escape on fidice closes an
 open sheet and does nothing else (every other game dispatches the shell's `escape`). Also its own
 `ui/waiting.ts` over `seatRows`/`seatListHtml` (§3), its `protocol.ts` on `seatingFault` rather
-than `seatedProtocol`, and the legacy `Controller` boot behind `shellPathOn`.
+than `seatedProtocol`, and the legacy `Controller` boot behind `shellPathOn`. (Record of the review:
+#90, row 15, moved `pname/typed` and the two effects onto the shell's seat names, the sheet binder
+onto the fallback and `protocol.ts` onto `seatedProtocol`; `ui/waiting.ts`'s computers' rows and
+`localStart` are §8's.)
 
 Judged: these are the Fidice shell adoption row ([fidice-shell-adoption.md](fidice-shell-adoption.md)),
 not new findings; graph 7 left fidice out on purpose because its seats are chairs (humans and
@@ -315,26 +320,27 @@ Ranked as the audits rank: copies × likeness, least divergence first, bytes-unc
 re-record, an API that exists before one that needs a design. Minutes are one lane's, gate
 included. Files are named so the waves are disjoint; every row also edits
 `tools/new-game/templates.ts` (its own lines) and `web/shared/ui/README.md`'s module table where
-it adds a module.
+it adds a module. All sixteen landed, one PR per row, on 2026-10-02 and 2026-10-03: the `Landed`
+column is the PR and its merge date; §8 is what they left.
 
-| Row | What                                                                                                                                                                                                                                                                                 | Files                                                                                                                                                                                                                            | Bytes     | Min |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | --- |
-| 1   | `act` by role into the shell (`shell.ts act(app, action, ctx, cfg)`, the local actor from `local.revealer`); `refuse` exported; the seven `act`/`localAct` go (§2.6)                                                                                                                 | `web/shared/ui/shell.ts`, seven `web/games/*/src/ui/state.ts`                                                                                                                                                                    | unchanged | 60  |
-| 2   | Config defaults: `names.default`, `localNames`, `tabs`, `modes`, `copy.opening/connecting/handoff`, `cues.initial`, `home`, `result.keyOf`, `frames: PROTOCOL`; `seatedCopy` returns the leave messages; `HOME_TABS`/`DEFAULT_*`/the `Save` aliases from prefs.ts (§2.3, §2.4)        | `web/shared/ui/shell.ts`, `seatCopy.ts`, `web/shared/edge/prefs.ts`, seven `shellConfig.ts`, seven `storage.ts`, seven `protocol.ts`                                                                                             | unchanged | 60  |
-| 3   | `seatCountOpts(SEAT_COUNTS, seatsOf)` (`opts` + `prefs.opts` + `hostExtra`), `extraNamePrefs(prefix, max)`, the shell pads `engine.create`'s names, `SeatedRaw`, `GameTypes<Own>`; the ten `pNName` keys, `soundEnabled`, `decodeSeatCount`, `EffectDeps` deleted                       | `web/shared/ui/seatCopy.ts`, `shell.ts`, `web/shared/edge/prefs.ts`, `{uno,flip7,briscola,fidice}/src/{storage,shellConfig}.ts`, seven `ui/state.ts` (the type bag)                                                             | unchanged | 60  |
-| 4   | The boot: `sound` derived, `copy` as tables (`rulesItemsHtml` gone), `net` from `sessionsFor` (`isGuestFrame` default), `game` on the hook; `seatedSessions(game, PROTOCOL, pick)`                                                                                                   | `web/shared/edge/boot.ts`, `web/shared/net/sessions.ts`, seven `main.ts`, seven `ui/rules.ts`, `{uno,flip7,briscola}/src/net/sessions.ts`                                                                                        | unchanged | 45  |
-| 5   | The paint's small shapes: `shellSheets<G>()` + `bindShellSheets` with the fallback, `bindCurtain` default, `curtainText` (title once, `button` gone, `REVEAL_LABEL`s gone), `paintShellChrome` paints the names strip, `bindDelegated`, `Dispatch<I>` imported (§2.8)                   | `web/shared/ui/shellPaint.ts`, `curtain.ts`, seven `ui/render.ts`, four `ui/local.ts`                                                                                                                                            | unchanged | 60  |
-| 6   | `seatedHome` (`web/shared/ui/seatedHome.ts`): uno's and flip7's `ui/home.ts` go, briscola's composes; the dead re-exports in `home.ts`/`render.ts` go                                                                                                                                 | new module, `{uno,flip7,briscola}/src/ui/home.ts`, their `render.ts` imports                                                                                                                                                     | unchanged | 45  |
-| 7   | `.flyer` into shell.css at z-index 40 with its CONTRACT.md row; the three themes keep their transitions; the two comments (§5.1)                                                                                                                                                      | `web/shared/styles/shell.css`, `CONTRACT.md`, `{uno,briscola,backgammon}/theme.css`                                                                                                           | CSS only  | 30  |
-| 8   | `ShellBlocks` optional slots, `ShellCopy` defaults, the seat lists and `guestSeatName` from `seated: true`, the endgame placeholder default, `seatedHostFields` (§2.2)                                                                                                                | `web/shared/markup/shell.ts`, `stepper.ts`, seven `page.ts`                                                                                                                                                                      | unchanged (`shell-markup.test.ts` proves it) | 45 |
-| 9   | Copy and comments: `about.ts:6` "two to twelve"; the stale comments at `page.ts:3`, `storage.ts:3`, `state.ts:3`, `shellConfig.ts:62`, `sound.ts:9-11`; `waitingToDealMsg` once; `STATUSES` from the engine; `RULES_SLOT_IDS` re-export gone                                           | `web/games/flip7/**` only                                                                                                                                                                                                        | unchanged | 20  |
-| 10  | Shell exports with no caller: un-export the test-only ones, delete `readViewport`, `toolbarFor`, `childCount`, `versusOrList` (or adopt it), fold `paintConnDot`/`paintHandoff`/`paintScreen`/`extraNamePref` (§3)                                                                      | `web/shared/**` and the tests that reach through the callers                                                                                                                                                                     | unchanged | 45  |
-| 11  | flip7's name grid onto `seatNamesHtml`; `#moreNames` and `.more-names` go                                                                                                                                                                                                             | `web/games/flip7/{page.ts,index.html,theme.css,src/ui/home.ts}`                                                                                                                                                                  | **bytes** (flip7's index.html; no golden pins the grid) | 30 |
-| 12  | The curtain's handoff button into `curtain.html`/`paintShellCurtain`/`bindCurtain`; three toggles and three binds go                                                                                                                                                                  | `web/shared/markup/shell/curtain.html`, `web/shared/ui/curtain.ts`, `{flip7,briscola,backgammon}/{page.ts,index.html}`, flip7 `render.ts`, briscola and backgammon `local.ts`                                                    | **bytes** (three index.html) | 45 |
-| 13  | Row H: the pause as shell state (`table.pause: pauseFor`, `pause/continue`, a `pause.html` partial), flip7's `#result` onto `resultMarkup`/`paintResult` with the phase's primary; the shell's `again/click` (uno's `again` action, flip7's `replay`, hive's go)                         | `web/shared/ui/shell.ts`, `shellPaint.ts`, `web/shared/markup/shell/`, `web/games/flip7/**`, uno and hive `state.ts`/`render.ts`                                                                                                 | **bytes** (flip7 index.html, a story PNG, `flip7-local.spec` round-end case) | 120 |
-| 14  | `topbarHtml` partial for the two pages that share the strip's ids                                                                                                                                                                                                                     | `web/shared/markup/shell/`, uno and flip7 `page.ts`/`index.html`                                                                                                                                                                 | **bytes** | 30  |
-| 15  | Fidice: `pname/typed` → the shell's `seatName/typed`, the sheet binder's fallback, `ui/waiting.ts` onto `paintWaiting`, `protocol.ts` onto `seatedProtocol` (§5.2); `localStart` per the adoption doc                                                                                 | `web/games/fidice/**`                                                                                                                                                                                                            | unchanged | 90  |
-| 16 | The template scaffolds a game and typechecks it in a test (§6) | `tools/new-game/templates.ts`, `tools/new-game.test.ts` (the proof, beside its module), `AGENT.md` | unchanged | 45 |
+| Row | What                                                                                                                                                                                                                                                                                 | Files                                                                                                                                                                                                                            | Bytes     | Min | Landed |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | --- | --- |
+| 1   | `act` by role into the shell (`shell.ts act(app, action, ctx, cfg)`, the local actor from `local.revealer`); `refuse` exported; the seven `act`/`localAct` go (§2.6)                                                                                                                 | `web/shared/ui/shell.ts`, seven `web/games/*/src/ui/state.ts`                                                                                                                                                                    | unchanged | 60  | #78, 2026-10-02 |
+| 2   | Config defaults: `names.default`, `localNames`, `tabs`, `modes`, `copy.opening/connecting/handoff`, `cues.initial`, `home`, `result.keyOf`, `frames: PROTOCOL`; `seatedCopy` returns the leave messages; `HOME_TABS`/`DEFAULT_*`/the `Save` aliases from prefs.ts (§2.3, §2.4)        | `web/shared/ui/shell.ts`, `seatCopy.ts`, `web/shared/edge/prefs.ts`, seven `shellConfig.ts`, seven `storage.ts`, seven `protocol.ts`                                                                                             | unchanged | 60  | #84, 2026-10-02 |
+| 3   | `seatCountOpts(SEAT_COUNTS, seatsOf)` (`opts` + `prefs.opts` + `hostExtra`), `extraNamePrefs(prefix, max)`, the shell pads `engine.create`'s names, `SeatedRaw`, `GameTypes<Own>`; the ten `pNName` keys, `soundEnabled`, `decodeSeatCount`, `EffectDeps` deleted                       | `web/shared/ui/seatCopy.ts`, `shell.ts`, `web/shared/edge/prefs.ts`, `{uno,flip7,briscola,fidice}/src/{storage,shellConfig}.ts`, seven `ui/state.ts` (the type bag)                                                             | unchanged | 60  | #88, 2026-10-02 |
+| 4   | The boot: `sound` derived, `copy` as tables (`rulesItemsHtml` gone), `net` from `sessionsFor` (`isGuestFrame` default), `game` on the hook; `seatedSessions(game, PROTOCOL, pick)`                                                                                                   | `web/shared/edge/boot.ts`, `web/shared/net/sessions.ts`, seven `main.ts`, seven `ui/rules.ts`, `{uno,flip7,briscola}/src/net/sessions.ts`                                                                                        | unchanged | 45  | #80, 2026-10-02 |
+| 5   | The paint's small shapes: `shellSheets<G>()` + `bindShellSheets` with the fallback, `bindCurtain` default, `curtainText` (title once, `button` gone, `REVEAL_LABEL`s gone), `paintShellChrome` paints the names strip, `bindDelegated`, `Dispatch<I>` imported (§2.8)                   | `web/shared/ui/shellPaint.ts`, `curtain.ts`, seven `ui/render.ts`, four `ui/local.ts`                                                                                                                                            | unchanged | 60  | #79, 2026-10-02 |
+| 6   | `seatedHome` (`web/shared/ui/seatedHome.ts`): uno's and flip7's `ui/home.ts` go, briscola's composes; the dead re-exports in `home.ts`/`render.ts` go                                                                                                                                 | new module, `{uno,flip7,briscola}/src/ui/home.ts`, their `render.ts` imports                                                                                                                                                     | unchanged | 45  | #83, 2026-10-02 |
+| 7   | `.flyer` into shell.css at z-index 40 with its CONTRACT.md row; the three themes keep their transitions; the two comments (§5.1)                                                                                                                                                      | `web/shared/styles/shell.css`, `CONTRACT.md`, `{uno,briscola,backgammon}/theme.css`                                                                                                           | CSS only  | 30  | #77, 2026-10-02 |
+| 8   | `ShellBlocks` optional slots, `ShellCopy` defaults, the seat lists and `guestSeatName` from `seated: true`, the endgame placeholder default, `seatedHostFields` (§2.2)                                                                                                                | `web/shared/markup/shell.ts`, `stepper.ts`, seven `page.ts`                                                                                                                                                                      | unchanged (`shell-markup.test.ts` proves it) | 45 | #82, 2026-10-02 |
+| 9   | Copy and comments: `about.ts:6` "two to twelve"; the stale comments at `page.ts:3`, `storage.ts:3`, `state.ts:3`, `shellConfig.ts:62`, `sound.ts:9-11`; `waitingToDealMsg` once; `STATUSES` from the engine; `RULES_SLOT_IDS` re-export gone                                           | `web/games/flip7/**` only                                                                                                                                                                                                        | unchanged | 20  | #76, 2026-10-02 |
+| 10  | Shell exports with no caller: un-export the test-only ones, delete `readViewport`, `toolbarFor`, `childCount`, `versusOrList` (or adopt it), fold `paintConnDot`/`paintHandoff`/`paintScreen`/`extraNamePref` (§3)                                                                      | `web/shared/**` and the tests that reach through the callers                                                                                                                                                                     | unchanged | 45  | #81, 2026-10-02 |
+| 11  | flip7's name grid onto `seatNamesHtml`; `#moreNames` and `.more-names` go                                                                                                                                                                                                             | `web/games/flip7/{page.ts,index.html,theme.css,src/ui/home.ts}`                                                                                                                                                                  | **bytes** (flip7's index.html; no golden pins the grid) | 30 | #85, 2026-10-02 |
+| 12  | The curtain's handoff button into `curtain.html`/`paintShellCurtain`/`bindCurtain`; three toggles and three binds go                                                                                                                                                                  | `web/shared/markup/shell/curtain.html`, `web/shared/ui/curtain.ts`, `{flip7,briscola,backgammon}/{page.ts,index.html}`, flip7 `render.ts`, briscola and backgammon `local.ts`                                                    | **bytes** (three index.html) | 45 | #86, 2026-10-02 |
+| 13  | Row H: the pause as shell state (`table.pause: pauseFor`, `pause/continue`, a `pause.html` partial), flip7's `#result` onto `resultMarkup`/`paintResult` with the phase's primary; the shell's `again/click` (uno's `again` action, flip7's `replay`, hive's go)                         | `web/shared/ui/shell.ts`, `shellPaint.ts`, `web/shared/markup/shell/`, `web/games/flip7/**`, uno and hive `state.ts`/`render.ts`                                                                                                 | **bytes** (flip7 index.html, a story PNG, `flip7-local.spec` round-end case) | 120 | #89, 2026-10-03 |
+| 14  | `topbarHtml` partial for the two pages that share the strip's ids                                                                                                                                                                                                                     | `web/shared/markup/shell/`, uno and flip7 `page.ts`/`index.html`                                                                                                                                                                 | **bytes** | 30  | #87, 2026-10-02 |
+| 15  | Fidice: `pname/typed` → the shell's `seatName/typed`, the sheet binder's fallback, `ui/waiting.ts` onto `paintWaiting`, `protocol.ts` onto `seatedProtocol` (§5.2); `localStart` per the adoption doc                                                                                 | `web/games/fidice/**`                                                                                                                                                                                                            | unchanged | 90  | #90, 2026-10-03 |
+| 16 | The template scaffolds a game and typechecks it in a test (§6) | `tools/new-game/templates.ts`, `tools/new-game.test.ts` (the proof, beside its module), `AGENT.md` | unchanged | 45 | #91, 2026-10-03 |
 
 Waves: rows 1, 4, 5, 7, 9 are disjoint and go first (row 9 is flip7's own files; row 1 touches
 `state.ts`, 4 `main.ts`, 5 `render.ts`); then 2, 3, 6, 8, 10 (2 and 3 both edit `shellConfig.ts`
@@ -349,3 +355,61 @@ seat range, the engine and result adapters (~45); `storage.ts` the prefix, the s
 the reducer line (~150); `ui/render.ts` the table paint and its binders (~230); `ui/sound.ts`,
 `ui/rules.ts`, `ui/glossary.ts`, `ui/about.ts` the tables they are; `ui/motion.ts` and `theme.css`
 untouched. About 1,100 lines of game outside the engine, from 1,650, and every one of them Flip 7's.
+
+## 8. After the review
+
+Rows 1-16 landed as PRs #76-#91 (the `Landed` column in §7). Their lanes' Results left seven
+follow-ups, each a small row with its own reason for not being in the row that found it, two
+changes a player can see, and one orchestration rule.
+
+**Left by the rows, and why.**
+
+1. A `paintWaiting` extra-rows hook (lane `fu-waiting-rows`). Row 15 (#90) put fidice's statuses
+   through the shell's `paintWaiting` and its humans' rows through `seatRows`/`seatListHtml`/
+   `seatListKey`; the computers' rows (rename, strategy, remove) and the keyed rebuild over both
+   lists stay fidice's behind a doc shim, because `paintWaiting` has no slot for extra rows and
+   re-keying one `<ul>` on every paint would wipe the rename input mid-typing. Left because the hook
+   is a shared edit (`web/shared/ui/shellPaint.ts`), outside the fidice row's files: one optional
+   argument, `lists?: { key, html }`, and about 25 fidice lines go.
+2. Briscola onto `seatNamesHtml` (lane `fu-briscola-seat-grid`). Row 11 (#85) moved Flip 7's grid
+   and left briscola's two extra inputs in `#moreNames` beside its selects, because
+   `e2e/briscola-local.spec.ts` and its fixture read that id; `seatedHome`'s `group?` option exists
+   for it alone. Bytes: briscola's `index.html` and four e2e lines.
+3. The strip, tight-row and conn-dot CSS (lane `fu-strip-css`). Row 14 (#87) hoisted the names
+   strip's layout and `.row.tight` from uno's and flip7's themes into `shell.css` and left hive's
+   and backgammon's `.row.tight` copies, hive's `.names-strip` layout and the seven `.conn-dot`
+   shapes, because the goldens pin computed styles per game and each theme's copy needs its own
+   `--check` before it goes.
+4. The `DEFAULT_HOME_TAB` re-exports (lane `fu-storage-tab-reexport`). Row 2 (#84) made seven
+   `storage.ts` re-export the shell's tab and mode defaults; five still re-export `DEFAULT_HOME_TAB`
+   only because their `storage.test.ts` reads it there. The tests move to the shell's spelling and
+   the re-exports go.
+5. `user-select: none` on the drag surfaces (lane `fu-user-select`). The gin layoff flake (#72) was
+   text selection turning a press into a native drag; `preventDefault` in `web/shared/edge/drag.ts`
+   fixed it, and the rule on the pickable classes (never on room codes, rules or names) is the
+   belt to that brace. Left because the goldens may pin `user-select` and each game needs its check.
+6. Fidice's `localStart` (lane `fu-fidice-local-start`). Row 15 kept it, as §5.2 and
+   [fidice-shell-adoption.md](fidice-shell-adoption.md) say: the shell's `local/click` has no
+   `seatTable` hook and `engine.create` receiving the computers is the adoption doc's open design
+   question. The lane designs the smallest hook first and may stop if it would be fidice-only and
+   larger than the code it removes.
+7. Fidice keeps three things by design (row 15's Result): its leave and waiting sentences ("The
+   table will be cleared.", "N chairs at the table"), because `leaveCopy`/`seatedCopy` spell other
+   words and a Fidice table starts whenever the host says; its Ladder tab, so `tabs` stays spelled;
+   and its actor rule, because the pass-the-phone actor is the cup holder's chair but the host's
+   while a computer holds the cup or a round is revealed, not `revealer(game).seat`, so the shell's
+   `act` (row 1) would change who acts.
+
+**What a player sees differently.**
+
+- UNO's and Briscola's fifth and sixth pass-and-play seats default to Noa and Ethan (Flip 7's list)
+  instead of `Player 5`/`Player 6` (row 2, #84).
+- At UNO and Hive online, only the host starts Play again; a guest hears "Waiting for <host> to deal
+  again." where it could press the button before (row 13, #89; the shell's `again/click` applies the
+  `act`-by-role rule of §2.6 to the result sheet).
+
+**Orchestration.** The rows ran as parallel lanes on disjoint files, so two PRs were often open at
+once; when a sibling merged first, the other was rebased onto main and the combined tree gated
+locally (typecheck, the touched suites) before its own merge, and CI ran once more on the result
+(rows 3, 6, 11, 12 record it). A green PR is green against the main it was cut from, not the main
+it lands on.
