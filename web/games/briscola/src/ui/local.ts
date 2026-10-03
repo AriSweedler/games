@@ -9,24 +9,15 @@
 import { listenId, requireId, toggleClass, type PageLike } from '../../../../shared/edge/dom.ts';
 import {
   bindCurtain,
+  curtainText as shellCurtainText,
   paintCurtain as paintShellCurtain,
-  type CurtainText as ShellCurtainText,
+  type CurtainText,
 } from '../../../../shared/ui/curtain.ts';
 import { dealText, nameOf, type Seat, type View } from '../engine/index.ts';
 import { listNames } from '../../../../shared/lib/name.ts';
-import type { App, Intent } from './state.ts';
+import type { App, Briscola, Intent } from './state.ts';
 
-export type CurtainText = Readonly<{
-  title: string;
-  /** Everyone but the incoming player, told to look away. */
-  sub: string;
-  /** The trick just taken, the deal before any, the result once the game is over. */
-  last: string;
-  button: string;
-}>;
-
-/** `#curtainBtn`: what one tap does (the page's `revealLabel`). */
-export const REVEAL_LABEL = 'Show my cards';
+export type { CurtainText };
 
 /** `#curtainSub`: "Bob, look away" / "Ann, Cara and Dan, look away" (D17). */
 export const lookAwayText = (v: View, incoming: Seat): string =>
@@ -44,13 +35,13 @@ export const lastLineText = (v: View, incoming: Seat): string => {
   return `${who} took the trick · ${String(t.points)} points`;
 };
 
-/** The curtain for the seat the phone is handed to, read from that seat's own view. */
-export const curtainText = (v: View, incoming: Seat): CurtainText => ({
-  title: `Pass the phone to ${nameOf(v.players, incoming)}`,
-  sub: lookAwayText(v, incoming),
-  last: lastLineText(v, incoming),
-  button: REVEAL_LABEL,
-});
+/** The curtain for the seat the phone is handed to, read from that seat's own view: everyone else told to look away, the trick just taken (the deal before any); the button is the page's `Show my cards`. */
+export const curtainText = (v: View, incoming: Seat): CurtainText =>
+  shellCurtainText({
+    to: nameOf(v.players, incoming),
+    sub: lookAwayText(v, incoming),
+    last: lastLineText(v, incoming),
+  });
 
 /**
  * `#curtainOverlay` and its texts from the App; hidden (texts untouched) when no seat is waiting.
@@ -60,14 +51,13 @@ export const curtainText = (v: View, incoming: Seat): CurtainText => ({
 export const paintCurtain = (doc: PageLike, app: App): void => {
   const seat = app.table.curtain;
   const v = app.shell.view;
-  const text: ShellCurtainText | null = seat === null || v === null ? null : curtainText(v, seat);
-  paintShellCurtain(doc, text);
+  paintShellCurtain(doc, seat === null || v === null ? null : curtainText(v, seat));
   toggleClass(requireId(doc, 'curtainHandoffBtn'), 'hidden', v?.options.seatCount !== 2);
 };
 
 /** `#curtainBtn`: the incoming seat reveals; `#curtainHandoffBtn` hands off. */
 export const bindLocal = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
-  bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
+  bindCurtain<Briscola>(doc, dispatch);
   listenId(doc, 'curtainHandoffBtn', 'click', () => {
     dispatch({ type: 'handoff/click' });
   });

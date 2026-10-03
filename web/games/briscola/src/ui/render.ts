@@ -69,7 +69,7 @@ import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
-  bindSheets as bindShellSheets,
+  bindShellSheets,
   paintResult,
   paintSheet,
   paintShellChrome,
@@ -1178,8 +1178,6 @@ export const paint = (doc: PageLike, app: App): void => {
 // backdrop (the overlay element itself, never its children) and Escape. The list is this game's; the
 // result sheet's "Look at the table" is its close.
 const SHEETS: ReadonlyArray<Sheet<Intent>> = [
-  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
-  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
   { overlay: 'deckOverlay', close: 'closeDeckBtn', intent: { type: 'deck/close' } },
   { overlay: 'resultOverlay', close: 'rsPeekBtn', intent: { type: 'result/dismiss' } },
   { overlay: 'cardViewOverlay', close: 'closeCardViewBtn', intent: { type: 'cardView/close' } },
@@ -1370,5 +1368,5 @@ export const bindAll = (doc: PageLike, dispatch: Dispatch): void => {
   bindLocal(doc, dispatch);
   bindTable(doc, dispatch);
   bindDrag(doc, dispatch);
-  bindShellSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'escape' } });
+  bindShellSheets<Briscola>(doc, dispatch, SHEETS);
 };

@@ -12,9 +12,7 @@
 // repaint of the same view keeps their tiles and a flight's `arriving` survives it; the motion
 // layer (ui/motion.ts) plans its flights off the table before it repaints and runs them after.
 import {
-  closestFrom,
   dataOf,
-  listenId,
   queryAllIn,
   requireId,
   safeHtml,
@@ -28,18 +26,23 @@ import {
   type PageLike,
   type SafeHtml,
 } from '../../../../shared/edge/dom.ts';
-import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
+import {
+  bindCurtain,
+  curtainText as shellCurtainText,
+  paintCurtain as paintShellCurtain,
+} from '../../../../shared/ui/curtain.ts';
 import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
-  bindSheets,
+  bindDelegated,
+  bindShellSheets,
   paintResult,
   paintShellChrome,
   paintShellSheets,
-  type ResultWords,
-  type Sheet,
   shellButtons,
+  type Dispatch,
+  type ResultWords,
 } from '../../../../shared/ui/shellPaint.ts';
 import { COLORS, type Card, type Color } from '../engine/cards.ts';
 import { cardName } from '../engine/engine.ts';
@@ -50,8 +53,6 @@ import { listNames } from '../../../../shared/lib/name.ts';
 import { UNO, type App, type Intent, type Uno } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
-
-type Dispatch = (intent: Intent) => void;
 
 /** The glyph on a tile: the digit, or the symbol of the action. */
 export const glyphOf = (card: Card): string => {
@@ -133,8 +134,6 @@ export const resultWords = (v: View): ResultWords => {
 const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const mine = v.turn === v.seat;
   setHtml(requireId(doc, 'seats'), trustedHtml(seatsHtml(v)));
-  setText(requireId(doc, 'myName'), nameAt(v, v.seat));
-  setText(requireId(doc, 'oppName'), nameAt(v, (v.seat + 1) % Math.max(1, v.names.length)));
   setText(requireId(doc, 'direction'), v.direction === 1 ? '↻' : '↺');
   ensureKeyed(requireId(doc, 'topCard'), v.top.id, () => tileHtml(v.top, null).markup);
   const dot = requireId(doc, 'colorDot');
@@ -160,7 +159,7 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   paintResult(doc, over && app.table.curtain === null, over ? resultWords(v) : null);
 };
 
-/** `#curtainOverlay`: the seat taking the phone, everyone else told to look away, what just happened. */
+/** `#curtainOverlay`: the seat taking the phone, everyone else told to look away, what just happened; the button is the page's `Show my hand`. */
 const paintCurtain = (doc: DocumentLike, app: App): void => {
   const seat = app.table.curtain;
   const v = app.shell.view;
@@ -168,17 +167,24 @@ const paintCurtain = (doc: DocumentLike, app: App): void => {
     doc,
     seat === null || v === null
       ? null
-      : {
-          title: `Pass the phone to ${nameAt(v, seat)}`,
+      : shellCurtainText({
+          to: nameAt(v, seat),
           sub: `${listNames(v.names.filter((_, i) => i !== seat))}, look away`,
           last: v.note,
-          button: 'Show my hand',
-        },
+        }),
   );
 };
 
 export const paint = (doc: PageLike, app: App): void => {
-  paintShellChrome(doc, app.shell, { handoff: handoffLabelOf(app.shell, UNO), connDot: 'oppDot' });
+  paintShellChrome(doc, app.shell, {
+    handoff: handoffLabelOf(app.shell, UNO),
+    connDot: 'oppDot',
+    // The strip names the seat after mine: the one the play passes to.
+    names: (v) => ({
+      me: nameAt(v, v.seat),
+      others: nameAt(v, (v.seat + 1) % Math.max(1, v.names.length)),
+    }),
+  });
   paintHome(doc, app);
   paintCurtain(doc, app);
   const v = app.shell.view;
@@ -189,26 +195,25 @@ export const paint = (doc: PageLike, app: App): void => {
   paintShellSheets(doc, app.shell);
 };
 
-const SHEETS: ReadonlyArray<Sheet<Intent>> = [
-  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
-  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
-];
-
-const act = (dispatch: Dispatch, action: Extract<Intent, { type: 'act' }>['action']): void => {
-  dispatch({ type: 'act', action });
-};
-
-const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
-  listenId(doc, 'hand', 'click', (e) => {
-    const button = closestFrom(e, 'button.tile');
-    const id = button === null ? null : dataOf(button, 'id');
-    if (id !== null && id !== '') act(dispatch, { type: 'play', id });
-  });
-  listenId(doc, 'colorPicker', 'click', (e) => {
-    const button = closestFrom(e, 'button[data-color]');
-    const color = COLORS.find((c) => c === (button === null ? null : dataOf(button, 'color')));
-    if (color !== undefined) act(dispatch, { type: 'color', color });
-  });
+/** A tap on a tile in my hand plays it; one on a swatch of the colour picker names my wild's colour (only one of the four). */
+const bindTable = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
+  bindDelegated<Uno>(doc, dispatch, [
+    {
+      id: 'hand',
+      selector: 'button.tile',
+      key: 'id',
+      intent: (id) => ({ type: 'act', action: { type: 'play', id } }),
+    },
+    {
+      id: 'colorPicker',
+      selector: 'button[data-color]',
+      key: 'color',
+      intent: (raw) => {
+        const color = COLORS.find((c) => c === raw);
+        return color === undefined ? null : { type: 'act', action: { type: 'color', color } };
+      },
+    },
+  ]);
   bindButtons(
     doc,
     dispatch,
@@ -226,9 +231,9 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
 };
 
 /** Every control of the page (home, curtain, table, sheets), once, at boot. */
-export const bindAll = (doc: PageLike, dispatch: Dispatch): void => {
+export const bindAll = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
   bindHome(doc, dispatch);
-  bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
+  bindCurtain<Uno>(doc, dispatch);
   bindTable(doc, dispatch);
-  bindSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'escape' } });
+  bindShellSheets<Uno>(doc, dispatch);
 };

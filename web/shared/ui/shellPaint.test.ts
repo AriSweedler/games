@@ -7,8 +7,10 @@ import { closestFrom, dataOf } from '../edge/dom.ts';
 import { fakeEl, fakePage, fakeTarget, type FakeEl, type FakePage } from '../edge/page.fake.ts';
 import {
   bindButtons,
+  bindDelegated,
   bindLongPress,
   bindSheets,
+  bindShellSheets,
   connDotClass,
   connDotView,
   hideToast,
@@ -31,11 +33,12 @@ import {
   seatListKey,
   seatRows,
   shellButtons,
+  shellSheets,
   showToast,
   type Sheet,
   type ShellChromeView,
 } from './shellPaint.ts';
-import type { ShellTypes } from './shell.ts';
+import type { Intent as ShellIntentOf, ShellTypes } from './shell.ts';
 
 const SCREENS = ['homeScreen', 'hostWaitScreen', 'tableScreen'] as const;
 
@@ -549,6 +552,47 @@ describe('paintShellChrome', () => {
   });
 });
 
+describe('paintShellChrome names strip', () => {
+  const strip = (): FakePage =>
+    fakePage([...pageEls(), fakeEl('myName', { text: 'You' }), fakeEl('oppName', { text: '…' })]);
+  const chrome = (over: Partial<ShellChromeView<ShellTypes>>): ShellChromeView<ShellTypes> => ({
+    screen: 'tableScreen',
+    view: null,
+    role: 'host',
+    oppConnected: true,
+    code: 'ABCD',
+    hostStatus: { text: '', pulse: false },
+    guestStatus: { text: '', pulse: false },
+    startGameVisible: false,
+    ...over,
+  });
+
+  test('`names` writes #myName and #oppName off the view while one stands; without a view the markup`s words hold, as the dot`s class does', () => {
+    const p = strip();
+    const names = (view: unknown): Readonly<{ me: string; others: string }> => {
+      const v = view as Readonly<{ me: string; others: ReadonlyArray<string> }>;
+      return { me: v.me, others: v.others.join(' · ') };
+    };
+    paintShellChrome(p.doc, chrome({ view: null }), { screens: SCREENS, handoff: null, names });
+    expect(p.get('myName').text()).toBe('You');
+    expect(p.get('oppName').text()).toBe('…');
+    paintShellChrome(p.doc, chrome({ view: { me: 'Ann', others: ['Bob', 'Cara'] } }), {
+      screens: SCREENS,
+      handoff: null,
+      names,
+    });
+    expect(p.get('myName').text()).toBe('Ann');
+    expect(p.get('oppName').text()).toBe('Bob · Cara');
+  });
+
+  test('a page without a strip names none and neither id is looked up', () => {
+    const p = page();
+    expect(() => {
+      paintShellChrome(p.doc, chrome({ view: {} }), { screens: SCREENS, handoff: null });
+    }).not.toThrow();
+  });
+});
+
 describe('shellButtons', () => {
   test('the five rows every table binds: the shell`s intents, the two sheets` opens among them, in the ids` order', () => {
     const rows = shellButtons<ShellTypes>();
@@ -701,6 +745,116 @@ describe('paintSheet / bindSheets', () => {
     expect(intents.at(-1)).toEqual({ type: 'menu/toggle' });
     p.fire('keydown', { key: 'x' });
     expect(intents).toHaveLength(2);
+  });
+});
+
+describe('shellSheets / bindShellSheets', () => {
+  type I = ShellIntentOf<ShellTypes>;
+  /** The shell page's two sheets with their close buttons, and a game's own (the menu). */
+  const sheetPage = (): FakePage =>
+    fakePage([
+      ...pageEls(),
+      fakeEl('historyOverlay', { classes: ['overlay', 'hidden'] }),
+      fakeEl('closeHistoryBtn'),
+    ]);
+  const wiredShell = (
+    extra?: ReadonlyArray<Sheet<I>>,
+    fallback?: I,
+  ): Readonly<{ p: FakePage; intents: ReadonlyArray<I> }> => {
+    const p = sheetPage();
+    const intents: I[] = [];
+    bindShellSheets<ShellTypes>(
+      p.doc,
+      (i) => {
+        intents.push(i);
+      },
+      extra,
+      fallback,
+    );
+    return { p, intents };
+  };
+
+  test('shellSheets is the two rows every page carried: the rules and the history, closing on the shell`s intents', () => {
+    expect(shellSheets<ShellTypes>()).toEqual([
+      { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
+      { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
+    ]);
+  });
+
+  test('both shell sheets are wired with no list given, and Escape with none open dispatches the shell`s escape: the fallback cannot be left out', () => {
+    const { p, intents } = wiredShell();
+    p.get('closeRulesBtn').fire('click');
+    p.get('closeHistoryBtn').fire('click');
+    expect(intents).toEqual([{ type: 'rules/close' }, { type: 'history/close' }]);
+    p.fire('keydown', { key: 'Escape' });
+    expect(intents.at(-1)).toEqual({ type: 'escape' });
+    p.get('historyOverlay').el.classList.remove('hidden');
+    p.fire('keydown', { key: 'Escape' });
+    expect(intents.at(-1)).toEqual({ type: 'history/close' });
+  });
+
+  test('a game`s own sheets come after the shell`s and its own fallback replaces the shell`s (backgammon`s die-chip tray)', () => {
+    const menu: Sheet<I> = {
+      overlay: 'menuOverlay',
+      close: 'closeMenuBtn',
+      intent: { type: 'leave/request' },
+    };
+    const { p, intents } = wiredShell([menu], { type: 'cancel' });
+    p.get('closeMenuBtn').fire('click');
+    expect(intents).toEqual([{ type: 'leave/request' }]);
+    p.fire('keydown', { key: 'Escape' });
+    expect(intents.at(-1)).toEqual({ type: 'cancel' });
+    p.get('menuOverlay').el.classList.remove('hidden');
+    p.fire('keydown', { key: 'Escape' });
+    expect(intents.at(-1)).toEqual({ type: 'leave/request' });
+  });
+});
+
+describe('bindDelegated', () => {
+  type I = ShellIntentOf<ShellTypes>;
+  const wiredPicker = (): Readonly<{ p: FakePage; intents: I[] }> => {
+    const p = page();
+    const intents: I[] = [];
+    bindDelegated<ShellTypes>(
+      p.doc,
+      (i) => {
+        intents.push(i);
+      },
+      [
+        {
+          id: 'hand',
+          selector: 'button[data-seat]',
+          key: 'seat',
+          intent: (seat) => (seat === '9' ? null : { type: `give:${seat}` }),
+        },
+      ],
+    );
+    return { p, intents };
+  };
+
+  test('a click resolves to the nearest matching child`s data value and dispatches the intent of it; off every child, on one without a value, or for a value the table refuses (null), nothing', () => {
+    const { p, intents } = wiredPicker();
+    const seat = fakeEl('seat2', { attrs: { 'data-seat': '2' } });
+    const blank = fakeEl('seatBlank', { attrs: { 'data-seat': '' } });
+    const refused = fakeEl('seat9', { attrs: { 'data-seat': '9' } });
+    p.get('hand').fire('click');
+    p.get('hand').fire('click', {
+      target: fakeTarget({ closest: { 'button[data-seat]': blank } }),
+    });
+    p.get('hand').fire('click', {
+      target: fakeTarget({ closest: { 'button[data-seat]': refused } }),
+    });
+    expect(intents).toEqual([]);
+    p.get('hand').fire('click', { target: fakeTarget({ closest: { 'button[data-seat]': seat } }) });
+    expect(intents).toEqual([{ type: 'give:2' }]);
+  });
+
+  test('a missing container throws at bind time, as every id binder does', () => {
+    expect(() => {
+      bindDelegated<ShellTypes>(page().doc, () => undefined, [
+        { id: 'nowhere', selector: 'button', key: 'x', intent: () => null },
+      ]);
+    }).toThrow('missing element #nowhere');
   });
 });
 

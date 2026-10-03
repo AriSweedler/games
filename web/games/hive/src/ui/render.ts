@@ -57,11 +57,10 @@ import {
 import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
-  bindSheets,
+  bindShellSheets,
   paintResult,
   paintShellChrome,
   paintShellSheets,
-  type Sheet,
   shellButtons,
 } from '../../../../shared/ui/shellPaint.ts';
 import { columnAt, spiderPaths, stackAt, withIntent, type Game } from '../engine/engine.ts';
@@ -443,9 +442,7 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const picked = app.table.picked;
   const other: Seat = v.seat === 0 ? 1 : 0;
   paintSwatch(doc, 'mySide', v.seat);
-  setText(requireId(doc, 'myName'), nameAt(v, v.seat));
   paintSwatch(doc, 'oppSide', other);
-  setText(requireId(doc, 'oppName'), nameAt(v, other));
   const lift = app.table.drag !== null && picked?.kind === 'hex' ? picked.hex : null;
   // The aim a Spider's path is numbered to: a drag's nearest lit hex while one stands, else the hex the pointer is over.
   const aim = app.table.drag !== null ? app.table.drag.over : app.table.aim;
@@ -532,7 +529,11 @@ export const paintHints = (doc: DocumentLike, hints: Hints): void => {
 };
 
 export const paint = (doc: PageLike, app: App): void => {
-  paintShellChrome(doc, app.shell, { handoff: handoffLabelOf(app.shell, HIVE), connDot: 'oppDot' });
+  paintShellChrome(doc, app.shell, {
+    handoff: handoffLabelOf(app.shell, HIVE),
+    connDot: 'oppDot',
+    names: (v) => ({ me: nameAt(v, v.seat), others: nameAt(v, v.seat === 0 ? 1 : 0) }),
+  });
   // No curtain to paint: the shell composed `#curtainOverlay` hidden and `viewer` never raises it.
   paintHome(doc, app);
   const v = app.shell.view;
@@ -541,11 +542,6 @@ export const paint = (doc: PageLike, app: App): void => {
   paintHints(doc, app.table.hints);
   paintShellSheets(doc, app.shell);
 };
-
-const SHEETS: ReadonlyArray<Sheet<Intent>> = [
-  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
-  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
-];
 
 const isBug = (raw: string | null): raw is Bug => BUGS.some((bug) => bug === raw);
 
@@ -653,5 +649,5 @@ export const bindAll = (doc: PageLike, dispatch: Dispatch): void => {
   bindHome(doc, dispatch);
   bindTable(doc, dispatch);
   bindDrag(doc, dispatch);
-  bindSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'escape' } });
+  bindShellSheets<Hive>(doc, dispatch);
 };

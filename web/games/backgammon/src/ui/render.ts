@@ -102,7 +102,7 @@ import { flyMoves } from './board/fly.ts';
 import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
-  bindSheets as bindShellSheets,
+  bindShellSheets,
   connDotClass as shellConnDotClass,
   connDotView,
   paintResult,
@@ -170,10 +170,9 @@ export const showToast = (doc: DocumentLike, message: string): void => {
 };
 
 // A sheet is an overlay a flag shows; the same flag's intent answers its close button, a tap on
-// its backdrop (the overlay element itself, never its children) and Escape. The list is this game's.
+// its backdrop (the overlay element itself, never its children) and Escape. The list is this game's
+// own beside the shell's rules and history (`bindShellSheets`).
 const SHEETS: ReadonlyArray<Sheet<Intent>> = [
-  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
-  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
   { overlay: 'menuOverlay', close: 'closeMenuBtn', intent: { type: 'menu/toggle' } },
   { overlay: 'resultOverlay', close: 'rsPeekBtn', intent: { type: 'result/dismiss' } },
 ];
@@ -795,7 +794,7 @@ export const boardIntentOf = (e: Readonly<Event>): Intent | null => {
 
 /** The sheets' close buttons and backdrops; Escape closes the open sheet, else the die-chip tray (design §6). */
 const bindSheets = (doc: PageLike, dispatch: Dispatch): void => {
-  bindShellSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'chip/cancel' } });
+  bindShellSheets<Backgammon>(doc, dispatch, SHEETS, { type: 'chip/cancel' });
 };
 
 /** The table's, the sheets' and the endgame's controls, each an intent. */

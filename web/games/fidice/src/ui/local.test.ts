@@ -9,7 +9,6 @@ import { redactFor } from '../domain/publicState.ts';
 import type { PublicState } from '../domain/types.ts';
 import {
   FRESH_ROLL_MSG,
-  REVEAL_LABEL,
   bindLocal,
   curtainText,
   lastLineText,
@@ -64,7 +63,6 @@ describe('the curtain copy', () => {
       title: 'Pass the phone to Bob',
       sub: 'Ann, look away',
       last: v.log[v.log.length - 1]?.text,
-      button: REVEAL_LABEL,
     });
     expect(lastLineText({ ...v, log: [] })).toBe(FRESH_ROLL_MSG);
     expect(lookAwayText(v, 0)).toBe('Bob, look away');
@@ -109,7 +107,10 @@ describe('the curtain over the page', () => {
     expect(p.get('curtainOverlay').hidden()).toBe(false);
     expect(p.get('curtainTitle').text()).toMatch(/^Pass the phone to (Ann|Bob)$/);
     expect(p.get('curtainSub').text()).toMatch(/^(Ann|Bob), look away$/);
-    expect(p.get('curtainBtn').text()).toBe(REVEAL_LABEL);
+    // The button's words are the markup's (page.ts `revealLabel`): the paint writes none (the
+    // fake carries no text), and the page ships them.
+    expect(p.get('curtainBtn').text()).toBe('');
+    expect(MARKUP).toContain('id="curtainBtn">Lift the cup<');
     const lifted = run(started, { type: 'curtain/reveal' }).app;
     expect(lifted.table.curtain).toBeNull();
     paintCurtain(p.doc, lifted);
