@@ -21,9 +21,10 @@ import {
   runEffect,
   waitingToDealMsg,
   type App,
-  type EffectDeps,
   type Intent,
+  type Flip7,
 } from './state.ts';
+import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { listNames, resumeLabel as sharedResumeLabel } from '../../../../shared/lib/name.ts';
 
 /** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
@@ -199,11 +200,11 @@ describe('the table`s own controls', () => {
         map.delete(k);
       },
     };
-    const deps = { store: createStore(storage) } as unknown as EffectDeps;
+    const deps = { store: createStore(storage) } as unknown as ShellEffectDeps<Flip7>;
     runEffect(initialApp, { type: 'writeOpts', opts: { seatCount: 4 } }, deps);
     runEffect(initialApp, { type: 'rememberSeatName', seat: 2, name: 'Sandro' }, deps);
     expect(map.get(STORAGE_KEYS.players)).toBe('4');
-    expect(map.get(STORAGE_KEYS.p3Name)).toBe('Sandro');
+    expect(map.get('flip7_p3Name')).toBe('Sandro');
   });
 });
 
@@ -221,7 +222,7 @@ describe('what the boot and the sessions read back', () => {
     expect(myTurn(seated('guest', game, 1))).toBe(false);
     const map = new Map<string, string>([
       [STORAGE_KEYS.players, '4'],
-      [STORAGE_KEYS.p5Name, 'Noa'],
+      ['flip7_p5Name', 'Noa'],
     ]);
     const store = createStore({
       getItem: (k) => map.get(k) ?? null,

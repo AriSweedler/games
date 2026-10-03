@@ -4,7 +4,7 @@ import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { WAITING_MSG } from '../../../shared/net/host.ts';
 import { createState, viewFor } from './engine/view.ts';
 import { defaultModeOf, keyOfView } from '../../../shared/ui/shell.ts';
-import { UNO_SHELL, parseOpts, seatNames } from './shellConfig.ts';
+import { UNO_SHELL } from './shellConfig.ts';
 
 describe('the N-seat copy is the shell’s (web/shared/ui/seatCopy.ts), dealt', () => {
   test('the forms are wired in, the verb is deal', () => {
@@ -20,14 +20,15 @@ describe('the N-seat copy is the shell’s (web/shared/ui/seatCopy.ts), dealt', 
 });
 
 describe('the options and the seats', () => {
-  test('a count off either stepper, else the current one', () => {
-    expect(parseOpts({ players: '12' }, { seatCount: 2 })).toEqual({ seatCount: 12 });
-    expect(parseOpts({ players: '13' }, { seatCount: 2 })).toEqual({ seatCount: 2 });
-    expect(parseOpts({ localPlayers: '4' }, { seatCount: 2 })).toEqual({ seatCount: 4 });
-    expect(parseOpts({}, { seatCount: 3 })).toEqual({ seatCount: 3 });
+  test('the option codec is the shell’s seatCountOpts over the engine’s counts: a count off either stepper, else the current one', () => {
+    const { parse } = UNO_SHELL.opts;
+    expect(UNO_SHELL.opts.initial).toEqual({ seatCount: 2 });
+    expect(parse({ players: '12' }, { seatCount: 2 })).toEqual({ seatCount: 12 });
+    expect(parse({ players: '13' }, { seatCount: 2 })).toEqual({ seatCount: 2 });
+    expect(parse({ localPlayers: '4' }, { seatCount: 2 })).toEqual({ seatCount: 4 });
+    expect(parse({}, { seatCount: 3 })).toEqual({ seatCount: 3 });
     expect(UNO_SHELL.opts.capacity?.({ seatCount: 3 })).toBe(3);
     expect(UNO_SHELL.opts.pick({ seatCount: 4 })).toEqual({ seatCount: 4 });
-    expect(seatNames(3, [{ id: 'p1', name: 'Ann' }])).toEqual(['Ann', 'Player 2', 'Player 3']);
     // The play mode is the shell's default (local or online; shell.test.ts).
     expect(UNO_SHELL.modes).toBeUndefined();
     expect(defaultModeOf(UNO_SHELL)).toBe('online');

@@ -74,15 +74,19 @@ import {
   BACKGAMMON,
   type App,
   type Effect,
-  type EffectDeps,
   type HomeSnapshot,
   type Intent,
   type Step,
+  type Backgammon,
 } from './state.ts';
+import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 
 // The leave confirms are the shell's words over a match and a room (seatCopy.ts `leaveCopy`), read off the config.
 const { leaveLocal: LEAVE_LOCAL_MSG, leaveOnline: LEAVE_ONLINE_MSG } = BACKGAMMON.copy;
 import { handoffLabel, resumeLabel as sharedResumeLabel } from '../../../../shared/lib/name.ts';
+
+/** The shell's effect adapters over this game's bag (the game spells no alias of its own since dry-review-2026-10.md §7 row 3). */
+type EffectDeps = ShellEffectDeps<Backgammon>;
 
 /** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
 const resumeLabel = (resume: Resume): string => sharedResumeLabel(resume, namesOf);

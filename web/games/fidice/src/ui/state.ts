@@ -56,6 +56,7 @@ import {
   type Ctx,
   type CueMachine,
   type Effect as SharedEffect,
+  type GameTypes,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
   type Player,
@@ -69,9 +70,8 @@ import {
   type Step as SharedStep,
   type TableReset,
   type TimerId as SharedTimerId,
-  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
-import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
+import type { TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import { decide, emptyMemories, type Memories } from '../bots/brain.ts';
 import { HOST, apply, bySeat, scheduleAutoNext, stampLog } from '../domain/game.ts';
@@ -198,7 +198,7 @@ export type GameTimer = 'bot/step' | 'autoNext';
  * five, no resume offer beyond the three roles, the two game-loop timers, the shell's four cues,
  * and the table's own intents and effects are the unions below. No ephemeral frame.
  */
-export type Fidice = Readonly<{
+export type Fidice = GameTypes<{
   Opts: Opts;
   Raw: Raw;
   State: State;
@@ -210,8 +210,6 @@ export type Fidice = Readonly<{
   Screen: 'configScreen';
   Timer: GameTimer;
   Cue: Cue;
-  Cues: CueMemory;
-  Resume: never;
   Home: Home;
   Intent: TableIntent;
   Effect: TableEffect;
@@ -1053,7 +1051,6 @@ export const initialShell: Shell = initialApp.shell;
 export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
 
 /** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); fidice adds none. main.ts constructs the real ones, tests record. */
-export type EffectDeps = ShellEffectDeps<Fidice>;
 
 /** The seeded rng a driver hands the reducer (the hook's `__rng`), named here so the tests spell one type. */
 export type { Rng };

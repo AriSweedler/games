@@ -6,8 +6,11 @@
 // two-seat `waiting` line is web/shared/lib/shellDefaults.ts's WAITING_MSG (web/shared/net speaks
 // it too); a game with a line of its own hands it over (`waitingAtTwo`). The two leave confirms
 // (dry-review-2026-10.md §2.3) are spelled here too, from the three nouns a game chooses
-// (`leaveCopy`), so no config carries a sentence the shell could have written.
-import { WAITING_MSG } from '../lib/shellDefaults.ts';
+// (`leaveCopy`), so no config carries a sentence the shell could have written. The option codec a
+// seated game's config carries (`seatCountOpts`, dry-review-2026-10.md §7 row 3: uno, flip7 and
+// briscola each spelled `parseOpts` and the four members around it) lives here beside the count
+// parser it is built on; its preference and save field are web/shared/edge/prefs.ts `seatedStore`'s.
+import { WAITING_MSG, type SeatCountOpts, type SeatCounts } from '../lib/shellDefaults.ts';
 import {
   OPPONENT_LEFT_MSG,
   WAITING_FOR_GUEST_MSG,
@@ -110,3 +113,48 @@ export const parseSeatCount = <N extends number>(
   raw: string | undefined,
   fallback: N,
 ): N => counts.find((n) => String(n) === raw) ?? fallback;
+
+// ---- the seat count as the room's one term ----------------------------------------------------
+
+/**
+ * The raw values off a seated game's home screen (seatedHome.ts reads them, `ShellTypes.Raw`):
+ * each panel's count under its own key, the third name on with `#localBtn`.
+ */
+export type SeatedRaw = Readonly<{
+  players?: string;
+  localPlayers?: string;
+  names?: ReadonlyArray<string>;
+}>;
+
+/** `ShellConfig['opts']` for a game whose room's one term is its seat count: what `seatCountOpts` returns. */
+export type SeatCountOptsSpec<N extends number, State> = Readonly<{
+  initial: SeatCountOpts<N>;
+  parse: (raw: SeatedRaw, current: SeatCountOpts<N>) => SeatCountOpts<N>;
+  ofGame: (game: State) => SeatCountOpts<N>;
+  pick: (from: SeatCountOpts<N>) => SeatCountOpts<N>;
+  capacity: (opts: SeatCountOpts<N>) => number;
+}>;
+
+/**
+ * The option codec of a game that seats a count and nothing else (uno, flip7): the smallest table
+ * first, a count off either stepper (else the current one), the table a saved game was dealt to
+ * (`seatsOf`; the smallest when the save names a size the table no longer offers), the one field
+ * off a record that carries it, and the count as the room's capacity.
+ */
+export const seatCountOpts = <N extends number, State>(
+  counts: SeatCounts<N>,
+  seatsOf: (game: State) => number,
+): SeatCountOptsSpec<N, State> => {
+  const initial: SeatCountOpts<N> = { seatCount: counts[0] };
+  return {
+    initial,
+    parse: (raw, current) => ({
+      seatCount: parseSeatCount(counts, raw.players ?? raw.localPlayers, current.seatCount),
+    }),
+    ofGame: (game) => ({
+      seatCount: parseSeatCount(counts, String(seatsOf(game)), initial.seatCount),
+    }),
+    pick: (from) => ({ seatCount: from.seatCount }),
+    capacity: (opts) => opts.seatCount,
+  };
+};

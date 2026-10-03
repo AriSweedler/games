@@ -19,7 +19,6 @@ import {
   withTable,
   type Ctx,
   type CueMachine,
-  type CueMemory,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
@@ -27,11 +26,12 @@ import {
   type ShellApp,
   type ShellConfig,
   type ShellState,
+  type GameTypes,
   type Step as SharedStep,
   type TableReset,
 } from '../../../../shared/ui/shell.ts';
-import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
+import type { SeatedRaw } from '../../../../shared/ui/seatCopy.ts';
 import {
   actorOf,
   createGame,
@@ -45,26 +45,12 @@ import {
 import { FLIP7_BONUS, cardName, scoreLine } from '../engine/cards.ts';
 import { FLIP7_SHELL, asSeat } from '../shellConfig.ts';
 import { cueKey, cuesBetween, type Cue } from './sound.ts';
-import {
-  HOME_TABS,
-  type ExtraSeat,
-  type HomeTab,
-  type Opts,
-  type PlayMode,
-  type Store,
-} from '../storage.ts';
+import { HOME_TABS, type HomeTab, type Opts, type PlayMode, type Store } from '../storage.ts';
 
-export { HOME_TABS, type ExtraSeat, type HomeTab, type PlayMode };
+export { HOME_TABS, type HomeTab, type PlayMode };
 
-/** The raw values `host/click` and `local/click` carry: the two Players steppers (the third to twelfth names ride as the shell's `names`). */
-export type Raw = Readonly<{
-  players?: string;
-  localPlayers?: string;
-  names?: ReadonlyArray<string>;
-}>;
-
-/** Nothing beyond the shell's keys: the seat count is the shell's `prefs.opts`, the third to twelfth names its `prefs.seatNames`. */
-export type Home = object;
+/** The raw values `host/click` and `local/click` carry: the seated home's (the two Players steppers; the third to twelfth names ride as the shell's `names`). */
+export type Raw = SeatedRaw;
 
 /**
  * What just happened to a seat, held on this phone until its Continue (the owner, 2026-10-02: "When
@@ -86,6 +72,8 @@ export type Table = Readonly<{
   pause: Pause | null;
 }>;
 
+/** The seats past the shell's two: the third to the twelfth (the shell's `SeatOf<Flip7>` adds its own two). */
+export type ExtraSeat = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 export type FlipSeat = 0 | 1 | ExtraSeat;
 
 export type TableIntent =
@@ -97,26 +85,16 @@ export type TableIntent =
   | Readonly<{ type: 'replay/click' }>
   | Readonly<{ type: 'continue/click' }>;
 
-export type TableEffect = never;
-
-/** Flip 7's types for the shared shell (`ShellTypes`). */
-export type Flip7 = Readonly<{
+/** Flip 7's types for the shared shell (`GameTypes` over what it names; the rest are the shell's defaults). */
+export type Flip7 = GameTypes<{
   Opts: Opts;
   Raw: Raw;
   State: State;
   View: View;
   Action: Action;
   Table: Table;
-  Tab: HomeTab;
-  Mode: PlayMode;
-  Screen: never;
-  Timer: never;
   Cue: Cue;
-  Cues: CueMemory;
-  Resume: never;
-  Home: Home;
   Intent: TableIntent;
-  Effect: TableEffect;
   Store: Store;
   Seat: ExtraSeat;
 }>;
@@ -298,8 +276,6 @@ export const FLIP7: ShellConfig<Flip7> = {
 export const reducer = shellReducer(FLIP7, { intent: tableIntent });
 export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
   reducer;
-
-export type EffectDeps = ShellEffectDeps<Flip7>;
 
 /** My seat may act on the view now (the paint's buttons). */
 export const myTurn = (app: App): boolean => {

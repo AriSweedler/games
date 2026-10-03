@@ -1,83 +1,31 @@
 // Flip 7's browser storage (docs/design/flip7.md §8): the shell's keys under the `flip7_` prefix
-// (web/shared/edge/prefs.ts `shellStore`; tools/games.ts REGISTRY pins the save key and the prefix),
-// the seat count the two Players steppers share, and the third to twelfth pass-and-play names.
+// (web/shared/edge/prefs.ts `seatedStore`; tools/games.ts REGISTRY pins the save key and the
+// prefix), the seat count the two Players steppers share under `flip7_players`, and the third to
+// twelfth pass-and-play names under `flip7_p3Name` on: every key a seated game keeps, derived once.
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
 import {
-  decodeDigitsOf,
-  extraNamePrefs,
-  seatCountPref,
-  shellKeys,
-  shellStore,
-  type GuestSave as ShellGuestSave,
-  type HostSave as ShellHostSave,
-  type LocalSave as ShellLocalSave,
+  seatedStore,
   DEFAULT_HOME_TAB,
   DEFAULT_PLAY_MODE,
   HOME_TABS,
   type HomeTab,
   type PlayMode,
-  type Save as ShellSave,
 } from '../../../shared/edge/prefs.ts';
-import { literal, object, type Decoder } from '../../../shared/lib/json.ts';
-import { SEAT_COUNTS, decodeState, type SeatCount, type State } from './engine/index.ts';
+import type { SeatCountOpts } from '../../../shared/lib/shellDefaults.ts';
+import { SEAT_COUNTS, decodeState, type SeatCount } from './engine/index.ts';
 
 export type { PlayMode, Store, StorageError };
-
-const PREFIX = 'flip7_';
-export const STORAGE_KEYS = {
-  /** The shell's keys (prefs.ts `ShellKeysOf`): the save and the eight preferences every shell keeps. */
-  ...shellKeys(PREFIX, 'flip7MP_v1'),
-  /** The third to twelfth pass-and-play names, under the name rule (this page alone seats them; `extraNamePrefs`). */
-  p3Name: 'flip7_p3Name',
-  p4Name: 'flip7_p4Name',
-  p5Name: 'flip7_p5Name',
-  p6Name: 'flip7_p6Name',
-  p7Name: 'flip7_p7Name',
-  p8Name: 'flip7_p8Name',
-  p9Name: 'flip7_p9Name',
-  p10Name: 'flip7_p10Name',
-  p11Name: 'flip7_p11Name',
-  p12Name: 'flip7_p12Name',
-  players: 'flip7_players',
-} as const;
 
 // The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
 export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 
 /** The room's one term. */
-export type Opts = Readonly<{ seatCount: SeatCount }>;
-export const DEFAULT_OPTS: Opts = { seatCount: 2 };
+export type Opts = SeatCountOpts<SeatCount>;
 
-export type LocalSave = ShellLocalSave<State>;
-export type HostSave = ShellHostSave<State, Opts>;
-export type GuestSave = ShellGuestSave;
-export type Save = ShellSave<State, Opts>;
-
-const decodeSeatCountField: Decoder<SeatCount> = literal(...SEAT_COUNTS);
-const decodeOpts: Decoder<Opts> = object({ seatCount: decodeSeatCountField });
-
-export const SHELL_STORE = shellStore<State, Opts, HomeTab>(STORAGE_KEYS, {
+export const SHELL_STORE = seatedStore('flip7_', 'flip7MP_v1', {
   game: 'flip7',
   decodeGame: decodeState,
-  hostExtra: { decode: decodeOpts, literal: (save) => ({ seatCount: save.seatCount }) },
-  decodeHomeTab: literal(...HOME_TABS),
+  counts: SEAT_COUNTS,
 });
-export const { enabled: soundEnabled } = SHELL_STORE.sound;
-
-/** The seats past the shell's two (the third to the twelfth): their names, remembered as typed. */
-export type ExtraSeat = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
-export const EXTRA_SEATS: ReadonlyArray<ExtraSeat> = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-export const EXTRA_NAME_PREFS = extraNamePrefs(PREFIX, EXTRA_SEATS);
-
-/** A seat count from its digit (`"3"`), one of SEAT_COUNTS (prefs.ts `decodeDigitsOf`). */
-export const decodeSeatCount: Decoder<SeatCount> = decodeDigitsOf(SEAT_COUNTS);
-const PLAYERS_PREF = seatCountPref(STORAGE_KEYS.players, SEAT_COUNTS);
-
-export const readOpts = (store: Store): Opts => {
-  const read = PLAYERS_PREF.read(store);
-  return { seatCount: read.ok ? read.value : DEFAULT_OPTS.seatCount };
-};
-
-export const writeOpts = (store: Store, opts: Opts): void => {
-  PLAYERS_PREF.write(store, opts.seatCount);
-};
+/** The shell's keys (prefs.ts `SeatedKeysOf`): the save, the eight preferences every shell keeps, the seat count and the ten extra names. */
+export const STORAGE_KEYS = SHELL_STORE.keys;

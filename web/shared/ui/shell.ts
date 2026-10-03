@@ -54,6 +54,7 @@ import {
   OPENING_MSG,
   connectingMsg,
   handoffMsg,
+  type HomeTab,
   type PlayMode,
 } from '../lib/shellDefaults.ts';
 import { DEFAULT_SOUND_FONT, type SoundFontName } from '../lib/sound/fonts.ts';
@@ -116,6 +117,35 @@ export type ShellTypes = Readonly<{
    */
   Ephemeral?: EphemeralFrame;
 }>;
+
+/**
+ * The bag members most games leave at the shell's own (dry-review-2026-10.md §2.6: nine of Flip
+ * 7's seventeen were these): the three tabs, the two stored modes, no screen, timer or effect of
+ * the game's, the plain cue memory, no resume offer beyond the three roles, nothing read at home.
+ */
+export type ShellTypeDefaults = Readonly<{
+  Tab: HomeTab;
+  Mode: PlayMode;
+  Screen: never;
+  Timer: never;
+  Cues: CueMemory;
+  Resume: never;
+  Home: object;
+  Effect: never;
+}>;
+/** What every game names for itself: its engine's four types, its table slice, its cues and intents, its store, and (past two seats) its `Seat`. */
+type OwnTypes = Pick<
+  ShellTypes,
+  'Opts' | 'Raw' | 'State' | 'View' | 'Action' | 'Table' | 'Cue' | 'Intent' | 'Store' | 'Seat'
+>;
+/**
+ * A game's bag from what it names: `ShellTypeDefaults` where `Own` is silent, `Own` where it
+ * speaks (gin's tabs, screens, timer, cue state, resume and home; fidice's modes). `Store` is the
+ * game's because this zone may not name web/shared/edge/storage.ts's.
+ */
+export type GameTypes<Own extends OwnTypes & Partial<ShellTypes>> = Readonly<
+  Omit<ShellTypeDefaults, keyof Own> & Own
+>;
 
 /** The game's seats beyond the shell's own two: what its bag's `Seat` names, `never` when it names none. */
 type ExtraSeats<G extends ShellTypes> =
@@ -960,7 +990,12 @@ export type ShellConfigBase<G extends ShellTypes> = Readonly<{
     capacity?: (opts: G['Opts']) => number;
   }>;
   engine: Readonly<{
-    /** The deal: the host first, then every guest seat in order (`PlayersOf<G>`: the pair for a two-seat game). */
+    /**
+     * The deal: the host first, then every guest seat in order (`PlayersOf<G>`: the pair for a
+     * two-seat game), one per seat of the room's capacity (`capacityOf(opts)`): the shell seats
+     * every chair before it deals (`localSeats` names an empty input, `startHost` opens
+     * `capacity − 1` seats), so an engine deals to the list as it is and pads nothing.
+     */
     create: (players: PlayersOf<G>, opts: G['Opts'], rng: Rng, now: () => number) => G['State'];
     apply: (
       game: G['State'],

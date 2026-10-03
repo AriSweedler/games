@@ -26,7 +26,6 @@ import {
   decodeName,
   decodePlayMode,
   decodeSoundFont,
-  decodeDigitsOf,
   decodeSoundState,
   extraNamePrefs,
   langPref,
@@ -34,9 +33,6 @@ import {
   shellKeys,
   shellStore,
   textPref,
-  type GuestSave as ShellGuestSave,
-  type HostSave as ShellHostSave,
-  type LocalSave as ShellLocalSave,
   type PlayMode,
   type Save as ShellSave,
   type SoundState,
@@ -64,7 +60,6 @@ import {
   type CreateGameOptions,
   type GameOptions,
   type GamesToWin,
-  type SeatCount,
   type State,
 } from './engine/index.ts';
 
@@ -125,12 +120,9 @@ export const TABLE_TERMS: CreateGameOptions = { gamesToWin: ONE_GAME };
 /** The room's terms as the home screen starts (D3): two players on the fixed terms. */
 export const DEFAULT_OPTS: GameOptions = normaliseOptions(2, TABLE_TERMS);
 
-/** One of three shapes by role; the keys are in the order `writeSave` emits them. */
-export type LocalSave = ShellLocalSave<State>;
 /** The host save's own fields, between `myName` and `game` in the literal: the room's six options. */
 export type HostExtra = GameOptions;
-export type HostSave = ShellHostSave<State, HostExtra>;
-export type GuestSave = ShellGuestSave;
+/** One of three shapes by role; the keys are in the order `writeSave` emits them (ui/state.ts reads it). */
 export type Save = ShellSave<State, HostExtra>;
 
 export const decodeHomeTab: Decoder<HomeTab> = literal(...HOME_TABS);
@@ -160,11 +152,7 @@ export const { read: readName, write: writeName } = SHELL_STORE.name;
 export const { read: readP2Name, write: writeP2Name } = SHELL_STORE.p2Name;
 export const { read: readHomeTab, write: writeHomeTab } = SHELL_STORE.homeTab;
 export const { read: readPlayMode, write: writePlayMode } = SHELL_STORE.playMode;
-export const {
-  read: readSoundState,
-  write: writeSoundState,
-  enabled: soundEnabled,
-} = SHELL_STORE.sound;
+export const { read: readSoundState, write: writeSoundState } = SHELL_STORE.sound;
 export const { read: readSoundFont, write: writeSoundFont } = SHELL_STORE.soundFont;
 /** The finished matches: the stored list or [], and one match put first under the cap. */
 export const {
@@ -175,10 +163,8 @@ export const {
 
 // ---- this page's own preferences -----------------------------------------------------------
 
-/** The third and fourth pass-and-play names, by seat (2 and 3), under `rememberName`'s rule. */
-export const EXTRA_NAME_PREFS = extraNamePrefs(PREFIX, [2, 3]);
-export const { read: readP3Name, write: writeP3Name } = EXTRA_NAME_PREFS[2];
-export const { read: readP4Name, write: writeP4Name } = EXTRA_NAME_PREFS[3];
+/** The third and fourth pass-and-play names (the shell's `prefs.seatNames`, index 0 the third seat), under `rememberName`'s rule. */
+export const EXTRA_NAME_PREFS = extraNamePrefs(PREFIX, 4);
 
 /** The card pack, one of the packs that draw the Italian deck (a French-only pack is refused under this key). */
 export const decodeCardPack: Decoder<CardPack> = decodeCardPackFor(DECK_KIND);
@@ -195,8 +181,6 @@ export const { read: readSpeed, write: writeSpeed } = textPref(STORAGE_KEYS.spee
 export const LANG_PREF = langPref(STORAGE_KEYS.lang, DEFAULT_LANG);
 export const { read: readLang, write: writeLang } = LANG_PREF;
 
-/** The seat count from its digit (`"3"`), one of SEAT_COUNTS (prefs.ts `decodeDigitsOf`). */
-export const decodeSeatCount: Decoder<SeatCount> = decodeDigitsOf(SEAT_COUNTS);
 const PLAYERS_PREF = seatCountPref(STORAGE_KEYS.players, SEAT_COUNTS);
 
 const orDefault = <T>(r: Result<T, StorageError>, fallback: T): T => (r.ok ? r.value : fallback);

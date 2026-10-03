@@ -1,89 +1,33 @@
 // UNO's storage (docs/design/uno.md §9): the shared shell's keys under this game's prefix
-// (web/shared/edge/prefs.ts `shellStore`: the save of the game in progress, the names, the tab,
-// the mode, sound, the font, the finished games, the far seat's flip) and one key of its own, the
-// seat count the home screen last chose. tools/games.ts REGISTRY pins the save key and the prefix.
+// (web/shared/edge/prefs.ts `seatedStore`: the save of the game in progress, the names, the tab,
+// the mode, sound, the font, the finished games, the far seat's flip), the seat count the home
+// screen last chose under `uno_players` and the third to twelfth pass-and-play names under
+// `uno_p3Name` on: every key a seated game keeps, derived once. tools/games.ts REGISTRY pins the
+// save key and the prefix.
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
 import {
-  extraNamePref,
-  seatCountPref,
-  shellKeys,
-  shellStore,
-  type TextPref,
-  type GuestSave as ShellGuestSave,
-  type HostSave as ShellHostSave,
-  type LocalSave as ShellLocalSave,
+  seatedStore,
   DEFAULT_HOME_TAB,
   DEFAULT_PLAY_MODE,
   HOME_TABS,
   type HomeTab,
   type PlayMode,
-  type Save as ShellSave,
 } from '../../../shared/edge/prefs.ts';
-import { literal, object, type Decoder } from '../../../shared/lib/json.ts';
-import { SEAT_COUNTS, decodeState, type SeatCount, type State } from './engine/view.ts';
+import type { SeatCountOpts } from '../../../shared/lib/shellDefaults.ts';
+import { SEAT_COUNTS, decodeState, type SeatCount } from './engine/view.ts';
 
 export type { PlayMode, Store, StorageError };
-
-const PREFIX = 'uno_';
-export const STORAGE_KEYS = {
-  /** The shell's keys (prefs.ts `ShellKeysOf`): the save and the eight preferences every shell keeps. */
-  ...shellKeys(PREFIX, 'unoMP_v1'),
-  /** The seat count the home screen last chose, a bare string: `2` to `12`. */
-  players: 'uno_players',
-  /** The third to twelfth pass-and-play names, remembered as typed (the shell keeps the first two). */
-  p3Name: 'uno_p3Name',
-  p4Name: 'uno_p4Name',
-  p5Name: 'uno_p5Name',
-  p6Name: 'uno_p6Name',
-  p7Name: 'uno_p7Name',
-  p8Name: 'uno_p8Name',
-  p9Name: 'uno_p9Name',
-  p10Name: 'uno_p10Name',
-  p11Name: 'uno_p11Name',
-  p12Name: 'uno_p12Name',
-} as const;
-
-/** The seats past the shell's two, 0-based (the third seat is 2), up to the page's twelve. */
-export const EXTRA_SEATS: ReadonlyArray<number> = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-/** The remembered name of each seat past the second, index 0 the third seat. */
-export const EXTRA_NAME_PREFS: ReadonlyArray<TextPref<string>> = EXTRA_SEATS.map((seat) =>
-  extraNamePref(PREFIX, seat),
-);
 
 // The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
 export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 
 /** The room's terms: how many sit down (the target is the engine's 500). */
-export type Opts = Readonly<{ seatCount: SeatCount }>;
-export const DEFAULT_OPTS: Opts = { seatCount: 2 };
+export type Opts = SeatCountOpts<SeatCount>;
 
-export type HostExtra = Opts;
-export type LocalSave = ShellLocalSave<State>;
-export type HostSave = ShellHostSave<State, HostExtra>;
-export type GuestSave = ShellGuestSave;
-export type Save = ShellSave<State, HostExtra>;
-
-const decodeSeatCount: Decoder<SeatCount> = literal(...SEAT_COUNTS);
-
-export const SHELL_STORE = shellStore<State, HostExtra, HomeTab>(STORAGE_KEYS, {
+export const SHELL_STORE = seatedStore('uno_', 'unoMP_v1', {
   game: 'uno',
   decodeGame: decodeState,
-  hostExtra: {
-    decode: object({ seatCount: decodeSeatCount }),
-    literal: (save) => ({ seatCount: save.seatCount }),
-  },
-  decodeHomeTab: literal(...HOME_TABS),
+  counts: SEAT_COUNTS,
 });
-export const { enabled: soundEnabled, write: writeSoundState } = SHELL_STORE.sound;
-
-const PLAYERS_PREF = seatCountPref(STORAGE_KEYS.players, SEAT_COUNTS);
-
-/** The remembered seat count, else two. */
-export const readOpts = (store: Store): Opts => {
-  const stored = PLAYERS_PREF.read(store);
-  return stored.ok ? { seatCount: stored.value } : DEFAULT_OPTS;
-};
-
-export const writeOpts = (store: Store, opts: Opts): void => {
-  PLAYERS_PREF.write(store, opts.seatCount);
-};
+/** The shell's keys (prefs.ts `SeatedKeysOf`): the save, the eight preferences every shell keeps, the seat count and the ten extra names. */
+export const STORAGE_KEYS = SHELL_STORE.keys;

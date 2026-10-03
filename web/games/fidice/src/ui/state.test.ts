@@ -48,11 +48,15 @@ import {
   viewedChair,
   type App,
   type Effect,
-  type EffectDeps,
   type HomeSnapshot,
   type ShellSeat,
   type Step,
+  type Fidice,
 } from './state.ts';
+import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+
+/** The shell's effect adapters over this game's bag (the game spells no alias of its own since dry-review-2026-10.md §7 row 3). */
+type EffectDeps = ShellEffectDeps<Fidice>;
 
 const ctx = { rng: mulberry32(7), now: () => NOW };
 const run = runIntents(reduce, ctx);

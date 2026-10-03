@@ -19,6 +19,7 @@ import {
   type PageLike,
 } from '../edge/dom.ts';
 import { resumeLabel } from '../lib/name.ts';
+import type { SeatedRaw } from './seatCopy.ts';
 import { bindHomeShell, homeView, paintHomeShell, shellIntents, type HomeSlice } from './home.ts';
 import {
   bindSeatNames,
@@ -31,12 +32,8 @@ import type { Intent, ShellResume, ShellTypes, Tab } from './shell.ts';
 import type { Dispatch } from './shellPaint.ts';
 import { bindStepper, paintStepper, type StepperSpec } from './stepper.ts';
 
-/** The raw values off a seated game's home screen: each panel's count under its own key, the third name on with `#localBtn`. */
-export type SeatedRaw = Readonly<{
-  players?: string;
-  localPlayers?: string;
-  names?: ReadonlyArray<string>;
-}>;
+/** The raw values this home screen reads: seatCopy.ts's `SeatedRaw`, the one spelling (a game's `Raw` is it). */
+export type { SeatedRaw };
 
 /**
  * A seated game's type bag: its room terms hold the seat count the steppers paint, its raw values

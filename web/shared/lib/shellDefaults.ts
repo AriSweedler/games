@@ -29,3 +29,12 @@ export const connectingMsg = (code: string): string => `Connecting to room ${cod
 /** A pass-and-play game handed to a room (shell.ts `handoff`): nobody has joined it yet. */
 export const handoffMsg = (code: string, oppName: string | null): string =>
   `Room ${code} is open — send ${oppName ?? 'your opponent'} the invite to carry on this game…`;
+
+// ---- the seated games' one term (uno, flip7; dry-review-2026-10.md §7 row 3) -------------------
+// Here because both zones name it: web/shared/ui/seatCopy.ts `seatCountOpts` builds the config's
+// option codec over it and web/shared/edge/prefs.ts `seatedStore` the preference and the save field.
+
+/** A seated game's table sizes, smallest first (its engine's `SEAT_COUNTS`): the first is the room a home screen opens with. */
+export type SeatCounts<N extends number> = readonly [N, ...N[]];
+/** The room's one term where its size is all a room chooses: how many sit down. */
+export type SeatCountOpts<N extends number> = Readonly<{ seatCount: N }>;

@@ -32,7 +32,14 @@ import { appendCapped, decodeRecentGames, type RecentGame } from '../lib/recentG
 import { ROOM_CODE, isWellFormedCode, type Game } from '../lib/roomCode.ts';
 import { LANGUAGE_PACKS, type LanguagePackName } from '../lib/lang/packs.ts';
 import { SOUND_FONTS, type SoundFontName } from '../lib/sound/fonts.ts';
-import { PLAY_MODES, type PlayMode } from '../lib/shellDefaults.ts';
+import {
+  HOME_TABS,
+  PLAY_MODES,
+  type HomeTab,
+  type PlayMode,
+  type SeatCountOpts,
+  type SeatCounts,
+} from '../lib/shellDefaults.ts';
 import type { StorageError, Store } from './storage.ts';
 
 /** The stored tab and mode and their defaults (web/shared/lib/shellDefaults.ts): what every game's storage.ts decodes its `homeTab` and `playMode` keys against. */
@@ -118,15 +125,12 @@ export const namePref = (key: string): TextPref<string> => ({
 export const extraNamePref = (prefix: string, seat: number): TextPref<string> =>
   namePref(`${prefix}p${String(seat + 1)}Name`);
 
-/** `extraNamePref` for each of `seats`, keyed by seat: a table's third chair on, as its reducer looks them up. */
-export const extraNamePrefs = <S extends number>(
-  prefix: string,
-  seats: ReadonlyArray<S>,
-): Readonly<Record<S, TextPref<string>>> =>
-  Object.fromEntries(seats.map((seat) => [seat, extraNamePref(prefix, seat)])) as Record<
-    S,
-    TextPref<string>
-  >;
+/**
+ * `ShellPrefs.seatNames` for a table of `max` seats: `extraNamePref` for the third seat up to the
+ * last, index 0 the third seat, as the shell looks them up (`rememberSeatName`); [] at two.
+ */
+export const extraNamePrefs = (prefix: string, max: number): ReadonlyArray<TextPref<string>> =>
+  Array.from({ length: Math.max(0, max - 2) }, (_, i) => extraNamePref(prefix, i + 2));
 
 /** A bare string of digits naming one of `values`, read back as the number (`"3"` reads as 3). */
 export const decodeDigitsOf = <T extends number>(values: ReadonlyArray<T>): Decoder<T> =>
@@ -153,6 +157,44 @@ export const seatCountPref = <T extends number>(
   key: string,
   counts: ReadonlyArray<T>,
 ): TextPref<T> => digitsPref(key, decodeDigitsOf(counts));
+
+// ---- the seat count as the room's one term (uno, flip7; dry-review-2026-10.md §7 row 3) --------
+
+/**
+ * `shellStore`'s `hostExtra` for a game whose room's one term is its seat count: the host save
+ * carries `seatCount`, one of `counts`, between `myName` and `game` (uno's and flip7's literal).
+ */
+export const seatCountExtra = <N extends number>(
+  counts: SeatCounts<N>,
+): Readonly<{
+  decode: Decoder<SeatCountOpts<N>>;
+  literal: (save: SeatCountOpts<N>) => SeatCountOpts<N>;
+}> => ({
+  // `object`'s Shape cannot be resolved over a type parameter (as `shellSave` notes), so the decoder is asserted to the shape it spells.
+  decode: object({ seatCount: literal(...counts) }) as unknown as Decoder<SeatCountOpts<N>>,
+  literal: (save) => ({ seatCount: save.seatCount }),
+});
+
+/** The room's terms over the store (what web/shared/ui/shell.ts `OptsPref` asks of a game): `read` fills the defaults where a key is missing or unreadable, `write` stores every term under its own key. */
+export type StoredOptsPref<T> = Readonly<{
+  read: (store: Store) => T;
+  write: (store: Store, opts: T) => Result<null, StorageError>;
+}>;
+
+/** `ShellPrefs.opts` for a seated game: the count under `key` as digits (`seatCountPref`), the smallest table when the key is missing or unreadable. */
+export const seatCountOptsPref = <N extends number>(
+  key: string,
+  counts: SeatCounts<N>,
+): StoredOptsPref<SeatCountOpts<N>> => {
+  const pref = seatCountPref(key, counts);
+  return {
+    read: (store) => {
+      const stored = pref.read(store);
+      return { seatCount: stored.ok ? stored.value : counts[0] };
+    },
+    write: (store, opts) => pref.write(store, opts.seatCount),
+  };
+};
 
 /** A game's card-pack preference under its own key, validated for its deck kind like the sound font. */
 export const cardPackPref = <K extends DeckKind>(key: string, kind: K): TextPref<CardPackFor<K>> =>
@@ -468,3 +510,48 @@ export const shellStore = <S, X extends object, Tab extends string>(
     hostExtra: cfg.hostExtra,
   }),
 });
+
+// ---- the seated games' store -----------------------------------------------------------------
+
+/** A seated game's keys: the shell's and the seat count its two steppers share (`<prefix>players`, bare digits). */
+export type SeatedKeysOf<P extends string, S extends string> = ShellKeysOf<P, S> &
+  Readonly<{ players: `${P}players` }>;
+
+/** `shellStore`'s record for a seated game, with the two preferences its `ShellConfig.prefs` carries beyond the shell's eight. */
+export type SeatedStore<S, N extends number, P extends string, K extends string> = Omit<
+  ShellStore<S, SeatCountOpts<N>, HomeTab>,
+  'keys'
+> &
+  Readonly<{
+    keys: SeatedKeysOf<P, K>;
+    /** The seat count the home screen last chose (the shell's `prefs.opts`), under `players`. */
+    opts: StoredOptsPref<SeatCountOpts<N>>;
+    /** The pass-and-play names past the shell's two (the shell's `prefs.seatNames`), under `p3Name` on. */
+    seatNames: ReadonlyArray<TextPref<string>>;
+  }>;
+
+/**
+ * The store of a game that seats a count and nothing else (uno, flip7): `shellStore` over the
+ * shell's keys and the three tabs, the host save's one field (`seatCountExtra`), the count under
+ * `<prefix>players` (`seatCountOptsPref`) and one name key per seat past the shell's two up to the
+ * largest table (`extraNamePrefs`). Its `keys` are the game's `STORAGE_KEYS`, so a storage.ts
+ * spells its prefix and save key once and nothing else.
+ */
+export const seatedStore = <S, N extends number, P extends string, K extends string>(
+  prefix: P,
+  saveKey: K,
+  cfg: Readonly<{ game: Game; decodeGame: Decoder<S>; counts: SeatCounts<N> }>,
+): SeatedStore<S, N, P, K> => {
+  const keys: SeatedKeysOf<P, K> = { ...shellKeys(prefix, saveKey), players: `${prefix}players` };
+  return {
+    ...shellStore<S, SeatCountOpts<N>, HomeTab>(keys, {
+      game: cfg.game,
+      decodeGame: cfg.decodeGame,
+      hostExtra: seatCountExtra(cfg.counts),
+      decodeHomeTab: literal(...HOME_TABS),
+    }),
+    keys,
+    opts: seatCountOptsPref(keys.players, cfg.counts),
+    seatNames: extraNamePrefs(prefix, Math.max(...cfg.counts)),
+  };
+};

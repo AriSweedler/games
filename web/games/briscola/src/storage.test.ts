@@ -27,28 +27,25 @@ import {
   readName,
   readOpts,
   readP2Name,
-  readP3Name,
-  readP4Name,
   readPlayMode,
   readSave,
   readRecentGames,
   readSoundFont,
   readSoundState,
-  soundEnabled,
   writeCardPack,
   writeLang,
   writeHomeTab,
   writeName,
   writeOpts,
   writeP2Name,
-  writeP3Name,
-  writeP4Name,
   writePlayMode,
   writeSave,
   writeRecentGames,
   writeSoundFont,
   appendRecentGame,
   writeSoundState,
+  EXTRA_NAME_PREFS,
+  SHELL_STORE,
 } from './storage.ts';
 
 const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => {
@@ -225,24 +222,26 @@ describe('the bare-string preferences', () => {
   test('the four names are stored cut to 20 under their own keys and removed when empty', () => {
     const s = fakeStorage();
     const store = createStore(s);
+    // The third and fourth names are the shell's `seatNames` (prefs.ts `extraNamePrefs`), index 0 the third seat.
+    expect(EXTRA_NAME_PREFS).toHaveLength(2);
     const names = [
       [readName, writeName, STORAGE_KEYS.name],
       [readP2Name, writeP2Name, STORAGE_KEYS.p2Name],
-      [readP3Name, writeP3Name, STORAGE_KEYS.p3Name],
-      [readP4Name, writeP4Name, STORAGE_KEYS.p4Name],
+      [EXTRA_NAME_PREFS[0]?.read, EXTRA_NAME_PREFS[0]?.write, STORAGE_KEYS.p3Name],
+      [EXTRA_NAME_PREFS[1]?.read, EXTRA_NAME_PREFS[1]?.write, STORAGE_KEYS.p4Name],
     ] as const;
     names.forEach(([read, write, key], i) => {
-      expect(write(store, `Name${String(i)}`)).toEqual({ ok: true, value: null });
+      expect(write?.(store, `Name${String(i)}`)).toEqual({ ok: true, value: null });
       expect(s.map.get(key)).toBe(`Name${String(i)}`);
-      expect(read(store)).toEqual({ ok: true, value: `Name${String(i)}` });
+      expect(read?.(store)).toEqual({ ok: true, value: `Name${String(i)}` });
     });
     // Four keys, four values: the names are remembered apart.
     expect([...s.map.keys()].sort()).toEqual(
       [STORAGE_KEYS.name, STORAGE_KEYS.p2Name, STORAGE_KEYS.p3Name, STORAGE_KEYS.p4Name].sort(),
     );
-    expect(writeP3Name(store, 'abcdefghijklmnopqrstuvwxyz').ok).toBe(true);
+    expect(EXTRA_NAME_PREFS[0]?.write(store, 'abcdefghijklmnopqrstuvwxyz').ok).toBe(true);
     expect(s.map.get(STORAGE_KEYS.p3Name)).toBe('abcdefghijklmnopqrst');
-    expect(writeP4Name(store, '')).toEqual({ ok: true, value: null });
+    expect(EXTRA_NAME_PREFS[1]?.write(store, '')).toEqual({ ok: true, value: null });
     expect(s.map.has(STORAGE_KEYS.p4Name)).toBe(false);
     s.setItem(STORAGE_KEYS.name, '');
     expect(readName(store)).toEqual({
@@ -271,12 +270,12 @@ describe('the bare-string preferences', () => {
       expect(writePlayMode(store, mode).ok).toBe(true);
       expect(readPlayMode(store)).toEqual({ ok: true, value: mode });
     });
-    expect(soundEnabled(store)).toBe(true);
+    expect(SHELL_STORE.sound.enabled(store)).toBe(true);
     expect(writeSoundState(store, 'off').ok).toBe(true);
     expect(readSoundState(store)).toEqual({ ok: true, value: 'off' });
-    expect(soundEnabled(store)).toBe(false);
+    expect(SHELL_STORE.sound.enabled(store)).toBe(false);
     s.setItem(STORAGE_KEYS.sound, 'OFF');
-    expect(soundEnabled(store)).toBe(true);
+    expect(SHELL_STORE.sound.enabled(store)).toBe(true);
     SOUND_FONTS.forEach((font) => {
       expect(writeSoundFont(store, font).ok).toBe(true);
       expect(readSoundFont(store)).toEqual({ ok: true, value: font });
