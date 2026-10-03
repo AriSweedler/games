@@ -1969,12 +1969,10 @@ label {
    delay inline on both the transition and the animation. The transform is a translate between
    the two rects' top-left corners and then the scale, so it scales about that corner
    (`transform-origin: 0 0`): about the centre, a coin shrinking into a slab would land half the
-   size difference away from it. */
+   size difference away from it. The shell fixes the clone on the body, inert, under the overlays
+   (shell.css `.flyer`); this rule is the glide alone. */
 .flyer {
-  position: fixed;
   margin: 0;
-  z-index: 60;
-  pointer-events: none;
   will-change: transform;
   transform-origin: 0 0;
   transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);

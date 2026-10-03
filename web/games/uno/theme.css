@@ -332,12 +332,10 @@ label {
 .tile.arriving {
   visibility: hidden;
 }
-/* A tile in flight (ui/motion.ts over web/shared/edge/motion.ts `launchClone`): fixed on the body,
-   inert, over the overlays (50) and under the toast; `--fly-ms` is the flight's own length. */
+/* A tile in flight (ui/motion.ts over web/shared/edge/motion.ts `launchClone`): the shell fixes it on
+   the body, inert, under the overlays (shell.css `.flyer`); the theme's part is the glide, and
+   `--fly-ms` is the flight's own length. */
 .flyer {
-  position: fixed;
-  z-index: 60;
-  pointer-events: none;
   transition: transform var(--fly-ms) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .color-picker {

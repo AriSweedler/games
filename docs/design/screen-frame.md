@@ -72,7 +72,7 @@ Pad like everyone, and draw the frame from a table. The shell owns both.
 1. The band is the shell's (`web/shared/styles/shell.css` "the screen frame"): `body[data-frame]::before`,
    `position: fixed; inset: 0; pointer-events: none; z-index: 0`, a border of `--frame-band` in
    `--frame-color` with an inset hairline in `--frame-hairline`. It paints under every positioned
-   thing (overlays 50, flyers 60, the toast 100).
+   thing (flyers 40, overlays 50, the gate 90, the toast 100).
 2. The clearance is the shell's: `#app` is padded per side by
    `max(--frame-band + 1px + --frame-gap, env(safe-area-inset-<side>))`, so nothing a game puts
    in `#app` touches the band and nothing hides under a notch or the home indicator. A theme may

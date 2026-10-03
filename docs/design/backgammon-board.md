@@ -460,7 +460,7 @@ band reads as one. The trim (the owner: "green style trim in the background at t
 window") is the shell's screen frame (docs/design/screen-frame.md), dressed by this theme: `page.ts`
 says `frame: true`, so the composed `<body>` carries `data-frame` and shell.css draws
 `body[data-frame]::before`, a fixed, inert band along the viewport's edge with a hairline on its
-inner side, at `z-index: 0` under every positioned thing (overlays 50, flyers 60, the toast 100);
+inner side, at `z-index: 0` under every positioned thing (flyers 40, overlays 50, the gate 90, the toast 100);
 theme.css sets `--frame-band: 6px` (10px from 900px, except a phone held sideways, which keeps
 6 at any width: a Pixel 8 is 915 wide, and the sideways table's `--pad-t` counts the 6px band and
 its hairline; layout.ts `frameBand` is the twin), `--frame-color: var(--olive)`,
