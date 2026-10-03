@@ -38,7 +38,6 @@ import {
   runEffect,
   type App,
   type Briscola,
-  type HostContext,
 } from './src/ui/state.ts';
 
 /**
@@ -76,7 +75,7 @@ const boot = (): void => {
     return;
   }
   // The host context is the shell's plus `seats` (the codec's welcome lists the table past two seats), and the seated adapter names each guest frame's seat (n-seat-sessions.md §7).
-  bootShell<Briscola, App, object, HostContext>({
+  bootShell<Briscola, App>({
     page: { doc: document, win: window, nav: navigator, store: browserStore(), clock: realClock },
     // PeerJS log level 0 as the other shell pages (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__briscola', title: 'Briscola', debug: 0 },

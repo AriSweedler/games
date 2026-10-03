@@ -3013,6 +3013,8 @@ describe('storage and what the sessions read back', () => {
       handoff: false,
       oppName: 'Jeff',
       oppConnected: true,
+      // The one guest seat of a two-seat room, the same player `oppName`/`oppConnected` mirror.
+      seats: [{ name: 'Jeff', connected: true }],
     });
     expect(guestContextOf(h.shell)).toEqual({
       attempt: 1,

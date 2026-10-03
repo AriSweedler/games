@@ -162,9 +162,10 @@ report), frees the seat it left, and hands that seat to a held join if one waits
     in order with ids `host`, `guest`, `guest2`, `guest3`), rather than a second builder;
     `engine.renameGuest(game, name, seat)` gains the seat (1 for a two-seat game) rather than a
     `rename` beside it; `frames.welcome` is not a config field, because the shell never sends the
-    welcome: the session's codec builds it (the game's `net/host.ts`) off `hostContextOf`, and a
-    game whose welcome lists the table returns the shell's context plus `seats` from its own
-    `hostContextOf` (`BootConfig`'s fourth parameter `HC`); a guest's seat and the table are read
+    welcome: the session's codec builds it (the game's `net/host.ts`) off `hostContextOf`, whose
+    `seats` a game whose welcome lists the table reads (the shell's `HostContextOf` carries them
+    since shell-call-graph.md §4.2; before it each N-seat game added them through `BootConfig`'s
+    fourth parameter `HC`); a guest's seat and the table are read
     off a room frame structurally by `roomSeatingOf` (`you` a whole number naming one of `seats`,
     `seats` rows of `{ name, connected }` beside the options, D3), so no reader enters the config
     and a two-seat game's frames, carrying neither, read as none; `copy.joined(name, names,

@@ -113,7 +113,6 @@ import {
   writeOpts,
   type ExtraSeat,
   type HomeTab,
-  type HostExtra,
   type Opts,
   type PlayMode,
   type Save,
@@ -1122,15 +1121,10 @@ export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, FID
 // ---- what the sessions read back ---------------------------------------------------------------
 
 /** The host session's context: the shell's fields, the room's five terms and the guest seats as the shell holds them (net/host.ts `HostContext`). */
-export type HostContext = HostContextOf<Fidice> &
-  HostExtra &
-  Readonly<{ seats: ReadonlyArray<SeatState> }>;
+export type HostContext = HostContextOf<Fidice>;
 export type GuestContext = GuestContextOf;
 
-export const hostContextOf = (app: App): HostContext => ({
-  ...shellHostContextOf(app.shell),
-  seats: app.shell.seats,
-});
+export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
 
 export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
 

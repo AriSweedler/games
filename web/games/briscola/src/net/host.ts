@@ -9,8 +9,8 @@
 // argument); `joinName` hands the session the name a join carries so a guest back from a dead tab
 // is reseated where that name last sat (D6). At two seats the welcome is PR-4's byte for byte
 // (protocol.ts `seated`) and the session runs its one-slot path, so the two-seat pins hold
-// (sessions.test.ts pins both forms). The context is the shell's host context plus `seats`
-// (`HostContext`): the reducer's `hostContextOf` supplies them from `ShellState.seats`. Every
+// (sessions.test.ts pins both forms). The context is the shell's host context (`HostContext`),
+// whose `seats` the shell's `hostContextOf` fills from `ShellState.seats`. Every
 // constant and message ui/state.ts, main.ts and the tests import is re-exported.
 import {
   HostSession as SharedHostSession,

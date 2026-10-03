@@ -44,7 +44,6 @@ import {
   runEffect,
   type App,
   type Fidice,
-  type HostContext,
 } from './src/ui/state.ts';
 import type { Action, PublicState } from './src/domain/types.ts';
 
@@ -140,7 +139,7 @@ const bootLegacy = (): void => {
  * seats), and the seated adapter names each guest frame's seat (n-seat-sessions.md §7).
  */
 const bootShellPath = (): void => {
-  bootShell<Fidice, App, object, HostContext>({
+  bootShell<Fidice, App>({
     page: { doc: document, win: window, nav: navigator, store: browserStore(), clock: realClock },
     // PeerJS log level 1 as the legacy page set it (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__fidice', title: 'Fidice', debug: 1 },

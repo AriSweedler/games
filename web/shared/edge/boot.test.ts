@@ -923,6 +923,7 @@ const bootPage = (options: Options = {}) => {
         handoff: false,
         oppName: null,
         oppConnected: false,
+        seats: [],
       }),
       guestContextOf: (app) => ({
         attempt: app.steps,

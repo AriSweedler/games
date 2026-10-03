@@ -31,10 +31,9 @@ import {
   runEffect,
   type App,
   type Hive,
-  type HostContext,
 } from './src/ui/state.ts';
 
-bootShell<Hive, App, object, HostContext>({
+bootShell<Hive, App>({
   page: { doc: document, win: window, nav: navigator, store: browserStore(), clock: realClock },
   game: { hook: '__hive', title: 'Hive', debug: 0 },
   sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },

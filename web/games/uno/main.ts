@@ -28,11 +28,10 @@ import {
   reduce,
   runEffect,
   type App,
-  type HostContext,
   type Uno,
 } from './src/ui/state.ts';
 
-bootShell<Uno, App, object, HostContext>({
+bootShell<Uno, App>({
   page: { doc: document, win: window, nav: navigator, store: browserStore(), clock: realClock },
   game: { hook: '__uno', title: 'UNO', debug: 0 },
   sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },

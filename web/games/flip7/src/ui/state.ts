@@ -34,7 +34,6 @@ import {
   type HostContextOf,
   type Intent as SharedIntent,
   type Resume as SharedResume,
-  type SeatState,
   type ShellApp,
   type ShellConfig,
   type ShellState,
@@ -486,13 +485,10 @@ export const myTurn = (app: App): boolean => {
 export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(save, FLIP7);
 export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, FLIP7);
 
-export type HostContext = HostContextOf<Flip7> & Readonly<{ seats: ReadonlyArray<SeatState> }>;
+export type HostContext = HostContextOf<Flip7>;
 export type GuestContext = GuestContextOf;
 
-export const hostContextOf = (app: App): HostContext => ({
-  ...shellHostContextOf(app.shell),
-  seats: app.shell.seats,
-});
+export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
 export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
 
 export type EffectDeps = ShellEffectDeps<Flip7>;

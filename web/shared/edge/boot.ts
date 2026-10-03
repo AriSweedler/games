@@ -371,15 +371,9 @@ export type SessionLike<K extends 'host' | 'guest', F> = Readonly<{
   send: (frame: F, seat?: number) => void;
   close: () => void;
 }>;
-/**
- * A host session's deps over the game's bag; `HC` is what its `read` returns: the shell's host
- * context, or a game's wider one (an N-seat codec reads the seat list off it for its welcome, so
- * the game's `reducer.hostContextOf` adds `seats` to the shell's and its `Host` asks for them).
- */
-export type HostDepsOf<
-  G extends BootTypes,
-  HC extends HostContextOf<G> = HostContextOf<G>,
-> = NetDeps & Readonly<{ read: () => HC; events: HostEvents<GuestFrameOf<G>> }>;
+/** A host session's deps over the game's bag; its `read` returns the shell's host context, `seats` among its fields for an N-seat codec's welcome. */
+export type HostDepsOf<G extends BootTypes> = NetDeps &
+  Readonly<{ read: () => HostContextOf<G>; events: HostEvents<GuestFrameOf<G>> }>;
 export type GuestDepsOf<G extends BootTypes> = NetDeps &
   Readonly<{ read: () => GuestContextOf; events: GuestEvents<HostFrameOf<G>> }>;
 /** The host session's options less the game: `capacity`, `waiting` and `names` ride only for an N-seat room (shell.ts `startHost` effect). */
@@ -421,12 +415,7 @@ export type BootCtx<G extends BootTypes, App extends BootApp<G>> = Readonly<{
  * `App` its App (the boot reads `shell.soundFont` and `shell.view` of it), `Ex` the effect adapters
  * it has beside the shell's (gin's Score Counter and clipboard; backgammon none).
  */
-export type BootConfig<
-  G extends BootTypes,
-  App extends BootApp<G>,
-  Ex extends object,
-  HC extends HostContextOf<G> = HostContextOf<G>,
-> = Readonly<{
+export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends object> = Readonly<{
   page: BootPage<G>;
   game: Readonly<{
     /** The documented test hook's property on the window: `__gin`, `__backgammon` (tools/games.ts REGISTRY `hook`). */
@@ -455,8 +444,7 @@ export type BootConfig<
     ) => Readonly<{ app: App; effects: ReadonlyArray<Effect<G>> }>;
     runEffect: (app: App, effect: Effect<G>, deps: ShellEffectDeps<G> & Ex) => void;
     readHome: (store: G['Store']) => HomeSnapshot<G>;
-    /** What the host session reads back: the shell's, or the game's wider context (`HC`) its `Host` asks for. */
-    hostContextOf: (app: App) => HC;
+    hostContextOf: (app: App) => HostContextOf<G>;
     guestContextOf: (app: App) => GuestContextOf;
   }>;
   paint: Readonly<{
@@ -477,7 +465,7 @@ export type BootConfig<
   /** The game's fx.ts `createFx`: the shared cue player over its table and its sound key. */
   fx: (deps: FxDepsOf<G>) => CuePlayer<Cue<G>>;
   net: Readonly<{
-    Host: new (deps: HostDepsOf<G, HC>, opts: HostOptionsOf) => SessionLike<'host', HostFrameOf<G>>;
+    Host: new (deps: HostDepsOf<G>, opts: HostOptionsOf) => SessionLike<'host', HostFrameOf<G>>;
     Guest: new (
       deps: GuestDepsOf<G>,
       opts: GuestOptionsOf,
@@ -538,9 +526,8 @@ export const bootShell = <
   G extends BootTypes,
   App extends BootApp<G> = ShellApp<G> & BootApp<G>,
   Ex extends object = object,
-  HC extends HostContextOf<G> = HostContextOf<G>,
 >(
-  cfg: BootConfig<G, App, Ex, HC>,
+  cfg: BootConfig<G, App, Ex>,
 ): BootCtx<G, App> => {
   const { doc, win, nav, store, clock } = cfg.page;
   // The sound font (docs/design/sound-fonts.md §6): a value the console left in storage that names
