@@ -221,8 +221,16 @@ file it names.
     `npm run test:harness`, `npm run test:site` (the build and the dist guards), the shell specs
     with `--grep @<g>` and the game's own spec at your port offset.
 
-A scaffolder that writes steps 2 to 11 as a skeleton is a planned row; until it lands, the closest
-game's files are the template.
+Steps 2 to 11 start from the scaffolder, never from a copy of another game:
+`npm run new-game -- --name <slug> --title <Title> --seats <min>-<max> --hidden-hands yes|no`
+(`tools/new-game.ts`, docs/design/new-game.md) writes the skeleton (Hive's shape with the game cut
+out: a placeholder engine with its bot game, the reducer with the end's pause, the cue table over
+`SHELL_CUES`, the one-screen Rules items, `page.ts` and the composed `index.html`, `theme.css`, the
+e2e fixture and spec, `docs/design/<g>.md` with its TODO rows) and every registry row and pin of
+steps 7 to 11, so `npm run typecheck`, `npm run test:<g>`, `npm run test:harness` and the
+conformance suite pass before a rule is written; it then prints what is left (the rules, the
+table, the splash, the floors). The two things it leaves as declared gaps: the stepper and the
+seat names when `--seats` is a range (Flip 7's shape, docs/design/flip7.md §8).
 
 ## Review
 
