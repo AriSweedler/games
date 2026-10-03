@@ -66,6 +66,7 @@ import {
   type ShellConfig,
   type ShellIntent as SharedShellIntent,
   type Role,
+  type ScreenId,
   type ShellState,
   type Step as SharedStep,
   type TableReset,
@@ -167,15 +168,6 @@ export {
   type Target,
 };
 /** The five top-level screens `showScreen` toggles between (design §4 `SCREENS`). */
-export const SCREENS = [
-  'homeScreen',
-  'hostWaitScreen',
-  'guestWaitScreen',
-  'tableScreen',
-  'endgameScreen',
-] as const;
-export type ScreenId = (typeof SCREENS)[number];
-
 /** What the home screen's resume box offers (`resumeFor`), one per save role (web/shared/ui/shell.ts `ShellResume`; backgammon adds none). */
 export type Resume = SharedResume<Backgammon>;
 
@@ -196,7 +188,7 @@ export type Backgammon = Readonly<{
   Table: Table;
   Tab: HomeTab;
   Mode: PlayMode;
-  Screen: ScreenId;
+  Screen: never;
   Timer: 'shake' | 'noMove' | 'tumble';
   Cue: Cue;
   Cues: CueMemory;
@@ -526,7 +518,7 @@ const rendered = (app: App, prev: View | null, ctx: Context): Step => {
   // Pass-and-play toasts the player hit when the phone reaches them (`handedHits`), not here.
   const hitToasts = since && app.shell.role !== 'local' ? hitToastsBetween(prev, view) : [];
   const beat = changed && freshNoMove(prev, view);
-  const screen: ScreenId = view.matchOver ? 'endgameScreen' : 'tableScreen';
+  const screen: ScreenId<Backgammon> = view.matchOver ? 'endgameScreen' : 'tableScreen';
   const resultOpen = view.phase === 'over' ? prev?.phase !== 'over' || app.table.resultOpen : false;
   return step(
     {

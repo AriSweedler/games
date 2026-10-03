@@ -30,6 +30,7 @@
 // longer in hand is dropped), and a leave closes the network before the state is reset, so the
 // session's own close still raises the "disconnected" toast the legacy raised.
 import {
+  SHELL_SCREENS,
   LONG_PRESS_MS,
   NOT_CONNECTED_MSG,
   guestContextOf as shellGuestContextOf,
@@ -136,15 +137,7 @@ export type Sandbox = Readonly<{
   helpOpen: boolean;
 }>;
 /** The seven top-level screens `showScreen` toggled between. */
-export const SCREENS = [
-  'homeScreen',
-  'hostWaitScreen',
-  'guestWaitScreen',
-  'tableScreen',
-  'endgameScreen',
-  'scGameScreen',
-  'scEndScreen',
-] as const;
+export const SCREENS = [...SHELL_SCREENS, 'scGameScreen', 'scEndScreen'] as const;
 export type ScreenId = (typeof SCREENS)[number];
 
 /**
@@ -170,7 +163,7 @@ export type Gin = Readonly<{
   Table: Table;
   Tab: HomeTab;
   Mode: PlayMode;
-  Screen: ScreenId;
+  Screen: 'scGameScreen' | 'scEndScreen';
   Timer: 'cardPress';
   Cue: Cue;
   Cues: CueState;

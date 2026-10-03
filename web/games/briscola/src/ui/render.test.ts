@@ -40,8 +40,6 @@ import {
   connDotClass,
   handIntentOf,
   paint,
-  paintScreen,
-  paintWaiting,
   replayLabel,
   resultLine,
   resultSheetText,
@@ -52,9 +50,9 @@ import {
   IMPACT_SUIT,
   clashFxHtml,
 } from './render.ts';
+import { SHELL_SCREENS } from '../../../../shared/ui/shell.ts';
 import {
   DEFAULT_OPTS,
-  SCREENS,
   awaitingDraw,
   initialApp,
   reduce,
@@ -122,7 +120,7 @@ const settled = (app: App): App =>
     app,
   );
 const shown = (p: BriscolaPage): ReadonlyArray<string> =>
-  SCREENS.filter((id) => !p.get(id).hidden());
+  SHELL_SCREENS.filter((id) => !p.get(id).hidden());
 const c = (id: string): Card => {
   const card = cardById(id);
   if (card === null) throw new Error(`no card ${id}`);
@@ -171,23 +169,22 @@ const declareHand = (
 };
 
 describe('the shell painters and the pack', () => {
-  test('paintScreen shows one screen and fixes the body at the table; paintWaiting', () => {
+  test('paint shows one screen and fixes the body at the table; the waiting room reads the shell', () => {
     const p = page();
-    paintScreen(p.doc, initialApp);
+    paint(p.doc, initialApp);
     expect(shown(p)).toEqual(['homeScreen']);
     expect(p.body.hasClass('fixed-screen')).toBe(false);
-    paintScreen(p.doc, { ...initialApp, shell: { ...initialApp.shell, screen: 'tableScreen' } });
-    expect(shown(p)).toEqual(['tableScreen']);
-    expect(p.body.hasClass('fixed-screen')).toBe(true);
-    paintWaiting(p.doc, {
+    paint(p.doc, {
       ...initialApp,
       shell: {
         ...initialApp.shell,
+        screen: 'hostWaitScreen',
         code: 'KQZM',
         hostStatus: { text: 'Jeff joined! Ready when you are.', pulse: false },
         startGameVisible: true,
       },
     });
+    expect(shown(p)).toEqual(['hostWaitScreen']);
     expect(p.get('roomCode').text()).toBe('KQZM');
     expect(p.get('hostWaitStatus').hasClass('pulse')).toBe(false);
     expect(p.get('startGameBtn').hidden()).toBe(false);

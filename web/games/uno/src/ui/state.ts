@@ -69,15 +69,6 @@ import { cuesBetween, type Cue } from './sound.ts';
 
 export { DEFAULT_PLAY_MODE, HOME_TABS, cuesBetween, type HomeTab, type PlayMode };
 
-export const SCREENS = [
-  'homeScreen',
-  'hostWaitScreen',
-  'guestWaitScreen',
-  'tableScreen',
-  'endgameScreen',
-] as const;
-export type ScreenId = (typeof SCREENS)[number];
-
 /** The raw option values `host/click` and `local/click` carry: the two seat-count steppers and the third to twelfth names. */
 export type Raw = Readonly<{
   players?: string;
@@ -125,7 +116,7 @@ export type Uno = Readonly<{
   Table: Table;
   Tab: HomeTab;
   Mode: PlayMode;
-  Screen: ScreenId;
+  Screen: never;
   Timer: never;
   Cue: Cue;
   Cues: CueMemory;

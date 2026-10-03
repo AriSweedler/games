@@ -61,7 +61,6 @@ import {
   LEAVE_LOCAL_MSG,
   NOT_CONNECTED_MSG,
   SANDBOX_LOCAL_ONLY_MSG,
-  SCREENS,
   SHELL_INTENT_TYPES,
   TIP_HOVER_MS,
   TIP_PRESS_MS,
@@ -260,13 +259,6 @@ describe('the initial app', () => {
       mirror: [null, null, null, null],
       budget: [null, null, null, null],
     });
-    expect(SCREENS).toEqual([
-      'homeScreen',
-      'hostWaitScreen',
-      'guestWaitScreen',
-      'tableScreen',
-      'endgameScreen',
-    ]);
     expect(SHELL_INTENT_TYPES).toHaveLength(52);
     expect(EMPTY_SLOTS).toEqual([null, null, null]);
   });

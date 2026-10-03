@@ -26,11 +26,9 @@ import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
   bindSheets as bindShellSheets,
-  connDotView,
-  paintConnDot,
-  paintHandoff as paintShellHandoff,
-  paintScreen as paintShellScreen,
   paintSheet,
+  paintShellChrome,
+  shellButtons,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
 import type { PublicState, Seat as EngineSeat } from '../domain/types.ts';
@@ -54,6 +52,7 @@ import {
   viewedChair,
   type App,
   type ConfigTarget,
+  type Fidice,
   type Intent,
   type Ladder,
 } from './state.ts';
@@ -68,11 +67,6 @@ export { RULES_SLOT_IDS } from './rules.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 
-/** `showScreen(id)`: every screen but `id` gets `hidden`; the table locks the body to the viewport. */
-export const paintScreen = (doc: PageLike, app: App): void => {
-  paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
-};
-
 /** `#roomCode`, the two statuses, `#startGameBtn`, the seat lists with the computers under the humans, the watch box (ui/waiting.ts). */
 export const paintWaiting = (doc: DocumentLike, app: App): void => {
   paintRoom(doc, {
@@ -85,10 +79,10 @@ export const paintWaiting = (doc: DocumentLike, app: App): void => {
   });
 };
 
-/** `#handoffBtn` (the 🌐 on the table): a pass-the-phone game of two humans can go on as a hosted room (plan §7 D8); the tooltip names who hosts and who joins. */
-export const paintHandoff = (doc: DocumentLike, app: App): void => {
+/** `#handoffBtn`'s tooltip (the 🌐 on the table): a pass-the-phone game of two humans can go on as a hosted room (plan §7 D8), naming who hosts and who joins; null hides it. */
+export const handoffTitle = (app: App): string | null => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
-  paintShellHandoff(doc, game !== null && handoffable(app) ? handoffLabel(game) : null);
+  return game !== null && handoffable(app) ? handoffLabel(game) : null;
 };
 
 /**
@@ -326,13 +320,17 @@ export const paintTable = (doc: DocumentLike, app: App, now: number): void => {
 
 /** Every write from the App, in the order the sections above describe; the clock is read once per paint for the reveal's countdown (M7 paints it live). */
 export const paint = (doc: PageLike, app: App): void => {
-  paintScreen(doc, app);
-  paintWaiting(doc, app);
+  paintShellChrome(doc, app.shell, {
+    screens: SCREENS,
+    handoff: handoffTitle(app),
+    connDot: 'connDot',
+    waiting: (d) => {
+      paintWaiting(d, app);
+    },
+  });
   paintHome(doc, app);
   paintCurtain(doc, app);
-  paintHandoff(doc, app);
   paintNames(doc, app);
-  paintConnDot(doc, 'connDot', connDotView(app.shell));
   paintOverlays(doc, app);
   paintTable(doc, app, Date.now());
 };
@@ -349,11 +347,7 @@ const SHEETS: ReadonlyArray<Sheet<Intent>> = [
 /** The table's shell controls (page.ts `table`): leave, sound, the handoff, the rules, the history and the ladder sheets. */
 export const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
   bindButtons(doc, dispatch, [
-    ['leaveBtn', { type: 'leave/request' }],
-    ['soundBtn', { type: 'sound/toggle' }],
-    ['handoffBtn', { type: 'handoff/click' }],
-    ['rulesBtnGame', { type: 'rules/open' }],
-    ['historyBtn', { type: 'history/open' }],
+    ...shellButtons<Fidice>({ rules: { type: 'rules/open' }, history: { type: 'history/open' } }),
     ['ladderBtn', { type: 'ladder/open' }],
   ]);
 };

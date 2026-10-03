@@ -19,10 +19,9 @@ import {
   MOUNT_IDS,
   bindAll,
   intentOf,
+  handoffTitle,
   paint,
-  paintHandoff,
   paintNames,
-  paintScreen,
   paintTable,
   paintWaiting,
   uiOf,
@@ -163,14 +162,14 @@ describe('the static markup rendered at boot', () => {
 });
 
 describe('the shell painters over the App', () => {
-  test('paintScreen shows one of the six screens and locks the body on the table', () => {
+  test('paint shows one of the six screens and locks the body on the table', () => {
     const p = fidicePage(MARKUP);
-    paintScreen(p.doc, initialApp);
+    paint(p.doc, initialApp);
     SCREENS.forEach((id) => {
       expect(p.get(id).hidden(), id).toBe(id !== 'homeScreen');
     });
     expect(p.body.hasClass('fixed-screen')).toBe(false);
-    paintScreen(p.doc, hosted());
+    paint(p.doc, hosted());
     expect(p.get('tableScreen').hidden()).toBe(false);
     expect(p.body.hasClass('fixed-screen')).toBe(true);
   });
@@ -186,17 +185,16 @@ describe('the shell painters over the App', () => {
     expect(list).toContain('data-bot-remove data-bot="1"');
   });
 
-  test('paintHandoff offers the two-seat room for two humans at one phone and nothing otherwise', () => {
+  test('handoffTitle offers the two-seat room for two humans at one phone and nothing otherwise', () => {
+    expect(handoffTitle(local())).toBe('Continue online: Ann hosts, Bob joins by invite');
+    expect(handoffTitle(local('1'))).toBeNull();
+    expect(handoffTitle(hosted())).toBeNull();
     const p = fidicePage(MARKUP);
-    paintHandoff(p.doc, local());
+    paint(p.doc, local());
     expect(p.get('handoffBtn').hidden()).toBe(false);
     expect(p.get('handoffBtn').attr('title')).toBe(
       'Continue online: Ann hosts, Bob joins by invite',
     );
-    paintHandoff(p.doc, local('1'));
-    expect(p.get('handoffBtn').hidden()).toBe(true);
-    paintHandoff(p.doc, hosted());
-    expect(p.get('handoffBtn').hidden()).toBe(true);
   });
 
   test('paintNames: my chair and the other seats; the cup holder`s under pass the phone; Watching with no chair; empty off the table', () => {

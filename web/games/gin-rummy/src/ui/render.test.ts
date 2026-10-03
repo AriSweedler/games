@@ -25,7 +25,7 @@ import { cardHtml, pretty } from './cards.ts';
 import { slotHandView } from './hand/SlotHandView.ts';
 import { ginPage, type GinPage } from './page.fake.ts';
 import {
-  paintHandoff,
+  handoffTitle,
   RULES_SLOT_IDS,
   actionsHtml,
   bindAll,
@@ -40,9 +40,7 @@ import {
   meldOptionHtml,
   oppCardsHtml,
   paint,
-  paintScreen,
   paintSound,
-  paintWaiting,
   roundResultText,
   rulesItemsHtml,
   showToast,
@@ -177,34 +175,46 @@ describe('renderCopy: the rules', () => {
 });
 
 describe('screens, waiting statuses, toast and sound', () => {
-  test('paintScreen shows exactly the app screen and locks the body for the table', () => {
+  test('paint shows exactly the app screen (the scorer pair too) and locks the body for the table', () => {
     const p = page();
     expect(shown(p)).toEqual(['homeScreen']);
-    paintScreen(p.doc, { ...initialApp, shell: { ...initialApp.shell, screen: 'tableScreen' } });
+    paint(
+      p.doc,
+      { ...initialApp, shell: { ...initialApp.shell, screen: 'tableScreen' } },
+      slotHandView,
+    );
     expect(shown(p)).toEqual(['tableScreen']);
     expect(p.body.hasClass('fixed-screen')).toBe(true);
-    paintScreen(p.doc, { ...initialApp, shell: { ...initialApp.shell, screen: 'scEndScreen' } });
+    paint(
+      p.doc,
+      { ...initialApp, shell: { ...initialApp.shell, screen: 'scEndScreen' } },
+      slotHandView,
+    );
     expect(shown(p)).toEqual(['scEndScreen']);
     expect(p.body.hasClass('fixed-screen')).toBe(false);
   });
 
-  test('paintWaiting: the room code, both statuses with their pulse, the deal button', () => {
+  test('paint: the room code, both statuses with their pulse, the deal button, off the shell', () => {
     const p = page();
-    paintWaiting(p.doc, initialApp);
+    paint(p.doc, initialApp, slotHandView);
     expect(p.get('roomCode').text()).toBe('----');
     expect(p.get('hostWaitStatus').text()).toBe('Opening room…');
     expect(p.get('hostWaitStatus').hasClass('pulse')).toBe(true);
     expect(p.get('startGameBtn').hidden()).toBe(true);
-    paintWaiting(p.doc, {
-      ...initialApp,
-      shell: {
-        ...initialApp.shell,
-        code: 'ABCD',
-        hostStatus: { text: 'Jeff joined! Ready when you are.', pulse: true },
-        guestStatus: { text: 'boom', pulse: false },
-        startGameVisible: true,
+    paint(
+      p.doc,
+      {
+        ...initialApp,
+        shell: {
+          ...initialApp.shell,
+          code: 'ABCD',
+          hostStatus: { text: 'Jeff joined! Ready when you are.', pulse: true },
+          guestStatus: { text: 'boom', pulse: false },
+          startGameVisible: true,
+        },
       },
-    });
+      slotHandView,
+    );
     expect(p.get('roomCode').text()).toBe('ABCD');
     expect(p.get('hostWaitStatus').text()).toBe('Jeff joined! Ready when you are.');
     expect(p.get('guestWaitStatus').text()).toBe('boom');
@@ -233,17 +243,14 @@ describe('screens, waiting statuses, toast and sound', () => {
     expect(p.get('soundBtn').attr('title')).toBe('Sound & vibration on');
   });
 
-  test('paintHandoff: the 🌐 shows for a pass-and-play game alone, its tooltip naming who hosts and who joins', () => {
-    const p = page();
-    paintHandoff(p.doc, local(dealt, 0));
-    expect(p.get('handoffBtn').hidden()).toBe(false);
-    expect(p.get('handoffBtn').attr('title')).toBe(
+  test('handoffTitle: the 🌐 shows for a pass-and-play game alone, its tooltip naming who hosts and who joins', () => {
+    expect(handoffTitle(local(dealt, 0))).toBe(
       `Continue online: ${PLAYERS[0].name} hosts, ${PLAYERS[1].name} joins by invite`,
     );
-    paintHandoff(p.doc, local(dealt, 0, { shell: { role: 'host' } }));
-    expect(p.get('handoffBtn').hidden()).toBe(true);
-    paintHandoff(p.doc, { ...initialApp, shell: { ...initialApp.shell, role: 'local' } });
-    expect(p.get('handoffBtn').hidden()).toBe(true);
+    expect(handoffTitle(local(dealt, 0, { shell: { role: 'host' } }))).toBeNull();
+    expect(
+      handoffTitle({ ...initialApp, shell: { ...initialApp.shell, role: 'local' } }),
+    ).toBeNull();
   });
 
   test('a missing element is a programming error', () => {

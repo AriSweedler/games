@@ -61,18 +61,16 @@ import {
   bindSheets as bindShellSheets,
   connDotClass as shellConnDotClass,
   connDotView,
-  paintConnDot,
-  paintHandoff as paintShellHandoff,
-  paintScreen as paintShellScreen,
   paintSheet,
-  paintWaiting as paintShellWaiting,
+  paintShellChrome,
+  shellButtons,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
 import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
-import { canDropDiscard, handoffLabel, SCREENS, type App, type Intent } from './state.ts';
+import { canDropDiscard, handoffLabel, SCREENS, type App, type Gin, type Intent } from './state.ts';
 
 export type { PageLike };
 export type Dispatch = (intent: Intent) => void;
@@ -103,27 +101,15 @@ const bindSheets = (doc: PageLike, dispatch: Dispatch): void => {
   bindShellSheets(doc, SHEETS, dispatch);
 };
 
-/** `showScreen(id)`: every screen but `id` gets `hidden`; the table locks the body to the viewport. */
-export const paintScreen = (doc: PageLike, app: App): void => {
-  paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
-  // The card back: theme.css draws every `.card.back` from `body[data-card-back]` (src/cardBack.ts).
-  setAttr(doc.body, 'data-card-back', app.table.cardBack);
-};
-
-/** `#roomCode`, `#hostWaitStatus` (+ its pulse), `#startGameBtn`, `#guestWaitStatus` (+ its pulse). */
-export const paintWaiting = (doc: DocumentLike, app: App): void => {
-  paintShellWaiting(doc, app.shell);
-};
-
 /**
- * `#handoffBtn` (the 🌐 beside the leave button): a pass-and-play game can go on as a hosted room,
- * the other seat joining from its own device (ui/state.ts `handoff`); the tooltip names who hosts
- * and who joins. A room is online already and the scorer has no table, so it shows for
- * pass-and-play alone.
+ * `#handoffBtn`'s tooltip (the 🌐 beside the leave button): a pass-and-play game can go on as a
+ * hosted room, the other seat joining from its own device (ui/state.ts `handoff`), naming who
+ * hosts and who joins. A room is online already and the scorer has no table, so it shows for
+ * pass-and-play alone: null hides it.
  */
-export const paintHandoff = (doc: DocumentLike, app: App): void => {
+export const handoffTitle = (app: App): string | null => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
-  paintShellHandoff(doc, game === null ? null : handoffLabel(game));
+  return game === null ? null : handoffLabel(game);
 };
 
 // ---- the table -----------------------------------------------------------------------------------
@@ -136,11 +122,10 @@ export const oppCardsHtml = (cardCount: number): string =>
 /** `#connDot`'s whole class attribute; pass-and-play hides it (the shell's, dry-round-2.md E6, over the App's shell slice). */
 export const connDotClass = (app: App): string => shellConnDotClass(connDotView(app.shell));
 
-const paintOpponent = (doc: DocumentLike, app: App, v: View): void => {
+const paintOpponent = (doc: DocumentLike, v: View): void => {
   setText(requireId(doc, 'oppName'), v.opp.name);
   setText(requireId(doc, 'oppScore'), `${String(v.opp.total)} pts`);
   setHtml(requireId(doc, 'oppCards'), trustedHtml(oppCardsHtml(v.opp.cardCount)));
-  paintConnDot(doc, 'connDot', connDotView(app.shell));
   setText(requireId(doc, 'roundBadge'), `Hand ${String(v.handNumber)}`);
   setText(requireId(doc, 'targetBadge'), `to ${String(v.target)}`);
 };
@@ -642,7 +627,7 @@ const paintGame = (doc: DocumentLike, app: App, handView: HandView): void => {
     paintRoundResult(doc, app, v);
     return;
   }
-  paintOpponent(doc, app, v);
+  paintOpponent(doc, v);
   paintPiles(doc, v);
   paintTableMelds(doc, app, v);
   paintStatus(doc, app, v);
@@ -658,11 +643,15 @@ const paintGame = (doc: DocumentLike, app: App, handView: HandView): void => {
  * `slotHandView`; no default here, so the legacy `defaultHandView` tree-shakes out of the page).
  */
 export const paint = (doc: PageLike, app: App, handView: HandView): void => {
-  paintScreen(doc, app);
-  paintWaiting(doc, app);
+  paintShellChrome(doc, app.shell, {
+    screens: SCREENS,
+    handoff: handoffTitle(app),
+    connDot: 'connDot',
+  });
+  // The card back: theme.css draws every `.card.back` from `body[data-card-back]` (src/cardBack.ts).
+  setAttr(doc.body, 'data-card-back', app.table.cardBack);
   paintHome(doc, app);
   paintCurtain(doc, app);
-  paintHandoff(doc, app);
   paintGame(doc, app, handView);
   paintOverlays(doc, app);
 };
@@ -684,18 +673,17 @@ export const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
   bindButtons(doc, dispatch, [
     ['stockPile', { type: 'stock/tap' }],
     ['discardPile', { type: 'discard/tap' }],
-    ['soundBtn', { type: 'sound/toggle' }],
+    ...shellButtons<Gin>({
+      rules: { type: 'rules/open' },
+      history: { type: 'history/open', who: 'game' },
+    }),
     ['deadwoodInfo', { type: 'meld/open' }],
     ['discardsBtn', { type: 'discards/open' }],
     ['arrangeBtn', { type: 'arrange/open' }],
     ['rrContinueBtn', { type: 'act', action: { type: 'ready' } }],
     ['rrHideBtn', { type: 'result/hide' }],
     ['rematchBtn', { type: 'act', action: { type: 'ready' } }],
-    ['leaveBtn', { type: 'leave/request' }],
     ['leaveBtnEnd', { type: 'leave/request' }],
-    ['handoffBtn', { type: 'handoff/click' }],
-    ['rulesBtnGame', { type: 'rules/open' }],
-    ['historyBtn', { type: 'history/open', who: 'game' }],
     ['historyBtnEnd', { type: 'history/open', who: 'game' }],
   ]);
   listenId(doc, 'hand', 'click', (e) => {

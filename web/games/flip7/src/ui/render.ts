@@ -31,12 +31,9 @@ import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
   bindSheets,
-  connDotView,
-  paintConnDot,
-  paintHandoff as paintShellHandoff,
-  paintScreen as paintShellScreen,
   paintSheet,
-  paintWaiting as paintShellWaiting,
+  paintShellChrome,
+  shellButtons,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
 import { cardName, type Card } from '../engine/cards.ts';
@@ -51,7 +48,7 @@ import {
   writeClock,
   type Moments,
 } from './motion.ts';
-import { SCREENS, handoffLabel, listNames, myTurn, type App, type Intent } from './state.ts';
+import { handoffLabel, listNames, myTurn, type App, type Flip7, type Intent } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 export { fillNameInputs, fillP2NameInput, setCodeInput } from './home.ts';
@@ -70,10 +67,10 @@ export const CURTAIN_SUB = 'Every card is face up: everyone can watch.';
 
 // ---- the shell's halves ---------------------------------------------------------------------
 
-/** `#handoffBtn`: a two-seat pass-and-play game can go on as a hosted room. */
-const paintHandoff = (doc: DocumentLike, app: App): void => {
+/** `#handoffBtn`'s tooltip: a two-seat pass-and-play game can go on as a hosted room; null hides it. */
+const handoffTitle = (app: App): string | null => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
-  paintShellHandoff(doc, game !== null && game.seats.length === 2 ? handoffLabel(game) : null);
+  return game !== null && game.seats.length === 2 ? handoffLabel(game) : null;
 };
 
 /** The curtain for the seat the phone goes to: its name, and the round about to be dealt. */
@@ -234,7 +231,6 @@ const paintTable = (doc: DocumentLike, app: App): void => {
     requireId(doc, 'oppName'),
     listNames(v.seats.filter((_, i) => i !== v.me).map((s) => s.name)),
   );
-  paintConnDot(doc, 'oppDot', connDotView(app.shell));
   setText(
     requireId(doc, 'roundLabel'),
     v.opening > 0 ? `Round ${String(v.round)} · dealing` : `Round ${String(v.round)}`,
@@ -283,11 +279,9 @@ const paintPause = (doc: DocumentLike, app: App): void => {
 };
 
 export const paint = (doc: PageLike, app: App): void => {
-  paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
-  paintShellWaiting(doc, app.shell);
+  paintShellChrome(doc, app.shell, { handoff: handoffTitle(app), connDot: 'oppDot' });
   paintHome(doc, app);
   paintCurtain(doc, app);
-  paintHandoff(doc, app);
   paintTable(doc, app);
   paintPause(doc, app);
   paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
@@ -307,11 +301,7 @@ export const bindAll = (doc: PageLike, dispatch: (intent: Intent) => void): void
   bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
   bindButtons(doc, dispatch, [
     ['curtainHandoffBtn', { type: 'handoff/click' }],
-    ['handoffBtn', { type: 'handoff/click' }],
-    ['leaveBtn', { type: 'leave/request' }],
-    ['rulesBtnGame', { type: 'rules/open' }],
-    ['historyBtn', { type: 'history/open' }],
-    ['soundBtn', { type: 'sound/toggle' }],
+    ...shellButtons<Flip7>({ rules: { type: 'rules/open' }, history: { type: 'history/open' } }),
     ['hitBtn', { type: 'hit/click' }],
     ['stayBtn', { type: 'stay/click' }],
     ['nextRoundBtn', { type: 'nextRound/click' }],
