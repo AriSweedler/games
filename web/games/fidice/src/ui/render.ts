@@ -22,6 +22,7 @@ import {
   type DocumentLike,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindSheets as bindShellSheets,
@@ -44,13 +45,11 @@ import type {
   Ui,
 } from '../view/types.ts';
 import { mount } from '../view/vdom.ts';
-import { handoffLabel } from '../../../../shared/lib/name.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
 import {
+  FIDICE,
   SCREENS,
-  handoffable,
-  namesOf,
   viewedChair,
   type App,
   type ConfigTarget,
@@ -79,12 +78,6 @@ export const paintWaiting = (doc: DocumentLike, app: App): void => {
     watch: app.shell.opts.watch,
     host: app.shell.role === 'host',
   });
-};
-
-/** `#handoffBtn`'s tooltip (the 🌐 on the table): a pass-the-phone game of two humans can go on as a hosted room (plan §7 D8), naming who hosts and who joins; null hides it. */
-export const handoffTitle = (app: App): string | null => {
-  const game = app.shell.role === 'local' ? app.shell.game : null;
-  return game !== null && handoffable(app) ? handoffLabel(namesOf(game)) : null;
 };
 
 /**
@@ -322,7 +315,7 @@ export const paintTable = (doc: DocumentLike, app: App, now: number): void => {
 export const paint = (doc: PageLike, app: App): void => {
   paintShellChrome(doc, app.shell, {
     screens: SCREENS,
-    handoff: handoffTitle(app),
+    handoff: handoffLabelOf(app.shell, FIDICE),
     connDot: 'connDot',
     waiting: (d) => {
       paintWaiting(d, app);

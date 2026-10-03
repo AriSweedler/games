@@ -100,7 +100,6 @@ import type {
   GameOptions,
   Played,
   Seat,
-  SeatCount,
   State,
   TrickRecord,
   View,
@@ -873,13 +872,6 @@ const replayDecided = (app: App, game: State, ctx: Context): Step => {
 /** The seats' names in order: the shell's labels read them (web/shared/lib/name.ts `handoffLabel`, `resumeLabel`). */
 export const namesOf = (game: State): ReadonlyArray<string> => game.players.map((p) => p.name);
 
-/** The seats at the table of the game in play or on offer; two when there is none (the handoff's gate). */
-const seatCountOf = (app: App): SeatCount => {
-  const s = app.shell;
-  if (s.role === 'local' && s.game !== null) return s.game.options.seatCount;
-  return s.resume?.kind === 'local' ? s.resume.game.options.seatCount : 2;
-};
-
 // ---- pass-and-play: whose view, and when the curtain rises (D17) --------------------------------
 
 /**
@@ -1297,8 +1289,6 @@ const forIntent = (app: App, intent: Intent): Step => {
 const reduceInner = (app: App, intent: Intent, ctx: Context): Step => {
   const v = app.shell.view;
   if (intent.type === 'guest/lost' && v?.phase === 'over') return hostLeft(app, v, ctx);
-  // The handoff is a two-seat room (D17): offered at two players only.
-  if (intent.type === 'handoff/click' && seatCountOf(app) !== 2) return pure(app);
   // A seat is down mid-game: the trick waits for it, so a guest's play is refused with who is missing.
   if (intent.type === 'host/frame' && intent.frame.t === 'action') {
     const down = seatsDown(app);

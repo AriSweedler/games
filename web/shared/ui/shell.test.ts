@@ -50,6 +50,8 @@ import {
   guestGoneMsg,
   guestName,
   guestNameAmong,
+  handoffLabelOf,
+  handoffable,
   hostContextOf,
   hostDispatch,
   initialShell,
@@ -694,6 +696,32 @@ describe('a table of four (FAKE4: cfg.seats)', () => {
     expect(
       run4(initialApp4, { type: 'host/click', name: 'Ann', level: '1' }).app.shell.seats,
     ).toEqual([EMPTY_SEAT]);
+  });
+
+  test('the handoff is a two-seat room: a pass-and-play game or offer whose terms seat more is not offered, its click dropped; at two it hosts as the two-seat game does', () => {
+    const at = (level: string): App4 =>
+      run4(initialApp4, { type: 'local/click', p1: 'Ann', p2: 'Bob', level }).app;
+    const four = at('4');
+    expect(handoffable(four.shell, FAKE4)).toBe(false);
+    expect(handoffLabelOf(four.shell, FAKE4)).toBeNull();
+    expect(run4(four, { type: 'handoff/click' })).toEqual({ app: four, effects: [] });
+    const offer4 = withShell(initialApp4, { resume: { kind: 'local', game: game4(four) } });
+    expect(handoffable(offer4.shell, FAKE4)).toBe(false);
+    expect(run4(offer4, { type: 'handoff/click' })).toEqual({ app: offer4, effects: [] });
+    const two = at('2');
+    expect(handoffable(two.shell, FAKE4)).toBe(true);
+    expect(handoffLabelOf(two.shell, FAKE4)).toBe(
+      'Continue online: Ann hosts, Bob joins by invite',
+    );
+    const handed = run4(two, { type: 'handoff/click' });
+    expect(handed.app.shell).toMatchObject({
+      role: 'host',
+      handoff: true,
+      myName: 'Ann',
+      seats: [{ name: 'Bob', connected: false }],
+      screen: 'hostWaitScreen',
+    });
+    expect(handed.effects.at(-1)).toMatchObject({ type: 'startHost', capacity: 2 });
   });
 
   test('a join fills the seat the session names; names are deduped against the host and every other seat; the lobby goes to each connected seat with its own `you`; Start waits for the table', () => {
@@ -2923,6 +2951,38 @@ describe('resume and the handoff', () => {
       opts: { level: 2 },
     });
     expect(marks(fromTable.app).at(-1)).toBe('handoff');
+  });
+
+  test('handoffLabelOf: the 🌐`s tooltip names who hosts and who joins for the game in play at one phone; null at home, online, or with no game', () => {
+    expect(handoffLabelOf(local().shell, FAKE)).toBe(
+      'Continue online: Ann hosts, Bob joins by invite',
+    );
+    expect(handoffLabelOf(initialApp.shell, FAKE)).toBeNull();
+    expect(handoffLabelOf(hosting().shell, FAKE)).toBeNull();
+    // The home's pass-and-play offer is `handoffable` (the resume box's label), not the button's.
+    expect(handoffable(offered().shell, FAKE)).toBe(true);
+    expect(handoffLabelOf(offered().shell, FAKE)).toBeNull();
+    expect(handoffLabelOf(withShell(initialApp, { role: 'local' }).shell, FAKE)).toBeNull();
+  });
+
+  test('engine.handoffable: the game`s own rule gates the click, the label and the offer alike; absent, every two-seat game may go online', () => {
+    // The table in play is at level 2 (`local`), the home's offer at level 3 (`dealt`).
+    const picky: ShellConfig<Fake> = {
+      ...FAKE,
+      engine: { ...FAKE.engine, handoffable: (g) => g.level !== 2 },
+    };
+    const table = local();
+    expect(handoffable(table.shell, picky)).toBe(false);
+    expect(handoffLabelOf(table.shell, picky)).toBeNull();
+    expect(runIn(ctx, picky, table, { type: 'handoff/click' })).toEqual({
+      app: table,
+      effects: [],
+    });
+    expect(handoffable(offered().shell, picky)).toBe(true);
+    expect(runIn(ctx, picky, offered(), { type: 'handoff/click' }).app.shell).toMatchObject({
+      role: 'host',
+      handoff: true,
+    });
   });
   const waitingSave = { ...hostSave, game: null, oppName: null, at: NOW - 60_000 } as const;
 

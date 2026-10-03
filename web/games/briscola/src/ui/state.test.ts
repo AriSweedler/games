@@ -412,20 +412,6 @@ describe('pass and play: seating two, three and four', () => {
     }).app;
     expect(game(typed).players).toHaveLength(3);
   });
-
-  test('the handoff is offered at two seats only: at three the intent is dropped, at two it opens a room', () => {
-    const three = revealed(local({ localPlayers: '3', names: ['Cara'] }));
-    const dropped = run(three, { type: 'handoff/click' });
-    expect(dropped.app).toBe(three);
-    expect(dropped.effects).toEqual([]);
-    const two = run(revealed(local()), { type: 'handoff/click' });
-    expect(two.app.shell.role).toBe('host');
-    expect(two.app.shell.handoff).toBe(true);
-    expect(two.app.shell.screen).toBe('hostWaitScreen');
-    expect(handoffLabel(namesOf(game(two.app)))).toBe(
-      'Continue online: Ann hosts, Bob joins by invite',
-    );
-  });
 });
 
 describe('pass and play: the lift, the play, the settle beat and the curtain', () => {

@@ -55,6 +55,7 @@ import { bindDrag } from './hand/dragger.ts';
 import { flipCards } from './hand/flip.ts';
 import { phoneRows, samePicture } from './hand/picture.ts';
 import { SORT_MODES, type SortMode } from '../sort.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindLongPress,
@@ -70,12 +71,11 @@ import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
-import { handoffLabel } from '../../../../shared/lib/name.ts';
 import {
   canDropDiscard,
+  GIN,
   historyWho,
   SCREENS,
-  namesOf,
   type App,
   type Gin,
   type Intent,
@@ -108,17 +108,6 @@ const SHEETS: ReadonlyArray<Sheet<Intent>> = [
 
 const bindSheets = (doc: PageLike, dispatch: Dispatch): void => {
   bindShellSheets(doc, SHEETS, dispatch);
-};
-
-/**
- * `#handoffBtn`'s tooltip (the 🌐 beside the leave button): a pass-and-play game can go on as a
- * hosted room, the other seat joining from its own device (ui/state.ts `handoff`), naming who
- * hosts and who joins. A room is online already and the scorer has no table, so it shows for
- * pass-and-play alone: null hides it.
- */
-export const handoffTitle = (app: App): string | null => {
-  const game = app.shell.role === 'local' ? app.shell.game : null;
-  return game === null ? null : handoffLabel(namesOf(game));
 };
 
 // ---- the table -----------------------------------------------------------------------------------
@@ -655,7 +644,7 @@ const paintGame = (doc: DocumentLike, app: App, handView: HandView): void => {
 export const paint = (doc: PageLike, app: App, handView: HandView): void => {
   paintShellChrome(doc, app.shell, {
     screens: SCREENS,
-    handoff: handoffTitle(app),
+    handoff: handoffLabelOf(app.shell, GIN),
     connDot: 'connDot',
   });
   // The card back: theme.css draws every `.card.back` from `body[data-card-back]` (src/cardBack.ts).

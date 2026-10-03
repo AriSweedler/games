@@ -54,6 +54,7 @@ import {
   type Element,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindSheets,
@@ -82,13 +83,12 @@ import {
 import { bugHtml } from './bugs.ts';
 import { bindDrag } from './dragger.ts';
 import { bindHome, paintHome } from './home.ts';
-import { handoffLabel } from '../../../../shared/lib/name.ts';
 import { hopAlong } from './motion.ts';
 import {
+  HIVE,
   HIVE_HINTS,
   HIVE_MOTION,
   intentOf,
-  namesOf,
   placeableNow,
   reachable,
   type App,
@@ -532,11 +532,7 @@ export const paintHints = (doc: DocumentLike, hints: Hints): void => {
 };
 
 export const paint = (doc: PageLike, app: App): void => {
-  const game = app.shell.role === 'local' ? app.shell.game : null;
-  paintShellChrome(doc, app.shell, {
-    handoff: game === null ? null : handoffLabel(namesOf(game)),
-    connDot: 'oppDot',
-  });
+  paintShellChrome(doc, app.shell, { handoff: handoffLabelOf(app.shell, HIVE), connDot: 'oppDot' });
   // No curtain to paint: the shell composed `#curtainOverlay` hidden and `viewer` never raises it.
   paintHome(doc, app);
   const v = app.shell.view;

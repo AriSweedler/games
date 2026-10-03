@@ -210,13 +210,6 @@ describe('pass and play', () => {
     expect(next.app.shell.revealed).toBeNull();
     expect(next.app.table.curtain).not.toBeNull();
   });
-
-  test('the handoff is offered at two seats only', () => {
-    const three = run(initialApp, localClick('3')).app;
-    expect(run(three, { type: 'handoff/click' }).app).toBe(three);
-    const two = run(initialApp, localClick('2')).app;
-    expect(run(two, { type: 'handoff/click' }).app.shell.role).toBe('host');
-  });
 });
 
 describe('online', () => {

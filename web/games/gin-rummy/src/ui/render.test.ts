@@ -10,6 +10,7 @@ import type { RecentGame } from '../../../../shared/lib/recentGames.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
 import { aboutHtml } from '../../../../shared/ui/glossary.ts';
 import { recentGamesHtml } from '../../../../shared/ui/recentGames.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import { renderCopy } from '../../../../shared/ui/shellPaint.ts';
 import {
   applyAction,
@@ -25,7 +26,6 @@ import { cardHtml, pretty } from './cards.ts';
 import { slotHandView } from './hand/SlotHandView.ts';
 import { ginPage, type GinPage } from './page.fake.ts';
 import {
-  handoffTitle,
   RULES_SLOT_IDS,
   actionsHtml,
   bindAll,
@@ -54,6 +54,7 @@ import { ABOUT_PARAGRAPHS } from './about.ts';
 import { GLOSSARY } from './glossary.ts';
 import { RULES_ITEMS, RULES_LIST_HTML } from './rules.ts';
 import {
+  GIN,
   SCREENS,
   initialApp,
   reduce,
@@ -243,14 +244,13 @@ describe('screens, waiting statuses, toast and sound', () => {
     expect(p.get('soundBtn').attr('title')).toBe('Sound & vibration on');
   });
 
-  test('handoffTitle: the 🌐 shows for a pass-and-play game alone, its tooltip naming who hosts and who joins', () => {
-    expect(handoffTitle(local(dealt, 0))).toBe(
+  test('the 🌐 shows for a pass-and-play game alone (the shell`s handoffLabelOf over GIN), its tooltip naming who hosts and who joins', () => {
+    const title = (app: App): string | null => handoffLabelOf(app.shell, GIN);
+    expect(title(local(dealt, 0))).toBe(
       `Continue online: ${PLAYERS[0].name} hosts, ${PLAYERS[1].name} joins by invite`,
     );
-    expect(handoffTitle(local(dealt, 0, { shell: { role: 'host' } }))).toBeNull();
-    expect(
-      handoffTitle({ ...initialApp, shell: { ...initialApp.shell, role: 'local' } }),
-    ).toBeNull();
+    expect(title(local(dealt, 0, { shell: { role: 'host' } }))).toBeNull();
+    expect(title({ ...initialApp, shell: { ...initialApp.shell, role: 'local' } })).toBeNull();
   });
 
   test('a missing element is a programming error', () => {

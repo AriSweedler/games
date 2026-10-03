@@ -195,18 +195,9 @@ const act = (app: App, action: Action, ctx: Ctx): Step => {
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step =>
   then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
 
-/** The seat count the current game or offer is played at (the handoff is a two-seat room). */
-const seatCountOf = (app: App): number => {
-  const s = app.shell;
-  if (s.role === 'local' && s.game !== null) return s.game.game.names.length;
-  return s.resume?.kind === 'local' ? s.resume.game.game.names.length : 2;
-};
-
 /** The shell's `local/click` seats two to twelve (its `seatNames` where the click carries none) and deals through `engine.create`. */
-export const reduce = (app: App, intent: Intent, ctx: Ctx): Step => {
-  if (intent.type === 'handoff/click' && seatCountOf(app) !== 2) return pure(app);
-  return isShellIntent(intent) ? reduceShell(app, intent, ctx, UNO) : tableIntent(app, intent, ctx);
-};
+export const reduce = (app: App, intent: Intent, ctx: Ctx): Step =>
+  isShellIntent(intent) ? reduceShell(app, intent, ctx, UNO) : tableIntent(app, intent, ctx);
 
 /** The resume box `initHome` shows, or null (a finished game is not offered). */
 export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(save, UNO);
