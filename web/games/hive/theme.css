@@ -205,21 +205,48 @@ label {
   justify-content: space-between;
   gap: 8px;
 }
+/* The names strip (page.ts table block, render.ts paintTable): a hex swatch in the side's tile
+   colour before each name, a thin rule between them, no words; at 390px the strip has about 110px
+   between the leave/globe pair and the rules/history/sound trio, so each name may shrink and
+   ellipsize, and never past 12 characters. */
 .names-strip {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.95rem;
+  gap: 6px;
+  font-size: 0.9rem;
   min-width: 0;
   flex: 1;
   justify-content: center;
   white-space: nowrap;
   overflow: hidden;
+}
+#myName,
+#oppName {
+  min-width: 0;
+  max-width: 12ch;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 .names-strip .vs {
-  color: var(--muted);
-  font-size: 0.8rem;
+  flex-shrink: 0;
+  width: 1px;
+  height: 14px;
+  background: var(--muted);
+  opacity: 0.6;
+}
+.side-swatch {
+  flex-shrink: 0;
+  width: 12px;
+  height: 13px;
+}
+.side-swatch polygon {
+  fill: var(--hive-white);
+  stroke: #cbbf9f;
+  stroke-width: 1.5;
+}
+.side-swatch[data-side='b'] polygon {
+  fill: var(--hive-black);
+  stroke: #57555c;
 }
 /* The board: the SVG fills the width and takes the height the hands leave it. */
 .board {
@@ -470,7 +497,7 @@ label {
 }
 /* The tiles' motion on the home (page.ts `playExtra`, render.ts `paintMotion`): a checkbox row, the
    shape backgammon's menu uses; the table's #motionBtn is hidden on a phone, whose topbar is full
-   (the names strip is already tight at 390px), so the home row is the choice there. */
+   (the names strip has about 110px at 390px), so the home row is the choice there. */
 .toggle-row {
   display: flex;
   align-items: center;

@@ -674,10 +674,10 @@ const hive: ShellDriver = {
   ...shellOnline,
   // No curtain, so no sub line; never read (e2e/fixtures/shell.ts `hasCurtain`).
   curtainSub: () => '',
-  // `#myName` is "<name> · White|Black" (ui/render.ts `paintTable`).
+  // `#myName` is the name alone; the side is the `#mySide` swatch (ui/render.ts `paintTable`).
   seatNames: {
     me: '#myName',
-    meText: (name) => new RegExp(`^${escapeRegExp(name)} · (White|Black)$`),
+    meText: (name) => new RegExp(`^${escapeRegExp(name)}$`),
     seated: '#guestSeatName',
   },
   start: async (host, guest) => {

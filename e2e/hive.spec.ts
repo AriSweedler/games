@@ -35,8 +35,60 @@ import { expect, test } from './fixtures/two-players.ts';
 
 const NAMES = ['Ari', 'Lavi'] as const;
 
-/** `#myName` as the table paints it: the seat's name and side. */
-const seated = (seat: 0 | 1): string => `${NAMES[seat]} · ${seat === 0 ? 'White' : 'Black'}`;
+/** `#myName` as the table paints it: the seat's name alone (the side is the `#mySide` swatch). */
+const seated = (seat: 0 | 1): string => NAMES[seat];
+
+/** The side the strip's swatch `id` shows, as a screen reader hears it. */
+const swatchSide = (page: Page, id: string): Promise<string | null> =>
+  page.locator(`#${id}`).getAttribute('aria-label');
+
+/** A box as `getBoundingClientRect` reads it. */
+type Box = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
+/** The topbar as laid out: whether the strip scrolls, every button on show, each name's box and whether it is whole. */
+type TopbarFit = {
+  readonly stripFits: boolean;
+  readonly buttons: ReadonlyArray<Box>;
+  readonly names: ReadonlyArray<Box & { readonly whole: boolean }>;
+};
+
+const topbarFitScript = `(() => {
+  const box = (el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; };
+  const strip = document.querySelector('.names-strip');
+  return {
+    stripFits: strip.scrollWidth <= strip.clientWidth,
+    buttons: [...document.querySelectorAll('.topbar .icon-btn')].filter((el) => el.offsetParent !== null).map(box),
+    names: ['myName', 'oppName'].map((id) => document.getElementById(id)).map((el) => ({ ...box(el), whole: el.scrollWidth <= el.clientWidth })),
+  };
+})()`;
+
+const overlaps = (a: Box, b: Box): boolean =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+/**
+ * The names strip fits (the owner: nothing clipped): the strip never scrolls, each name is whole,
+ * and each name's box is wholly inside the viewport and under no topbar button.
+ */
+const expectStripFits = async (page: Page, viewport: Viewport): Promise<void> => {
+  const fit = await page.evaluate<TopbarFit>(topbarFitScript);
+  expect(fit.stripFits, 'the strip does not scroll').toBe(true);
+  expect(fit.buttons.length).toBeGreaterThanOrEqual(4);
+  expect(fit.names).toHaveLength(2);
+  fit.names.forEach((n) => {
+    expect(n.width).toBeGreaterThan(0);
+    expect(n.whole, 'a short name is whole').toBe(true);
+    expect(n.x).toBeGreaterThanOrEqual(0);
+    expect(n.x + n.width).toBeLessThanOrEqual(viewport.width);
+    fit.buttons.forEach((b) => {
+      expect(overlaps(n, b), 'a name sits under no button').toBe(false);
+    });
+  });
+};
 
 /** The board's viewBox, the fit the paint chose. */
 const viewBox = (page: Page): Promise<string | null> =>
@@ -72,6 +124,19 @@ const playAt = (viewport: Viewport): void => {
     await expect(page.locator('#curtainOverlay')).toBeHidden();
     const start = await requireView(page);
     expect(start.names).toEqual([...NAMES]);
+    // The names strip: White's swatch before Ari, Black's before Lavi, both names whole between
+    // every topbar button (the live defect: "ri · White vs Lav" clipped at 390 and 1280).
+    await expect(page.locator('#myName')).toHaveText(seated(0));
+    await expect(page.locator('#oppName')).toHaveText(seated(1));
+    expect(await swatchSide(page, 'mySide')).toBe('White');
+    expect(await swatchSide(page, 'oppSide')).toBe('Black');
+    await expectStripFits(page, viewport);
+    const topbarShots = process.env['HIVE_TOPBAR_SHOTS'];
+    if (topbarShots !== undefined) {
+      await page.screenshot({
+        path: `${topbarShots}/topbar-${String(viewport.width)}x${String(viewport.height)}.png`,
+      });
+    }
     expect(start).toMatchObject({ seat: 0, game: { turn: 'white', board: {} } });
     await expect(page.locator('#myName')).toHaveText(seated(0));
     // The empty board shows the one cell the first tile may go to; all five bugs are playable.
@@ -103,6 +168,10 @@ const playAt = (viewport: Viewport): void => {
     await placeFirstLit(page, 'white', 'ant');
     await expect(page.locator('#statusText')).toContainText('placed a Soldier Ant');
     await expect(page.locator('#statusText')).toContainText('Your turn');
+    // The strip follows the view: Black's swatch now sits before Lavi, White's before Ari.
+    expect(await swatchSide(page, 'mySide')).toBe('Black');
+    expect(await swatchSide(page, 'oppSide')).toBe('White');
+    await expect(page.locator('#oppName')).toHaveText(seated(0));
     // Black's first tile touches the hive: six cells lit around the one tile, inside the fit.
     const fitOne = await viewBox(page);
     await page.locator('#blackHand .hand-tile[data-bug="spider"]').click();

@@ -1,8 +1,8 @@
 // The paint (docs/design/hive.md §7): the App onto the composed shell page (page.ts) through the
 // DOM edge, and every control bound to an intent. The shell's half is web/shared/ui's (the screens,
 // the waiting rooms, the home tabs, the sheets; its curtain is composed but never raised, since
-// Hive hides nothing: ui/state.ts `viewer`); the table is this file's: the names strip (`#myName`,
-// `#oppName`, `#oppDot`), the SVG board (one `g.hex` per cell: a bevelled hexagon in the side's
+// Hive hides nothing: ui/state.ts `viewer`); the table is this file's: the names strip (a hex swatch
+// `#mySide`/`#oppSide` in each side's colour, `#myName`, `#oppName`, `#oppDot`), the SVG board (one `g.hex` per cell: a bevelled hexagon in the side's
 // colour with the top tile's bug engraved on it (ui/bugs.ts `bugHtml`), a count badge and a lift
 // on a stack, `lit` where the picked tile may go, `picked` on the tile in hand; the viewBox fitted
 // to the hive and its ring, ui/board.ts `fitCells`, so a pick never rescales it), the two hands as
@@ -436,10 +436,21 @@ const paintDrag = (doc: DocumentLike, app: App, v: View): void => {
   if (over !== null) addClass(over, 'drop');
 };
 
+/** The hex swatch before a name in the names strip: the seat's tile colour (theme.css `[data-side]`), the side read aloud. */
+const paintSwatch = (doc: DocumentLike, id: string, seat: Seat): void => {
+  const el = requireId(doc, id);
+  const side = sideOf(seat);
+  setAttr(el, 'data-side', side === 'white' ? 'w' : 'b');
+  setAttr(el, 'aria-label', sideName(side));
+};
+
 const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const picked = app.table.picked;
-  setText(requireId(doc, 'myName'), `${nameAt(v, v.seat)} · ${v.seat === 0 ? 'White' : 'Black'}`);
-  setText(requireId(doc, 'oppName'), nameAt(v, v.seat === 0 ? 1 : 0));
+  const other: Seat = v.seat === 0 ? 1 : 0;
+  paintSwatch(doc, 'mySide', v.seat);
+  setText(requireId(doc, 'myName'), nameAt(v, v.seat));
+  paintSwatch(doc, 'oppSide', other);
+  setText(requireId(doc, 'oppName'), nameAt(v, other));
   paintConnDot(doc, 'oppDot', connDotView(app.shell));
   const lift = app.table.drag !== null && picked?.kind === 'hex' ? picked.hex : null;
   // The aim a Spider's path is numbered to: a drag's nearest lit hex while one stands, else the hex the pointer is over.
