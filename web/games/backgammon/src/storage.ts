@@ -34,6 +34,10 @@ import {
   type PlayMode,
   type Save as ShellSave,
   type SoundState,
+  DEFAULT_HOME_TAB,
+  DEFAULT_PLAY_MODE,
+  HOME_TABS,
+  type HomeTab,
 } from '../../../shared/edge/prefs.ts';
 
 // ui/state.ts names the Store through this module: the reducer may import everything below it
@@ -74,10 +78,8 @@ export const STORAGE_KEYS = {
 } as const;
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 
-export const HOME_TABS = ['play', 'rules', 'about'] as const;
-export type HomeTab = (typeof HOME_TABS)[number];
-export const DEFAULT_HOME_TAB: HomeTab = 'play';
-export const DEFAULT_PLAY_MODE: PlayMode = 'online';
+// The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
+export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 export const CURTAIN_MODES = ['always', 'never'] as const;
 export type CurtainMode = (typeof CURTAIN_MODES)[number];
 export const DEFAULT_CURTAIN_MODE: CurtainMode = 'always';

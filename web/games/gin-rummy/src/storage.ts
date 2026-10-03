@@ -37,6 +37,7 @@ import {
   type PlayMode,
   type Save as ShellSave,
   type SoundState,
+  DEFAULT_PLAY_MODE,
 } from '../../../shared/edge/prefs.ts';
 
 // ui/state.ts names the Store through this module (docs/MIGRATION.md step 12): the reducer may
@@ -103,7 +104,8 @@ export const RETIRED_KEYS = {
 export const HOME_TABS = ['play', 'rules', 'score', 'about'] as const;
 export type HomeTab = (typeof HOME_TABS)[number];
 export const DEFAULT_HOME_TAB: HomeTab = 'play';
-export const DEFAULT_PLAY_MODE: PlayMode = 'online';
+/** The stored mode's default is the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge. */
+export { DEFAULT_PLAY_MODE };
 export { DEFAULT_SORT, SORT_MODES, type SortMode } from './sort.ts';
 export { CARD_BACKS, DEFAULT_CARD_BACK, type CardBack } from './cardBack.ts';
 export {

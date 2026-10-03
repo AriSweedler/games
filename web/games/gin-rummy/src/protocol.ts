@@ -46,6 +46,8 @@ export type StateFrame = SharedStateFrame<View>;
 export type HostFrame = SharedHostFrame<View, Room>;
 export type Frame = SharedFrame<Action, View, Room>;
 
+/** The protocol whole: what the shell sends from (shellConfig.ts `frames`). */
+export const PROTOCOL = twoSeatProtocol({ decodeAction, decodeView, room });
 export const {
   decodeFrame,
   decodeGuestFrame,
@@ -57,4 +59,4 @@ export const {
   full,
   toast,
   state,
-} = twoSeatProtocol({ decodeAction, decodeView, room });
+} = PROTOCOL;

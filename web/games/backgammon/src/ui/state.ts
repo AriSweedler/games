@@ -131,13 +131,7 @@ export {
   type Role,
   type WaitStatus,
 } from '../../../../shared/ui/shell.ts';
-export {
-  DEFAULT_NAME,
-  LEAVE_LOCAL_MSG,
-  LEAVE_ONLINE_MSG,
-  parseMatchLength,
-  parseVariant,
-} from '../shellConfig.ts';
+export { parseMatchLength, parseVariant } from '../shellConfig.ts';
 // ---- the state ---------------------------------------------------------------------------------
 
 // ui/home.ts paints the tabs and modes from the lists storage.ts decodes; ui/ may not import storage.ts.

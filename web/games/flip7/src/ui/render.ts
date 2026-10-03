@@ -29,7 +29,7 @@ import {
   curtainText as shellCurtainText,
   paintCurtain as paintShellCurtain,
 } from '../../../../shared/ui/curtain.ts';
-import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
+import { DEFAULT_LOCAL_NAMES, handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindDelegated,
@@ -61,7 +61,6 @@ import {
 } from './motion.ts';
 import { listNames } from '../../../../shared/lib/name.ts';
 import { seatedHome } from '../../../../shared/ui/seatedHome.ts';
-import { LOCAL_NAMES } from '../shellConfig.ts';
 import {
   FLIP7,
   HOME_TABS,
@@ -76,7 +75,7 @@ import {
 /** The home screen (web/shared/ui/seatedHome.ts): the shell's, two to twelve on both steppers, the third to twelfth names shown with the count (`#moreNames`). */
 const home = seatedHome<Flip7>({
   seats: { min: MIN_SEATS, max: MAX_SEATS },
-  localNames: LOCAL_NAMES,
+  localNames: DEFAULT_LOCAL_NAMES,
   allNames: namesOf,
   tabs: HOME_TABS,
   group: 'moreNames',

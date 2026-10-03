@@ -3,13 +3,12 @@ import { describe, expect, test } from 'vitest';
 import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
 import { createStore, type StorageLike } from '../../../../shared/edge/storage.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
-import { DEFAULT_LOCAL_NAMES } from '../../../../shared/ui/shell.ts';
+import { DEFAULT_LOCAL_NAMES, DEFAULT_NAME, keyOfView } from '../../../../shared/ui/shell.ts';
 import { STOCK_DRAW_FINAL_MSG, applyAction, createGame, viewFor } from '../engine/index.ts';
 import type { Action, Seat, State, View } from '../engine/index.ts';
 import { CONNECTED_MSG, connectingMsg } from '../../../../shared/net/guest.ts';
 import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../../shared/net/host.ts';
 import { DEFAULT_PRESET, dealMap, parseMap, presetById } from '../sandbox.ts';
-import { DEFAULT_NAME } from '../shellConfig.ts';
 import { STORAGE_KEYS } from '../storage.ts';
 import { arrangedOf } from './hand/arrange.ts';
 import { engineOf } from './hand/picture.ts';
@@ -17,8 +16,6 @@ import {
   DISCONNECTED_MSG,
   FORCE_STOCK_MSG,
   GONE_TOAST_MS,
-  LEAVE_LOCAL_MSG,
-  LEAVE_ONLINE_MSG,
   LOCKED_CARD_MSG,
   LONG_PRESS_MS,
   SANDBOX_COPIED_MSG,
@@ -52,6 +49,9 @@ import {
   type HomeSnapshot,
   historyWho,
 } from './state.ts';
+
+// The leave confirms are the shell's words over gin's nouns (seatCopy.ts `leaveCopy`), read off the config.
+const { leaveLocal: LEAVE_LOCAL_MSG, leaveOnline: LEAVE_ONLINE_MSG } = GIN.copy;
 import { handoffLabel } from '../../../../shared/lib/name.ts';
 
 const ctx = { rng: mulberry32(7), now: () => NOW };
@@ -1509,7 +1509,7 @@ describe('storage', () => {
 describe('the finished game`s record (the owner, 2026-09-25)', () => {
   test('the adapters: the deal`s clock is the key, the two totals the score, the seat `readyAfterRound` named the victor', () => {
     const v = viewFor(drawn, 0);
-    expect(GIN.result.keyOf(v)).toBe(String(drawn.startedAt));
+    expect(keyOfView(GIN, v)).toBe(String(drawn.startedAt));
     expect(GIN.result.playersOf(v)).toEqual(['Ann', 'Jeff']);
     expect(GIN.result.scoreOf(v)).toBe('0–0');
     expect(GIN.result.winnerOf(v)).toBeNull();

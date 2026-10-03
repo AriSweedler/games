@@ -135,10 +135,7 @@ export {
   type WaitStatus,
 } from '../../../../shared/ui/shell.ts';
 export {
-  DEFAULT_NAME,
   DEFAULT_OPTS,
-  LEAVE_LOCAL_MSG,
-  LEAVE_ONLINE_MSG,
   ONE_GAME,
   TABLE_TERMS,
   parseOpts,

@@ -1,13 +1,12 @@
 // The half of Hive's shell config the game spells from its engine, protocol and storage alone
 // (docs/design/hive.md §7; web/shared/ui/shell.ts `ShellGameData`): the id the table codes are
-// made for, the default names, the tabs, the two stored modes, the copy the shared flows paint,
-// the option codec (two seats, always), the engine adapters (engine/view.ts: the host holds the
-// game, both seats see the whole board), the frame builders, the cue memory's start and the
-// shell's store. The table hooks and the rest of `home` are the reducer's (ui/state.ts `HIVE`).
-import { hostRoomMsg } from '../../../shared/ui/seatCopy.ts';
-import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
-import { connectingMsg } from '../../../shared/net/guest.ts';
-import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
+// made for, the copy the shared flows paint (the leave confirms clear a board), the option codec
+// (two seats, always), the engine adapters (engine/view.ts: the host holds the game, both seats
+// see the whole board), the protocol and the shell's store; the names, tabs, modes, status copy
+// and cue memory are the shell's defaults (dry-review-2026-10.md §7 row 2). The table hooks and
+// the rest of `home` are the reducer's (ui/state.ts `HIVE`).
+import { hostRoomMsg, leaveCopy } from '../../../shared/ui/seatCopy.ts';
+import type { ShellGameData } from '../../../shared/ui/shell.ts';
 import {
   applyAction,
   createState,
@@ -16,42 +15,17 @@ import {
   winnerSeat,
   type Seat,
 } from './engine/view.ts';
-import { action, join, lobby, state, toast } from './protocol.ts';
-import {
-  DEFAULT_HOME_TAB,
-  DEFAULT_OPTS,
-  DEFAULT_PLAY_MODE,
-  HOME_TABS,
-  SHELL_STORE,
-  readHints,
-  readMotion,
-} from './storage.ts';
+import { PROTOCOL } from './protocol.ts';
+import { DEFAULT_OPTS, SHELL_STORE, readHints, readMotion } from './storage.ts';
 import { CUES } from './ui/sound.ts';
 import type { Hive } from './ui/state.ts';
-
-export const DEFAULT_NAME = 'Ari';
-/** The pass-and-play seats when nothing is typed: White, then Black. */
-export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi'];
-export const LEAVE_LOCAL_MSG = 'End this game? The board will be cleared.';
-export const LEAVE_ONLINE_MSG = 'Leave this game? The table will close.';
 
 /** The side a seat plays: "White" or "Black". */
 export const sideName = (seat: Seat): string => (seat === 0 ? 'White' : 'Black');
 
 export const HIVE_SHELL: ShellGameData<Hive> = {
   id: 'hive',
-  names: { default: DEFAULT_NAME },
-  localNames: LOCAL_NAMES,
-  tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
-  modes: { default: DEFAULT_PLAY_MODE },
-  copy: {
-    leaveLocal: LEAVE_LOCAL_MSG,
-    leaveOnline: LEAVE_ONLINE_MSG,
-    opening: OPENING_MSG,
-    connecting: connectingMsg,
-    handoff: handoffMsg,
-    hostRoom: hostRoomMsg('start'),
-  },
+  copy: { ...leaveCopy({ cleared: 'The board' }), hostRoom: hostRoomMsg('start') },
   opts: {
     initial: DEFAULT_OPTS,
     parse: () => DEFAULT_OPTS,
@@ -72,7 +46,6 @@ export const HIVE_SHELL: ShellGameData<Hive> = {
     }),
   },
   result: {
-    keyOf: (view) => String(view.startedAt),
     playersOf: (view) => view.names,
     // The score is how the game ended: a surround, a resignation, or a draw.
     scoreOf: (view) => {
@@ -82,8 +55,8 @@ export const HIVE_SHELL: ShellGameData<Hive> = {
     },
     winnerOf: (view) => winnerSeat(view.game.result),
   },
-  frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
+  frames: PROTOCOL,
+  cues: { table: CUES },
   // The tiles' motion and the hints, remembered per device (settings.ts): read at boot with the shell's keys.
   home: { read: (store) => ({ motion: readMotion(store), hints: readHints(store) }) },
   prefs: SHELL_STORE,

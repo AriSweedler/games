@@ -86,6 +86,7 @@ import type { Connection, PeerHandle } from '../edge/transport.ts';
 import type { Timer } from '../lib/clock.ts';
 import type { Result } from '../lib/result.ts';
 import { peerIdFor, type Game } from '../lib/roomCode.ts';
+import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../lib/shellDefaults.ts';
 import { HB_MISSED_MS, isHeartbeat, liveness, type Liveness } from './liveness.ts';
 
 export { HB_GRACE_MS, HB_MISSED_MS, HB_MS } from './liveness.ts';
@@ -99,8 +100,7 @@ export const ERROR_TOAST_MS = 5000;
 /** Seats at a table when `HostOptions.capacity` is not given: the host and one guest. */
 const DEFAULT_CAPACITY = 2;
 
-export const OPENING_MSG = 'Opening room…';
-export const WAITING_MSG = 'Waiting for your opponent to join…';
+export { OPENING_MSG, WAITING_MSG, handoffMsg };
 export const HOST_WATCHDOG_MSG =
   'Still trying to open the room… Your network may be blocking the connection service (VPN / strict Wi-Fi). Try mobile data or another network.';
 export const CODE_BUSY_MSG = 'Room code busy, retrying…';
@@ -108,9 +108,6 @@ export const reconnectingMsg = (tries: number): string =>
   `Reconnecting to the connection service (attempt ${String(tries)})…`;
 export const reopenedMsg = (code: string, oppName: string | null): string =>
   `Room ${code} reopened — waiting for ${oppName ?? 'your opponent'} to rejoin…`;
-/** A pass-and-play game handed to a room (ui/state.ts `handoff`): nobody has joined it yet. */
-export const handoffMsg = (code: string, oppName: string | null): string =>
-  `Room ${code} is open — send ${oppName ?? 'your opponent'} the invite to carry on this game…`;
 
 /** The status when the Peer opens and no guest is connected; `waiting` is the game's open status. */
 const openedMsg = (ctx: HostContext<unknown>, code: string, waiting: string): string => {

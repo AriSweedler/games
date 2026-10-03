@@ -11,7 +11,12 @@ import { createStore, type StorageLike } from '../../../shared/edge/storage.ts';
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { WAITING_MSG } from '../../../shared/net/host.ts';
 import { TABLE_FULL_MSG } from '../../../shared/ui/seatCopy.ts';
-import { joinedMsg } from '../../../shared/ui/shell.ts';
+import {
+  DEFAULT_LOCAL_NAMES,
+  defaultNameOf,
+  joinedMsg,
+  localNamesOf,
+} from '../../../shared/ui/shell.ts';
 import { HOST, apply } from './domain/game.ts';
 import { lobby } from './protocol.ts';
 import {
@@ -67,8 +72,9 @@ describe('the copy', () => {
     );
     expect(FIDICE_SHELL.copy.leaveLocal).toBe(LEAVE_LOCAL_MSG);
     expect(FIDICE_SHELL.copy.leaveOnline).toBe(LEAVE_ONLINE_MSG);
-    expect(FIDICE_SHELL.names.default).toBe(DEFAULT_NAME);
-    expect(FIDICE_SHELL.localNames).toEqual(['Ari', 'Lavi']);
+    // The shell's defaults: the host name and the pass-the-phone seats (shell.ts DEFAULT_LOCAL_NAMES).
+    expect(defaultNameOf(FIDICE_SHELL)).toBe(DEFAULT_NAME);
+    expect(localNamesOf(FIDICE_SHELL)).toBe(DEFAULT_LOCAL_NAMES);
     expect(FIDICE_SHELL.id).toBe('fidice');
     // The shell's store plus the host card's terms the shell remembers (`prefs.opts`, the four keys).
     expect(FIDICE_SHELL.prefs).toMatchObject(SHELL_STORE);
@@ -92,23 +98,23 @@ describe('the copy', () => {
   });
 
   test('the play mode: local and online stored; solo and watch shown only (plan §7 D9); anything else online', () => {
-    expect(FIDICE_SHELL.modes.parse?.('local', initialShell)).toEqual({
+    expect(FIDICE_SHELL.modes?.parse?.('local', initialShell)).toEqual({
       shown: 'local',
       stored: 'local',
     });
-    expect(FIDICE_SHELL.modes.parse?.('online', initialShell)).toEqual({
+    expect(FIDICE_SHELL.modes?.parse?.('online', initialShell)).toEqual({
       shown: 'online',
       stored: 'online',
     });
-    expect(FIDICE_SHELL.modes.parse?.('solo', initialShell)).toEqual({
+    expect(FIDICE_SHELL.modes?.parse?.('solo', initialShell)).toEqual({
       shown: 'solo',
       stored: null,
     });
-    expect(FIDICE_SHELL.modes.parse?.('watch', initialShell)).toEqual({
+    expect(FIDICE_SHELL.modes?.parse?.('watch', initialShell)).toEqual({
       shown: 'watch',
       stored: null,
     });
-    expect(FIDICE_SHELL.modes.parse?.('sandbox', initialShell)).toEqual({
+    expect(FIDICE_SHELL.modes?.parse?.('sandbox', initialShell)).toEqual({
       shown: 'online',
       stored: 'online',
     });

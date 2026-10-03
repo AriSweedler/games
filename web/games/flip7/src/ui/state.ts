@@ -287,7 +287,6 @@ export const FLIP7: ShellConfig<Flip7> = {
     escape: (app) => (app.table.pause === null ? null : pure(withTable(app, { pause: null }))),
   },
   local: { viewer, revealer },
-  home: { ...FLIP7_SHELL.home, apply: (app) => app },
 };
 
 /**

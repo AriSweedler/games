@@ -12,22 +12,32 @@ import { createStore, type StorageLike } from '../../../shared/edge/storage.ts';
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { WAITING_MSG } from '../../../shared/net/host.ts';
 import { TABLE_FULL_MSG } from '../../../shared/ui/seatCopy.ts';
-import { OPPONENT_LEFT_MSG, WAITING_FOR_GUEST_MSG, joinedMsg } from '../../../shared/ui/shell.ts';
+import {
+  DEFAULT_NAME,
+  OPPONENT_LEFT_MSG,
+  WAITING_FOR_GUEST_MSG,
+  defaultModeOf,
+  defaultNameOf,
+  initialCuesOf,
+  joinedMsg,
+  keyOfView,
+  tabsOf,
+} from '../../../shared/ui/shell.ts';
 import { applyAction, viewFor, type GameOptions, type Players } from './engine/index.ts';
 import {
   BRISCOLA_SHELL,
-  DEFAULT_NAME,
   DEFAULT_OPTS,
-  LEAVE_LOCAL_MSG,
-  LEAVE_ONLINE_MSG,
   ONE_GAME,
   TABLE_TERMS,
   parseOpts,
   pickOpts,
   seatPlayers,
 } from './shellConfig.ts';
-import { lobby, welcome } from './protocol.ts';
+import { PROTOCOL, lobby, welcome } from './protocol.ts';
 import { DEFAULT_CARD_PACK, SHELL_STORE, STORAGE_KEYS } from './storage.ts';
+
+// The leave confirms are the shell's words at their defaults (seatCopy.ts `leaveCopy`), read off the config.
+const { leaveLocal: LEAVE_LOCAL_MSG, leaveOnline: LEAVE_ONLINE_MSG } = BRISCOLA_SHELL.copy;
 
 const NOW = 1_700_000_000_000;
 const PAIR: Players = [
@@ -58,7 +68,7 @@ describe('the copy', () => {
     );
     expect(BRISCOLA_SHELL.copy.leaveLocal).toBe(LEAVE_LOCAL_MSG);
     expect(BRISCOLA_SHELL.copy.leaveOnline).toBe(LEAVE_ONLINE_MSG);
-    expect(BRISCOLA_SHELL.names.default).toBe(DEFAULT_NAME);
+    expect(defaultNameOf(BRISCOLA_SHELL)).toBe(DEFAULT_NAME);
     expect(BRISCOLA_SHELL.id).toBe('briscola');
     // The shell's store plus the room options the shell remembers (`prefs.opts`, the `players` key).
     expect(BRISCOLA_SHELL.prefs).toMatchObject(SHELL_STORE);
@@ -66,7 +76,8 @@ describe('the copy', () => {
   });
 
   test('the play mode: the shell`s default (local or online, anything else online; shell.test.ts)', () => {
-    expect(BRISCOLA_SHELL.modes).toEqual({ default: 'online' });
+    expect(BRISCOLA_SHELL.modes).toBeUndefined();
+    expect(defaultModeOf(BRISCOLA_SHELL)).toBe('online');
   });
 });
 
@@ -78,8 +89,9 @@ describe('the table (docs/design/n-seat-sessions.md §7)', () => {
     expect(capacity(DEFAULT_OPTS)).toBe(2);
     expect(capacity({ ...DEFAULT_OPTS, seatCount: 3 })).toBe(3);
     expect(capacity({ ...DEFAULT_OPTS, seatCount: 4 })).toBe(4);
+    // The protocol record whole; the shell reads its five (`ShellConfig['frames']`), the session codec the welcome.
     expect(BRISCOLA_SHELL.frames.lobby).toBe(lobby);
-    expect('welcome' in BRISCOLA_SHELL.frames).toBe(false);
+    expect(BRISCOLA_SHELL.frames).toBe(PROTOCOL);
     // At two seats the frames are PR-4's, whatever table is passed; at three the table rides along.
     const table = [{ name: 'Bo', connected: true }];
     expect(lobby('Ann', DEFAULT_OPTS, table, 1)).toEqual({
@@ -229,7 +241,7 @@ describe('the engine adapters over a pair', () => {
   test('the finished game`s record: the deal`s clock, every name, the points per side, the winning side (null for a draw)', () => {
     const { result } = BRISCOLA_SHELL;
     const v = viewFor(game, 0);
-    expect(result.keyOf(v)).toBe(String(game.startedAt));
+    expect(keyOfView(BRISCOLA_SHELL, v)).toBe(String(game.startedAt));
     expect(result.playersOf(v)).toEqual(['Ann', 'Bob']);
     expect(result.scoreOf(v)).toBe('0–0');
     expect(result.winnerOf(v)).toBeNull();
@@ -285,7 +297,7 @@ describe('home.read', () => {
         return name.ok ? name.value : null;
       }),
     ).toEqual(['Cara', 'Dan']);
-    expect(BRISCOLA_SHELL.tabs.list).toEqual(['play', 'rules', 'about']);
-    expect(BRISCOLA_SHELL.cues.initial).toEqual({ key: null });
+    expect(tabsOf(BRISCOLA_SHELL).list).toEqual(['play', 'rules', 'about']);
+    expect(initialCuesOf(BRISCOLA_SHELL)).toEqual({ key: null });
   });
 });

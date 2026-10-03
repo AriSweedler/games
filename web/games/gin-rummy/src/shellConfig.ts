@@ -1,24 +1,23 @@
 // The half of gin's shell config the game spells from its engine, protocol and storage alone
-// (docs/design/shared-shell.md §4.3; C2): the id the room codes are made for, the default host
-// name, the tabs, the modes (the sandbox shown while the first player is named `sandbox`, never
-// stored), the copy the shared flows paint (the two leave confirms, the room named with its
-// target, and the sessions' three status strings the shell paints before a session speaks), the
+// (docs/design/shared-shell.md §4.3; C2): the id the room codes are made for, the tabs (the
+// Score Counter's beside the shell's three), the modes (the sandbox shown while the first player
+// is named `sandbox`, never stored), the copy the shared flows paint (the two leave confirms,
+// with gin's own nouns, and the room named with its target; the host name, the status strings
+// and the stored mode's default are the shell's, dry-review-2026-10.md §7 row 2), the
 // option codec (`{ target }`: the host save's own field, the welcome frame's, the resume offer's),
 // the engine adapters, the frame builders, the cue memory's start and the shell's store. The
 // table hooks (`rendered`, `refuse`, the per-site `reset`, pass-and-play's `viewer`/`revealer`)
 // and the rest of `home` are the reducer's (ui/state.ts `GIN`), which completes this record: they
 // use its own helpers, and a value import both ways would be a cycle. Every literal here was
 // ui/state.ts's before the move; the constants and helpers the tests import are re-exported there.
+import { leaveCopy } from '../../../shared/ui/seatCopy.ts';
 import type { ShellGameData } from '../../../shared/ui/shell.ts';
 import { applyAction, createGame, decodeState, viewFor } from './engine/index.ts';
-import { connectingMsg } from '../../../shared/net/guest.ts';
-import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
-import { action, join, lobby, state, toast } from './protocol.ts';
+import { PROTOCOL } from './protocol.ts';
 import { unlocksSandbox } from './sandbox.ts';
 import {
   DEFAULT_CARD_BACK,
   DEFAULT_HOME_TAB,
-  DEFAULT_PLAY_MODE,
   DEFAULT_SORT,
   HOME_TABS,
   SHELL_STORE,
@@ -31,10 +30,7 @@ import { INITIAL_CUES } from './ui/cues.ts';
 import { CUES } from './ui/sound.ts';
 import type { Gin } from './ui/state.ts';
 
-export const DEFAULT_NAME = 'Ari';
 export const DEFAULT_TARGET = 100;
-export const LEAVE_LOCAL_MSG = 'End this game? Scores will be cleared.';
-export const LEAVE_ONLINE_MSG = 'Leave this game? The room will close.';
 export const hostRoomMsg = (hostName: string, target: number): string =>
   `Connected to ${hostName}'s room (playing to ${String(target)}). Waiting for the host to start…`;
 
@@ -46,10 +42,8 @@ export const parseTarget = (raw: string): number => {
 
 export const GIN_SHELL: ShellGameData<Gin> = {
   id: 'gin-rummy',
-  names: { default: DEFAULT_NAME },
   tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
   modes: {
-    default: DEFAULT_PLAY_MODE,
     parse: (raw, shell) => {
       // The sandbox is shown, never stored: a reload lands on the stored mode.
       if (raw === 'sandbox')
@@ -59,11 +53,7 @@ export const GIN_SHELL: ShellGameData<Gin> = {
     },
   },
   copy: {
-    leaveLocal: LEAVE_LOCAL_MSG,
-    leaveOnline: LEAVE_ONLINE_MSG,
-    opening: OPENING_MSG,
-    connecting: connectingMsg,
-    handoff: handoffMsg,
+    ...leaveCopy({ cleared: 'Scores', closes: 'room' }),
     hostRoom: (hostName, opts) => hostRoomMsg(hostName, opts.target),
   },
   opts: {
@@ -91,12 +81,11 @@ export const GIN_SHELL: ShellGameData<Gin> = {
   // The finished game's record (the owner, 2026-09-25): a game is its deal's clock (a rematch
   // deals under a new one), its score the two totals, its victor the seat `readyAfterRound` named.
   result: {
-    keyOf: (view) => String(view.startedAt),
     playersOf: (view) => view.players.map((p) => p.name),
     scoreOf: (view) => `${String(view.players[0].total)}–${String(view.players[1].total)}`,
     winnerOf: (view) => view.winner,
   },
-  frames: { lobby, state, toast, action, join },
+  frames: PROTOCOL,
   cues: { initial: INITIAL_CUES, table: CUES },
   home: {
     // This page's own keys (defaults when unreadable; main.ts logs a bad card back), and the Score Counter's session.

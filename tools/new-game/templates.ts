@@ -390,7 +390,8 @@ export type StateFrame = SharedStateFrame<View>;
 export type HostFrame = SharedHostFrame<View, Room>;
 export type Frame = SharedFrame<Action, View, Room>;
 
-const protocol = twoSeatProtocol({ decodeAction, decodeView, room });
+/** The protocol whole: what the shell sends from (shellConfig.ts \`frames\`). */
+export const PROTOCOL = twoSeatProtocol({ decodeAction, decodeView, room });
 
 export const {
   decodeFrame,
@@ -403,7 +404,7 @@ export const {
   state,
   welcome,
   lobby,
-} = protocol;
+} = PROTOCOL;
 
 /** The name a join carries (the session reseats a same-named rejoin), null for an action. */
 export const joinName = (frame: GuestFrame): string | null =>
@@ -455,6 +456,10 @@ import {
   type GuestSave as ShellGuestSave,
   type HostSave as ShellHostSave,
   type LocalSave as ShellLocalSave,
+  DEFAULT_HOME_TAB,
+  DEFAULT_PLAY_MODE,
+  HOME_TABS,
+  type HomeTab,
   type PlayMode,
   type Save as ShellSave,
 } from '../../../shared/edge/prefs.ts';
@@ -476,10 +481,8 @@ export const STORAGE_KEYS = {
   flipTable: '${slug}_flipTable',
 } as const;
 
-export const HOME_TABS = ['play', 'rules', 'about'] as const;
-export type HomeTab = (typeof HOME_TABS)[number];
-export const DEFAULT_HOME_TAB: HomeTab = 'play';
-export const DEFAULT_PLAY_MODE: PlayMode = 'online';
+// The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
+export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 
 /** The room's terms: two seats, always (the shell's option record needs one field). */
 export type Opts = Readonly<{ seatCount: 2 }>;
@@ -510,46 +513,22 @@ const shellConfigTs = (
   title: string,
 ): string => `// The half of ${title}'s shell config the game spells from its engine, protocol and storage alone
 // (docs/design/${slug}.md §3; web/shared/ui/shell.ts \`ShellGameData\`): the id the table codes are
-// made for, the default names, the tabs, the two stored modes, the copy the shared flows paint, the
-// option codec (two seats, always), the engine adapters (engine/view.ts), the frame builders, the
-// cue memory's start, the cue table and the shell's store. The table hooks and the rest of \`home\` are the
-// reducer's (ui/state.ts \`${upper}\`).
-import { hostRoomMsg } from '../../../shared/ui/seatCopy.ts';
-import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
-import { connectingMsg } from '../../../shared/net/guest.ts';
-import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
+// made for, the copy the shared flows paint (the leave confirms over a game, a score and a table:
+// the shell's words), the option codec (two seats, always), the engine adapters (engine/view.ts),
+// the protocol, the cue table and the shell's store; the names, tabs, modes, status copy and cue
+// memory are the shell's defaults (docs/design/dry-review-2026-10.md §7 row 2). The table hooks
+// are the reducer's (ui/state.ts \`${upper}\`).
+import { hostRoomMsg, leaveCopy } from '../../../shared/ui/seatCopy.ts';
+import type { ShellGameData } from '../../../shared/ui/shell.ts';
 import { applyAction, createState, decodeState, viewFor, winnerSeat } from './engine/view.ts';
-import { action, join, lobby, state, toast } from './protocol.ts';
-import {
-  DEFAULT_HOME_TAB,
-  DEFAULT_OPTS,
-  DEFAULT_PLAY_MODE,
-  HOME_TABS,
-  SHELL_STORE,
-} from './storage.ts';
+import { PROTOCOL } from './protocol.ts';
+import { DEFAULT_OPTS, SHELL_STORE } from './storage.ts';
 import { CUES } from './ui/sound.ts';
 import type { ${pascal} } from './ui/state.ts';
 
-export const DEFAULT_NAME = 'Ari';
-/** The pass-and-play seats when nothing is typed. */
-export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi'];
-export const LEAVE_LOCAL_MSG = 'End this game? The table will be cleared.';
-export const LEAVE_ONLINE_MSG = 'Leave this game? The table will close.';
-
 export const ${upper}_SHELL: ShellGameData<${pascal}> = {
   id: '${slug}',
-  names: { default: DEFAULT_NAME },
-  localNames: LOCAL_NAMES,
-  tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
-  modes: { default: DEFAULT_PLAY_MODE },
-  copy: {
-    leaveLocal: LEAVE_LOCAL_MSG,
-    leaveOnline: LEAVE_ONLINE_MSG,
-    opening: OPENING_MSG,
-    connecting: connectingMsg,
-    handoff: handoffMsg,
-    hostRoom: hostRoomMsg('start'),
-  },
+  copy: { ...leaveCopy(), hostRoom: hostRoomMsg('start') },
   opts: {
     initial: DEFAULT_OPTS,
     parse: () => DEFAULT_OPTS,
@@ -570,7 +549,6 @@ export const ${upper}_SHELL: ShellGameData<${pascal}> = {
     }),
   },
   result: {
-    keyOf: (view) => String(view.startedAt),
     playersOf: (view) => view.names,
     scoreOf: (view) => {
       const result = view.game.result;
@@ -579,9 +557,8 @@ export const ${upper}_SHELL: ShellGameData<${pascal}> = {
     },
     winnerOf: (view) => winnerSeat(view.game.result),
   },
-  frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
-  home: { read: () => ({}) },
+  frames: PROTOCOL,
+  cues: { table: CUES },
   prefs: SHELL_STORE,
 };
 `;
@@ -591,6 +568,7 @@ const shellConfigTestTs = (
 ): string => `import { describe, expect, test } from 'vitest';
 
 import { mulberry32 } from '../../../shared/lib/rng.ts';
+import { defaultModeOf, keyOfView } from '../../../shared/ui/shell.ts';
 import { viewFor } from './engine/view.ts';
 import { ${upper}_SHELL } from './shellConfig.ts';
 
@@ -605,7 +583,8 @@ describe('the shell config', () => {
       'Connected — waiting for Ann to start',
     );
     // The play mode is the shell's default (local or online; shell.test.ts).
-    expect(${upper}_SHELL.modes).toEqual({ default: 'online' });
+    expect(${upper}_SHELL.modes).toBeUndefined();
+    expect(defaultModeOf(${upper}_SHELL)).toBe('online');
     expect(${upper}_SHELL.opts.parse({}, { seatCount: 2 })).toEqual({ seatCount: 2 });
   });
 
@@ -617,7 +596,7 @@ describe('the shell config', () => {
     expect(e.finished(game)).toBe(false);
     const view = viewFor(game, 0);
     expect(e.over(view)).toBe(false);
-    expect(${upper}_SHELL.result.keyOf(view)).toBe('77');
+    expect(keyOfView(${upper}_SHELL, view)).toBe('77');
     expect(${upper}_SHELL.result.playersOf(view)).toEqual(['Ann', 'Bob']);
     expect(${upper}_SHELL.result.scoreOf(view)).toBe('');
     expect(${upper}_SHELL.result.winnerOf(view)).toBeNull();
@@ -981,7 +960,6 @@ export const ${upper}: ShellConfig<${pascal}> = {
   ...${upper}_SHELL,
   table: { initial: initialTable, reset, rendered },
   local: { viewer, revealer, newGame },
-  home: { ...${upper}_SHELL.home, apply: (app) => app },
 };
 
 /** \`act(action)\`: the shell's by role (the mover acts on a pass-and-play phone: \`revealer\`), behind the game's one guard: nothing moves while a pause waits for its Continue. */

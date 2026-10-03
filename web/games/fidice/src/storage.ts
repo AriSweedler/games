@@ -42,6 +42,7 @@ import {
   type PlayMode,
   type Save as ShellSave,
   type SoundState,
+  DEFAULT_PLAY_MODE,
 } from '../../../shared/edge/prefs.ts';
 import {
   boolean,
@@ -113,7 +114,8 @@ export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 export const HOME_TABS = ['play', 'rules', 'ladder', 'about'] as const;
 export type HomeTab = (typeof HOME_TABS)[number];
 export const DEFAULT_HOME_TAB: HomeTab = 'play';
-export const DEFAULT_PLAY_MODE: PlayMode = 'online';
+/** The stored mode's default is the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge. */
+export { DEFAULT_PLAY_MODE };
 
 /** The room's terms: the host save's own fields, the welcome frame's room and the resume offer's (protocol.ts `Room`). */
 export type Opts = Room;

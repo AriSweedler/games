@@ -1,23 +1,18 @@
 // The half of UNO's shell config the game spells from its engine, protocol and storage alone
 // (docs/design/uno.md §9; web/shared/ui/shell.ts `ShellGameData`): the id the table codes are made
-// for, the default names, the tabs, the two stored modes, the copy the shared flows paint (the
-// N-seat forms are the shell's, web/shared/ui/seatCopy.ts, dealt), the option codec
-// (the seat count alone), the engine adapters (engine/view.ts: the host deals, every seat sees its
-// own hand), the frame builders, the cue memory's start and the shell's store. The table hooks and
-// the rest of `home` are the reducer's (ui/state.ts `UNO`). Online seats two to twelve (the owner,
+// for, the copy the shared flows paint (the N-seat forms are the shell's, web/shared/ui/seatCopy.ts,
+// dealt), the option codec (the seat count alone), the engine adapters (engine/view.ts: the host
+// deals, every seat sees its own hand), the protocol and the shell's store; the names, tabs,
+// modes, status copy and cue memory are the shell's defaults (dry-review-2026-10.md §7 row 2). The
+// table hooks are the reducer's (ui/state.ts `UNO`). Online seats two to twelve (the owner,
 // 2026-10-02: "uno caps out at 12"), fixed when the room opens and started full (`seats.fixed`).
 import { parseSeatCount, seatedCopy } from '../../../shared/ui/seatCopy.ts';
-import { INITIAL_CUE_MEMORY, type Player, type ShellGameData } from '../../../shared/ui/shell.ts';
-import { connectingMsg } from '../../../shared/net/guest.ts';
-import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../shared/net/host.ts';
+import type { Player, ShellGameData } from '../../../shared/ui/shell.ts';
 import { SEAT_COUNTS, applyAction, createState, decodeState, viewFor } from './engine/view.ts';
-import { action, join, lobby, state, toast } from './protocol.ts';
+import { PROTOCOL } from './protocol.ts';
 import {
-  DEFAULT_HOME_TAB,
   DEFAULT_OPTS,
-  DEFAULT_PLAY_MODE,
   EXTRA_NAME_PREFS,
-  HOME_TABS,
   SHELL_STORE,
   readOpts,
   writeOpts,
@@ -26,15 +21,9 @@ import {
 import { CUES } from './ui/sound.ts';
 import type { Raw, Seat, Uno } from './ui/state.ts';
 
-export const DEFAULT_NAME = 'Ari';
 /** The seat counts the room and the home's steppers allow (the owner, 2026-10-02: "uno caps out at 12"). */
 export const MIN_SEATS = 2;
 export const MAX_SEATS = 12;
-/** The pass-and-play seats when nothing is typed: the shell's two, then the third and fourth. */
-export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi', 'Sandro', 'Grant'];
-export const LEAVE_LOCAL_MSG = 'End this game? The score will be cleared.';
-export const LEAVE_ONLINE_MSG = 'Leave this game? The table will close.';
-
 /** The room's terms off the raw inputs: the Online stepper or its pass-and-play twin, whichever the click carried. */
 export const parseOpts = (raw: Raw, current: Opts): Opts => ({
   seatCount: parseSeatCount(SEAT_COUNTS, raw.players ?? raw.localPlayers, current.seatCount),
@@ -46,18 +35,7 @@ export const seatNames = (n: number, seats: ReadonlyArray<Player>): ReadonlyArra
 
 export const UNO_SHELL: ShellGameData<Uno> = {
   id: 'uno',
-  names: { default: DEFAULT_NAME },
-  localNames: LOCAL_NAMES,
-  tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
-  modes: { default: DEFAULT_PLAY_MODE },
-  copy: {
-    ...seatedCopy({ verb: 'deal', waitingAtTwo: WAITING_MSG }),
-    leaveLocal: LEAVE_LOCAL_MSG,
-    leaveOnline: LEAVE_ONLINE_MSG,
-    opening: OPENING_MSG,
-    connecting: connectingMsg,
-    handoff: handoffMsg,
-  },
+  copy: seatedCopy({ verb: 'deal' }),
   seats: { min: MIN_SEATS, max: MAX_SEATS, fixed: true },
   opts: {
     initial: DEFAULT_OPTS,
@@ -82,15 +60,13 @@ export const UNO_SHELL: ShellGameData<Uno> = {
     }),
   },
   result: {
-    keyOf: (view) => String(view.startedAt),
     playersOf: (view) => view.names,
     // One round is the game (the owner, 2026-10-02): the score is the cards each seat still held.
     scoreOf: (view) => view.counts.map(String).join('–'),
     winnerOf: (view) => (view.winner === null ? null : (view.winner as Seat)),
   },
-  frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
-  home: { read: () => ({}) },
+  frames: PROTOCOL,
+  cues: { table: CUES },
   // The seat count is the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key; the third to twelfth names its `seatNames` (`seatName/typed`, `rememberSeatName`), under `p3Name` on.
   prefs: {
     ...SHELL_STORE,

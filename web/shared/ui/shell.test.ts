@@ -63,6 +63,13 @@ import {
   localBroadcast,
   localNameFor,
   localNamesOf,
+  copyOf,
+  defaultModeOf,
+  defaultNameOf,
+  homeOf,
+  initialCuesOf,
+  keyOfView,
+  tabsOf,
   localPlayers,
   localSeated,
   localSeats,
@@ -97,6 +104,7 @@ import {
   type SeatState,
   type ShellApp,
   type ShellConfig,
+  type ShellTypes,
   type ShellState,
   type Step,
   type TableReset,
@@ -533,8 +541,6 @@ const lobby4 = (
 
 const FAKE4: ShellConfig<Fake4> = {
   id: 'gin-rummy',
-  names: FAKE.names,
-  tabs: FAKE.tabs,
   modes: {
     default: 'online',
     parse: (raw) => ({
@@ -631,7 +637,7 @@ const FAKE4: ShellConfig<Fake4> = {
     revealer: (game) => ({ seat: game.turn as Seat4, effects: [] }),
   },
   home: {
-    read: FAKE.home.read,
+    read: homeOf(FAKE).read,
     apply: (app) => app,
     resume: (home) => resumeFor(home.save, FAKE4),
     resumeExtra: (app) => pure(app),
@@ -1211,7 +1217,7 @@ describe('home', () => {
       p2Name: '',
       homeTab: 'play',
     });
-    expect(DEFAULT_LOCAL_NAMES).toEqual(['Ari', 'Lavi']);
+    expect(DEFAULT_LOCAL_NAMES).toEqual(['Ari', 'Lavi', 'Sandro', 'Grant', 'Noa', 'Ethan']);
     // A default fill is marked, so the page clears it on its first tap (the owner, 2026-09-25).
     expect(plain.effects).toEqual([
       { type: 'scrollTop' },
@@ -2475,7 +2481,11 @@ describe('pass and play', () => {
     expect(localSeats(['', '', ''], DEFAULT_LOCAL_NAMES).map((p) => p.name)).toEqual([
       'Ari',
       'Lavi',
-      'Player 3',
+      'Sandro',
+    ]);
+    expect(localSeats(Array<string>(7).fill(''), DEFAULT_LOCAL_NAMES).map((p) => p.name)).toEqual([
+      ...DEFAULT_LOCAL_NAMES,
+      'Player 7',
     ]);
     expect(localSeats([], DEFAULT_LOCAL_NAMES)).toEqual([]);
   });
@@ -2605,8 +2615,9 @@ describe('the ephemeral lane (docs/design/briscola-battle.md §4.5)', () => {
   });
 
   test('the seven frames still take their own routes beside the lane (a join is welcomed, a state is painted)', () => {
+    const host: LaneApp = withShell(initialApp, { role: 'host', myName: 'Ann' });
     const welcomed = reduceShell(
-      withShell(initialApp, { role: 'host', myName: 'Ann' }),
+      host,
       { type: 'host/frame', frame: { t: 'join', name: 'Jeff' } },
       ctx,
       LANE,
@@ -4263,7 +4274,7 @@ describe('the config`s defaults (shell-call-graph.md §4.3): what every game but
   /** FAKE with every optional hook left out: no `refuse`, no `modes.parse`, no `home.resume`/`resumeExtra`, no own effects on the viewer or the revealer. */
   const PLAIN: ShellConfig<Fake> = {
     ...FAKE,
-    modes: { default: FAKE.modes.default },
+    modes: { default: 'online' },
     table: { initial: FAKE.table.initial, reset: markReset, rendered: FAKE.table.rendered },
     local: {
       viewer: (app, g) => ({
@@ -4272,7 +4283,7 @@ describe('the config`s defaults (shell-call-graph.md §4.3): what every game but
       }),
       revealer: (g) => ({ seat: g.turn }),
     },
-    home: { read: FAKE.home.read, apply: FAKE.home.apply },
+    home: { read: homeOf(FAKE).read, apply: homeOf(FAKE).apply },
   };
   const plain = (app: App, ...intents: ReadonlyArray<FakeIntent>): FakeStep =>
     runIn(ctx, PLAIN, app, ...intents);
@@ -4504,11 +4515,11 @@ describe('the extra seat names as shell state (shell-call-graph.md §4.7): `seat
       level: '4',
       names: ['Cy', ''],
     });
-    expect(players4(carried.app)).toEqual(['Ann', 'Bob', 'Cy', 'Player 4']);
+    expect(players4(carried.app)).toEqual(['Ann', 'Bob', 'Cy', 'Grant']);
     expect(carried.app.shell).toMatchObject({
       role: 'local',
       opts: { level: 4 },
-      localNames: ['Ann', 'Bob', 'Cy', 'Player 4'],
+      localNames: ['Ann', 'Bob', 'Cy', 'Grant'],
       localSeats: [0, 1, 2, 3],
     });
     const remembered = named4(
@@ -4520,10 +4531,10 @@ describe('the extra seat names as shell state (shell-call-graph.md §4.7): `seat
     // The remembered names under the `localSeats` rule: a clash is numbered by its seat.
     expect(players4(remembered.app)).toEqual(['Ann', 'Bob', 'Cy', 'cy 4']);
     expect(remembered.app.shell.seatNames).toEqual(['Cy', 'cy']);
-    // Nothing typed anywhere: the shell's defaults, then `Player N`.
+    // Nothing typed anywhere: the shell's defaults (DEFAULT_LOCAL_NAMES seats six before `Player N`).
     expect(
       players4(named4(initialApp4, { type: 'local/click', p1: '', p2: '', level: '4' }).app),
-    ).toEqual(['Ari', 'Lavi', 'Player 3', 'Player 4']);
+    ).toEqual(['Ari', 'Lavi', 'Sandro', 'Grant']);
     // Fewer seats than names: the terms' capacity wins.
     expect(
       players4(
@@ -4578,5 +4589,72 @@ describe('the extra seat names as shell state (shell-call-graph.md §4.7): `seat
       FAKE,
     );
     expect([...store.keys()]).toEqual([]);
+  });
+});
+
+describe('the config`s shell defaults (dry-review-2026-10.md §7 row 2): what seven configs spelled back to the shell, left out', () => {
+  /** FAKE with no names, tabs or modes and only the two leave confirms and the room line in `copy`: every default in play. */
+  const BARE: ShellConfig<Fake> = {
+    id: FAKE.id,
+    copy: { leaveLocal: 'Leave?', leaveOnline: 'Leave the room?', hostRoom: FAKE.copy.hostRoom },
+    opts: FAKE.opts,
+    engine: FAKE.engine,
+    result: FAKE.result,
+    frames: FAKE.frames,
+    cues: FAKE.cues,
+    table: FAKE.table,
+    local: FAKE.local,
+    home: FAKE.home,
+    prefs: FAKE.prefs,
+  };
+
+  test('the host name, the tabs and the stored mode: Ari, play/rules/about on play, online', () => {
+    expect(defaultNameOf(BARE)).toBe('Ari');
+    expect(defaultNameOf(FAKE)).toBe('Ari');
+    expect(defaultNameOf({ names: { default: 'Bo' } })).toBe('Bo');
+    expect(tabsOf(BARE)).toEqual({ list: ['play', 'rules', 'about'], default: 'play' });
+    expect(tabsOf(FAKE4).list).toEqual(['play', 'rules', 'about']);
+    expect(defaultModeOf(BARE)).toBe('online');
+    expect(defaultModeOf({ modes: { default: 'local' } })).toBe('local');
+    const shell = initialShell(BARE);
+    expect(shell).toMatchObject({ myName: 'Ari', homeTab: 'play', playMode: 'online' });
+    expect(guestName('', BARE)).toBe('Guest');
+  });
+
+  test('the sessions` status copy is the shell`s unless the game has words of its own', () => {
+    expect(copyOf(BARE).opening).toBe('Opening room…');
+    expect(copyOf(BARE).connecting('ABCD')).toBe('Connecting to room ABCD…');
+    expect(copyOf(BARE).handoff('ABCD', null)).toBe(
+      'Room ABCD is open — send your opponent the invite to carry on this game…',
+    );
+    expect(copyOf(BARE).handoff('ABCD', 'Jeff')).toBe(
+      'Room ABCD is open — send Jeff the invite to carry on this game…',
+    );
+    expect(copyOf(FAKE).opening).toBe('Opening…');
+    expect(initialShell(BARE).hostStatus).toEqual({ text: 'Opening room…', pulse: true });
+    const opened = reduceShell(initialApp, { type: 'host/click', name: '', level: '' }, ctx, BARE);
+    expect(opened.app.shell.hostStatus.text).toBe('Opening room…');
+    expect(opened.app.shell.myName).toBe('Ari');
+  });
+
+  test('the cue memory, the result key and the home hooks: INITIAL_CUE_MEMORY, `startedAt`, nothing read and the App as it is', () => {
+    expect(initialCuesOf(BARE)).toBe(INITIAL_CUE_MEMORY);
+    expect(initialCuesOf<Fake>({ cues: {} })).toBe(INITIAL_CUE_MEMORY);
+    expect(initialCuesOf({ cues: { initial: { key: 'k' } } })).toEqual({ key: 'k' });
+    expect(keyOfView({ result: {} }, { startedAt: 77 })).toBe('77');
+    const view: View = {
+      seat: 0,
+      turn: 0,
+      moves: 3,
+      over: false,
+      isMyTurn: true,
+      names: ['A', 'B'],
+    };
+    expect(keyOfView(FAKE, view)).toBe('3:0');
+    const hooks = homeOf<ShellTypes & Readonly<{ Home: object }>>({});
+    expect(hooks.read(undefined)).toEqual({});
+    expect(hooks.apply(initialApp, readHome(new Map(), FAKE))).toBe(initialApp);
+    expect(hooks.resume).toBeUndefined();
+    expect(homeOf(FAKE)).toBe(FAKE.home);
   });
 });

@@ -32,7 +32,7 @@ import {
   paintCurtain as paintShellCurtain,
 } from '../../../../shared/ui/curtain.ts';
 import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
-import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
+import { DEFAULT_LOCAL_NAMES, handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindDelegated,
@@ -50,13 +50,13 @@ import type { View } from '../engine/view.ts';
 import { flyCards, planFlights, type Flight } from './motion.ts';
 import { listNames } from '../../../../shared/lib/name.ts';
 import { seatedHome } from '../../../../shared/ui/seatedHome.ts';
-import { LOCAL_NAMES, MAX_SEATS, MIN_SEATS } from '../shellConfig.ts';
+import { MAX_SEATS, MIN_SEATS } from '../shellConfig.ts';
 import { HOME_TABS, UNO, namesOf, type App, type Intent, type Uno } from './state.ts';
 
 /** The home screen (web/shared/ui/seatedHome.ts): the shell's, two to twelve on both steppers, one name input per seat. */
 const home = seatedHome<Uno>({
   seats: { min: MIN_SEATS, max: MAX_SEATS },
-  localNames: LOCAL_NAMES,
+  localNames: DEFAULT_LOCAL_NAMES,
   allNames: namesOf,
   tabs: HOME_TABS,
 });

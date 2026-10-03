@@ -7,7 +7,13 @@ import { describe, expect, test } from 'vitest';
 import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
 import { createStore, type StorageLike } from '../../../../shared/edge/storage.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
-import { DEFAULT_LOCAL_NAMES, flipped, gateOpen } from '../../../../shared/ui/shell.ts';
+import {
+  DEFAULT_LOCAL_NAMES,
+  DEFAULT_NAME,
+  flipped,
+  gateOpen,
+  keyOfView,
+} from '../../../../shared/ui/shell.ts';
 import {
   actorOf,
   applyAction,
@@ -26,7 +32,7 @@ import {
   toast as toastFrame,
 } from '../protocol.ts';
 import { pos, scripted } from '../engine/test-helpers.ts';
-import { DEFAULT_NAME, LOCAL_NAMES } from '../shellConfig.ts';
+import { LOCAL_NAMES } from '../shellConfig.ts';
 import { STORAGE_KEYS } from '../storage.ts';
 import { effectiveSelection, sourcesOf, targetsOf } from './board.ts';
 import { CUES } from './sound.ts';
@@ -34,8 +40,6 @@ import {
   DEFAULT_PLAY_MODE,
   DISCONNECTED_MSG,
   GONE_TOAST_MS,
-  LEAVE_LOCAL_MSG,
-  LEAVE_ONLINE_MSG,
   LONG_PRESS_MS,
   LOST_HOST_MSG,
   hostLeftMsg,
@@ -75,6 +79,9 @@ import {
   type Intent,
   type Step,
 } from './state.ts';
+
+// The leave confirms are the shell's words over a match and a room (seatCopy.ts `leaveCopy`), read off the config.
+const { leaveLocal: LEAVE_LOCAL_MSG, leaveOnline: LEAVE_ONLINE_MSG } = BACKGAMMON.copy;
 import { handoffLabel, resumeLabel as sharedResumeLabel } from '../../../../shared/lib/name.ts';
 
 /** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
@@ -1638,7 +1645,7 @@ describe('the finished match`s record (the owner, 2026-09-25)', () => {
   test('the adapters: the opening`s clock is the key, the match score the score, `matchWinner` the victor', () => {
     const l = local();
     const v = view(l);
-    expect(BACKGAMMON.result.keyOf(v)).toBe(String(game(l).startedAt));
+    expect(keyOfView(BACKGAMMON, v)).toBe(String(game(l).startedAt));
     expect(BACKGAMMON.result.playersOf(v)).toEqual(['Ann', 'Bob']);
     expect(BACKGAMMON.result.scoreOf(v)).toBe('0–0');
     expect(BACKGAMMON.result.winnerOf(v)).toBeNull();

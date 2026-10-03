@@ -12,6 +12,10 @@ import {
   type GuestSave as ShellGuestSave,
   type HostSave as ShellHostSave,
   type LocalSave as ShellLocalSave,
+  DEFAULT_HOME_TAB,
+  DEFAULT_PLAY_MODE,
+  HOME_TABS,
+  type HomeTab,
   type PlayMode,
   type Save as ShellSave,
 } from '../../../shared/edge/prefs.ts';
@@ -46,10 +50,8 @@ export const EXTRA_NAME_PREFS: ReadonlyArray<TextPref<string>> = EXTRA_SEATS.map
   extraNamePref(PREFIX, seat),
 );
 
-export const HOME_TABS = ['play', 'rules', 'about'] as const;
-export type HomeTab = (typeof HOME_TABS)[number];
-export const DEFAULT_HOME_TAB: HomeTab = 'play';
-export const DEFAULT_PLAY_MODE: PlayMode = 'online';
+// The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
+export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 
 /** The room's terms: how many sit down (the target is the engine's 500). */
 export type Opts = Readonly<{ seatCount: SeatCount }>;

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { WAITING_MSG } from '../../../shared/net/host.ts';
 import { createState, viewFor } from './engine/view.ts';
+import { defaultModeOf, keyOfView } from '../../../shared/ui/shell.ts';
 import { UNO_SHELL, parseOpts, seatNames } from './shellConfig.ts';
 
 describe('the N-seat copy is the shell’s (web/shared/ui/seatCopy.ts), dealt', () => {
@@ -28,7 +29,8 @@ describe('the options and the seats', () => {
     expect(UNO_SHELL.opts.pick({ seatCount: 4 })).toEqual({ seatCount: 4 });
     expect(seatNames(3, [{ id: 'p1', name: 'Ann' }])).toEqual(['Ann', 'Player 2', 'Player 3']);
     // The play mode is the shell's default (local or online; shell.test.ts).
-    expect(UNO_SHELL.modes).toEqual({ default: 'online' });
+    expect(UNO_SHELL.modes).toBeUndefined();
+    expect(defaultModeOf(UNO_SHELL)).toBe('online');
   });
 
   test('the engine adapters: the deal over the seated list, the names, a rename, the result', () => {
@@ -50,7 +52,7 @@ describe('the options and the seats', () => {
     expect(e.finished(game)).toBe(false);
     const view = viewFor(game, 0);
     expect(e.over(view)).toBe(false);
-    expect(UNO_SHELL.result.keyOf(view)).toBe('77');
+    expect(keyOfView(UNO_SHELL, view)).toBe('77');
     expect(UNO_SHELL.result.playersOf(view)).toEqual(['Ann', 'Bob', 'Cy']);
     expect(UNO_SHELL.result.scoreOf(view)).toBe(view.counts.map(String).join('–'));
     expect(UNO_SHELL.result.winnerOf(view)).toBeNull();

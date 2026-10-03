@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
 import { createStore, type StorageLike } from '../../../../shared/edge/storage.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
+import { homeOf } from '../../../../shared/ui/shell.ts';
 import { createGame, viewFor, type State } from '../engine/index.ts';
 import { STORAGE_KEYS } from '../storage.ts';
 import {
@@ -235,7 +236,7 @@ describe('what the boot and the sessions read back', () => {
     expect(home.opts).toEqual({ seatCount: 4 });
     expect(home.seatNames).toEqual([null, null, 'Noa', ...Array<null>(7).fill(null)]);
     // The seat count and the names are the shell's (`prefs.opts`, `prefs.seatNames`): `home/init` sets them, the game's apply has nothing of its own.
-    expect(FLIP7.home.apply(initialApp, home)).toBe(initialApp);
+    expect(homeOf(FLIP7).apply(initialApp, home)).toBe(initialApp);
     const atHome = run(initialApp, { type: 'home/init', home }).app;
     expect(atHome.shell.opts).toEqual({ seatCount: 4 });
     expect(atHome.shell.seatNames[2]).toBe('Noa');

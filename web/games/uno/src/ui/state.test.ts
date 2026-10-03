@@ -123,10 +123,11 @@ describe('pass and play', () => {
     expect(s.effects).toContainEqual({ type: 'writeOpts', opts: { seatCount: 2 } });
   });
 
-  test('twelve seats, the largest table: the names past the fourth are numbered', () => {
+  test('twelve seats, the largest table: the names past the fourth are the shell`s defaults, then numbered', () => {
     const twelve = run(initialApp, localClick('12'));
     expect(twelve.app.shell.game?.game.names).toHaveLength(12);
-    expect(twelve.app.shell.game?.game.names.slice(3, 5)).toEqual(['Grant', 'Player 5']);
+    expect(twelve.app.shell.game?.game.names.slice(3, 5)).toEqual(['Grant', 'Noa']);
+    expect(twelve.app.shell.game?.game.names.slice(6, 8)).toEqual(['Player 7', 'Player 8']);
   });
 
   test('three seats: the third name the default when left empty; four with all four typed', () => {
@@ -156,7 +157,7 @@ describe('pass and play', () => {
       'Sandro',
       'Grant',
       'Eve',
-      'Player 6',
+      'Ethan',
     ]);
     // Leaving the table keeps the names typed at home.
     expect(run(six.app, { type: 'leave/finish' }).app.shell.seatNames[2]).toBe('Eve');
