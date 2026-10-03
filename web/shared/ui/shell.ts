@@ -2884,13 +2884,15 @@ export const readHome = <G extends ShellTypes>(
     save: save.ok ? save.value : null,
     recentGames: cfg.prefs.recentGames.read(store),
     opts: cfg.prefs.opts === undefined ? null : cfg.prefs.opts.read(store),
-    seatNames:
-      cfg.prefs.seatNames === undefined
-        ? null
-        : cfg.prefs.seatNames.map((pref) => {
+    // Absent, not null, for a game without the prefs: its snapshot is the literal it was.
+    ...(cfg.prefs.seatNames === undefined
+      ? {}
+      : {
+          seatNames: cfg.prefs.seatNames.map((pref) => {
             const name = pref.read(store);
             return name.ok ? name.value : null;
           }),
+        }),
     ...cfg.home.read(store),
   };
 };

@@ -394,7 +394,6 @@ const home: Snapshot = {
   soundFont: 'default',
   flipTable: false,
   save: null,
-  seatNames: null,
   recentGames: [],
   opts: null,
   colour: 'green',
@@ -3091,7 +3090,6 @@ describe('storage and what the sessions read back', () => {
       save: { role: 'guest', code: 'KQZM', myName: 'Jeff' },
       recentGames: [RECORD],
       opts: null,
-      seatNames: null,
       colour: 'red',
     });
     store.set(KEYS.homeTab, 'settings');
@@ -4315,12 +4313,12 @@ describe('the extra seat names as shell state (shell-call-graph.md §4.7): `seat
     ]);
   });
 
-  test('readHome reads the seat names through the prefs (null where nothing is stored), null for a game without; home/init puts them in the shell and keeps the current ones otherwise', () => {
+  test('readHome reads the seat names through the prefs (null where nothing is stored), nothing for a game without; home/init puts them in the shell and keeps the current ones otherwise', () => {
     const store: Store = new Map();
     expect(readHome(store, NAMED4).seatNames).toEqual([null, null]);
     store.set('fake_p4Name', 'Dan');
     expect(readHome(store, NAMED4).seatNames).toEqual([null, 'Dan']);
-    expect(readHome(store, FAKE4).seatNames).toBeNull();
+    expect(readHome(store, FAKE4)).not.toHaveProperty('seatNames');
     const snapshot = readHome(store, NAMED4);
     expect(named4(initialApp4, { type: 'home/init', home: snapshot }).app.shell.seatNames).toEqual([
       null,

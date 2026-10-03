@@ -251,16 +251,18 @@ describe('the engine adapters over a pair', () => {
 });
 
 describe('home.read', () => {
-  test('defaults on an empty store; the pack, the language and the third and fourth names when stored', () => {
+  test('defaults on an empty store; the pack, the language and the speed when stored; the third and fourth names through the shell`s seat-name prefs', () => {
     const empty = createStore(fakeStorage());
     expect(BRISCOLA_SHELL.prefs.opts?.read(empty)).toEqual(DEFAULT_OPTS);
     expect(BRISCOLA_SHELL.home.read(empty)).toEqual({
       cardPack: DEFAULT_CARD_PACK,
       lang: 'it',
       speed: 'normal',
-      p3Name: null,
-      p4Name: null,
     });
+    expect(BRISCOLA_SHELL.prefs.seatNames?.map((pref) => pref.read(empty).ok)).toEqual([
+      false,
+      false,
+    ]);
     const storage = fakeStorage();
     storage.setItem(STORAGE_KEYS.speed, 'quick');
     storage.setItem(STORAGE_KEYS.cardPack, 'linea');
@@ -275,10 +277,14 @@ describe('home.read', () => {
     expect(BRISCOLA_SHELL.home.read(createStore(storage))).toEqual({
       cardPack: 'linea',
       lang: 'en',
-      p3Name: 'Cara',
-      p4Name: 'Dan',
       speed: 'quick',
     });
+    expect(
+      BRISCOLA_SHELL.prefs.seatNames?.map((pref) => {
+        const name = pref.read(createStore(storage));
+        return name.ok ? name.value : null;
+      }),
+    ).toEqual(['Cara', 'Dan']);
     expect(BRISCOLA_SHELL.tabs.list).toEqual(['play', 'rules', 'about']);
     expect(BRISCOLA_SHELL.cues.initial).toEqual({ key: null });
   });

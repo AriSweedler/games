@@ -7,16 +7,16 @@
 // completed here with the table hooks: `reset` per site, `rendered`, `refuse`, pass-and-play's
 // `viewer`/`revealer`, and the home snapshot's own part); `table` is the table's interaction
 // memory (the hand's kept slots, a lifted card, a drag, the settle beat, the sheets, the curtain,
-// the card pack, the third and fourth names), which no other game has. `Intent` is every handler
+// the card pack), which no other game has. `Intent` is every handler
 // and every network event, and `reduce` returns the next App with a list of `Effect`s: what to
 // persist, toast, send, play or arm, as data. main.ts runs the effects through the real adapters
 // (`runEffect`: briscola's three, then the shared runner) and paints the App (ui/render.ts); the
 // tests run the reducer alone. The first game booted through the shared shell (D18).
 //
-// Briscola's residue on the shell: pass-and-play seats two, three or four (D1, D17), so `reduce`
-// takes `local/click` itself (the shell's case seats a pair) and creates the N-seat game before
-// handing it to the shared `startLocal`, drops the handoff at three and four seats (offered at two
-// only), and persists the room's options after a start; the guest whose game is over when the
+// Briscola's residue on the shell: pass-and-play seats two, three or four (D1, D17: the shell's
+// `local/click` seats every seat the terms hold, the third and fourth names its `seatNames`), so
+// `reduce` drops the handoff at three and four seats (offered at two
+// only); the guest whose game is over when the
 // host drops (`hostLeft`, backgammon's) is taken before the shell's `guest/lost` too. One game per
 // sitting (the owner, 2026-09-25): every game ends on the result sheet over the table, whose Play
 // again (`replay/click`) deals anew for the same players with the deal passed to the next seat; the
@@ -52,14 +52,11 @@ import {
   isShellEffect,
   isShellIntent,
   localBroadcast,
-  localNamesOf,
-  localSeats,
   pure,
   readHome as shellReadHome,
   reduceShell,
   resumeFor as shellResumeFor,
   saveFor as shellSaveFor,
-  startLocal,
   step,
   toast,
   withShell,
@@ -92,7 +89,6 @@ import {
   actorOf,
   applyAction,
   cardById,
-  createGame,
   nameOf,
   replayGame,
   viewFor,
@@ -118,7 +114,7 @@ import {
   type IntentSlot,
 } from '../protocol.ts';
 import { emptySeatName } from '../../../../shared/ui/seatCopy.ts';
-import { BRISCOLA_SHELL, parseOpts, seatPlayers } from '../shellConfig.ts';
+import { BRISCOLA_SHELL } from '../shellConfig.ts';
 import { DURATIONS, drawRunMs, drawSpan, durationsFor, freezeMsFor, stageMs } from './beat.ts';
 import { TEMPO_SCALE, variantOf, type Variant } from './variant.ts';
 import {
@@ -127,7 +123,6 @@ import {
   DEFAULT_LANG,
   DEFAULT_PLAY_MODE,
   DEFAULT_SPEED,
-  EXTRA_NAME_PREFS,
   HOME_TABS,
   isSpeed,
   writeCardPack,
@@ -187,28 +182,25 @@ export type Resume = SharedResume<Briscola>;
 
 /**
  * The raw option values `host/click` and `local/click` carry off the inputs (design §5.8
- * `startOptions`): the Online seat count select, its pass-and-play twin, and the third and fourth
- * pass-and-play names (the shared binder reads the first two). A key the click did not carry keeps
- * the shell's current value; the rest of the room's terms are fixed (`TABLE_TERMS`).
+ * `startOptions`): the Online seat count stepper and its pass-and-play twin (the third and fourth
+ * pass-and-play names ride as the shell's `names`). A key the click did not carry keeps the
+ * shell's current value; the rest of the room's terms are fixed (`TABLE_TERMS`).
  */
 export type Raw = Readonly<{
   players?: string;
   localPlayers?: string;
-  p3?: string;
-  p4?: string;
+  names?: ReadonlyArray<string>;
 }>;
 
 /** The seats beyond the shell's two: the third and fourth players (D1). */
 export type ExtraSeat = 2 | 3;
 
-/** What `initHome` reads beyond the shell's keys: the card pack, the language pack, the speed, the third and fourth names (the room options are the shell's `prefs.opts`). */
+/** What `initHome` reads beyond the shell's keys: the card pack, the language pack, the speed (the room options are the shell's `prefs.opts`, the third and fourth names its `prefs.seatNames`). */
 export type Home = Readonly<{
   cardPack: CardPack;
   lang: LanguagePackName;
   /** `briscola_speed`: the battle beat's speed. */
   speed: Speed;
-  p3Name: string | null;
-  p4Name: string | null;
 }>;
 
 /**
@@ -315,12 +307,6 @@ export type Table = Readonly<{
   swallowTap: string | null;
   /** `#cardViewOverlay`: the card shown large with its name (the briscola tapped), or none. */
   cardView: string | null;
-  /**
-   * The third and fourth pass-and-play names as last read from their keys or typed into their
-   * inputs; null when neither (the input shows the seat's default, shellConfig.ts LOCAL_NAMES,
-   * marked for the first-tap clear, and the seat starts as it).
-   */
-  extraNames: Readonly<Record<ExtraSeat, string | null>>;
   /** The hand slot (an index into `slots`) under a fine pointer or holding focus (§4.2); null when none. */
   hover: IntentSlot | null;
   /** The last intent frame this device put on the lane; equality stops repeats; null after a rejoin so a held lift is re-sent. */
@@ -357,7 +343,6 @@ export const initialTable: Table = {
   tip: null,
   swallowTap: null,
   cardView: null,
-  extraNames: { 2: null, 3: null },
   hover: null,
   sent: null,
   intentArmed: false,
@@ -418,8 +403,6 @@ export type TableIntent =
   | Readonly<{ type: 'settle/elapsed' }>
   /** `#stock`, my awaiting slot or the felt tapped while my draw waits (§3.1 DRAW): my back flies and flips; dropped at any other moment. */
   | Readonly<{ type: 'draw/tap' }>
-  /** `#p3NameInput` / `#p4NameInput` typed: remembered under its key. */
-  | Readonly<{ type: 'pname/typed'; seat: ExtraSeat; value: string }>
   /** The hook's `cardPack(name)`: a pack that draws the Italian deck is shown from now on and remembered; anything else is ignored. */
   | Readonly<{ type: 'cardPack/set'; pack: string }>
   /** The hook's `lang(name)`: a language pack names the cards from now on and is remembered; anything else is ignored. */
@@ -451,9 +434,8 @@ export type ShellIntent = SharedShellIntent<Briscola>;
 
 export type TimerId = SharedTimerId<Briscola>;
 
-/** Briscola's own effects, handled by `runEffect` before the shared runner: the four preferences this page alone keeps (the room options are the shell's `writeOpts`). */
+/** Briscola's own effects, handled by `runEffect` before the shared runner: the three preferences this page alone keeps (the room options are the shell's `writeOpts`, the seat names its `rememberSeatName`). */
 export type TableEffect =
-  | Readonly<{ type: 'rememberPName'; seat: ExtraSeat; name: string }>
   | Readonly<{ type: 'writeCardPack'; pack: CardPack }>
   | Readonly<{ type: 'writeLang'; name: LanguagePackName }>
   | Readonly<{ type: 'writeSpeed'; speed: Speed }>;
@@ -922,13 +904,12 @@ const revealer: ShellConfig<Briscola>['local']['revealer'] = (game) => ({
   seat: actorOf(game) ?? game.turn,
 });
 
-/** What a game leaves behind when it is left, lost or handed off: the table's memory; the card pack, the language and the names stay. */
+/** What a game leaves behind when it is left, lost or handed off: the table's memory; the card pack, the language and the speed stay. */
 const tableCleared = (table: Table): Table => ({
   ...initialTable,
   cardPack: table.cardPack,
   lang: table.lang,
   speed: table.speed,
-  extraNames: table.extraNames,
 });
 
 /** Escape (§5.5; the shell's hook): what is up goes, one thing per press: the card view, a drag, a lift, the deck; null leaves the history and the rules to the shell. */
@@ -1034,11 +1015,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
       return settleElapsed(app, ctx);
     case 'draw/tap':
       return drawTap(app, ctx);
-    case 'pname/typed':
-      return step(
-        withTable(app, { extraNames: { ...t.extraNames, [intent.seat]: intent.value } }),
-        { type: 'rememberPName', seat: intent.seat, name: intent.value.trim() },
-      );
     case 'cardPack/set':
       return isCardPackFor(DECK_KIND, intent.pack)
         ? step(withTable(app, { cardPack: intent.pack }), {
@@ -1268,7 +1244,6 @@ export const BRISCOLA: ShellConfig<Briscola> = {
         cardPack: home.cardPack,
         lang: home.lang,
         speed: home.speed,
-        extraNames: { 2: home.p3Name, 3: home.p4Name },
       },
     }),
   },
@@ -1292,33 +1267,6 @@ const hostLeft = (app: App, v: View, ctx: Context): Step => {
       { type: 'clearSave' },
       toast(hostLeftMsg(nameOf(v.players, 0)), GONE_TOAST_MS),
     ),
-  );
-};
-
-/**
- * `local/click` for two, three or four seats (D1, D17): the room's options off the raw inputs,
- * the names off the first `seatCount` inputs (the third and fourth carried in `Raw`, else as last
- * remembered, else empty) through the shared `localSeats` rule with this game's defaults
- * (shellConfig.ts LOCAL_NAMES: the owner's "Ari and Lavi (with p3 Sandro and p4 Grant)"), the game
- * dealt and handed to the shared `startLocal`, then the options remembered. The shell's own case
- * seats a pair; this replaces it.
- */
-const localStart = (
-  app: App,
-  intent: Readonly<{ p1: string; p2: string }> & Raw,
-  ctx: Context,
-): Step => {
-  const opts = parseOpts(intent, app.shell.opts);
-  const raws = [
-    intent.p1,
-    intent.p2,
-    intent.p3 ?? app.table.extraNames[2] ?? '',
-    intent.p4 ?? app.table.extraNames[3] ?? '',
-  ].slice(0, opts.seatCount);
-  const seats = localSeats(raws, localNamesOf(BRISCOLA_SHELL));
-  const game = createGame(seatPlayers(opts.seatCount, seats), opts, ctx.rng, ctx.now);
-  return then(startLocal(withShell(app, { opts }), game, ctx, BRISCOLA), (a) =>
-    step(a, { type: 'writeOpts', opts }),
   );
 };
 
@@ -1349,7 +1297,6 @@ const forIntent = (app: App, intent: Intent): Step => {
 const reduceInner = (app: App, intent: Intent, ctx: Context): Step => {
   const v = app.shell.view;
   if (intent.type === 'guest/lost' && v?.phase === 'over') return hostLeft(app, v, ctx);
-  if (intent.type === 'local/click') return localStart(app, intent, ctx);
   // The handoff is a two-seat room (D17): offered at two players only.
   if (intent.type === 'handoff/click' && seatCountOf(app) !== 2) return pure(app);
   // A seat is down mid-game: the trick waits for it, so a guest's play is refused with who is missing.
@@ -1400,16 +1347,13 @@ export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(ap
 /** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); briscola adds none. main.ts constructs the real ones, tests record. */
 export type EffectDeps = ShellEffectDeps<Briscola>;
 
-/** One effect against the adapters; `app` is the state after the step that produced it. Briscola's four first, then the shell's runner. */
+/** One effect against the adapters; `app` is the state after the step that produced it. Briscola's three first, then the shell's runner. */
 export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
   if (isShellEffect(effect)) {
     runShellEffect(app.shell, effect, deps, BRISCOLA);
     return;
   }
   switch (effect.type) {
-    case 'rememberPName':
-      EXTRA_NAME_PREFS[effect.seat].write(deps.store, effect.name);
-      return;
     case 'writeCardPack':
       writeCardPack(deps.store, effect.pack);
       return;

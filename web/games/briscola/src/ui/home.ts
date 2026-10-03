@@ -13,29 +13,29 @@
 // not a paint (the saved names at `initHome`, the
 // sanitised room code as it is typed) are effects the reducer raises and main.ts runs through
 // `fillNameInputs` / `fillP2NameInput` / `setCodeInput`; the third and fourth names are painted from
-// the table's memory (`extraNames`), which their own keystrokes keep current, so the paint never
-// overwrites what is being typed.
+// the shell's memory (`seatNames`, web/shared/ui/seatNames.ts), which their own keystrokes keep
+// current, so the paint never overwrites what is being typed.
 import {
-  dataOf,
-  listen,
   listenId,
   readValue,
   requireId,
-  setAttr,
   setValue,
   toggleClass,
   type DocumentLike,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
 import {
-  DEFAULT_MARK,
   bindHomeShell,
-  clearDefault,
   homeView,
   paintHomeShell,
   shellIntents,
 } from '../../../../shared/ui/home.ts';
-import { localNameFor } from '../../../../shared/ui/shell.ts';
+import {
+  bindSeatNames,
+  paintSeatNames,
+  readSeatNames,
+  type SeatNamesSpec,
+} from '../../../../shared/ui/seatNames.ts';
 import { bindStepper, paintStepper, type StepperSpec } from '../../../../shared/ui/stepper.ts';
 import { LOCAL_NAMES } from '../shellConfig.ts';
 import { resumeLabel } from '../../../../shared/lib/name.ts';
@@ -73,6 +73,8 @@ export const EXTRA_NAME_INPUTS: Readonly<Record<ExtraSeat, string>> = {
   2: 'p3NameInput',
   3: 'p4NameInput',
 };
+/** The same two inputs as the shared module places them: four seats, this game's defaults past the shell's two. */
+const SEAT_NAMES: SeatNamesSpec = { max: 4, names: LOCAL_NAMES };
 
 /** The Online panel's raw value, the key `host/click` carries (`Raw`). */
 export const readHostOptions = (doc: DocumentLike): Raw => ({
@@ -87,8 +89,7 @@ export const readLocalSeats = (doc: DocumentLike): Raw => ({
 /** What `#localBtn` carries beside the first two names: the seat count and the third and fourth names (the reducer seats the first `seatCount`). */
 export const readLocalOptions = (doc: DocumentLike): Raw => ({
   ...readLocalSeats(doc),
-  p3: readValue(requireId(doc, EXTRA_NAME_INPUTS[2])),
-  p4: readValue(requireId(doc, EXTRA_NAME_INPUTS[3])),
+  names: readSeatNames(doc, SEAT_NAMES),
 });
 
 /**
@@ -104,13 +105,7 @@ const paintOptions = (doc: DocumentLike, app: App): void => {
   // typed, or the seat's default marked for the first-tap clear (shellConfig.ts LOCAL_NAMES: the
   // owner's Sandro and Grant), as the shared fill marks the first two seats.
   toggleClass(requireId(doc, 'moreNames'), 'hidden', o.seatCount < 3);
-  toggleClass(requireId(doc, EXTRA_NAME_INPUTS[3]), 'hidden', o.seatCount < 4);
-  ([2, 3] as const).forEach((seat) => {
-    const input = requireId(doc, EXTRA_NAME_INPUTS[seat]);
-    const name = app.table.extraNames[seat];
-    setValue(input, name ?? localNameFor(LOCAL_NAMES, seat));
-    setAttr(input, DEFAULT_MARK, name === null ? '1' : null);
-  });
+  paintSeatNames(doc, SEAT_NAMES, o.seatCount, app.shell.seatNames);
   // The battle beat's speed (docs/design/briscola-battle.md §3.7): one preference, shown by both panels.
   SPEED_SELECTS.forEach((id) => {
     setValue(requireId(doc, id), app.table.speed);
@@ -143,22 +138,8 @@ const bindOptions = (doc: PageLike, dispatch: (intent: Intent) => void): void =>
       dispatch({ type: 'speed/set', speed: readValue(requireId(doc, id)) });
     });
   });
-  ([2, 3] as const).forEach((seat) => {
-    const input = requireId(doc, EXTRA_NAME_INPUTS[seat]);
-    listenId(doc, EXTRA_NAME_INPUTS[seat], 'input', () => {
-      dispatch({ type: 'pname/typed', seat, value: readValue(input) });
-    });
-    // A prefilled default clears on its first tap (the owner, 2026-09-25), as the shared binder
-    // clears the first two seats; these two are painted from the table's memory, so the reducer
-    // is told the seat is now empty (its key is dropped) and the paint follows instead of refilling.
-    ['focus', 'pointerdown'].forEach((type) => {
-      listen(input, type, () => {
-        if (dataOf(input, 'default') === null) return;
-        clearDefault(input);
-        dispatch({ type: 'pname/typed', seat, value: '' });
-      });
-    });
-  });
+  // Each seat's keystrokes, and the first-tap clear of a default (the owner, 2026-09-25), as the shell's `seatName/typed`.
+  bindSeatNames(doc, SEAT_NAMES, dispatch);
 };
 
 /** Every control of the home screen and the two waiting screens. */

@@ -47,8 +47,6 @@ const home: HomeSnapshot = {
   cardPack: 'linea',
   lang: 'it',
   speed: 'normal',
-  p3Name: null,
-  p4Name: null,
 };
 const three = createGame(
   [
@@ -125,7 +123,7 @@ describe('paintCurtain and bindLocal over the page', () => {
     const start = run(
       initialApp,
       { type: 'home/init', home },
-      { type: 'local/click', p1: 'Ann', p2: 'Bob', localPlayers: '4', p3: 'Cara', p4: 'Dan' },
+      { type: 'local/click', p1: 'Ann', p2: 'Bob', localPlayers: '4', names: ['Cara', 'Dan'] },
     ).app;
     paintCurtain(p.doc, start);
     const v = view(start);

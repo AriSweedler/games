@@ -53,9 +53,12 @@ const type = (p: BriscolaPage, id: string, value: string): void => {
 const tap = (p: BriscolaPage, field: string, which: 'inc' | 'dec'): void => {
   p.get(stepperIds(field)[which]).fire('click');
 };
-const withOpts = (over: Partial<App['shell']['opts']>, table: Partial<App['table']> = {}): App => ({
-  shell: { ...initialApp.shell, opts: { ...DEFAULT_OPTS, ...over } },
-  table: { ...initialApp.table, ...table },
+const withOpts = (
+  over: Partial<App['shell']['opts']>,
+  seatNames: ReadonlyArray<string | null> = [null, null],
+): App => ({
+  shell: { ...initialApp.shell, opts: { ...DEFAULT_OPTS, ...over }, seatNames },
+  table: initialApp.table,
 });
 const recorder = (): Readonly<{ intents: Intent[]; dispatch: (i: Intent) => void }> => {
   const intents: Intent[] = [];
@@ -134,9 +137,9 @@ describe('paintHome', () => {
     expect(p.get(stepperIds(ONLINE_PLAYERS).dec).disabled()).toBe(false);
   });
 
-  test('three and four seats show the extra names, painted from the table`s memory', () => {
+  test('three and four seats show the extra names, painted from the shell`s memory', () => {
     const p = page();
-    paintHome(p.doc, withOpts({ seatCount: 3 }, { extraNames: { 2: 'Cara', 3: 'Dan' } }));
+    paintHome(p.doc, withOpts({ seatCount: 3 }, ['Cara', 'Dan']));
     expect(p.get(LOCAL_PLAYERS).value()).toBe('3');
     expect(p.get('moreNames').hidden()).toBe(false);
     expect(p.get(EXTRA_NAME_INPUTS[2]).hidden()).toBe(false);
@@ -148,12 +151,12 @@ describe('paintHome', () => {
     expect(p.get(EXTRA_NAME_INPUTS[3]).attr('data-default')).toBeNull();
     // Nothing remembered (null): the seat shows its default (the owner's Sandro and Grant), marked
     // for the first-tap clear; a seat emptied by that tap ('') shows empty, unmarked.
-    paintHome(p.doc, withOpts({ seatCount: 4 }, { extraNames: { 2: null, 3: null } }));
+    paintHome(p.doc, withOpts({ seatCount: 4 }, [null, null]));
     expect(p.get(EXTRA_NAME_INPUTS[2]).value()).toBe('Sandro');
     expect(p.get(EXTRA_NAME_INPUTS[3]).value()).toBe('Grant');
     expect(p.get(EXTRA_NAME_INPUTS[2]).attr('data-default')).toBe('1');
     expect(p.get(EXTRA_NAME_INPUTS[3]).attr('data-default')).toBe('1');
-    paintHome(p.doc, withOpts({ seatCount: 4 }, { extraNames: { 2: '', 3: null } }));
+    paintHome(p.doc, withOpts({ seatCount: 4 }, ['', null]));
     expect(p.get(EXTRA_NAME_INPUTS[2]).value()).toBe('');
     expect(p.get(EXTRA_NAME_INPUTS[2]).attr('data-default')).toBeNull();
     expect(p.get(EXTRA_NAME_INPUTS[3]).attr('data-default')).toBe('1');
@@ -182,10 +185,9 @@ describe('bindHome', () => {
       p1: 'Ann',
       p2: 'Bob',
       localPlayers: '3',
-      p3: 'Cara',
-      p4: '',
+      names: ['Cara', ''],
     });
-    expect(readLocalOptions(p.doc).p3).toBe('Cara');
+    expect(readLocalOptions(p.doc).names).toEqual(['Cara', '']);
   });
 
   test('a tap on − or + remembers its panel`s count at once, clamped to two and four; the third and fourth names as typed', () => {
@@ -215,24 +217,24 @@ describe('bindHome', () => {
     type(p, EXTRA_NAME_INPUTS[3], 'Dan ');
     p.get(EXTRA_NAME_INPUTS[3]).fire('input');
     expect(r.intents.slice(-2)).toEqual([
-      { type: 'pname/typed', seat: 2, value: 'Cara' },
-      { type: 'pname/typed', seat: 3, value: 'Dan ' },
+      { type: 'seatName/typed', seat: 2, value: 'Cara' },
+      { type: 'seatName/typed', seat: 3, value: 'Dan ' },
     ]);
     // A third or fourth seat showing its default (painted marked) clears on its first tap and
     // tells the reducer the seat is empty; the second tap, and a tap on a typed name, do nothing.
-    paintHome(p.doc, withOpts({ seatCount: 4 }, { extraNames: { 2: null, 3: null } }));
+    paintHome(p.doc, withOpts({ seatCount: 4 }, [null, null]));
     const before = r.intents.length;
     p.get(EXTRA_NAME_INPUTS[2]).fire('focus');
     expect(p.get(EXTRA_NAME_INPUTS[2]).value()).toBe('');
     expect(p.get(EXTRA_NAME_INPUTS[2]).attr('data-default')).toBeNull();
     p.get(EXTRA_NAME_INPUTS[2]).fire('focus');
     p.get(EXTRA_NAME_INPUTS[2]).fire('pointerdown');
-    expect(r.intents.slice(before)).toEqual([{ type: 'pname/typed', seat: 2, value: '' }]);
+    expect(r.intents.slice(before)).toEqual([{ type: 'seatName/typed', seat: 2, value: '' }]);
     p.get(EXTRA_NAME_INPUTS[3]).fire('pointerdown');
     expect(p.get(EXTRA_NAME_INPUTS[3]).value()).toBe('');
     expect(r.intents.slice(before)).toEqual([
-      { type: 'pname/typed', seat: 2, value: '' },
-      { type: 'pname/typed', seat: 3, value: '' },
+      { type: 'seatName/typed', seat: 2, value: '' },
+      { type: 'seatName/typed', seat: 3, value: '' },
     ]);
     // The shell's own controls are bound through the shared binder: a tab click, for one.
     p.get('tabRulesBtn').fire('click', { target: fakeTarget({ id: 'tabRulesBtn' }) });
