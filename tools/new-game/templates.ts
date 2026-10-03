@@ -752,7 +752,6 @@ import {
   startLocal,
   step,
   withShell,
-  withTable,
   type Ctx,
   type Effect as SharedEffect,
   type GameTypes,
@@ -789,35 +788,20 @@ import type { Cue } from './sound.ts';
 
 export { DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab, type PlayMode };
 
-export const SCREENS = [
-  'homeScreen',
-  'hostWaitScreen',
-  'guestWaitScreen',
-  'tableScreen',
-  'endgameScreen',
-] as const;
-export type ScreenId = (typeof SCREENS)[number];
-
 /** \`host/click\` and \`local/click\` carry nothing beyond the names: a game for two has no option. */
 export type Raw = Readonly<{ seats?: never }>;
 
 /** \`initHome\` reads nothing beyond the shell's keys. */
 export type Home = Readonly<{ opts?: never }>;
 
+/** The table's own state: the curtain seat alone (the sheets, the pause and the result are the shell's, \`ShellState\`). */
 export type Table = Readonly<{
   /** The shell's pass-and-play curtain seat (\`ShellTypes.Table\`; the shell writes it from \`local.viewer\`). */
   curtain: Seat | null;
-  /** \`#historyOverlay\` open. */
-  historyOpen: boolean;
 }>;
 
-export type TableIntent =
-  | Readonly<{ type: 'act'; action: Action }>
-  | Readonly<{ type: 'rules/open' }>
-  | Readonly<{ type: 'rules/close' }>
-  | Readonly<{ type: 'history/open' }>
-  | Readonly<{ type: 'history/close' }>
-  | Readonly<{ type: 'escape' }>;
+/** The table's one intent: a play; the sheets (\`rules/*\`, \`history/*\`, \`escape\`) are the shell's intents. */
+export type TableIntent = Readonly<{ type: 'act'; action: Action }>;
 
 export type TableEffect = never;
 
@@ -829,7 +813,6 @@ export type ${pascal} = GameTypes<{
   View: View;
   Action: Action;
   Table: Table;
-  Screen: ScreenId;
   Cue: Cue;
   Home: Home;
   Intent: TableIntent;
@@ -846,7 +829,7 @@ export type Step = SharedStep<${pascal}>;
 export type Resume = SharedResume<${pascal}>;
 export type HomeSnapshot = SharedHomeSnapshot<${pascal}>;
 
-export const initialTable: Table = { curtain: null, historyOpen: false };
+export const initialTable: Table = { curtain: null };
 
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
@@ -942,24 +925,9 @@ export const ${upper}: ShellConfig<${pascal}> = {
 /** \`act(action)\`: the shell's by role (the mover acts on a pass-and-play phone: \`revealer\`; a pause up holds it there). */
 const act = (app: App, action: Action, ctx: Ctx): Step => shellAct(app, action, ctx, ${upper});
 
-const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
-  switch (intent.type) {
-    case 'act':
-      return then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
-    case 'rules/open':
-      return pure(withShell(app, { rulesOpen: true }));
-    case 'rules/close':
-      return pure(withShell(app, { rulesOpen: false }));
-    case 'history/open':
-      return pure(withTable(app, { historyOpen: true }));
-    case 'history/close':
-      return pure(withTable(app, { historyOpen: false }));
-    case 'escape':
-      if (app.table.historyOpen) return pure(withTable(app, { historyOpen: false }));
-      if (app.shell.rulesOpen) return pure(withShell(app, { rulesOpen: false }));
-      return pure(app);
-  }
-};
+/** A play with its tap: the table's one intent (the sheets are the shell's, reduced before this). */
+const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step =>
+  then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
 
 /** \`local/click\`: the two names through the shared \`localSeats\` rule with this game's defaults. */
 const localStart = (app: App, intent: Readonly<{ p1: string; p2: string }>, ctx: Ctx): Step => {
@@ -1178,9 +1146,9 @@ const paintCurtain = (doc: DocumentLike, app: App): void => {
   );
 };
 
-/** The shell's sheets (the rules, the history with the recent games, the pause the page opts into): the history flag is this table's. */
+/** The shell's sheets (the rules, the history with the recent games, the pause the page opts into), off the shell's own flags. */
 const paintOverlays = (doc: DocumentLike, app: App): void => {
-  paintShellSheets(doc, { ...app.shell, historyOpen: app.table.historyOpen });
+  paintShellSheets(doc, app.shell);
 };
 
 /** The shell's chrome first (the screens, the rooms, the 🌐, the dot and the names strip off the view), then the page's own. */

@@ -105,7 +105,7 @@ its state machine. The events that pause, so a new game can find its own on the 
 | A round's end                          | every seat's score, then Next round            |
 | A game's end                           | the result sheet, then Play again or Leave     |
 
-How it is built (Flip 7 today; the shape for every game):
+How it is built (the shell's since docs/design/shell-hoist.md row H; Flip 7 is the game to copy from):
 
 - The pause is shell state (`ShellState.pause`, web/shared/ui/shell.ts), raised when a new view
   is painted through the game's `table.pause` adapter (Flip 7's `pauseFor(local, prev, view)`) and
