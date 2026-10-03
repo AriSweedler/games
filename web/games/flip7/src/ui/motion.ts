@@ -33,7 +33,7 @@ import {
   type Element,
   type RootDocumentLike,
 } from '../../../../shared/edge/dom.ts';
-import type { Status, View } from '../engine/index.ts';
+import { STATUSES, type Status, type View } from '../engine/index.ts';
 
 // ---- the clock -----------------------------------------------------------------------------------------
 
@@ -166,8 +166,6 @@ export const moments = (prev: Painted, view: View): Moments => {
 };
 
 // ---- the DOM steps -------------------------------------------------------------------------------------
-
-const STATUSES: ReadonlyArray<Status> = ['active', 'stayed', 'frozen', 'busted', 'flip7'];
 
 const statusOf = (el: Element): Status | null =>
   STATUSES.find((s) => hasClass(el, `status-${s}`)) ?? null;

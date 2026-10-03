@@ -3,5 +3,5 @@
 
 export const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
   'Flip 7 is a press-your-luck card game: flip cards one at a time, bank your line before a repeated number busts it, and chase seven different numbers for the bonus.',
-  'Two to six players: pass one phone around, or open a table online and send the link. Every card is face up, so nobody needs to look away.',
+  'Two to twelve players: pass one phone around, or open a table online and send the link. Every card is face up, so nobody needs to look away.',
 ];

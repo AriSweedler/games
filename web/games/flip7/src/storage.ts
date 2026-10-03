@@ -1,6 +1,6 @@
 // Flip 7's browser storage (docs/design/flip7.md §8): the shell's keys under the `flip7_` prefix
 // (web/shared/edge/prefs.ts `shellStore`; tools/games.ts REGISTRY pins the save key and the prefix),
-// the seat count the two Players selects share, and the third to sixth pass-and-play names.
+// the seat count the two Players steppers share, and the third to twelfth pass-and-play names.
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
 import {
   decodeDigitsOf,

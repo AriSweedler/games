@@ -25,7 +25,9 @@ export const MAX_PLAYERS = 12;
 export const DEFAULT_TARGET = 200;
 export const FLIP3_COUNT = 3;
 
-export type Status = 'active' | 'stayed' | 'frozen' | 'busted' | 'flip7';
+/** A seat's standing in the round, in the order the table paints them. */
+export const STATUSES = ['active', 'stayed', 'frozen', 'busted', 'flip7'] as const;
+export type Status = (typeof STATUSES)[number];
 
 export type Seat = Readonly<{
   name: string;

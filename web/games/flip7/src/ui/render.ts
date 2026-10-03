@@ -50,7 +50,7 @@ import {
   type Moments,
 } from './motion.ts';
 import { listNames } from '../../../../shared/lib/name.ts';
-import { FLIP7, myTurn, type App, type Flip7, type Intent } from './state.ts';
+import { FLIP7, myTurn, waitingToDealMsg, type App, type Flip7, type Intent } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 export { fillNameInputs, fillP2NameInput, setCodeInput } from './home.ts';
@@ -212,7 +212,7 @@ const paintTarget = (doc: DocumentLike, v: View, mine: boolean): void => {
 export const waitText = (v: View): string => {
   const actor = actorOf(v);
   if (actor === null || actor === v.me) return '';
-  if (v.phase.kind === 'roundOver') return `Waiting for ${nameOf(v, 0)} to deal the next round`;
+  if (v.phase.kind === 'roundOver') return waitingToDealMsg(nameOf(v, 0));
   if (v.phase.kind === 'target') return `${nameOf(v, actor)} is giving ${cardName(v.phase.card)}`;
   return `${nameOf(v, actor)}'s turn`;
 };

@@ -59,7 +59,7 @@ export const parseOpts = (raw: Raw, current: Opts): Opts => ({
 export const seatNames = (n: number, seats: ReadonlyArray<Player>): ReadonlyArray<string> =>
   Array.from({ length: n }, (_, i) => seats[i]?.name ?? `Player ${String(i + 1)}`);
 
-/** The engine's seat index as the shell's seat type (0 to 5: the table's range). */
+/** The engine's seat index as the shell's seat type (0 to 11: the table's range). */
 export const asSeat = (seat: number): FlipSeat => seat as FlipSeat;
 
 export const FLIP7_SHELL: ShellGameData<Flip7> = {

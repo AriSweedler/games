@@ -5,8 +5,6 @@
 import { rulesListHtml, type RuleItem } from '../../../../shared/ui/glossary.ts';
 import { GLOSSARY } from './glossary.ts';
 
-export { RULES_SLOT_IDS, type RulesSlot } from '../../../../shared/ui/glossary.ts';
-
 export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
   { id: 'goal', heading: 'Goal', body: 'First to 200 points wins.' },
   {
