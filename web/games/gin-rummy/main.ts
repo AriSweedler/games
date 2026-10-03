@@ -8,26 +8,26 @@
 // paint (src/ui/render.ts). What the legacy page did with the PeerJS CDN <script> and
 // shared/ice.js arrives with this module instead, so index.html loads neither and defines neither
 // `window.Peer` nor `window.HyperIce`; `window.__gin` stays as the documented test hook with the
-// members the legacy exposed. This file keeps what is gin's alone: the stories page, the Score
-// Counter, the card back, the sandbox, the layoffs hook and the clipboard `copy`.
-import { bootShell, type BootCtx } from '../../shared/edge/boot.ts';
+// members the legacy exposed (`act`, `view`, `setup` and `legal` are the boot's). This file keeps
+// what is gin's alone: the stories page, the Score Counter, the card back, the sandbox, the layoffs
+// hook, the name fills (the Score Counter's inputs too) and the clipboard `copy`.
+import { bootShell, browserPage, type BootCtx } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import type { ShareNavigatorLike } from '../../shared/edge/share.ts';
-import { browserStore, type Store } from '../../shared/edge/storage.ts';
+import type { Store } from '../../shared/edge/storage.ts';
 import { aboutHtml } from '../../shared/ui/glossary.ts';
-import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { bestLayoffActions, legalActions } from './src/engine/index.ts';
 import type { Action } from './src/engine/types.ts';
 import { GuestSession, HostSession } from './src/net/sessions.ts';
 import { isGuestFrame } from './src/protocol.ts';
 import { createScorer, type Scorer, type SpeechRecognizerLike } from './src/scorer/main.ts';
-import { STORAGE_KEYS, migrateCardBack, soundEnabled } from './src/storage.ts';
+import { STORAGE_KEYS, migrateCardBack } from './src/storage.ts';
 import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
 import { GLOSSARY } from './src/ui/glossary.ts';
 import { badCardBackMsg, isCardBack, type CardBack } from './src/cardBack.ts';
 import { formatMap, mapOf } from './src/sandbox.ts';
 import { slotHandView } from './src/ui/hand/SlotHandView.ts';
-import { fillNameInputs, fillP2NameInput, renderSandbox, setCodeInput } from './src/ui/home.ts';
+import { fillNameInputs, fillP2NameInput, renderSandbox } from './src/ui/home.ts';
 import { bindAll, fmtTime, paint } from './src/ui/render.ts';
 import { rulesItemsHtml } from './src/ui/rules.ts';
 import {
@@ -135,17 +135,17 @@ const boot = (): void => {
   // The Score Counter's screen registers itself as the legacy `window.__scorer` did, and the
   // `scorer` effect resumes it through that name (the screen is built after the effect adapters).
   const page = window as Window & { __scorer?: Scorer };
-  const store = browserStore();
+  const browser = browserPage();
   // The card back's key was renamed when the shared card packs landed (docs/design/card-packs.md
   // §2.2): a value left under the old key moves over once, and one that names no preset is logged
   // under the new key's message and dropped.
-  const strayBack = migrateCardBack(store);
+  const strayBack = migrateCardBack(browser.store);
   if (strayBack !== null) console.error(badCardBackMsg(strayBack));
   bootShell<Gin, App, GinDeps>({
-    page: { doc: document, win: window, nav: navigator, store, clock: realClock },
+    page: browser,
     // PeerJS log level 0 as on the legacy page (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__gin', title: 'Gin Rummy', debug: 0 },
-    sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },
+    sound: { fontKey: STORAGE_KEYS.soundFont },
     reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
     paint: {
       // The hand is drawn by the slot view with the ghost draw slot (docs/ARCHITECTURE.md "Seams
@@ -155,12 +155,12 @@ const boot = (): void => {
         paint(doc, app, slotHandView);
       },
       bindAll,
-      paintSound,
+      // Gin's own fills: the Score Counter's name input beside the shell's two.
       fillName: fillNameInputs,
       fillP2Name: fillP2NameInput,
-      setCode: setCodeInput,
     },
     config: GIN,
+    copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
     net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
     legal: legalActions,
     deps: {
@@ -175,23 +175,16 @@ const boot = (): void => {
     },
     hooks: {
       home: dropBadCardBack,
-      // The static markup and the Score Counter's screen before the binders; its controls bound after them.
+      // The Score Counter's screen and the sandbox presets before the binders (the copy is the boot's); its controls bound after them.
       render: (ctx) => {
         page.__scorer = bootScorer(ctx);
-        renderCopy(document, {
-          rules: rulesItemsHtml(),
-          about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY),
-        });
         renderSandbox(document);
       },
       bind: () => {
         page.__scorer?.bind();
       },
-      // The members the legacy exposed beyond the shared ones (read-only state; actions go through the reducer).
+      // The members the legacy exposed beyond the boot's (read-only state; actions go through the reducer).
       hook: ({ app, dispatch }) => ({
-        act: (action: Action) => {
-          dispatch({ type: 'act', action });
-        },
         setHomeTab: (tab: string, opts?: Readonly<{ persist?: boolean }>) => {
           dispatch({
             type: 'tab/set',
