@@ -263,3 +263,42 @@ different answer without a re-pin. The recommendation is the v1 default unless t
 | M10   | ~250              | low                                                              | M7              | -                                               |
 | M11   | ~150              | none                                                             | M8-M10          | -                                               |
 | Total | ~+7,000 / -9,000  | one HIGH PR, after the old shell and net are already gone        | 12 merges (15 with the splits) | fidice ends in briscola's shape: `page.ts`, `shellConfig.ts`, `ui/`, `net/` wrappers, `protocol.ts`, `storage.ts`, `fx.ts`; `domain/` and `bots/` byte-identical |
+
+## 9. The pass-and-play start stays in `before` (2026-10-03)
+
+The question §4 M3 left open, and dry-review-2026-10.md §5.2 and §8 item 6 carried: once `engine.create`
+receives the computers (`seatTable`, every chair from the players listed plus `opts.bots`), can Fidice's
+`local/click` go through the shell's case and `ui/state.ts` `localStart` go? Lane `fu-fidice-local-start`
+read both paths. The shell's case (web/shared/ui/shell.ts `local/click`) is four steps: `cfg.opts.parse`,
+the seats `[p1, p2, ...seatNames]` sliced to `capacityOf(opts)` through `localSeats`, `cfg.engine.create`,
+then `startLocal` and `rememberOpts`. Fidice's `localStart` is the same four with a mode step at three of them:
+
+1. Terms: `optsForMode(parseOpts(raw), mode)`. Solo brings two computers and Watch four when the card
+   names none, and Watch sets `watch`. `cfg.opts.parse(raw, current)` cannot see the mode.
+2. Seats: `localHumans(intent, seatNames, mode)`. Watch seats the standing host alone, Solo the first
+   name, Pass the phone the first two and every extra seat the click carries or the shell remembers,
+   never filled up to a capacity: `opts.seatCount` is the host card's chairs (default 6, carried on
+   `#localBtn` since the terms apply in every mode, D7), so the shell's slice and default fill would
+   seat six humans where Fidice seats two.
+3. Deal: `seatTable` then the engine's `start`, whose refusal ("Need at least 2 players.") is the
+   toast (§6 risk 12). `engine.create` returns a `State` and cannot refuse.
+
+The hooks it would take, each optional on `ShellConfig.local`: `terms(opts, mode)`,
+`seat(raws, seatNames, mode)` and `deal(players, opts, ctx)` returning `Result<State, string>`. Who else
+could use them: `deal`, backgammon (its `localStart` deals `manualTurnEnd: true`, a term the online deal
+lacks and its `Opts` does not carry, so `terms` cannot express it: a different create, not a refusal);
+`terms` and `seat`, nobody (no other game has a mode that changes who sits; gin's Sandbox starts from its
+own `sandbox/start`). Size: about 25 lines of type and doc comment, 10 in the case, 40 of tests to keep
+shell.ts at 100%, a README sentence and the three config rows, for `localStart`'s 17 lines and its line in
+`before`; `localHumans`, `optsForMode` and `started` stay as the hooks' bodies. Three Fidice-only hooks,
+about +75 shared lines for −12 in Fidice, and a `local/click` case every game reads with three branches
+it never takes.
+
+Decision: stop; `before` is the hook. `localStart` is composed from the exports the shell's own case uses
+(`localSeats`, `localNamesOf`, `startLocal`, `withShell`), so the call graph is already the shell's case
+with the mode step in it, and nothing shared changes. `hostDeal` stays by the same reasoning (it drops
+empty seats and names the computers where the shell pads a seat with `Jeff`, §4 M3). Revisit when a
+second game gains a mode that changes who sits (`seat` has two callers) or a second engine refuses a deal
+(`deal` has two). The same read found the scaffold's own `localStart` (tools/new-game/templates.ts) to be
+the shell's case respelled for a game with no terms and no mode; it went with this row, so a new game
+starts pass-and-play through the shell until it has a reason not to.

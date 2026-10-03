@@ -619,7 +619,8 @@ export const localHumans = (
  * `local/click` in Pass the phone, Solo or Watch (plan §7 D9): the room's terms off the raw inputs
  * for the mode shown, the humans seated with the card's computers (shellConfig.ts `seatTable`),
  * the engine's `start` applied (its refusal the toast, §6 risk 12), the game handed to the shared
- * `startLocal`, then the terms remembered. The shell's own case seats a pair; this replaces it.
+ * `startLocal`, then the terms remembered. The shell's own case seats every chair the terms hold
+ * and cannot see the mode or refuse a deal; this replaces it, and stays (plan §9).
  */
 const localStart = (
   app: App,

@@ -745,10 +745,7 @@ const stateTs = (
 import {
   act as shellAct,
   andThen as then,
-  localNamesOf,
-  localSeats,
   pure,
-  startLocal,
   step,
   withShell,
   type Ctx,
@@ -766,7 +763,6 @@ import {
 } from '../../../../shared/ui/shell.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import {
-  createState,
   turnSeat,
   viewFor,
   type Action,
@@ -928,22 +924,15 @@ const act = (app: App, action: Action, ctx: Ctx): Step => shellAct(app, action, 
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step =>
   then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
 
-/** \`local/click\`: the two names through the shared \`localSeats\` rule with this game's defaults. */
-const localStart = (app: App, intent: Readonly<{ p1: string; p2: string }>, ctx: Ctx): Step => {
-  const seats = localSeats([intent.p1, intent.p2], localNamesOf(${upper}_SHELL));
-  const game = createState([seats[0]?.name ?? '', seats[1]?.name ?? ''], ctx.now);
-  return startLocal(app, game, ctx, ${upper});
-};
-
 /**
  * The boot's reducer block (web/shared/ui/shellReducer.ts): the shell's flows over \`${upper}\` and
- * the table's intents, with the pass-and-play start before the shell's case; every effect is the
- * shell's (the table has none of its own).
+ * the table's intents; every effect is the shell's (the table has none of its own). The
+ * pass-and-play start is the shell's \`local/click\` (the two names through its \`localSeats\` rule
+ * with this game's defaults, then \`engine.create\`): a game writes its own only where the start
+ * depends on something the shell cannot see (docs/design/fidice-shell-adoption.md §9).
  */
 export const reducer = shellReducer(${upper}, {
   intent: tableIntent,
-  before: (app, intent, ctx) =>
-    intent.type === 'local/click' ? localStart(app, intent, ctx) : null,
 });
 export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
   reducer;
