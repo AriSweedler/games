@@ -95,7 +95,7 @@ body {
     repeating-linear-gradient(90deg, rgba(43, 29, 20, 0.03) 0 1px, transparent 1px 4px);
 }
 /* The column is a stacking context one above the two fixed marks below (the trim, the honu), so
-   they paint under it and show only where the linen does; the overlays (50), the flyers (60) and
+   they paint under it and show only where the linen does; the flyers (40), the overlays (50) and
    the toast (100) are its siblings and stay above it. */
 #app {
   position: relative;
@@ -1417,11 +1417,10 @@ details.history-row > .history-detail dt {
 .face-preload {
   display: none;
 }
-/* Flights (src/ui/table/fly.ts) and the drag's ghost (web/shared/edge/drag.ts): fixed, inert, over everything but the toast. */
+/* Flights (src/ui/motion.ts): the shell fixes the clone on the body, inert, under the overlays
+   (shell.css `.flyer`); the theme's part is the glide. The drag's ghost (web/shared/edge/drag.ts) is
+   its own rule below. */
 .flyer {
-  position: fixed;
-  z-index: 60;
-  pointer-events: none;
   transition: transform var(--fly-ms) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 /* The ghost is the card's clone, so it inherits `.card`'s 160ms transform transition: left in

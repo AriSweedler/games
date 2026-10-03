@@ -242,8 +242,8 @@ body.fixed-screen {
    tokens dress it (the theme sets them on :root, after this file): `--frame-band` the band's width,
    `--frame-color` its colour, `--frame-hairline` the hairline's colour (transparent for none); a
    fourth, `--frame-gap`, is the air between the hairline and the content (4px unless the theme
-   says). It paints at z-index 0, under every positioned thing (overlays 50, flyers 60, the toast
-   100). Its corners follow the screen's: under viewport-fit=cover the band reaches the glass, whose
+   says). It paints at z-index 0, under every positioned thing (flyers 40, overlays 50, the gate
+   90, the toast 100). Its corners follow the screen's: under viewport-fit=cover the band reaches the glass, whose
    corners are round on every notched phone, and no CSS or JS API says by how much
    (screen-frame.md §2). The boot writes the four `--frame-corner-*` on the root (screen.ts
    `applyFrame`: the device catalogue's radius at each corner the page provably reaches, 0 at each a
@@ -320,7 +320,19 @@ body:not([data-frame]) {
   padding-left: var(--frame-inset-left);
 }
 
-/* ---------- overlays and sheets ---------- */
+/* ---------- flights, overlays and sheets ---------- */
+/* A clone in flight (web/shared/edge/motion.ts `launchClone`, the class the caller passes; CONTRACT.md's
+   shell row): fixed on the body, inert, and UNDER the overlays. Nothing that flies outranks a sheet:
+   the curtain is opaque so the seat that just played is hidden, and a flight through it would leak
+   the card; on UNO the last play of a game wins it, so the tile glides while the result sheet opens
+   (dry-review-2026-10.md §5.1). The stacking order, bottom up: the frame band 0, the tab submenu
+   30, flyers 40, overlays 50, the gate 90, the toast 100. Each theme adds the glide itself (its
+   transition, backgammon's lift) and nothing of the stacking. */
+.flyer {
+  position: fixed;
+  pointer-events: none;
+  z-index: 40;
+}
 /* Each theme paints the overlay's scrim and the sheet's edge (gin a gold border, backgammon a shadow) and radius. */
 .overlay {
   position: fixed;
@@ -360,7 +372,7 @@ body:not([data-frame]) {
 }
 /* The turn gate (docs/design/backgammon-landscape.md §5D; web/shared/ui/shell.ts gateOpen,
    shellPaint.ts paintGate; the markup is web/shared/markup/shell.ts gateMarkup, carried by a page
-   whose game plays sideways): over the overlays (50) and the flyers (60), under the toast (100).
+   whose game plays sideways): over the flyers (40) and the overlays (50), under the toast (100).
    The theme paints its scrim (backgammon: the curtain's deep aegean, denser still). No media query
    shows it: the App holds the orientation. The glyph is one small stroke in the accent,
    markup-carried (no TS toggles it; CONTRACT.md's shell row): 36px, so the quarter turn's arc and
