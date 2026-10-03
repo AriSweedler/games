@@ -230,7 +230,8 @@ describe('what the boot and the sessions read back', () => {
     const applied = FLIP7.home.apply(initialApp, home);
     expect(applied.shell.opts).toEqual({ seatCount: 4 });
     expect(applied.table.extraNames[4]).toBe('Noa');
-    expect(FLIP7.home.resume(home)).toBeNull();
+    // The resume box is the shell's off the save: none saved, none offered.
+    expect(run(initialApp, { type: 'home/init', home }).app.shell.resume).toBeNull();
     const started = run(initialApp, startThree, { type: 'curtain/reveal' });
     const loaded = run(started.app, {
       type: 'position/load',
@@ -291,9 +292,11 @@ describe('what the boot and the sessions read back', () => {
     const step = FLIP7.table.rendered(after, before.shell.view, ctx);
     expect(step.effects).toContainEqual({ type: 'fx', cue: 'win' });
     expect(FLIP7.table.rendered(after, after.shell.view, ctx).effects).toEqual([]);
-    expect(FLIP7.table.refuse(before, 'No.').effects).toEqual([
-      { type: 'toast', message: 'No.', ms: null },
-    ]);
+    // A refusal is the shell's toast alone (nothing picked up to drop): the host's refusal at a guest.
+    expect(
+      run(seated('guest', game, 1), { type: 'guest/frame', frame: { t: 'toast', msg: 'No.' } })
+        .effects,
+    ).toEqual([{ type: 'toast', message: 'No.', ms: null }]);
   });
 });
 

@@ -801,9 +801,11 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
     default: PlayMode;
     /**
      * `mode/set`'s raw value: the mode shown and the one stored (null: shown only, gin's sandbox),
-     * or null to ignore the intent (a sandbox the name does not unlock).
+     * or null to ignore the intent (a sandbox the name does not unlock). Absent, `local` is
+     * local and anything else online, shown and stored alike (`defaultModeParse`): a game with no
+     * mode of its own leaves it out; gin (the sandbox) and fidice (Solo, Watch) spell theirs.
      */
-    parse: (
+    parse?: (
       raw: string,
       shell: ShellState<G>,
     ) => Readonly<{ shown: Mode<G>; stored: PlayMode | null }> | null;
@@ -940,8 +942,12 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
      * as elapsed time).
      */
     rendered: (app: ShellApp<G>, prev: G['View'] | null, ctx: Ctx) => Step<G>;
-    /** A refused action: the toast, and whatever the table drops (gin a waiting draw stage, backgammon its taps). */
-    refuse: (app: ShellApp<G>, message: string) => Step<G>;
+    /**
+     * A refused action: the toast, and whatever the table drops (gin a waiting draw stage,
+     * backgammon its taps, hive its pick). Absent, the toast alone (`defaultRefuse`): a table with
+     * nothing picked up to drop (uno, flip7) leaves it out.
+     */
+    refuse?: (app: ShellApp<G>, message: string) => Step<G>;
     /**
      * An ephemeral frame arrived (`host/frame` from the guest's channel, `guest/frame` from the
      * host): `seat` is the sender's channel seat as the shell knows it (1 for the host's one guest,
@@ -953,7 +959,7 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
   local: Readonly<{
     /**
      * `localBroadcast`: whose view is shown, whether the curtain comes up for them, and what else
-     * the change hands over (backgammon's hit toast when the curtain is off).
+     * the change hands over (backgammon's hit toast when the curtain is off; absent, nothing).
      */
     viewer: (
       app: ShellApp<G>,
@@ -961,12 +967,12 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
     ) => Readonly<{
       seat: SeatOf<G>;
       curtain: SeatOf<G> | null;
-      effects: ReadonlyArray<Effect<G>>;
+      effects?: ReadonlyArray<Effect<G>>;
     }>;
-    /** `curtain/reveal`: the seat that lifts the curtain and what it is told (backgammon's hits against it). */
+    /** `curtain/reveal`: the seat that lifts the curtain and what it is told (backgammon's hits against it; absent, nothing). */
     revealer: (
       game: G['State'],
-    ) => Readonly<{ seat: SeatOf<G>; effects: ReadonlyArray<Effect<G>> }>;
+    ) => Readonly<{ seat: SeatOf<G>; effects?: ReadonlyArray<Effect<G>> }>;
     /**
      * The seat a pass-and-play view is for (backgammon `view.me.idx`): who is looking at the
      * phone while the curtain is down, what `flipped` reads to turn the table for seat 1. A game
@@ -979,10 +985,14 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
     read: (store: G['Store']) => G['Home'];
     /** The snapshot's own part into the App (gin's sort and card back onto the table; backgammon's options into the shell and its curtain mode onto the table). */
     apply: (app: ShellApp<G>, home: HomeSnapshot<G>) => ShellApp<G>;
-    /** The resume box for a snapshot, in the game's order of precedence (gin's scorer first). */
-    resume: (home: HomeSnapshot<G>) => Resume<G> | null;
-    /** `resume/click` on an offer the shell does not know (`G['Resume']`). */
-    resumeExtra: (app: ShellApp<G>, offer: G['Resume'], ctx: Ctx) => Step<G>;
+    /**
+     * The resume box for a snapshot, in the game's order of precedence (gin's scorer first).
+     * Absent, the shell's three offers off the save (`resumeFor(home.save, cfg)`): a game with no
+     * offer of its own leaves it out.
+     */
+    resume?: (home: HomeSnapshot<G>) => Resume<G> | null;
+    /** `resume/click` on an offer the shell does not know (`G['Resume']`); absent, nothing happens (a game whose `Resume` is `never` leaves it out). */
+    resumeExtra?: (app: ShellApp<G>, offer: G['Resume'], ctx: Ctx) => Step<G>;
   }>;
   prefs: ShellPrefs<G>;
 }>;
@@ -1065,6 +1075,23 @@ export const errorToast = (
   message: string,
 ): Readonly<{ type: 'toast'; message: string; ms: number | null; kind?: ToastKind }> =>
   toast(message, ERROR_TOAST_MS, 'error');
+
+// ---- the config's defaults: the body every game but one spelled (shell-call-graph.md §4.3) --------
+
+/** `table.refuse` absent: the toast alone; the table has nothing picked up to drop. */
+const defaultRefuse = <G extends ShellTypes>(app: ShellApp<G>, message: string): Step<G> =>
+  step(app, toast(message));
+/** `cfg.table.refuse(app, message)`, or the default. */
+const refuseWith = <G extends ShellTypes>(
+  app: ShellApp<G>,
+  message: string,
+  cfg: ShellConfig<G>,
+): Step<G> => (cfg.table.refuse ?? defaultRefuse)(app, message);
+/** `modes.parse` absent: `local` is local and anything else online, shown and stored alike. */
+const defaultModeParse = (raw: string): Readonly<{ shown: PlayMode; stored: PlayMode }> => {
+  const mode: PlayMode = raw === 'local' ? 'local' : 'online';
+  return { shown: mode, stored: mode };
+};
 const tap = { type: 'fx', cue: 'tap' } as const;
 export const withShell = <G extends ShellTypes>(
   app: ShellApp<G>,
@@ -1629,7 +1656,7 @@ export const hostDispatch = <G extends ShellTypes>(
   const res = cfg.engine.apply(game, seat, action, ctx.rng, ctx.now);
   if (!res.ok)
     return seat === 0
-      ? cfg.table.refuse(app, res.error)
+      ? refuseWith(app, res.error, cfg)
       : step(app, sendTo(cfg.frames.toast(res.error), seat, cfg));
   return broadcast(
     { shell: { ...app.shell, game: res.value }, table: cfg.table.reset(app.table, 'applied') },
@@ -1651,7 +1678,7 @@ export const localBroadcast = <G extends ShellTypes>(
   const game = app.shell.game;
   if (game === null) return pure(app);
   const prev = app.shell.view;
-  const { seat, curtain, effects } = cfg.local.viewer(app, game);
+  const { seat, curtain, effects = [] } = cfg.local.viewer(app, game);
   return andThen(
     step(
       {
@@ -1972,7 +1999,7 @@ const guestFrame = <G extends ShellTypes>(
       return pure(withGuestStatus(app, cfg.copy.roomFull ?? ROOM_FULL_MSG));
     case 'toast':
       // The host refused the guest's move.
-      return cfg.table.refuse(app, frame.msg);
+      return refuseWith(app, frame.msg, cfg);
     case 'state': {
       // My seat's name as the host dealt it: the word every painter shows, whatever rule made it.
       // The view's row for my seat: `result.seatName` where a game's players are chairs, not
@@ -2106,7 +2133,13 @@ const initHome = <G extends ShellTypes>(
         ),
         (b) => setHomeTab(b, home.homeTab, false, cfg),
       ),
-      (b) => pure(withShell(b, { resume: cfg.home.resume(home) })),
+      (b) =>
+        pure(
+          withShell(b, {
+            resume:
+              cfg.home.resume === undefined ? resumeFor(home.save, cfg) : cfg.home.resume(home),
+          }),
+        ),
     ),
   );
 
@@ -2117,7 +2150,8 @@ const resume = <G extends ShellTypes>(
   ctx: Ctx,
   cfg: ShellConfig<G>,
 ): Step<G> => {
-  if (!isShellResume(offer)) return cfg.home.resumeExtra(app, offer, ctx);
+  if (!isShellResume(offer))
+    return cfg.home.resumeExtra === undefined ? pure(app) : cfg.home.resumeExtra(app, offer, ctx);
   switch (offer.kind) {
     case 'local':
       return startLocal(app, offer.game, ctx, cfg);
@@ -2299,7 +2333,7 @@ export const reduceShell = <G extends ShellTypes>(
       );
     }
     case 'mode/set': {
-      const parsed = cfg.modes.parse(intent.mode, s);
+      const parsed = (cfg.modes.parse ?? defaultModeParse)(intent.mode, s);
       if (parsed === null) return pure(app);
       return step(
         withShell(app, { playMode: parsed.shown }),
@@ -2540,7 +2574,7 @@ export const reduceShell = <G extends ShellTypes>(
     case 'curtain/reveal': {
       const game = s.game;
       if (game === null) return pure(app);
-      const { seat, effects } = cfg.local.revealer(game);
+      const { seat, effects = [] } = cfg.local.revealer(game);
       // The curtain's Roll is the tap every turn has: the Android lock re-enters on it after a
       // back gesture (`lockSideways`, silent while held), then the reveal.
       return andThen(lockSideways(app, ctx, cfg), (locked) =>

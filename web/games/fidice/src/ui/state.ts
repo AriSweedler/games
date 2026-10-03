@@ -544,11 +544,11 @@ const viewer: ShellConfig<Fidice>['local']['viewer'] = (app, game) => {
   const last: ShellSeat = app.shell.revealed ?? 0;
   const r = game.round;
   if (game.phase !== 'playing' || r === null || game.reveal !== null)
-    return { seat: last, curtain: null, effects: [] };
-  if (game.players[r.holder]?.bot !== null) return { seat: last, curtain: null, effects: [] };
+    return { seat: last, curtain: null };
+  if (game.players[r.holder]?.bot !== null) return { seat: last, curtain: null };
   const seat = shellSeatOfChair(game, r.holder);
   const curtain = humansAt(game) > 1 && app.shell.revealed !== seat ? seat : null;
-  return { seat, curtain, effects: [] };
+  return { seat, curtain };
 };
 
 /**
@@ -566,7 +566,6 @@ export const viewedChair = (app: App): EngineSeat | null => {
 /** `curtain/reveal`: whoever holds the cup lifts the curtain. */
 const revealer: ShellConfig<Fidice>['local']['revealer'] = (game) => ({
   seat: game.round === null ? 0 : shellSeatOfChair(game, game.round.holder),
-  effects: [],
 });
 
 // ---- the shell's hooks into the table, and the config (docs/design/shared-shell.md §4.3) ---------
@@ -615,8 +614,6 @@ export const FIDICE: ShellConfig<Fidice> = {
       shell: { ...app.shell, opts: home.opts },
       table: { ...app.table, extraNames: home.extraNames },
     }),
-    resume: (home) => resumeFor(home.save),
-    resumeExtra: pure,
   },
 };
 

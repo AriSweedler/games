@@ -365,13 +365,12 @@ const reset = (table: Table, at: TableReset): Table => {
 const viewer: ShellConfig<Hive>['local']['viewer'] = (app, game) => {
   const actor = turnSeat(game.game);
   const holder: Seat = app.shell.view?.seat ?? app.shell.revealed ?? 0;
-  return { seat: actor ?? holder, curtain: null, effects: [] };
+  return { seat: actor ?? holder, curtain: null };
 };
 
 /** `curtain/reveal` never fires (no curtain comes up); the shell's `position/load` reads the seat to move off this. */
 const revealer: ShellConfig<Hive>['local']['revealer'] = (game) => ({
   seat: turnSeat(game.game) ?? 0,
-  effects: [],
 });
 
 export const HIVE: ShellConfig<Hive> = {
@@ -381,8 +380,6 @@ export const HIVE: ShellConfig<Hive> = {
   home: {
     ...HIVE_SHELL.home,
     apply: (app, home) => withTable(app, { motion: home.motion, hints: home.hints }),
-    resume: (home) => resumeFor(home.save),
-    resumeExtra: pure,
   },
 };
 

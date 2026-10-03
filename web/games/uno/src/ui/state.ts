@@ -204,17 +204,16 @@ const viewer: ShellConfig<Uno>['local']['viewer'] = (app, game) => {
   const holder = app.shell.view?.seat ?? app.shell.revealed ?? game.game.turn;
   const seat = (actor ?? holder) as Seat;
   const curtain = actor !== null && app.shell.revealed !== seat ? seat : null;
-  return { seat, curtain, effects: [] };
+  return { seat, curtain };
 };
 
 const revealer: ShellConfig<Uno>['local']['revealer'] = (game) => ({
   seat: game.game.turn as Seat,
-  effects: [],
 });
 
 export const UNO: ShellConfig<Uno> = {
   ...UNO_SHELL,
-  table: { initial: initialTable, reset, rendered, refuse },
+  table: { initial: initialTable, reset, rendered },
   local: { viewer, revealer },
   home: {
     ...UNO_SHELL.home,
@@ -222,8 +221,6 @@ export const UNO: ShellConfig<Uno> = {
       shell: { ...app.shell, opts: home.opts },
       table: { ...app.table, extraNames: home.extraNames },
     }),
-    resume: (home) => resumeFor(home.save),
-    resumeExtra: pure,
   },
 };
 

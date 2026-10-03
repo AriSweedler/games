@@ -17,11 +17,8 @@ describe('the shell config', () => {
     );
     expect(sideName(0)).toBe('White');
     expect(sideName(1)).toBe('Black');
-    expect(HIVE_SHELL.modes.parse('local', {} as never)).toEqual({
-      shown: 'local',
-      stored: 'local',
-    });
-    expect(HIVE_SHELL.modes.parse('x', {} as never)).toEqual({ shown: 'online', stored: 'online' });
+    // The play mode is the shell's default (local or online; shell.test.ts).
+    expect(HIVE_SHELL.modes).toEqual({ default: 'online' });
     expect(HIVE_SHELL.opts.parse({}, { seatCount: 2 })).toEqual({ seatCount: 2 });
     expect(HIVE_SHELL.seats).toBeUndefined();
   });

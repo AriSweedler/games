@@ -53,7 +53,6 @@ import {
   readOpts,
   readP3Name,
   readP4Name,
-  type PlayMode,
 } from './storage.ts';
 import { CUES } from './ui/sound.ts';
 import type { Briscola, Raw } from './ui/state.ts';
@@ -120,13 +119,7 @@ export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
   names: { default: DEFAULT_NAME },
   localNames: LOCAL_NAMES,
   tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
-  modes: {
-    default: DEFAULT_PLAY_MODE,
-    parse: (raw) => {
-      const mode: PlayMode = raw === 'local' ? 'local' : 'online';
-      return { shown: mode, stored: mode };
-    },
-  },
+  modes: { default: DEFAULT_PLAY_MODE },
   copy: {
     ...seatedCopy({ verb: 'deal', waitingAtTwo: WAITING_MSG }),
     leaveLocal: LEAVE_LOCAL_MSG,
