@@ -106,8 +106,13 @@ const SHEETS: ReadonlyArray<Sheet<Intent>> = [
   },
 ];
 
+/**
+ * The sheets' close buttons and backdrops; Escape closes the open sheet, else the shell's `escape`
+ * (the history, then the rules, from the table and the Score Counter's screens alike). Without the
+ * fallback `bindShellSheets` listens to no key, which is why gin's history ignored Escape.
+ */
 const bindSheets = (doc: PageLike, dispatch: Dispatch): void => {
-  bindShellSheets(doc, SHEETS, dispatch);
+  bindShellSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'escape' } });
 };
 
 // ---- the table -----------------------------------------------------------------------------------

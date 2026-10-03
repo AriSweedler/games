@@ -391,6 +391,25 @@ describe('home', () => {
       run(opened.app, { type: 'rules/close' }, { type: 'history/close' }).app.shell,
     ).toMatchObject({ rulesOpen: false, historyOpen: false });
   });
+
+  test('Escape closes the history, then the rules, at the table and on the Score Counter end screen', () => {
+    (['tableScreen', 'scEndScreen'] as const).forEach((screen) => {
+      const at = run(
+        initialApp,
+        { type: 'screen/show', screen },
+        { type: 'rules/open' },
+        { type: 'history/open' },
+      );
+      expect(at.app.shell).toMatchObject({ screen, rulesOpen: true, historyOpen: true });
+      const once = run(at.app, { type: 'escape' });
+      expect(once.app.shell).toMatchObject({ screen, rulesOpen: true, historyOpen: false });
+      expect(once.effects).toEqual([]);
+      const twice = run(once.app, { type: 'escape' });
+      expect(twice.app.shell).toMatchObject({ screen, rulesOpen: false, historyOpen: false });
+      // Nothing up: Escape is a no-op.
+      expect(run(twice.app, { type: 'escape' }).app).toEqual(twice.app);
+    });
+  });
 });
 
 describe('hosting', () => {

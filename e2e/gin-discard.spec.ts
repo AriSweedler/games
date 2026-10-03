@@ -117,7 +117,9 @@ Object.entries(VIEWPORTS).forEach(([name, vp]) => {
       await page.locator('#closeRulesBtn').click();
       await page.locator('#historyBtn').click();
       await expect(page.locator('#historyOverlay')).toBeVisible();
-      await page.locator('#closeHistoryBtn').click();
+      // Escape reaches the shell's sheet binding (its fallback is the shell `escape`).
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#historyOverlay')).toBeHidden();
       await still('rules and history');
       await page.locator('#arrangeBtn').click();
       await expect(page.locator('#arrangeOverlay')).toBeVisible();
