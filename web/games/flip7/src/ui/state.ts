@@ -8,7 +8,9 @@
 // it the table follows whoever must act (nothing is hidden, so the phone just goes round).
 import {
   NOT_CONNECTED_MSG,
+  andThen as then,
   broadcast,
+  cueStep,
   guestContextOf as shellGuestContextOf,
   hostContextOf as shellHostContextOf,
   initialShell as shellInitial,
@@ -19,10 +21,12 @@ import {
   reduceShell,
   resumeFor as shellResumeFor,
   step,
+  startsOver,
   toast,
   withShell,
   withTable,
   type Ctx,
+  type CueMachine,
   type Effect as SharedEffect,
   type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
@@ -147,21 +151,9 @@ export const namesOf = (game: State): ReadonlyArray<string> => game.seats.map((s
 
 // ---- the shell's hooks into the table --------------------------------------------------------
 
-const reset = (table: Table, at: TableReset): Table => {
-  switch (at) {
-    case 'startLocal':
-    case 'handoff':
-    case 'leave':
-    case 'lost':
-      return initialTable;
-    case 'deal':
-      return { ...table, pause: null };
-    case 'view':
-    case 'applied':
-    case 'frame':
-      return table;
-  }
-};
+/** The shell's split (a start, the handoff, a leave and the host lost start the table over), and a deal drops the pause. */
+const reset = (table: Table, at: TableReset): Table =>
+  startsOver(at) ? initialTable : at === 'deal' ? { ...table, pause: null } : table;
 
 const PAUSE_STATUSES: ReadonlyArray<Status> = ['busted', 'frozen', 'flip7'];
 
@@ -213,29 +205,23 @@ export const pauseFor = (local: boolean, prev: View | null, view: View): Pause |
 };
 
 /**
- * The paint's state side: the table is the screen while a view is up; the cues come from the
- * change since `prev` (sound.ts `cuesBetween`: the cards that landed, a seat's fate, the round's
- * end, the game's), once per position (`cueKey` against the shell's memory, so a re-sent frame
- * plays nothing), and "your turn" when an online turn lands on my seat.
+ * The paint's cues (the shell's `cueStep`): once per position (`cueKey`, so a re-sent frame plays
+ * nothing), sound.ts `cuesBetween` for the change (the cards that landed, a seat's fate, the
+ * round's end, the game's), "your turn" when an online turn lands on my seat.
  */
+const CUE_MACHINE: CueMachine<Flip7> = {
+  key: cueKey,
+  between: (prev, next, app) => cuesBetween(prev, next, app.shell.role === 'local'),
+  myTurn: isMyTurn,
+};
+
+/** The paint's state side: the shell's cue step, then the pause a new view raises (`pauseFor`) unless one is up. */
 const rendered = (app: App, prev: View | null): Step => {
   const view = app.shell.view;
   if (view === null) return pure(app);
   const local = app.shell.role === 'local';
-  const key = cueKey(view);
-  const fresh = prev !== null && key !== app.shell.cues.key;
-  const online = app.shell.role === 'host' || app.shell.role === 'guest';
-  const myTurnNow = online && fresh && isMyTurn(view) && !isMyTurn(prev);
-  const cues: ReadonlyArray<Cue> = fresh
-    ? [...cuesBetween(prev, view, local), ...(myTurnNow ? (['yourTurn'] as const) : [])]
-    : [];
-  const pause = app.table.pause ?? pauseFor(local, prev, view);
-  return step(
-    {
-      shell: { ...app.shell, cues: { key }, screen: 'tableScreen' },
-      table: { ...app.table, pause },
-    },
-    ...cues.map((cue) => ({ type: 'fx', cue }) as const),
+  return then(cueStep(CUE_MACHINE)(app, prev), (a) =>
+    pure(withTable(a, { pause: a.table.pause ?? pauseFor(local, prev, view) })),
   );
 };
 

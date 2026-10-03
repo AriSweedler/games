@@ -11,6 +11,8 @@ import {
   NOT_CONNECTED_MSG,
   andThen as then,
   broadcast,
+  cueStep,
+  fx,
   guestContextOf as shellGuestContextOf,
   hostContextOf as shellHostContextOf,
   initialShell as shellInitial,
@@ -24,6 +26,7 @@ import {
   toast,
   withShell,
   type Ctx,
+  type CueMachine,
   type Effect as SharedEffect,
   type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
@@ -34,7 +37,6 @@ import {
   type ShellConfig,
   type ShellState,
   type Step as SharedStep,
-  type TableReset,
   type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
@@ -108,49 +110,18 @@ export type HomeSnapshot = SharedHomeSnapshot<Uno>;
 
 export const initialTable: Table = { curtain: null };
 
-const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
-
 const refuse = (app: App, message: string): Step => step(app, toast(message));
 
-/** One key per position, so a re-sent frame plays nothing. */
-const cueKey = (v: View): string =>
-  `${String(v.startedAt)}:${String(v.drawCount)}:${v.top.id}:${String(v.turn)}:${v.phase}`;
-
 /**
- * The state side of a paint: the table is the screen while a view is held; the cues come from the
- * change since `prev` (sound.ts `cuesBetween`: the card's kind, the penalty, the deal), once per
- * position, and "your turn" when an online turn lands on my seat.
+ * The paint's cues (the shell's `cueStep`): one key per position, so a re-sent frame plays
+ * nothing; sound.ts `cuesBetween` for the change (the card's kind, the penalty, the deal); "your
+ * turn" when an online turn lands on my seat while the game is on.
  */
-const rendered = (app: App, prev: View | null): Step => {
-  const view = app.shell.view;
-  if (view === null) return pure(app);
-  const key = cueKey(view);
-  const fresh = prev !== null && key !== app.shell.cues.key;
-  const online = app.shell.role === 'host' || app.shell.role === 'guest';
-  const myTurnNow =
-    online && fresh && view.turn === view.seat && prev.turn !== view.seat && view.winner === null;
-  const cues: ReadonlyArray<Cue> = fresh
-    ? [...cuesBetween(prev, view), ...(myTurnNow ? (['yourTurn'] as const) : [])]
-    : [];
-  return step(
-    { shell: { ...app.shell, cues: { key }, screen: 'tableScreen' }, table: app.table },
-    ...cues.map(fx),
-  );
-};
-
-const reset = (table: Table, at: TableReset): Table => {
-  switch (at) {
-    case 'startLocal':
-    case 'handoff':
-    case 'leave':
-    case 'lost':
-      return initialTable;
-    case 'deal':
-    case 'view':
-    case 'applied':
-    case 'frame':
-      return table;
-  }
+const CUE_MACHINE: CueMachine<Uno> = {
+  key: (v) =>
+    `${String(v.startedAt)}:${String(v.drawCount)}:${v.top.id}:${String(v.turn)}:${v.phase}`,
+  between: cuesBetween,
+  myTurn: (v) => v.winner === null && v.turn === v.seat,
 };
 
 /** Whose turn it is, or null once the game is won (the result is everyone's). */
@@ -176,7 +147,8 @@ const revealer: ShellConfig<Uno>['local']['revealer'] = (game) => ({
 
 export const UNO: ShellConfig<Uno> = {
   ...UNO_SHELL,
-  table: { initial: initialTable, reset, rendered },
+  // The shell's reset: a start, the handoff, a leave and the host lost start the table over.
+  table: { initial: initialTable, rendered: cueStep(CUE_MACHINE) },
   local: { viewer, revealer },
   home: { ...UNO_SHELL.home, apply: (app) => app },
 };

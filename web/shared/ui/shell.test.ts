@@ -41,7 +41,10 @@ import {
   WAITING_RESUME_MS,
   badPositionMsg,
   broadcast,
+  cueStep,
+  cuesFor,
   fresh,
+  fx,
   INITIAL_CUE_MEMORY,
   guestContextOf,
   guestGoneMsg,
@@ -73,10 +76,13 @@ import {
   toast,
   ERROR_TOAST_MS,
   errorToast,
+  startsOver,
+  tableReset,
   userSeatOf,
   withShell,
   wrongWay,
   withTable,
+  type CueMachine,
   type Ctx,
   type CueMemory,
   type Effect,
@@ -92,6 +98,7 @@ import {
   type ShellConfig,
   type ShellState,
   type Step,
+  type TableReset,
 } from './shell.ts';
 import { runShellEffect, type ShellEffectDeps } from './shellEffects.ts';
 
@@ -115,7 +122,7 @@ type View = Readonly<{
 type Action = Readonly<{ type: 'move' | 'end' | 'bad' }>;
 type Opts = Readonly<{ level: number }>;
 type Table = Readonly<{ curtain: Seat | null; marks: ReadonlyArray<string> }>;
-type Cues = Readonly<{ seen: string | null }>;
+type Cues = CueMemory;
 type Store = Map<string, string>;
 type OwnIntent = Readonly<{ type: 'own' }>;
 type OwnEffect = Readonly<{ type: 'ownFx' }>;
@@ -147,6 +154,16 @@ type FakeStep = Step<Fake>;
 type Snapshot = HomeSnapshot<Fake>;
 
 const other = (seat: Seat): Seat => (seat === 0 ? 1 : 0);
+/** Every reset site marked on the table, so a flow's tests read the sites it passed. */
+const markReset = (table: Table, at: TableReset): Table => ({
+  ...table,
+  marks: [...table.marks, at],
+});
+/** The fake's cue machine: the position is the move count and the turn; every change dings; no turn is announced. */
+const DING: CueMachine<Fake> = {
+  key: (view) => `${String(view.moves)}:${String(view.turn)}`,
+  between: () => ['ding'],
+};
 const viewFor = (game: State, seat: Seat): View => ({
   seat,
   turn: game.turn,
@@ -258,7 +275,7 @@ const FAKE: ShellConfig<Fake> = {
     join: (name) => ({ t: 'join', name }),
   },
   cues: {
-    initial: { seen: null },
+    initial: INITIAL_CUE_MEMORY,
     table: {
       tap: SHELL_CUES.tap,
       yourTurn: SHELL_CUES.yourTurn,
@@ -267,18 +284,17 @@ const FAKE: ShellConfig<Fake> = {
   },
   table: {
     initial: { curtain: null, marks: [] },
-    reset: (table, at) => ({ ...table, marks: [...table.marks, at] }),
-    // The screen by the view, one `ding` per new position once there is a `prev`, and a mark saying what it was given.
+    reset: markReset,
+    // The screen by the view, one `ding` per new position once there is a `prev` (the shell's `cuesFor` over DING), and a mark saying what it was given.
     rendered: (app, prev, ctx) => {
       const view = app.shell.view;
       if (view === null) return { app, effects: [] };
-      const key = `${String(view.moves)}:${String(view.turn)}`;
-      const fresh = prev !== null && key !== app.shell.cues.seen;
+      const { key, cues } = cuesFor(app, prev, view, DING);
       return step(
         {
           shell: {
             ...app.shell,
-            cues: { seen: key },
+            cues: { key },
             screen: view.over ? 'endgameScreen' : 'tableScreen',
           },
           table: {
@@ -289,7 +305,7 @@ const FAKE: ShellConfig<Fake> = {
             ],
           },
         },
-        ...(fresh ? [{ type: 'fx', cue: 'ding' } as const] : []),
+        ...cues.map(fx),
         { type: 'scrollTop' },
       );
     },
@@ -590,7 +606,7 @@ const FAKE4: ShellConfig<Fake4> = {
     join: (name) => ({ t: 'join', name }),
   },
   cues: {
-    initial: { seen: null },
+    initial: INITIAL_CUE_MEMORY,
     table: {
       tap: SHELL_CUES.tap,
       yourTurn: SHELL_CUES.yourTurn,
@@ -599,7 +615,7 @@ const FAKE4: ShellConfig<Fake4> = {
   },
   table: {
     initial: { curtain: null, marks: [] },
-    reset: (table, at) => ({ ...table, marks: [...table.marks, at] }),
+    reset: markReset,
     rendered: (app) => {
       const view = app.shell.view;
       return view === null
@@ -1069,7 +1085,7 @@ describe('the initial shell and the partitions', () => {
       rulesOpen: false,
       historyOpen: false,
       resultDismissed: false,
-      cues: { seen: null },
+      cues: { key: null },
       submenuOpen: false,
       longPressed: false,
       codeDraft: '',
@@ -2460,7 +2476,7 @@ describe('the ephemeral lane (docs/design/briscola-battle.md §4.5)', () => {
     ...FAKE,
     table: {
       initial: FAKE.table.initial,
-      reset: FAKE.table.reset,
+      reset: markReset,
       rendered: FAKE.table.rendered,
     },
   };
@@ -2672,6 +2688,76 @@ describe('the cue memory', () => {
     // A memory extending the record (gin's `turnKey`) passes as it is; the result carries the key alone.
     const extended: CueMemory & Readonly<{ turnKey: string }> = { key: 'a', turnKey: 'x' };
     expect(fresh(extended, 'a')).toEqual({ mem: { key: 'a' }, fresh: false });
+  });
+
+  /** The machine of a two-seat game whose turn alternates: the fake's view says whose turn it is. */
+  const TURNS: CueMachine<Fake> = { ...DING, myTurn: (v) => v.isMyTurn };
+  const seat1 = (app: App, prev: State, next: State, machine: CueMachine<Fake> = TURNS) =>
+    cuesFor(
+      withShell(app, { view: viewFor(next, 1) }),
+      viewFor(prev, 1),
+      viewFor(next, 1),
+      machine,
+    );
+  const moved: State = { ...dealt, moves: 1, turn: 1 };
+
+  test('cuesFor: no `prev` or the same key plays nothing; a new key with a prev plays the change', () => {
+    const at = withShell(seated(), { view: viewFor(moved, 1) });
+    expect(cuesFor(at, null, viewFor(moved, 1), DING)).toEqual({
+      key: '1:1',
+      fresh: false,
+      cues: [],
+    });
+    expect(
+      cuesFor(withShell(at, { cues: { key: '1:1' } }), viewFor(dealt, 1), viewFor(moved, 1), DING),
+    ).toEqual({ key: '1:1', fresh: false, cues: [] });
+    expect(seat1(seated(), dealt, moved, DING)).toEqual({
+      key: '1:1',
+      fresh: true,
+      cues: ['ding'],
+    });
+  });
+
+  test('cuesFor: `yourTurn` after the change when an online turn lands on my seat; not when it was mine, not when it leaves, never in pass-and-play', () => {
+    expect(seat1(seated(), dealt, moved).cues).toEqual(['ding', 'yourTurn']);
+    expect(seat1(seated(), moved, { ...moved, moves: 2 }).cues).toEqual(['ding']);
+    expect(seat1(seated(), moved, { ...moved, moves: 2, turn: 0 }).cues).toEqual(['ding']);
+    expect(seat1(local(), dealt, moved).cues).toEqual(['ding']);
+    // `between` reads the app: the role here.
+    const roled: CueMachine<Fake> = {
+      ...DING,
+      between: (_p, _n, app) => (app.shell.role === 'guest' ? ['ding'] : []),
+    };
+    expect(seat1(seated(), dealt, moved, roled).cues).toEqual(['ding']);
+    expect(seat1(local(), dealt, moved, roled).cues).toEqual([]);
+  });
+
+  test('fx is the effect for a cue', () => {
+    expect(fx('ding')).toEqual({ type: 'fx', cue: 'ding' });
+  });
+
+  test('cueStep: the table is the screen, the memory keyed on the position (its other fields kept), the cues the effects; no view, no change', () => {
+    const rendered = cueStep(TURNS);
+    const home = initialApp;
+    expect(rendered(home, null)).toEqual({ app: home, effects: [] });
+    const at = withShell(seated(), {
+      view: viewFor(moved, 1),
+      screen: 'homeScreen',
+      cues: { key: '0:0' },
+    });
+    const s = rendered(at, viewFor(dealt, 1));
+    expect(s.app).toEqual(withShell(at, { screen: 'tableScreen', cues: { key: '1:1' } }));
+    expect(s.effects).toEqual([
+      { type: 'fx', cue: 'ding' },
+      { type: 'fx', cue: 'yourTurn' },
+    ]);
+    expect(rendered(s.app, viewFor(dealt, 1)).effects).toEqual([]);
+    // A memory extending the record (gin's `turnKey`) keeps its extension.
+    const extended = { ...at, shell: { ...at.shell, cues: { key: '0:0', turnKey: 'x' } } };
+    expect(rendered(extended, viewFor(dealt, 1)).app.shell.cues).toEqual({
+      key: '1:1',
+      turnKey: 'x',
+    });
   });
 });
 
@@ -2987,7 +3073,7 @@ describe('leaving and cancelling', () => {
       rulesOpen: false,
       historyOpen: false,
       resultDismissed: false,
-      cues: { seen: null },
+      cues: { key: null },
       netAttempt: h.shell.netAttempt + 1,
     });
     expect(marks(finished.app).at(-1)).toBe('leave');
@@ -4064,7 +4150,7 @@ describe('the config`s defaults (shell-call-graph.md §4.3): what every game but
   const PLAIN: ShellConfig<Fake> = {
     ...FAKE,
     modes: { default: FAKE.modes.default },
-    table: { initial: FAKE.table.initial, reset: FAKE.table.reset, rendered: FAKE.table.rendered },
+    table: { initial: FAKE.table.initial, reset: markReset, rendered: FAKE.table.rendered },
     local: {
       viewer: (app, g) => ({
         seat: g.turn,
@@ -4138,6 +4224,47 @@ describe('the config`s defaults (shell-call-graph.md §4.3): what every game but
       { type: 'persist' },
       { type: 'scrollTop' },
     ]);
+  });
+
+  test('startsOver: a start, the handoff, a leave and the host lost start the table over; a deal, a view, an applied action and a frame keep it', () => {
+    const over: ReadonlyArray<TableReset> = ['startLocal', 'handoff', 'leave', 'lost'];
+    const kept: ReadonlyArray<TableReset> = ['deal', 'view', 'applied', 'frame'];
+    expect(over.map(startsOver)).toEqual([true, true, true, true]);
+    expect(kept.map(startsOver)).toEqual([false, false, false, false]);
+  });
+
+  test('tableReset: the initial table with the kept fields where the site starts over; the same table elsewhere', () => {
+    const initial: Table = { curtain: null, marks: [] };
+    const table: Table = { curtain: 1, marks: ['a'] };
+    expect(tableReset(initial, ['marks'])(table, 'leave')).toEqual({ curtain: null, marks: ['a'] });
+    expect(tableReset(initial, [])(table, 'handoff')).toEqual(initial);
+    expect(tableReset(initial, ['marks'])(table, 'view')).toBe(table);
+  });
+
+  test('reset absent: the shell resets with `keeps` at every site (a start keeps the marks and adds none; the view and the frame leave the table)', () => {
+    const BARE: ShellConfig<Fake> = {
+      ...PLAIN,
+      table: { initial: FAKE.table.initial, keeps: ['marks'], rendered: FAKE.table.rendered },
+    };
+    const marked: App = { ...initialApp, table: { ...initialApp.table, marks: ['x'] } };
+    const start = runIn(ctx, BARE, marked, {
+      type: 'local/click',
+      p1: 'Ann',
+      p2: 'Bob',
+      level: '2',
+    });
+    expect(marks(start.app)).toEqual(['x', `rendered:-@${String(NOW)}`]);
+    const NOTHING: ShellConfig<Fake> = {
+      ...BARE,
+      table: { initial: FAKE.table.initial, rendered: FAKE.table.rendered },
+    };
+    const bare = runIn(ctx, NOTHING, marked, {
+      type: 'local/click',
+      p1: 'Ann',
+      p2: 'Bob',
+      level: '2',
+    });
+    expect(marks(bare.app)).toEqual([`rendered:-@${String(NOW)}`]);
   });
 });
 
