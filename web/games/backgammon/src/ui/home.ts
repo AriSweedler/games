@@ -20,7 +20,6 @@ import {
 } from '../../../../shared/edge/dom.ts';
 import {
   bindHomeShell,
-  fillInputs,
   homeView,
   paintHomeShell,
   shellIntents,
@@ -34,23 +33,14 @@ import {
   type PlayMode,
 } from './state.ts';
 
-/**
- * The first player's name into every input that shows it: the online name and pass-and-play's
- * first seat (one name, `backgammon_name`). `setValue` leaves the input being typed in alone, so
- * the fill after a keystroke moves only the other input; `isDefault` marks the shell's prefill for
- * the first-tap clear (shared home.ts `fillInputs`).
- */
-export const fillNameInputs = (doc: DocumentLike, name: string, isDefault = false): void => {
-  fillInputs(doc, ['nameInput', 'p1NameInput'], name, isDefault);
-};
-
-/** The second player's name into pass-and-play's second seat. */
-export const fillP2NameInput = (doc: DocumentLike, name: string, isDefault = false): void => {
-  fillInputs(doc, ['p2NameInput'], name, isDefault);
-};
-
 /** The shell's helpers, kept under their gin names for main.ts and the tests. */
-export { blocksCodeInput, setCodeInput, tabButtonId } from '../../../../shared/ui/home.ts';
+export {
+  blocksCodeInput,
+  fillNameInputs,
+  fillP2NameInput,
+  setCodeInput,
+  tabButtonId,
+} from '../../../../shared/ui/home.ts';
 
 /**
  * The invite `#shareCodeBtn` shares: the page (`pageUrl` is its origin and path) with the code to

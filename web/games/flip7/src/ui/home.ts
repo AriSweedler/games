@@ -16,7 +16,7 @@ import {
   DEFAULT_MARK,
   bindHomeShell,
   clearDefault,
-  fillInputs,
+  homeView,
   paintHomeShell,
   shellIntents,
 } from '../../../../shared/ui/home.ts';
@@ -36,15 +36,7 @@ import {
   type Raw,
 } from './state.ts';
 
-export { setCodeInput } from '../../../../shared/ui/home.ts';
-
-export const fillNameInputs = (doc: DocumentLike, name: string, isDefault = false): void => {
-  fillInputs(doc, ['nameInput', 'p1NameInput'], name, isDefault);
-};
-
-export const fillP2NameInput = (doc: DocumentLike, name: string, isDefault = false): void => {
-  fillInputs(doc, ['p2NameInput'], name, isDefault);
-};
+export { fillNameInputs, fillP2NameInput, setCodeInput } from '../../../../shared/ui/home.ts';
 
 const PLAY_MODES: ReadonlyArray<PlayMode> = ['online', 'local'];
 /** The two steppers' hidden fields (page.ts), two to twelve players each. */
@@ -83,16 +75,7 @@ const paintOptions = (doc: DocumentLike, app: App): void => {
 };
 
 export const paintHome = (doc: DocumentLike, app: App): void => {
-  paintHomeShell(
-    doc,
-    {
-      homeTab: app.shell.homeTab,
-      playMode: app.shell.playMode,
-      submenuOpen: app.shell.submenuOpen,
-      resumeLabel: app.shell.resume === null ? null : resumeLabel(app.shell.resume),
-    },
-    { tabs: HOME_TABS, modes: PLAY_MODES },
-  );
+  paintHomeShell(doc, homeView(app.shell, resumeLabel), { tabs: HOME_TABS, modes: PLAY_MODES });
   paintOptions(doc, app);
 };
 

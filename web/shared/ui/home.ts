@@ -115,6 +115,20 @@ export const fillInputs = (
   });
 };
 
+/**
+ * The first player's name into the two inputs that show it, the online name and pass-and-play's
+ * first seat: what every game's `bootShell.paint.fillName` runs, except gin's, whose Score Counter
+ * adds a third input (the shell-hoist audit, docs/design/shell-hoist.md row D).
+ */
+export const fillNameInputs = (doc: DocumentLike, name: string, isDefault = false): void => {
+  fillInputs(doc, ['nameInput', 'p1NameInput'], name, isDefault);
+};
+
+/** The second player's name into pass-and-play's second seat: every game's `paint.fillP2Name` but gin's. */
+export const fillP2NameInput = (doc: DocumentLike, name: string, isDefault = false): void => {
+  fillInputs(doc, ['p2NameInput'], name, isDefault);
+};
+
 /** A marked input (a prefilled default) empties and loses its mark; any other is left alone. */
 export const clearDefault = (input: Element): void => {
   if (dataOf(input, 'default') === null) return;

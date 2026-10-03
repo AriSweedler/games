@@ -25,10 +25,9 @@ import {
 } from '../../../../shared/edge/dom.ts';
 import {
   bindHomeShell,
-  fillInputs,
+  homeView,
   paintHomeShell,
   shellIntents,
-  type HomeView,
 } from '../../../../shared/ui/home.ts';
 import { ROOM_CODE } from '../../../../shared/lib/roomCode.ts';
 import { difficultyOfChoice } from '../bots/registry.ts';
@@ -38,29 +37,20 @@ import {
   type App,
   type ExtraSeat,
   type Fidice,
-  type HomeTab,
   type Intent,
   type Mode,
   type Raw,
   type Resume,
 } from './state.ts';
 
-/**
- * The first player's name into every input that shows it: the online name and pass the phone's
- * first seat (one name, `fidice_name`); `isDefault` marks the shell's prefill for the first-tap
- * clear (shared home.ts `fillInputs`).
- */
-export const fillNameInputs = (doc: DocumentLike, name: string, isDefault = false): void => {
-  fillInputs(doc, ['nameInput', 'p1NameInput'], name, isDefault);
-};
-
-/** The second player's name into pass the phone's second seat. */
-export const fillP2NameInput = (doc: DocumentLike, name: string, isDefault = false): void => {
-  fillInputs(doc, ['p2NameInput'], name, isDefault);
-};
-
 /** The shell's helpers, kept under their gin names for main.ts and the tests. */
-export { blocksCodeInput, setCodeInput, tabButtonId } from '../../../../shared/ui/home.ts';
+export {
+  blocksCodeInput,
+  fillNameInputs,
+  fillP2NameInput,
+  setCodeInput,
+  tabButtonId,
+} from '../../../../shared/ui/home.ts';
 export { inviteUrl } from '../../../../shared/lib/invite.ts';
 
 /**
@@ -156,14 +146,6 @@ export const resumeLabel = (resume: Resume): string => {
   }
 };
 
-/** What the shared shell paints, read off the App's shell slice. */
-const homeView = (app: App): HomeView<HomeTab> => ({
-  homeTab: app.shell.homeTab,
-  playMode: app.shell.playMode,
-  submenuOpen: app.shell.submenuOpen,
-  resumeLabel: app.shell.resume === null ? null : resumeLabel(app.shell.resume),
-});
-
 /**
  * The room's terms into the host card's selects (written only when they differ, so an open select
  * is left alone); the difficulty select follows the strategy when a difficulty means it, and is
@@ -210,7 +192,7 @@ const paintLocalPanel = (doc: DocumentLike, app: App): void => {
 /** The tabs and panels, the play mode, the submenu's `force-open` and the resume box; then the host card's terms and the pass-the-phone panel. */
 export const paintHome = (doc: DocumentLike, app: App): void => {
   setAttr(requireId(doc, 'codeInput'), 'maxlength', String(CODE_LENGTH));
-  paintHomeShell(doc, homeView(app), { tabs: HOME_TABS, modes: PANEL_MODES });
+  paintHomeShell(doc, homeView(app.shell, resumeLabel), { tabs: HOME_TABS, modes: PANEL_MODES });
   paintOptions(doc, app);
   paintLocalPanel(doc, app);
 };

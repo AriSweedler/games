@@ -11,6 +11,8 @@ import {
   bindLongPress,
   blocksCodeInput,
   fillInputs,
+  fillNameInputs,
+  fillP2NameInput,
   homeView,
   paintHomeShell,
   paintPlayMode,
@@ -156,6 +158,27 @@ describe('the input writes the reducer raises as effects', () => {
     expect(p.get('nameInput').attr(DEFAULT_MARK)).toBeNull();
     expect(p.get('p1NameInput').attr(DEFAULT_MARK)).toBeNull();
     expect(p.get('p1NameInput').value()).toBe('Ann');
+  });
+
+  test('fillNameInputs writes the online name and the first seat, fillP2NameInput the second seat, both carrying the default mark', () => {
+    const p = shellPage();
+    fillNameInputs(p.doc, 'Ari', true);
+    expect(p.get('nameInput').value()).toBe('Ari');
+    expect(p.get('p1NameInput').value()).toBe('Ari');
+    expect(p.get('nameInput').attr(DEFAULT_MARK)).toBe('1');
+    expect(p.get('p1NameInput').attr(DEFAULT_MARK)).toBe('1');
+    expect(p.get('p2NameInput').value()).toBe('');
+    fillP2NameInput(p.doc, 'Lavi', true);
+    expect(p.get('p2NameInput').value()).toBe('Lavi');
+    expect(p.get('p2NameInput').attr(DEFAULT_MARK)).toBe('1');
+    expect(p.get('nameInput').value()).toBe('Ari');
+    // A remembered name (no flag) takes the mark off and leaves the other inputs alone.
+    fillNameInputs(p.doc, 'Ann');
+    fillP2NameInput(p.doc, 'Bob');
+    expect(p.get('nameInput').value()).toBe('Ann');
+    expect(p.get('p1NameInput').attr(DEFAULT_MARK)).toBeNull();
+    expect(p.get('p2NameInput').value()).toBe('Bob');
+    expect(p.get('p2NameInput').attr(DEFAULT_MARK)).toBeNull();
   });
 });
 
