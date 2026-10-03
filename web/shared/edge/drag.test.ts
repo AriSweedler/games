@@ -149,6 +149,19 @@ describe('bindDrag', () => {
     expect(t.captured).toEqual([]);
   });
 
+  test('a press that picks something cancels the pointerdown (no text selection, no native drag of one under it); a press on nothing is left to the browser', () => {
+    const t = table();
+    const picked = t.a.fire('pointerdown', on(t.coin, 100, 100));
+    expect(picked.wasPrevented()).toBe(true);
+    t.a.fire('pointerup', on(t.coin, 100, 100));
+    const missed = t.a.fire('pointerdown', on(null, 100, 100));
+    expect(missed.wasPrevented()).toBe(false);
+    // While a session stands the second press is ignored whole: not cancelled either.
+    t.a.fire('pointerdown', on(t.coin, 100, 100, 7));
+    const second = t.b.fire('pointerdown', on(t.coin, 500, 500, 8));
+    expect(second.wasPrevented()).toBe(false);
+  });
+
   test('past the threshold: the start intents once, in order, then the ghost is made on the source rect, stripped, sized by its variable, and the surface pressed holds the pointer', () => {
     const t = table();
     t.b.fire('pointerdown', on(t.coin, 100, 100, 7));
