@@ -103,6 +103,9 @@ export const runShellEffect = <G extends ShellTypes>(
     case 'rememberP2Name':
       cfg.prefs.p2Name.write(deps.store, effect.name);
       return;
+    case 'rememberSeatName':
+      cfg.prefs.seatNames?.[effect.seat - 2]?.write(deps.store, effect.name);
+      return;
     case 'writeHomeTab':
       cfg.prefs.homeTab.write(deps.store, effect.tab);
       return;

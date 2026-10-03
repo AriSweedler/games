@@ -8,21 +8,16 @@
 // it the table follows whoever must act (nothing is hidden, so the phone just goes round).
 import {
   NOT_CONNECTED_MSG,
-  andThen as then,
   broadcast,
   guestContextOf as shellGuestContextOf,
   hostContextOf as shellHostContextOf,
   initialShell as shellInitial,
-  isShellEffect,
   isShellIntent,
   localBroadcast,
-  localNamesOf,
-  localSeats,
   pure,
   readHome as shellReadHome,
   reduceShell,
   resumeFor as shellResumeFor,
-  startLocal,
   step,
   toast,
   withShell,
@@ -55,11 +50,9 @@ import {
 } from '../engine/index.ts';
 import { action as actionFrame } from '../protocol.ts';
 import { FLIP7_BONUS, cardName, scoreLine } from '../engine/cards.ts';
-import { FLIP7_SHELL, asSeat, parseOpts, seatNames } from '../shellConfig.ts';
+import { FLIP7_SHELL, asSeat } from '../shellConfig.ts';
 import { cueKey, cuesBetween, type Cue } from './sound.ts';
 import {
-  EXTRA_NAME_PREFS,
-  EXTRA_SEATS,
   HOME_TABS,
   type ExtraSeat,
   type HomeTab,
@@ -69,32 +62,17 @@ import {
   type Store,
 } from '../storage.ts';
 
-export { EXTRA_SEATS, HOME_TABS, type ExtraSeat, type HomeTab, type PlayMode };
+export { HOME_TABS, type ExtraSeat, type HomeTab, type PlayMode };
 
-/** The raw values `host/click` and `local/click` carry: the two Players selects and the third to sixth names. */
+/** The raw values `host/click` and `local/click` carry: the two Players steppers (the third to twelfth names ride as the shell's `names`). */
 export type Raw = Readonly<{
   players?: string;
   localPlayers?: string;
   names?: ReadonlyArray<string>;
 }>;
 
-/** Null where nothing was remembered; a cleared seat is '' so the repaint after the tap leaves it empty. */
-export type ExtraNames = Readonly<Record<ExtraSeat, string | null>>;
-export const NO_EXTRA_NAMES: ExtraNames = {
-  2: null,
-  3: null,
-  4: null,
-  5: null,
-  6: null,
-  7: null,
-  8: null,
-  9: null,
-  10: null,
-  11: null,
-};
-
-/** What `initHome` reads beyond the shell's keys: the third to sixth names (the seat count is the shell's `prefs.opts`). */
-export type Home = Readonly<{ extraNames: ExtraNames }>;
+/** Nothing beyond the shell's keys: the seat count is the shell's `prefs.opts`, the third to twelfth names its `prefs.seatNames`. */
+export type Home = object;
 
 /**
  * What just happened to a seat, held on this phone until its Continue (the owner, 2026-10-02: "When
@@ -110,11 +88,10 @@ export type Pause = Readonly<{
   detail: string;
 }>;
 
-/** The table's slice: the curtain (the shell's), the pause, the history sheet and the names past the second as last typed. */
+/** The table's slice: the curtain (the shell's), the pause and the history sheet (the names past the second are the shell's `seatNames`). */
 export type Table = Readonly<{
   curtain: number | null;
   pause: Pause | null;
-  extraNames: ExtraNames;
 }>;
 
 export type FlipSeat = 0 | 1 | ExtraSeat;
@@ -126,10 +103,9 @@ export type TableIntent =
   | Readonly<{ type: 'give/click'; seat: number }>
   | Readonly<{ type: 'nextRound/click' }>
   | Readonly<{ type: 'replay/click' }>
-  | Readonly<{ type: 'continue/click' }>
-  | Readonly<{ type: 'pname/typed'; seat: ExtraSeat; value: string }>;
+  | Readonly<{ type: 'continue/click' }>;
 
-export type TableEffect = Readonly<{ type: 'rememberPName'; seat: ExtraSeat; name: string }>;
+export type TableEffect = never;
 
 /** Flip 7's types for the shared shell (`ShellTypes`). */
 export type Flip7 = Readonly<{
@@ -161,11 +137,7 @@ export type Step = SharedStep<Flip7>;
 export type Resume = SharedResume<Flip7>;
 export type HomeSnapshot = SharedHomeSnapshot<Flip7>;
 
-export const initialTable: Table = {
-  curtain: null,
-  pause: null,
-  extraNames: NO_EXTRA_NAMES,
-};
+export const initialTable: Table = { curtain: null, pause: null };
 
 export const waitingToDealMsg = (hostName: string): string =>
   `Waiting for ${hostName} to deal the next round`;
@@ -181,7 +153,7 @@ const reset = (table: Table, at: TableReset): Table => {
     case 'handoff':
     case 'leave':
     case 'lost':
-      return { ...initialTable, extraNames: table.extraNames };
+      return initialTable;
     case 'deal':
       return { ...table, pause: null };
     case 'view':
@@ -334,22 +306,6 @@ const replay = (app: App, ctx: Ctx): Step => {
     : broadcast(withShell(app, { game: next }), ctx, FLIP7);
 };
 
-/** `local/click` for two to six seats: the seat count, the names (the third on carried in `Raw`, else as last typed), the deal. */
-const localStart = (
-  app: App,
-  intent: Readonly<{ p1: string; p2: string }> & Raw,
-  ctx: Ctx,
-): Step => {
-  const opts = parseOpts(intent, app.shell.opts);
-  const extra = EXTRA_SEATS.map((seat, i) => intent.names?.[i] ?? app.table.extraNames[seat] ?? '');
-  const raws = [intent.p1, intent.p2, ...extra].slice(0, opts.seatCount);
-  const seats = localSeats(raws, localNamesOf(FLIP7_SHELL));
-  const game = createGame(seatNames(opts.seatCount, seats), ctx.rng, ctx.now);
-  return then(startLocal(withShell(app, { opts }), game, ctx, FLIP7), (a) =>
-    step(a, { type: 'writeOpts', opts }),
-  );
-};
-
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
   switch (intent.type) {
     case 'act':
@@ -366,16 +322,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       return replay(app, ctx);
     case 'continue/click':
       return pure(withTable(app, { pause: null }));
-    case 'pname/typed':
-      return step(
-        withTable(app, {
-          extraNames: {
-            ...app.table.extraNames,
-            [intent.seat]: intent.value,
-          },
-        }),
-        { type: 'rememberPName', seat: intent.seat, name: intent.value },
-      );
   }
 };
 
@@ -390,20 +336,14 @@ export const FLIP7: ShellConfig<Flip7> = {
     escape: (app) => (app.table.pause === null ? null : pure(withTable(app, { pause: null }))),
   },
   local: { viewer, revealer },
-  home: {
-    ...FLIP7_SHELL.home,
-    apply: (app, home) => ({
-      shell: app.shell,
-      table: { ...app.table, extraNames: home.extraNames },
-    }),
-  },
+  home: { ...FLIP7_SHELL.home, apply: (app) => app },
 };
 
 export const initialShell: Shell = shellInitial(FLIP7);
 export const initialApp: App = { shell: initialShell, table: initialTable };
 
+/** The shell's `local/click` seats two to twelve (its `seatNames` where the click carries none) and deals through `engine.create`. */
 export const reduce = (app: App, intent: Intent, ctx: Ctx): Step => {
-  if (intent.type === 'local/click') return localStart(app, intent, ctx);
   // The handoff hands a two-seat room on: at two players only.
   if (
     intent.type === 'handoff/click' &&
@@ -433,10 +373,7 @@ export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(ap
 
 export type EffectDeps = ShellEffectDeps<Flip7>;
 
+/** Every effect is the shell's (the seat count's write is its `writeOpts`, a seat name's its `rememberSeatName`). */
 export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
-  if (isShellEffect(effect)) {
-    runShellEffect(app.shell, effect, deps, FLIP7);
-    return;
-  }
-  EXTRA_NAME_PREFS[effect.seat].write(deps.store, effect.name);
+  runShellEffect(app.shell, effect, deps, FLIP7);
 };

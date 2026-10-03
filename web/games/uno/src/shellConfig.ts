@@ -90,14 +90,11 @@ export const UNO_SHELL: ShellGameData<Uno> = {
   },
   frames: { lobby, state, toast, action, join },
   cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
-  home: {
-    read: (store) => ({
-      extraNames: EXTRA_NAME_PREFS.map((pref) => {
-        const name = pref.read(store);
-        return name.ok ? name.value : null;
-      }),
-    }),
+  home: { read: () => ({}) },
+  // The seat count is the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key; the third to twelfth names its `seatNames` (`seatName/typed`, `rememberSeatName`), under `p3Name` on.
+  prefs: {
+    ...SHELL_STORE,
+    opts: { read: readOpts, write: writeOpts },
+    seatNames: EXTRA_NAME_PREFS,
   },
-  // The seat count is the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key.
-  prefs: { ...SHELL_STORE, opts: { read: readOpts, write: writeOpts } },
 };

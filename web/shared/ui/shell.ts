@@ -219,6 +219,8 @@ export type HomeSnapshot<G extends ShellTypes> = Readonly<{
   recentGames: ReadonlyArray<RecentGame>;
   /** The room's terms as remembered (`cfg.prefs.opts`); null for a game that forgets them (gin, hive), whose shell keeps its current ones. */
   opts: G['Opts'] | null;
+  /** The third seat's name on, as remembered (`cfg.prefs.seatNames`, index 0 the third seat, null where nothing is stored); null or absent for a game that keeps none, whose shell keeps its current ones. */
+  seatNames?: ReadonlyArray<string | null> | null;
 }> &
   G['Home'];
 
@@ -283,6 +285,14 @@ export type ShellState<G extends ShellTypes> = Readonly<{
   p1Name: string;
   /** The second player's name as last read from its key or typed. */
   p2Name: string;
+  /**
+   * The pass-and-play names past the shell's two as last read from their keys or typed, index 0
+   * the third seat, one entry per seat up to `cfg.seats.max` ([] for a two-seat game); null where
+   * nothing was, '' for a seat the player cleared (the paint keeps it empty where null would refill
+   * the default under the caret, web/shared/ui/seatNames.ts). A preference like `p1Name`: no table
+   * reset touches it, and `local/click` seats them where its click carries no names.
+   */
+  seatNames: ReadonlyArray<string | null>;
   screen: ScreenId<G>;
   /**
    * The device is a phone held upright right now (web/shared/edge/media.ts `PORTRAIT_PHONE`, from
@@ -402,6 +412,8 @@ export type ShellIntent<G extends ShellTypes> =
   | Readonly<{ type: 'name/typed'; value: string }>
   | Readonly<{ type: 'p1name/typed'; value: string }>
   | Readonly<{ type: 'p2name/typed'; value: string }>
+  /** A keystroke in the input of seat `seat` (0-based, the third seat is 2; web/shared/ui/seatNames.ts): kept as typed, remembered trimmed. */
+  | Readonly<{ type: 'seatName/typed'; seat: number; value: string }>
   /** `setHomeTab(tab, { persist })`: an unknown tab is `play`. */
   | Readonly<{ type: 'tab/set'; tab: string; persist?: boolean }>
   /**
@@ -417,8 +429,9 @@ export type ShellIntent<G extends ShellTypes> =
   | (Readonly<{ type: 'host/click'; name: string }> & G['Raw'])
   /** `#joinBtn`: the raw input values. */
   | Readonly<{ type: 'join/click'; name: string; code: string }>
-  /** `#localBtn`: the raw names and the raw option values. */
-  | (Readonly<{ type: 'local/click'; p1: string; p2: string }> & G['Raw'])
+  /** `#localBtn`: the raw names (`names`: the third seat's input on, in seat order, where the page has them; absent, the shell's `seatNames`) and the raw option values. */
+  | (Readonly<{ type: 'local/click'; p1: string; p2: string; names?: ReadonlyArray<string> }> &
+      G['Raw'])
   /** `#resumeBtn`: whatever `shell.resume` offers. */
   | Readonly<{ type: 'resume/click' }>
   /**
@@ -554,6 +567,7 @@ export const SHELL_INTENT_TYPES = [
   'name/typed',
   'p1name/typed',
   'p2name/typed',
+  'seatName/typed',
   'tab/set',
   'rules/show',
   'mode/set',
@@ -629,6 +643,8 @@ export type ShellEffect<G extends ShellTypes> =
   | Readonly<{ type: 'saveLocal'; game: G['State'] }>
   | Readonly<{ type: 'rememberName'; name: string }>
   | Readonly<{ type: 'rememberP2Name'; name: string }>
+  /** Seat `seat`'s name (0-based, the third seat on) through `cfg.prefs.seatNames`; nothing for a seat the game keeps no key for. */
+  | Readonly<{ type: 'rememberSeatName'; seat: number; name: string }>
   | Readonly<{ type: 'writeHomeTab'; tab: Tab<G> }>
   | Readonly<{ type: 'writePlayMode'; mode: PlayMode }>
   | Readonly<{ type: 'writeSoundFont'; font: SoundFontName }>
@@ -709,6 +725,7 @@ export const SHELL_EFFECT_TYPES = [
   'saveLocal',
   'rememberName',
   'rememberP2Name',
+  'rememberSeatName',
   'writeHomeTab',
   'writePlayMode',
   'writeSoundFont',
@@ -816,6 +833,8 @@ export type ShellPrefs<G extends ShellTypes> = Readonly<{
   recentGames: RecentGamesPref<G['Store']>;
   /** The room's terms remembered across reloads (the seat-count steppers, backgammon's two selects); absent, the game forgets them (gin, hive). */
   opts?: OptsPref<G['Store'], G['Opts']>;
+  /** The pass-and-play names past the shell's two, index 0 the third seat (prefs.ts `extraNamePrefs`); absent, the game keeps none (the two-seat games). */
+  seatNames?: ReadonlyArray<Pref<G['Store'], string>>;
   save: Readonly<{
     readSave: (store: G['Store']) => Result<Save<G>, unknown>;
     writeSave: (store: G['Store'], save: Save<G>) => unknown;
@@ -1441,6 +1460,12 @@ export const localSeats = (
     const taken = seated.some((p) => p.name.toLowerCase() === name.toLowerCase());
     return [...seated, { id: `p${n}`, name: taken ? `${name} ${n}` : name }];
   }, []);
+
+/** `ShellState.seatNames` with nothing remembered: one null per seat past the shell's two up to `cfg.seats.max`; [] for a two-seat game. */
+export const noSeatNames = <G extends ShellTypes>(
+  cfg: Pick<ShellConfig<G>, 'seats'>,
+): ReadonlyArray<string | null> =>
+  Array.from({ length: cfg.seats === undefined ? 0 : Math.max(0, cfg.seats.max - 2) }, () => null);
 
 const showScreen = <G extends ShellTypes>(app: ShellApp<G>, screen: ScreenId<G>): Step<G> =>
   step(withShell(app, { screen }), { type: 'scrollTop' });
@@ -2203,6 +2228,7 @@ const initHome = <G extends ShellTypes>(
               flipForFar: home.flipTable,
               recentGames: home.recentGames,
               opts: home.opts ?? a.shell.opts,
+              seatNames: home.seatNames ?? a.shell.seatNames,
             }),
             home,
           ),
@@ -2398,6 +2424,14 @@ export const reduceShell = <G extends ShellTypes>(
         { type: 'rememberP2Name', name: intent.value.trim() },
         { type: 'fillP2Name', name: intent.value },
       );
+    // The input is the only place the name shows, so no fill: the paint reads `seatNames` ('' kept empty).
+    case 'seatName/typed':
+      return step(
+        withShell(app, {
+          seatNames: s.seatNames.map((name, i) => (i === intent.seat - 2 ? intent.value : name)),
+        }),
+        { type: 'rememberSeatName', seat: intent.seat, name: intent.value.trim() },
+      );
     case 'tab/set':
       return setHomeTab(app, intent.tab, intent.persist !== false, cfg);
     case 'rules/show': {
@@ -2455,9 +2489,13 @@ export const reduceShell = <G extends ShellTypes>(
       );
     }
     case 'local/click': {
+      // Every seat the terms hold, from the inputs (the third on as the click carries them, else as
+      // remembered) under the `localSeats` rule; a two-seat game's is `localPlayers(p1, p2)`.
       const opts = cfg.opts.parse(intent, s.opts);
+      const extra = s.seatNames.map((name, i) => intent.names?.[i] ?? name ?? '');
+      const raws = [intent.p1, intent.p2, ...extra].slice(0, capacityOf(opts, cfg));
       const game = cfg.engine.create(
-        playersFor<G>(localPlayers(intent.p1, intent.p2, localNamesOf(cfg))),
+        playersFor<G>(localSeats(raws, localNamesOf(cfg))),
         opts,
         ctx.rng,
         ctx.now,
@@ -2770,6 +2808,7 @@ export const initialShell = <G extends ShellTypes>(cfg: ShellConfig<G>): ShellSt
   playMode: cfg.modes.default,
   p1Name: '',
   p2Name: '',
+  seatNames: noSeatNames(cfg),
   screen: 'homeScreen',
   portraitPhone: false,
   landscapePhone: false,
@@ -2845,6 +2884,13 @@ export const readHome = <G extends ShellTypes>(
     save: save.ok ? save.value : null,
     recentGames: cfg.prefs.recentGames.read(store),
     opts: cfg.prefs.opts === undefined ? null : cfg.prefs.opts.read(store),
+    seatNames:
+      cfg.prefs.seatNames === undefined
+        ? null
+        : cfg.prefs.seatNames.map((pref) => {
+            const name = pref.read(store);
+            return name.ok ? name.value : null;
+          }),
     ...cfg.home.read(store),
   };
 };

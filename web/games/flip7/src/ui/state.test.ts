@@ -7,10 +7,10 @@ import { createGame, viewFor, type State } from '../engine/index.ts';
 import { STORAGE_KEYS } from '../storage.ts';
 import {
   FLIP7,
-  NO_EXTRA_NAMES,
   guestContextOf,
   hostContextOf,
   initialApp,
+  initialTable,
   namesOf,
   myTurn,
   pauseFor,
@@ -146,11 +146,13 @@ describe('the table`s own controls', () => {
     const set = run(initialApp, { type: 'opts/set', raw: { players: '5' } });
     expect(set.app.shell.opts).toEqual({ seatCount: 5 });
     expect(set.effects).toEqual([{ type: 'writeOpts', opts: { seatCount: 5 } }]);
-    const named = run(initialApp, { type: 'pname/typed', seat: 3, value: 'Grant' });
-    expect(named.app.table.extraNames[3]).toBe('Grant');
+    // The third seat on is the shell's (`seatNames`, index 0 the third seat).
+    const named = run(initialApp, { type: 'seatName/typed', seat: 3, value: 'Grant' });
+    expect(named.app.shell.seatNames[1]).toBe('Grant');
+    expect(named.effects).toEqual([{ type: 'rememberSeatName', seat: 3, name: 'Grant' }]);
     // A cleared seat stays '' (the paint leaves it empty); only an unknown seat is null.
     expect(
-      run(named.app, { type: 'pname/typed', seat: 3, value: '' }).app.table.extraNames[3],
+      run(named.app, { type: 'seatName/typed', seat: 3, value: '' }).app.shell.seatNames[1],
     ).toBe('');
     const rules = run(initialApp, { type: 'rules/open' });
     expect(rules.app.shell.rulesOpen).toBe(true);
@@ -198,7 +200,7 @@ describe('the table`s own controls', () => {
     };
     const deps = { store: createStore(storage) } as unknown as EffectDeps;
     runEffect(initialApp, { type: 'writeOpts', opts: { seatCount: 4 } }, deps);
-    runEffect(initialApp, { type: 'rememberPName', seat: 2, name: 'Sandro' }, deps);
+    runEffect(initialApp, { type: 'rememberSeatName', seat: 2, name: 'Sandro' }, deps);
     expect(map.get(STORAGE_KEYS.players)).toBe('4');
     expect(map.get(STORAGE_KEYS.p3Name)).toBe('Sandro');
   });
@@ -231,12 +233,12 @@ describe('what the boot and the sessions read back', () => {
     });
     const home = readHome(store);
     expect(home.opts).toEqual({ seatCount: 4 });
-    expect(home.extraNames).toEqual({ ...NO_EXTRA_NAMES, 4: 'Noa' });
-    const applied = FLIP7.home.apply(initialApp, home);
-    expect(applied.table.extraNames[4]).toBe('Noa');
-    // The seat count is the shell's (`prefs.opts`): `home/init` sets it, the game's apply leaves the shell alone.
-    expect(applied.shell).toBe(initialApp.shell);
-    expect(run(initialApp, { type: 'home/init', home }).app.shell.opts).toEqual({ seatCount: 4 });
+    expect(home.seatNames).toEqual([null, null, 'Noa', ...Array<null>(7).fill(null)]);
+    // The seat count and the names are the shell's (`prefs.opts`, `prefs.seatNames`): `home/init` sets them, the game's apply has nothing of its own.
+    expect(FLIP7.home.apply(initialApp, home)).toBe(initialApp);
+    const atHome = run(initialApp, { type: 'home/init', home }).app;
+    expect(atHome.shell.opts).toEqual({ seatCount: 4 });
+    expect(atHome.shell.seatNames[2]).toBe('Noa');
     // The resume box is the shell's off the save: none saved, none offered.
     expect(run(initialApp, { type: 'home/init', home }).app.shell.resume).toBeNull();
     const started = run(initialApp, startThree, { type: 'curtain/reveal' });
@@ -247,9 +249,7 @@ describe('what the boot and the sessions read back', () => {
     expect(loaded.app.shell.game?.seats.map((s) => s.name)).toEqual(['Ari', 'Lavi']);
     expect(loaded.app.table.curtain).toBeNull();
     expect(FLIP7.local.revealer(game).seat).toBe(0);
-    expect(FLIP7.table.reset(started.app.table, 'leave').extraNames).toEqual(
-      started.app.table.extraNames,
-    );
+    expect(FLIP7.table.reset(started.app.table, 'leave')).toEqual(initialTable);
     expect(FLIP7.table.reset(started.app.table, 'view')).toBe(started.app.table);
   });
 

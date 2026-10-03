@@ -6,7 +6,13 @@ import { describe, expect, test } from 'vitest';
 import { fakeEl, fakePage, type FakePage } from '../edge/page.fake.ts';
 import { seatNameInputId } from '../markup/seatNames.ts';
 import { DEFAULT_MARK } from './home.ts';
-import { bindSeatNames, paintSeatNames, readSeatNames, type SeatNamesSpec } from './seatNames.ts';
+import {
+  bindSeatNames,
+  paintSeatNames,
+  readSeatNames,
+  type SeatNameTyped,
+  type SeatNamesSpec,
+} from './seatNames.ts';
 
 const SPEC: SeatNamesSpec = { max: 5, names: ['Ari', 'Lavi', 'Sandro'] };
 
@@ -42,12 +48,13 @@ describe('paintSeatNames', () => {
 });
 
 describe('bindSeatNames', () => {
-  test('typing reaches onTyped with the seat; a default clears once on focus or tap and is reported empty', () => {
+  test('typing dispatches seatName/typed with the seat; a default clears once on focus or tap and is dispatched empty', () => {
     const p = page();
     const seen: (readonly [number, string])[] = [];
     paintSeatNames(p.doc, SPEC, 5, [null, 'Dan', null]);
-    bindSeatNames(p.doc, SPEC, (seat, value) => {
-      seen.push([seat, value]);
+    bindSeatNames(p.doc, SPEC, (intent: SeatNameTyped) => {
+      expect(intent.type).toBe('seatName/typed');
+      seen.push([intent.seat, intent.value]);
     });
     const p3 = p.get('p3NameInput');
     p3.fire('focus');

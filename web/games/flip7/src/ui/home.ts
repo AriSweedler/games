@@ -1,34 +1,32 @@
 // The home screen's Flip 7 half (web/shared/ui/home.ts does the shell's): the two Players steppers
 // (Online and its pass-and-play twin, − count +, two to twelve), the third to twelfth pass-and-play
-// names shown with the count, and the input writes the boot hands the shell (the names, the code).
+// names shown with the count (web/shared/ui/seatNames.ts, off the shell's `seatNames`), and the
+// input writes the boot hands the shell (the names, the code).
 import {
-  dataOf,
-  listen,
   readValue,
   requireId,
-  setAttr,
-  setValue,
   toggleClass,
   type DocumentLike,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
 import {
-  DEFAULT_MARK,
   bindHomeShell,
-  clearDefault,
   homeView,
   paintHomeShell,
   shellIntents,
 } from '../../../../shared/ui/home.ts';
-import { localNameFor } from '../../../../shared/ui/shell.ts';
+import {
+  bindSeatNames,
+  paintSeatNames,
+  readSeatNames,
+  type SeatNamesSpec,
+} from '../../../../shared/ui/seatNames.ts';
 import { bindStepper, paintStepper, type StepperSpec } from '../../../../shared/ui/stepper.ts';
 import { MAX_SEATS, MIN_SEATS } from '../engine/index.ts';
 import { LOCAL_NAMES } from '../shellConfig.ts';
 import { resumeLabel } from '../../../../shared/lib/name.ts';
 import {
-  EXTRA_SEATS,
   HOME_TABS,
-  type ExtraSeat,
   namesOf,
   type App,
   type Flip7,
@@ -46,11 +44,8 @@ export const LOCAL_PLAYERS_SEL = 'localPlayersCount';
 const ONLINE_STEPPER: StepperSpec = { id: PLAYERS_SEL, min: MIN_SEATS, max: MAX_SEATS };
 const LOCAL_STEPPER: StepperSpec = { id: LOCAL_PLAYERS_SEL, min: MIN_SEATS, max: MAX_SEATS };
 
-/** The input of a seat past the second: `p3NameInput` … `p6NameInput`. */
-export const nameInputId = (seat: ExtraSeat): string => `p${String(seat + 1)}NameInput`;
-
-const readExtraNames = (doc: DocumentLike): ReadonlyArray<string> =>
-  EXTRA_SEATS.map((seat) => readValue(requireId(doc, nameInputId(seat))));
+/** The pass-and-play name inputs (page.ts, `p3NameInput` … `p12NameInput`): twelve, this game's defaults past the shell's two. */
+const SEAT_NAMES: SeatNamesSpec = { max: MAX_SEATS, names: LOCAL_NAMES };
 
 export const readHostOptions = (doc: DocumentLike): Raw => ({
   players: readValue(requireId(doc, PLAYERS_SEL)),
@@ -58,7 +53,7 @@ export const readHostOptions = (doc: DocumentLike): Raw => ({
 
 export const readLocalOptions = (doc: DocumentLike): Raw => ({
   localPlayers: readValue(requireId(doc, LOCAL_PLAYERS_SEL)),
-  names: readExtraNames(doc),
+  names: readSeatNames(doc, SEAT_NAMES),
 });
 
 const paintOptions = (doc: DocumentLike, app: App): void => {
@@ -66,13 +61,7 @@ const paintOptions = (doc: DocumentLike, app: App): void => {
   paintStepper(doc, ONLINE_STEPPER, n);
   paintStepper(doc, LOCAL_STEPPER, n);
   toggleClass(requireId(doc, 'moreNames'), 'hidden', n < 3);
-  EXTRA_SEATS.forEach((seat) => {
-    const input = requireId(doc, nameInputId(seat));
-    const name = app.table.extraNames[seat];
-    toggleClass(input, 'hidden', seat >= n);
-    setValue(input, name ?? localNameFor(LOCAL_NAMES, seat));
-    setAttr(input, DEFAULT_MARK, name === null ? '1' : null);
-  });
+  paintSeatNames(doc, SEAT_NAMES, n, app.shell.seatNames);
 };
 
 export const paintHome = (doc: DocumentLike, app: App): void => {
@@ -92,20 +81,8 @@ const bindOptions = (doc: PageLike, dispatch: (intent: Intent) => void): void =>
   bindStepper(doc, LOCAL_STEPPER, (n) => {
     dispatch({ type: 'opts/set', raw: { localPlayers: String(n) } });
   });
-  EXTRA_SEATS.forEach((seat) => {
-    const input = requireId(doc, nameInputId(seat));
-    listen(input, 'input', () => {
-      dispatch({ type: 'pname/typed', seat, value: readValue(input) });
-    });
-    // A prefilled default clears on its first tap, as the shared binder clears the first two seats.
-    ['focus', 'pointerdown'].forEach((type) => {
-      listen(input, type, () => {
-        if (dataOf(input, 'default') === null) return;
-        clearDefault(input);
-        dispatch({ type: 'pname/typed', seat, value: '' });
-      });
-    });
-  });
+  // Each seat's keystrokes, and the first-tap clear of a default, as the shell's `seatName/typed`.
+  bindSeatNames(doc, SEAT_NAMES, dispatch);
 };
 
 export const bindHome = (doc: PageLike, dispatch: (intent: Intent) => void): void => {

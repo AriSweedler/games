@@ -144,10 +144,10 @@ describe('pass and play', () => {
     expect(four.app.shell.game?.game.names).toEqual(['Ann', 'Bob', 'Cy', 'Di']);
   });
 
-  test('a name typed for a later seat is remembered, written, and seats the game when the click carries none', () => {
-    const typed = run(initialApp, { type: 'pname/typed', seat: 4, value: 'Eve' });
-    expect(typed.app.table.extraNames[2]).toBe('Eve');
-    expect(typed.effects).toContainEqual({ type: 'rememberPName', seat: 4, name: 'Eve' });
+  test('a name typed for a later seat is the shell`s, remembered, written, and seats the game when the click carries none', () => {
+    const typed = run(initialApp, { type: 'seatName/typed', seat: 4, value: 'Eve' });
+    expect(typed.app.shell.seatNames[2]).toBe('Eve');
+    expect(typed.effects).toContainEqual({ type: 'rememberSeatName', seat: 4, name: 'Eve' });
     const six = run(typed.app, { type: 'local/click', p1: 'Ann', p2: 'Bob', localPlayers: '6' });
     expect(six.app.shell.game?.game.names).toEqual([
       'Ann',
@@ -158,11 +158,11 @@ describe('pass and play', () => {
       'Player 6',
     ]);
     // Leaving the table keeps the names typed at home.
-    expect(six.app.table.extraNames[2]).toBe('Eve');
+    expect(run(six.app, { type: 'leave/finish' }).app.shell.seatNames[2]).toBe('Eve');
     // A cleared seat stays '' (the paint leaves it empty); only an unknown seat is null.
-    const cleared = run(typed.app, { type: 'pname/typed', seat: 4, value: '' });
-    expect(cleared.app.table.extraNames[2]).toBe('');
-    expect(cleared.effects).toContainEqual({ type: 'rememberPName', seat: 4, name: '' });
+    const cleared = run(typed.app, { type: 'seatName/typed', seat: 4, value: '' });
+    expect(cleared.app.shell.seatNames[2]).toBe('');
+    expect(cleared.effects).toContainEqual({ type: 'rememberSeatName', seat: 4, name: '' });
   });
 
   test('the reveal shows the seat its own hand; a play hands the phone to the next seat', () => {
@@ -406,6 +406,10 @@ describe('storage', () => {
     runEffect(initialApp, { type: 'writeOpts', opts: { seatCount: 3 } }, deps);
     expect(s.map.get(STORAGE_KEYS.players)).toBe('3');
     expect(readHome(store).opts).toEqual({ seatCount: 3 });
+    // A later seat's name under its own key, read back into the shell at `home/init`.
+    runEffect(initialApp, { type: 'rememberSeatName', seat: 3, name: 'Eve' }, deps);
+    expect(s.map.get(STORAGE_KEYS.p4Name)).toBe('Eve');
+    expect(readHome(store).seatNames).toEqual([null, 'Eve', ...Array<null>(8).fill(null)]);
     const app = atPosition();
     runEffect(app, { type: 'persist' }, deps);
     expect(JSON.parse(s.map.get(STORAGE_KEYS.save) ?? 'null')).toMatchObject({ role: 'local' });
@@ -413,6 +417,7 @@ describe('storage', () => {
     // `home/init`: the remembered count into the shell, the saved game offered to resume.
     const home = run(initialApp, { type: 'home/init', home: readHome(store) }).app;
     expect(home.shell.opts).toEqual({ seatCount: 3 });
+    expect(home.shell.seatNames[1]).toBe('Eve');
     expect(home.shell.resume).toMatchObject({ kind: 'local' });
   });
 });
