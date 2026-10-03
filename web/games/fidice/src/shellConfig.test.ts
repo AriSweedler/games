@@ -70,7 +70,9 @@ describe('the copy', () => {
     expect(FIDICE_SHELL.names.default).toBe(DEFAULT_NAME);
     expect(FIDICE_SHELL.localNames).toEqual(['Ari', 'Lavi']);
     expect(FIDICE_SHELL.id).toBe('fidice');
-    expect(FIDICE_SHELL.prefs).toBe(SHELL_STORE);
+    // The shell's store plus the host card's terms the shell remembers (`prefs.opts`, the four keys).
+    expect(FIDICE_SHELL.prefs).toMatchObject(SHELL_STORE);
+    expect(FIDICE_SHELL.prefs.opts).toBeDefined();
     expect(FIDICE_SHELL.tabs).toEqual({
       list: ['play', 'rules', 'ladder', 'about'],
       default: 'play',
@@ -322,14 +324,14 @@ describe('home.read', () => {
   test('the terms (defaults when unreadable) and the third to sixth names (null when none)', () => {
     const s = fakeStorage();
     const store = createStore(s);
+    expect(FIDICE_SHELL.prefs.opts?.read(store)).toEqual(DEFAULT_OPTS);
     expect(FIDICE_SHELL.home.read(store)).toEqual({
-      opts: DEFAULT_OPTS,
       extraNames: { 2: null, 3: null, 4: null, 5: null },
     });
     s.map.set(STORAGE_KEYS.lives, '2');
     s.map.set(STORAGE_KEYS.p4Name, 'Grant');
+    expect(FIDICE_SHELL.prefs.opts?.read(store)).toEqual({ ...DEFAULT_OPTS, lives: 2 });
     expect(FIDICE_SHELL.home.read(store)).toEqual({
-      opts: { ...DEFAULT_OPTS, lives: 2 },
       extraNames: { 2: null, 3: 'Grant', 4: null, 5: null },
     });
   });

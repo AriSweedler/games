@@ -84,12 +84,12 @@ export const paintHome = (doc: DocumentLike, app: App): void => {
 const bindOptions = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
   MATCH_LENGTH_SELECTS.forEach((id) => {
     listenId(doc, id, 'change', (e) => {
-      dispatch({ type: 'matchLength/set', length: targetValueOf(e) });
+      dispatch({ type: 'opts/set', raw: { matchLength: targetValueOf(e) } });
     });
   });
   VARIANT_SELECTS.forEach((id) => {
     listenId(doc, id, 'change', (e) => {
-      dispatch({ type: 'variant/set', variant: targetValueOf(e) });
+      dispatch({ type: 'opts/set', raw: { variant: targetValueOf(e) } });
     });
   });
 };

@@ -115,6 +115,10 @@ export const runShellEffect = <G extends ShellTypes>(
     case 'writeFlip':
       cfg.prefs.flipTable.write(deps.store, effect.on ? 'on' : 'off');
       return;
+    case 'writeOpts':
+      // Emitted only by a shell whose prefs hold the terms (`rememberOpts`); a game's own effect of the same name never reaches here.
+      cfg.prefs.opts?.write(deps.store, effect.opts);
+      return;
     case 'recordGame':
       cfg.prefs.recentGames.append(deps.store, effect.game);
       return;

@@ -60,7 +60,9 @@ describe('the copy', () => {
     expect(BRISCOLA_SHELL.copy.leaveOnline).toBe(LEAVE_ONLINE_MSG);
     expect(BRISCOLA_SHELL.names.default).toBe(DEFAULT_NAME);
     expect(BRISCOLA_SHELL.id).toBe('briscola');
-    expect(BRISCOLA_SHELL.prefs).toBe(SHELL_STORE);
+    // The shell's store plus the room options the shell remembers (`prefs.opts`, the `players` key).
+    expect(BRISCOLA_SHELL.prefs).toMatchObject(SHELL_STORE);
+    expect(BRISCOLA_SHELL.prefs.opts).toBeDefined();
   });
 
   test('the play mode: the shell`s default (local or online, anything else online; shell.test.ts)', () => {
@@ -251,8 +253,8 @@ describe('the engine adapters over a pair', () => {
 describe('home.read', () => {
   test('defaults on an empty store; the pack, the language and the third and fourth names when stored', () => {
     const empty = createStore(fakeStorage());
+    expect(BRISCOLA_SHELL.prefs.opts?.read(empty)).toEqual(DEFAULT_OPTS);
     expect(BRISCOLA_SHELL.home.read(empty)).toEqual({
-      opts: DEFAULT_OPTS,
       cardPack: DEFAULT_CARD_PACK,
       lang: 'it',
       speed: 'normal',
@@ -266,8 +268,11 @@ describe('home.read', () => {
     storage.setItem(STORAGE_KEYS.p3Name, 'Cara');
     storage.setItem(STORAGE_KEYS.p4Name, 'Dan');
     storage.setItem(STORAGE_KEYS.players, '4');
+    expect(BRISCOLA_SHELL.prefs.opts?.read(createStore(storage))).toEqual({
+      ...DEFAULT_OPTS,
+      seatCount: 4,
+    });
     expect(BRISCOLA_SHELL.home.read(createStore(storage))).toEqual({
-      opts: { ...DEFAULT_OPTS, seatCount: 4 },
       cardPack: 'linea',
       lang: 'en',
       p3Name: 'Cara',

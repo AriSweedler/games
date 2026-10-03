@@ -20,6 +20,7 @@ import {
   HOME_TABS,
   SHELL_STORE,
   readOpts,
+  writeOpts,
   type Opts,
 } from './storage.ts';
 import { CUES } from './ui/sound.ts';
@@ -91,12 +92,12 @@ export const UNO_SHELL: ShellGameData<Uno> = {
   cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   home: {
     read: (store) => ({
-      opts: readOpts(store),
       extraNames: EXTRA_NAME_PREFS.map((pref) => {
         const name = pref.read(store);
         return name.ok ? name.value : null;
       }),
     }),
   },
-  prefs: SHELL_STORE,
+  // The seat count is the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key.
+  prefs: { ...SHELL_STORE, opts: { read: readOpts, write: writeOpts } },
 };

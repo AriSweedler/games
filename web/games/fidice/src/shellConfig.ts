@@ -78,6 +78,7 @@ import {
   readP4Name,
   readP5Name,
   readP6Name,
+  writeOpts,
   type Opts,
 } from './storage.ts';
 import { CUES } from './ui/sound.ts';
@@ -319,7 +320,6 @@ export const FIDICE_SHELL: ShellGameData<Fidice> = {
       const p5 = readP5Name(store);
       const p6 = readP6Name(store);
       return {
-        opts: readOpts(store),
         extraNames: {
           2: p3.ok ? p3.value : null,
           3: p4.ok ? p4.value : null,
@@ -329,5 +329,6 @@ export const FIDICE_SHELL: ShellGameData<Fidice> = {
       };
     },
   },
-  prefs: SHELL_STORE,
+  // The host card's terms are the shell's remembered terms (`opts/set`, `writeOpts`), under this game's four keys.
+  prefs: { ...SHELL_STORE, opts: { read: readOpts, write: writeOpts } },
 };

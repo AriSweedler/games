@@ -109,8 +109,7 @@ const home: HomeSnapshot = {
   p2Name: null,
   homeTab: 'play',
   playMode: 'local',
-  matchLength: 5,
-  variant: 'portes',
+  opts: { matchLength: 5, variant: 'portes' },
   curtainMode: 'always',
   soundFont: 'default',
   flipTable: false,
@@ -279,8 +278,7 @@ describe('home', () => {
       p2Name: 'Bob',
       homeTab: 'rules',
       playMode: 'online',
-      matchLength: 7,
-      variant: 'backgammon',
+      opts: { matchLength: 7, variant: 'backgammon' },
       curtainMode: 'never',
       soundFont: 'felt',
       save: { role: 'local', game: saved },
@@ -368,7 +366,7 @@ describe('home', () => {
     ]);
   });
 
-  test('mode/set stores local or online; variant/set and matchLength/set keep only shipped values', () => {
+  test('mode/set stores local or online; opts/set keeps only shipped values and remembers both terms', () => {
     const online = run(initialApp, { type: 'mode/set', mode: 'online' });
     const back = run(online.app, { type: 'mode/set', mode: 'local' });
     expect(back.app.shell.playMode).toBe('local');
@@ -376,20 +374,19 @@ describe('home', () => {
     expect(run(initialApp, { type: 'mode/set', mode: 'sandbox' }).app.shell.playMode).toBe(
       'online',
     );
-    const western = run(initialApp, { type: 'variant/set', variant: 'backgammon' });
+    const western = run(initialApp, { type: 'opts/set', raw: { variant: 'backgammon' } });
     expect(western.app.shell.opts.variant).toBe('backgammon');
-    expect(western.effects).toEqual([{ type: 'writeVariant', variant: 'backgammon' }]);
-    expect(run(initialApp, { type: 'variant/set', variant: 'plakoto' })).toEqual({
-      app: initialApp,
-      effects: [],
-    });
-    const seven = run(initialApp, { type: 'matchLength/set', length: '7' });
+    expect(western.effects).toEqual([{ type: 'writeOpts', opts: western.app.shell.opts }]);
+    // An unshipped variant or an unknown length keeps the current terms (the write stores them as they are).
+    expect(run(initialApp, { type: 'opts/set', raw: { variant: 'plakoto' } }).app).toEqual(
+      initialApp,
+    );
+    const seven = run(initialApp, { type: 'opts/set', raw: { matchLength: '7' } });
     expect(seven.app.shell.opts.matchLength).toBe(7);
-    expect(seven.effects).toEqual([{ type: 'writeMatchLength', length: 7 }]);
-    expect(run(initialApp, { type: 'matchLength/set', length: 4 })).toEqual({
-      app: initialApp,
-      effects: [],
-    });
+    expect(seven.effects).toEqual([{ type: 'writeOpts', opts: seven.app.shell.opts }]);
+    expect(run(initialApp, { type: 'opts/set', raw: { matchLength: '4' } }).app).toEqual(
+      initialApp,
+    );
     expect(parseMatchLength(undefined, 3)).toBe(3);
     expect(parseMatchLength('1', 3)).toBe(1);
     expect(parseVariant('fevga', 'portes')).toBe('portes');
@@ -479,7 +476,7 @@ describe('hosting', () => {
     const { app, effects } = run(
       initialApp,
       { type: 'home/init', home },
-      { type: 'variant/set', variant: 'backgammon' },
+      { type: 'opts/set', raw: { variant: 'backgammon' } },
       { type: 'host/click', name: '  ', matchLength: '7' },
     );
     expect(app.shell).toMatchObject({
@@ -495,9 +492,11 @@ describe('hosting', () => {
       startGameVisible: false,
     });
     expect(app.shell.code).toMatch(/^[A-HJ-NP-Z]{4}$/);
-    expect(effects.slice(-2)).toEqual([
+    // The terms are remembered after the room opens (the shell's `writeOpts`, both keys).
+    expect(effects.slice(-3)).toEqual([
       { type: 'scrollTop' },
       { type: 'startHost', code: app.shell.code, attempt: 1, resume: false },
+      { type: 'writeOpts', opts: { matchLength: 7, variant: 'backgammon' } },
     ]);
     const resumed = run(app, { type: 'host/start', code: 'ABCD' });
     expect(resumed.app.shell).toMatchObject({ code: 'ABCD', netAttempt: 2 });
@@ -1719,8 +1718,7 @@ describe('storage', () => {
       p2Name: 'Bob',
       homeTab: 'about',
       playMode: 'online',
-      matchLength: 7,
-      variant: 'backgammon',
+      opts: { matchLength: 7, variant: 'backgammon' },
       curtainMode: 'never',
       soundFont: 'felt',
       flipTable: false,
@@ -1729,7 +1727,7 @@ describe('storage', () => {
     });
     storage.map.set(STORAGE_KEYS.variant, 'plakoto');
     storage.map.set(STORAGE_KEYS.matchLength, '4');
-    expect(readHome(store)).toMatchObject({ variant: 'portes', matchLength: 5 });
+    expect(readHome(store)).toMatchObject({ opts: { matchLength: 5, variant: 'portes' } });
   });
 });
 
@@ -1825,8 +1823,11 @@ describe('runEffect', () => {
     runEffect(initialApp, { type: 'rememberP2Name', name: 'Bob' }, d);
     runEffect(initialApp, { type: 'writeHomeTab', tab: 'about' }, d);
     runEffect(initialApp, { type: 'writePlayMode', mode: 'online' }, d);
-    runEffect(initialApp, { type: 'writeVariant', variant: 'backgammon' }, d);
-    runEffect(initialApp, { type: 'writeMatchLength', length: 7 }, d);
+    runEffect(
+      initialApp,
+      { type: 'writeOpts', opts: { matchLength: 7, variant: 'backgammon' } },
+      d,
+    );
     runEffect(initialApp, { type: 'writeCurtainMode', mode: 'never' }, d);
     runEffect(initialApp, { type: 'writeSoundFont', font: 'arcade' }, d);
     expect(storage.map.get(STORAGE_KEYS.name)).toBe('Ann');
@@ -1842,8 +1843,7 @@ describe('runEffect', () => {
       p2Name: 'Bob',
       homeTab: 'about',
       playMode: 'online',
-      matchLength: 7,
-      variant: 'backgammon',
+      opts: { matchLength: 7, variant: 'backgammon' },
       curtainMode: 'never',
       soundFont: 'arcade',
     });

@@ -92,6 +92,7 @@ const home: HomeSnapshot = {
   flipTable: false,
   save: null,
   recentGames: [],
+  opts: null,
   scorer: null,
 };
 
@@ -166,7 +167,7 @@ describe('the initial app', () => {
     expect(SHELL_INTENT_TYPES).toContain('home/init');
     expect(SHELL_INTENT_TYPES).toContain('guest/lost');
     expect(SHELL_INTENT_TYPES).not.toContain('card/tap');
-    expect(SHELL_INTENT_TYPES).toHaveLength(52);
+    expect(SHELL_INTENT_TYPES).toHaveLength(53);
     expect(new Set(SHELL_INTENT_TYPES).size).toBe(SHELL_INTENT_TYPES.length);
   });
 });
@@ -1455,6 +1456,8 @@ describe('storage', () => {
       flipTable: false,
       save: { role: 'guest', code: 'KQZM', myName: 'Jeff' },
       recentGames: [],
+      // Gin keeps no terms (no `prefs.opts`): the target is forgotten, as it was.
+      opts: null,
       scorer: {
         players: [
           { id: 'a', name: 'A' },
