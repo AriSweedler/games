@@ -3,21 +3,14 @@
 // prefix), the seat count the two Players steppers share under `flip7_players`, and the third to
 // twelfth pass-and-play names under `flip7_p3Name` on: every key a seated game keeps, derived once.
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
-import {
-  seatedStore,
-  DEFAULT_HOME_TAB,
-  DEFAULT_PLAY_MODE,
-  HOME_TABS,
-  type HomeTab,
-  type PlayMode,
-} from '../../../shared/edge/prefs.ts';
+import { seatedStore, HOME_TABS, type HomeTab, type PlayMode } from '../../../shared/edge/prefs.ts';
 import type { SeatCountOpts } from '../../../shared/lib/shellDefaults.ts';
 import { SEAT_COUNTS, decodeState, type SeatCount } from './engine/index.ts';
 
 export type { PlayMode, Store, StorageError };
 
-// The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
-export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
+// The tabs are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
+export { HOME_TABS, type HomeTab };
 
 /** The room's one term. */
 export type Opts = SeatCountOpts<SeatCount>;

@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'vitest';
 
 import { createStore, type StorageLike } from '../../../shared/edge/storage.ts';
+import { DEFAULT_HOME_TAB } from '../../../shared/lib/shellDefaults.ts';
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { createGame } from './engine/index.ts';
 import {
   ALL_KEYS,
   CURTAIN_MODES,
   DEFAULT_CURTAIN_MODE,
-  DEFAULT_HOME_TAB,
   DEFAULT_MATCH_LENGTH,
   DEFAULT_PLAY_MODE,
   DEFAULT_SOUND_FONT,

@@ -36,7 +36,6 @@ import {
   type PlayMode,
   type Save as ShellSave,
   type SoundState,
-  DEFAULT_HOME_TAB,
   DEFAULT_PLAY_MODE,
   HOME_TABS,
   type HomeTab,
@@ -104,7 +103,7 @@ export const STORAGE_KEYS = {
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
 
 // The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
-export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
+export { DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 
 /** The deck this page deals (D10): the packs it may store are the ones that draw it. */
 export const DECK_KIND = 'italian40';

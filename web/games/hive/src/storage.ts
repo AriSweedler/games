@@ -12,7 +12,6 @@ import {
   type GuestSave as ShellGuestSave,
   type HostSave as ShellHostSave,
   type LocalSave as ShellLocalSave,
-  DEFAULT_HOME_TAB,
   DEFAULT_PLAY_MODE,
   HOME_TABS,
   type HomeTab,
@@ -57,7 +56,7 @@ export const writeHints = (store: Store, hints: Hints): void => {
 export const nextHints = (hints: Hints): Hints => nextSetting(HIVE_HINTS, hints);
 
 // The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
-export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
+export { DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 
 /** The room's terms: two seats, always (the shell's option record needs one field). */
 export type Opts = Readonly<{ seatCount: 2 }>;
