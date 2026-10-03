@@ -133,7 +133,7 @@ one with the pause (`web/games/flip7/src/`). The shell's design is `docs/design/
   (`hostRoomMsg`, `waitingMsg`, `joinedText`, …), the option codec, the engine adapters
   (`createState`, `applyAction`, `viewFor`, `decodeState`), the frame builders, the store.
 - `protocol.ts`: pure, the trust boundary. Every inbound frame through a `Result` decoder.
-- `net/{host,guest}.ts`: edges over a `Transport`; never import `peerjs`.
+- `net/sessions.ts`: `sessionsFor(game, codec)` over protocol.ts; the sessions themselves are the shell's (`web/shared/net`), edges over a `Transport`; never import `peerjs`.
 - `storage.ts`: the only localStorage reader, keys prefixed `<g>_`, the save under `<g>MP_v1`.
 - `ui/state.ts`: the table slice and its reducer (the curtain, the pause, the game's intents);
   `ui/render.ts` paints it through `edge/dom.ts`; `ui/home.ts` the home's game-specific inputs;

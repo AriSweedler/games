@@ -40,9 +40,11 @@ import {
   state as stateFrame,
   toast as toastFrame,
   welcome,
+  type GuestFrame,
   type IntentFrame,
 } from '../protocol.ts';
-import { HostSession, type HostEvents } from '../net/host.ts';
+import type { HostEvents } from '../../../../shared/net/host.ts';
+import { HostSession } from '../net/sessions.ts';
 import { LOCAL_NAMES } from '../shellConfig.ts';
 import { DEFAULT_CARD_PACK, STORAGE_KEYS } from '../storage.ts';
 import { BEAT_MS, DURATIONS, drawSpan } from './beat.ts';
@@ -2103,7 +2105,7 @@ describe('the live intent relayed over the sessions harness at three and four se
     };
     const relayed: Relay[] = [];
     // eslint-disable-next-line prefer-const -- assigned once the events below, which need it, exist.
-    let session: HostSession;
+    let session: InstanceType<typeof HostSession>;
     const dispatch = (intent: Intent): void => {
       const s = timed(held.app, intent);
       held.app = s.app;
@@ -2117,7 +2119,7 @@ describe('the live intent relayed over the sessions harness at three and four se
         }
       });
     };
-    const events: HostEvents = {
+    const events: HostEvents<GuestFrame> = {
       ...w.hostEvents,
       frame: (frame, seat) => {
         w.hostEvents.frame(frame, seat);

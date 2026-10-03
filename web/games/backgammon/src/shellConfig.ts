@@ -25,8 +25,8 @@ import {
   viewFor,
   type ShippedVariant,
 } from './engine/index.ts';
-import { connectingMsg } from './net/guest.ts';
-import { OPENING_MSG, handoffMsg } from './net/host.ts';
+import { connectingMsg } from '../../../shared/net/guest.ts';
+import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
 import { action, join, lobby, state, toast } from './protocol.ts';
 import {
   DEFAULT_CURTAIN_MODE,

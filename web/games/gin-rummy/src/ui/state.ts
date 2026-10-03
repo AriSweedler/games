@@ -70,7 +70,7 @@ import {
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { applyAction, canTakeBack, fitsOnto, idsOf, inPlay } from '../engine/index.ts';
 import type { Action, Seat, State, View } from '../engine/types.ts';
-import type { GuestContext } from '../net/guest.ts';
+import type { GuestContext } from '../../../../shared/net/guest.ts';
 import { action as actionFrame } from '../protocol.ts';
 import type { ScorerState } from '../scorer/scores.ts';
 import { GIN_SHELL } from '../shellConfig.ts';

@@ -48,15 +48,17 @@ import {
   type Room,
   type TableSeat,
 } from '../protocol.ts';
-import { CONNECTED_MSG, GuestSession } from './guest.ts';
+import { CONNECTED_MSG } from '../../../../shared/net/guest.ts';
 import {
   FULL_CLOSE_MS,
   HB_GRACE_MS,
-  HostSession,
   WAITING_MSG,
-  type HostContext,
-  type HostRoom,
-} from './host.ts';
+  type HostContext as SharedHostContext,
+} from '../../../../shared/net/host.ts';
+import { GuestSession, HostSession, type HostRoom } from './sessions.ts';
+
+/** The host context as this game's codec reads it: the shell's fields, the six options and the guest seats. */
+type HostContext = SharedHostContext<HostRoom>;
 
 /** D19: prefix `briscola-`, the code upper case. */
 const ROOM = peerIdFor('briscola', CODE);
@@ -89,7 +91,7 @@ const startHost = (
   w: World,
   read: () => HostContext,
   opts: Readonly<{ capacity?: number; waiting?: string }> = {},
-): HostSession =>
+): InstanceType<typeof HostSession> =>
   new HostSession(
     { ...w.deps, read, events: w.hostEvents },
     { code: CODE, attempt: 1, resume: false, ...opts },

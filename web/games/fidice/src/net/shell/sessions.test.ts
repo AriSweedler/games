@@ -42,14 +42,16 @@ import {
   type TableSeat,
 } from '../../protocol.ts';
 import { seatTable, viewerFor } from '../../shellConfig.ts';
-import { CONNECTED_MSG, GuestSession } from './guest.ts';
+import { CONNECTED_MSG } from '../../../../../shared/net/guest.ts';
 import {
   FULL_CLOSE_MS,
-  HostSession,
   WAITING_MSG,
-  type HostContext,
-  type HostRoom,
-} from './host.ts';
+  type HostContext as SharedHostContext,
+} from '../../../../../shared/net/host.ts';
+import { GuestSession, HostSession, type HostRoom } from './sessions.ts';
+
+/** The host context as this game's codec reads it: the shell's fields, the room's terms and the guest seats. */
+type HostContext = SharedHostContext<HostRoom>;
 
 /** Fidice codes are five characters; the harness's CODE is gin's four, so this suite spells its own. */
 const CODE = 'ABCDE';
@@ -69,7 +71,7 @@ const startHost = (
   w: World,
   read: () => HostContext,
   opts: Readonly<{ capacity?: number; waiting?: string }> = {},
-): HostSession =>
+): InstanceType<typeof HostSession> =>
   new HostSession(
     { ...w.deps, read, events: w.hostEvents },
     { code: CODE, attempt: 1, resume: false, ...opts },
