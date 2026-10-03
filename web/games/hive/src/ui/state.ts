@@ -35,8 +35,8 @@ import {
   withTable,
   type Ctx,
   type CueMachine,
-  type CueMemory,
   type Effect as SharedEffect,
+  type GameTypes,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
   type Resume as SharedResume,
@@ -46,7 +46,7 @@ import {
   type Step as SharedStep,
   type TableReset,
 } from '../../../../shared/ui/shell.ts';
-import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
+import type { TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import {
   explainMove,
@@ -164,20 +164,14 @@ export type TableEffect =
   | Readonly<{ type: 'hints/write'; hints: Hints }>;
 
 /** Hive's types for the shared shell: two seats, no option, the whole game as every seat's view. */
-export type Hive = Readonly<{
+export type Hive = GameTypes<{
   Opts: Opts;
   Raw: Raw;
   State: State;
   View: View;
   Action: Action;
   Table: Table;
-  Tab: HomeTab;
-  Mode: PlayMode;
-  Screen: never;
-  Timer: never;
   Cue: Cue;
-  Cues: CueMemory;
-  Resume: never;
   Home: Home;
   Intent: TableIntent;
   Effect: TableEffect;
@@ -602,8 +596,6 @@ const tableEffect: TableEffectRunner<Hive> = (_app, effect, deps) => {
 export const reducer = shellReducer(HIVE, { intent: tableIntent, effect: tableEffect });
 export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
   reducer;
-
-export type EffectDeps = ShellEffectDeps<Hive>;
 
 /** The view the table paints: my seat's, or null at home. */
 export const viewOf = (app: App): View | null => app.shell.view;

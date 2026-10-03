@@ -15,7 +15,6 @@ import {
   step,
   type Ctx,
   type CueMachine,
-  type CueMemory,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
@@ -23,10 +22,11 @@ import {
   type ShellApp,
   type ShellConfig,
   type ShellState,
+  type GameTypes,
   type Step as SharedStep,
 } from '../../../../shared/ui/shell.ts';
-import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
+import type { SeatedRaw } from '../../../../shared/ui/seatCopy.ts';
 import { viewFor, type Action, type State, type View } from '../engine/view.ts';
 import { UNO_SHELL } from '../shellConfig.ts';
 import {
@@ -41,15 +41,8 @@ import { cuesBetween, type Cue } from './sound.ts';
 
 export { DEFAULT_PLAY_MODE, HOME_TABS, cuesBetween, type HomeTab, type PlayMode };
 
-/** The raw option values `host/click` and `local/click` carry: the two seat-count steppers (the third to twelfth names ride as the shell's `names`). */
-export type Raw = Readonly<{
-  players?: string;
-  localPlayers?: string;
-  names?: ReadonlyArray<string>;
-}>;
-
-/** Nothing beyond the shell's keys: the seat count is the shell's `prefs.opts`, the third to twelfth names its `prefs.seatNames`. */
-export type Home = object;
+/** The raw option values `host/click` and `local/click` carry: the seated home's (the two seat-count steppers; the third to twelfth names ride as the shell's `names`). */
+export type Raw = SeatedRaw;
 
 export type Table = Readonly<{
   /** The pass-and-play seat the curtain names, or null (the shell writes it, `local.viewer`). */
@@ -58,26 +51,16 @@ export type Table = Readonly<{
 
 export type TableIntent = Readonly<{ type: 'act'; action: Action }>;
 
-export type TableEffect = never;
-
-/** UNO's types for the shared shell: two to four seats, the seat count as the room's terms. */
-export type Uno = Readonly<{
+/** UNO's types for the shared shell (`GameTypes` over what it names; the rest are the shell's defaults): two to twelve seats, the seat count as the room's terms. */
+export type Uno = GameTypes<{
   Opts: Opts;
   Raw: Raw;
   State: State;
   View: View;
   Action: Action;
   Table: Table;
-  Tab: HomeTab;
-  Mode: PlayMode;
-  Screen: never;
-  Timer: never;
   Cue: Cue;
-  Cues: CueMemory;
-  Resume: never;
-  Home: Home;
   Intent: TableIntent;
-  Effect: TableEffect;
   Store: Store;
   Seat: Exclude<Seat, 0 | 1>;
 }>;
@@ -153,8 +136,6 @@ export const reducer = shellReducer(UNO, { intent: tableIntent });
 export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
   reducer;
 export const initialShell: Shell = initialApp.shell;
-
-export type EffectDeps = ShellEffectDeps<Uno>;
 
 /** The view the table paints: my seat's, or null at home. */
 export const viewOf = (app: App): View | null => app.shell.view;

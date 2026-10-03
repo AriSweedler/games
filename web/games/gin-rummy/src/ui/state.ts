@@ -47,6 +47,7 @@ import {
   withTable,
   type Ctx,
   type Effect as SharedEffect,
+  type GameTypes,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
   type Resume as SharedResume,
@@ -138,7 +139,7 @@ export type Resume = SharedResume<Gin>;
  * offers include the Score Counter's session, `initHome` also reads the sort, the card back and
  * that session, and the table's own intents and effects are the unions below.
  */
-export type Gin = Readonly<{
+export type Gin = GameTypes<{
   Opts: HostExtra;
   Raw: Readonly<{ target: string }>;
   State: State;

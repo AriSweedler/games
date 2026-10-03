@@ -3,7 +3,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { createStore, type StorageLike } from '../../../shared/edge/storage.ts';
-import { SHELL_STORE, STORAGE_KEYS, soundEnabled, writeSoundState } from './storage.ts';
+import { SHELL_STORE, STORAGE_KEYS, writeSoundState } from './storage.ts';
 
 const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => {
   const map = new Map<string, string>();
@@ -40,7 +40,7 @@ describe('the keys', () => {
     s.map.set('hive_name', 'Ann');
     s.map.set('hive_sound', 'off');
     expect(SHELL_STORE.name.read(store)).toEqual({ ok: true, value: 'Ann' });
-    expect(soundEnabled(store)).toBe(false);
+    expect(SHELL_STORE.sound.enabled(store)).toBe(false);
     writeSoundState(store, 'on');
     expect(s.map.get('hive_sound')).toBe('on');
   });

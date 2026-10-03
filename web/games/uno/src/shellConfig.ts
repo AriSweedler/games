@@ -1,53 +1,37 @@
 // The half of UNO's shell config the game spells from its engine, protocol and storage alone
 // (docs/design/uno.md §9; web/shared/ui/shell.ts `ShellGameData`): the id the table codes are made
 // for, the copy the shared flows paint (the N-seat forms are the shell's, web/shared/ui/seatCopy.ts,
-// dealt), the option codec (the seat count alone), the engine adapters (engine/view.ts: the host
-// deals, every seat sees its own hand), the protocol and the shell's store; the names, tabs,
-// modes, status copy and cue memory are the shell's defaults (dry-review-2026-10.md §7 row 2). The
-// table hooks are the reducer's (ui/state.ts `UNO`). Online seats two to twelve (the owner,
-// 2026-10-02: "uno caps out at 12"), fixed when the room opens and started full (`seats.fixed`).
-import { parseSeatCount, seatedCopy } from '../../../shared/ui/seatCopy.ts';
-import type { Player, ShellGameData } from '../../../shared/ui/shell.ts';
+// dealt), the option codec (the shell's `seatCountOpts`: the seat count alone), the engine adapters
+// (engine/view.ts: the host deals, every seat sees its own hand), the protocol and the shell's
+// store; the names, tabs, modes, status copy and cue memory are the shell's defaults
+// (dry-review-2026-10.md §7 row 2). The table hooks are the reducer's (ui/state.ts `UNO`). Online
+// seats two to twelve (the owner, 2026-10-02: "uno caps out at 12"), fixed when the room opens and
+// started full (`seats.fixed`).
+import { seatCountOpts, seatedCopy } from '../../../shared/ui/seatCopy.ts';
+import type { ShellGameData } from '../../../shared/ui/shell.ts';
 import { SEAT_COUNTS, applyAction, createState, decodeState, viewFor } from './engine/view.ts';
 import { PROTOCOL } from './protocol.ts';
-import {
-  DEFAULT_OPTS,
-  EXTRA_NAME_PREFS,
-  SHELL_STORE,
-  readOpts,
-  writeOpts,
-  type Opts,
-} from './storage.ts';
+import { SHELL_STORE } from './storage.ts';
 import { CUES } from './ui/sound.ts';
-import type { Raw, Seat, Uno } from './ui/state.ts';
+import type { Seat, Uno } from './ui/state.ts';
 
 /** The seat counts the room and the home's steppers allow (the owner, 2026-10-02: "uno caps out at 12"). */
 export const MIN_SEATS = 2;
 export const MAX_SEATS = 12;
-/** The room's terms off the raw inputs: the Online stepper or its pass-and-play twin, whichever the click carried. */
-export const parseOpts = (raw: Raw, current: Opts): Opts => ({
-  seatCount: parseSeatCount(SEAT_COUNTS, raw.players ?? raw.localPlayers, current.seatCount),
-});
-
-/** Every seat's name in order for a table of `n` (the shell lists the host, then every guest seat). */
-export const seatNames = (n: number, seats: ReadonlyArray<Player>): ReadonlyArray<string> =>
-  Array.from({ length: n }, (_, i) => seats[i]?.name ?? `Player ${String(i + 1)}`);
 
 export const UNO_SHELL: ShellGameData<Uno> = {
   id: 'uno',
   copy: seatedCopy({ verb: 'deal' }),
   seats: { min: MIN_SEATS, max: MAX_SEATS, fixed: true },
-  opts: {
-    initial: DEFAULT_OPTS,
-    parse: parseOpts,
-    ofGame: (game) => ({
-      seatCount: parseSeatCount(SEAT_COUNTS, String(game.game.names.length), 2),
-    }),
-    pick: (from) => ({ seatCount: from.seatCount }),
-    capacity: (opts) => opts.seatCount,
-  },
+  opts: seatCountOpts(SEAT_COUNTS, (game) => game.game.names.length),
   engine: {
-    create: (players, opts, rng, now) => createState(seatNames(opts.seatCount, players), rng, now),
+    /** The deal over every seat the shell listed (the host first, or pass-and-play's inputs in order): the shell seats the room's capacity, so the names are the list's. */
+    create: (players, _opts, rng, now) =>
+      createState(
+        players.map((p) => p.name),
+        rng,
+        now,
+      ),
     apply: applyAction,
     viewFor,
     decodeState,
@@ -67,10 +51,6 @@ export const UNO_SHELL: ShellGameData<Uno> = {
   },
   frames: PROTOCOL,
   cues: { table: CUES },
-  // The seat count is the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key; the third to twelfth names its `seatNames` (`seatName/typed`, `rememberSeatName`), under `p3Name` on.
-  prefs: {
-    ...SHELL_STORE,
-    opts: { read: readOpts, write: writeOpts },
-    seatNames: EXTRA_NAME_PREFS,
-  },
+  // The seat count is the shell's remembered terms (`opts/set`, `writeOpts`) and the third to twelfth names its `seatNames` (`seatName/typed`, `rememberSeatName`): both the seated store's (storage.ts).
+  prefs: SHELL_STORE,
 };

@@ -131,11 +131,7 @@ export const { read: readName, write: writeName } = SHELL_STORE.name;
 export const { read: readP2Name, write: writeP2Name } = SHELL_STORE.p2Name;
 export const { read: readHomeTab, write: writeHomeTab } = SHELL_STORE.homeTab;
 export const { read: readPlayMode, write: writePlayMode } = SHELL_STORE.playMode;
-export const {
-  read: readSoundState,
-  write: writeSoundState,
-  enabled: soundEnabled,
-} = SHELL_STORE.sound;
+export const { read: readSoundState, write: writeSoundState } = SHELL_STORE.sound;
 export const { read: readSoundFont, write: writeSoundFont } = SHELL_STORE.soundFont;
 /** The far seat's flip, `on` or `off` (prefs.ts `FLIP_STATES`). */
 export const { read: readFlipTable, write: writeFlipTable } = SHELL_STORE.flipTable;

@@ -35,7 +35,6 @@ import {
   readShellFlag,
   readSoundFont,
   readSoundState,
-  soundEnabled,
   writeHomeTab,
   writeName,
   writeOpts,
@@ -46,6 +45,7 @@ import {
   writeShellFlag,
   writeSoundFont,
   writeSoundState,
+  SHELL_STORE,
 } from './storage.ts';
 
 const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => {
@@ -235,11 +235,11 @@ describe('the bare-string preferences', () => {
     expect(readHomeTab(store).ok).toBe(false);
     writePlayMode(store, 'local');
     expect(readPlayMode(store)).toEqual({ ok: true, value: 'local' });
-    expect(soundEnabled(store)).toBe(true);
-    expect(soundEnabled(store, false)).toBe(false);
+    expect(SHELL_STORE.sound.enabled(store)).toBe(true);
+    expect(SHELL_STORE.sound.enabled(store, false)).toBe(false);
     writeSoundState(store, 'off');
     expect(readSoundState(store)).toEqual({ ok: true, value: 'off' });
-    expect(soundEnabled(store)).toBe(false);
+    expect(SHELL_STORE.sound.enabled(store)).toBe(false);
     writeSoundFont(store, 'felt');
     expect(readSoundFont(store)).toEqual({ ok: true, value: 'felt' });
     expect(readRecentGames(store)).toEqual([]);

@@ -158,6 +158,6 @@ export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
   prefs: {
     ...SHELL_STORE,
     opts: { read: readOpts, write: writeOpts },
-    seatNames: [EXTRA_NAME_PREFS[2], EXTRA_NAME_PREFS[3]],
+    seatNames: EXTRA_NAME_PREFS,
   },
 };

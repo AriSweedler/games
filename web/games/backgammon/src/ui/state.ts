@@ -49,8 +49,8 @@ import {
   withShell,
   withTable,
   type Ctx,
-  type CueMemory,
   type Effect as SharedEffect,
+  type GameTypes,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
   type Resume as SharedResume,
@@ -64,7 +64,7 @@ import {
   type TableReset,
   type TimerId as SharedTimerId,
 } from '../../../../shared/ui/shell.ts';
-import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
+import type { TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 
 import {
@@ -158,20 +158,15 @@ export type Resume = SharedResume<Backgammon>;
  * `initHome` also reads the options and the curtain mode, and the table's own intents and effects
  * are the unions below.
  */
-export type Backgammon = Readonly<{
+export type Backgammon = GameTypes<{
   Opts: HostExtra;
   Raw: Readonly<{ matchLength?: string; variant?: string }>;
   State: State;
   View: View;
   Action: Action;
   Table: Table;
-  Tab: HomeTab;
-  Mode: PlayMode;
-  Screen: never;
   Timer: 'shake' | 'noMove' | 'tumble';
   Cue: Cue;
-  Cues: CueMemory;
-  Resume: never;
   Home: Readonly<{ curtainMode: CurtainMode }>;
   Intent: TableIntent;
   Effect: TableEffect;
@@ -934,4 +929,3 @@ export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf
 export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
 
 /** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); backgammon adds none. main.ts constructs the real ones, tests record. */
-export type EffectDeps = ShellEffectDeps<Backgammon>;

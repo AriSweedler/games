@@ -18,10 +18,14 @@ import {
   runEffect,
   viewOf,
   type App,
-  type EffectDeps,
   type Intent,
+  type Hive,
 } from './state.ts';
+import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { handoffLabel, resumeLabel as sharedResumeLabel } from '../../../../shared/lib/name.ts';
+
+/** The shell's effect adapters over this game's bag (the game spells no alias of its own since dry-review-2026-10.md §7 row 3). */
+type EffectDeps = ShellEffectDeps<Hive>;
 
 /** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
 const resumeLabel = (resume: Resume): string => sharedResumeLabel(resume, namesOf);

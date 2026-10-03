@@ -453,15 +453,11 @@ const storageTs = (
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
 import {
   shellStore,
-  type GuestSave as ShellGuestSave,
-  type HostSave as ShellHostSave,
-  type LocalSave as ShellLocalSave,
   DEFAULT_HOME_TAB,
   DEFAULT_PLAY_MODE,
   HOME_TABS,
   type HomeTab,
   type PlayMode,
-  type Save as ShellSave,
 } from '../../../shared/edge/prefs.ts';
 import { literal, object } from '../../../shared/lib/json.ts';
 import { decodeState, type State } from './engine/view.ts';
@@ -488,13 +484,7 @@ export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 export type Opts = Readonly<{ seatCount: 2 }>;
 export const DEFAULT_OPTS: Opts = { seatCount: 2 };
 
-export type HostExtra = Opts;
-export type LocalSave = ShellLocalSave<State>;
-export type HostSave = ShellHostSave<State, HostExtra>;
-export type GuestSave = ShellGuestSave;
-export type Save = ShellSave<State, HostExtra>;
-
-export const SHELL_STORE = shellStore<State, HostExtra, HomeTab>(STORAGE_KEYS, {
+export const SHELL_STORE = shellStore<State, Opts, HomeTab>(STORAGE_KEYS, {
   game: '${slug}',
   decodeGame: decodeState,
   hostExtra: {
@@ -503,7 +493,6 @@ export const SHELL_STORE = shellStore<State, HostExtra, HomeTab>(STORAGE_KEYS, {
   },
   decodeHomeTab: literal(...HOME_TABS),
 });
-export const { enabled: soundEnabled, write: writeSoundState } = SHELL_STORE.sound;
 `;
 
 const shellConfigTs = (
@@ -764,8 +753,8 @@ import {
   withShell,
   withTable,
   type Ctx,
-  type CueMemory,
   type Effect as SharedEffect,
+  type GameTypes,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
   type Resume as SharedResume,
@@ -775,7 +764,6 @@ import {
   type Step as SharedStep,
   type TableReset,
 } from '../../../../shared/ui/shell.ts';
-import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import {
   createState,
@@ -837,21 +825,16 @@ export type TableIntent =
 
 export type TableEffect = never;
 
-/** ${title}'s types for the shared shell: two seats, no option, the whole game as every seat's view. */
-export type ${pascal} = Readonly<{
+/** ${title}'s types for the shared shell (\`GameTypes\` over what it names; the rest are the shell's defaults): two seats, no option, the whole game as every seat's view. */
+export type ${pascal} = GameTypes<{
   Opts: Opts;
   Raw: Raw;
   State: State;
   View: View;
   Action: Action;
   Table: Table;
-  Tab: HomeTab;
-  Mode: PlayMode;
   Screen: ScreenId;
-  Timer: never;
   Cue: Cue;
-  Cues: CueMemory;
-  Resume: never;
   Home: Home;
   Intent: TableIntent;
   Effect: TableEffect;
@@ -1006,8 +989,6 @@ export const reducer = shellReducer(${upper}, {
 });
 export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
   reducer;
-
-export type EffectDeps = ShellEffectDeps<${pascal}>;
 
 /** The view the table paints: my seat's, or null at home. */
 export const viewOf = (app: App): View | null => app.shell.view;

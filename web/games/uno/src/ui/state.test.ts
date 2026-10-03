@@ -21,10 +21,11 @@ import {
   runEffect,
   viewOf,
   type App,
-  type EffectDeps,
   type Intent,
   resumeFor,
+  type Uno,
 } from './state.ts';
+import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import {
   handoffLabel,
   listNames,
@@ -396,14 +397,14 @@ describe('storage', () => {
   test('the count is written and read back; the shell’s save goes through the shared runner', () => {
     const s = fakeStorage();
     const store = createStore(s);
-    const deps = { store } as unknown as EffectDeps;
+    const deps = { store } as unknown as ShellEffectDeps<Uno>;
     expect(readHome(store).opts).toEqual({ seatCount: 2 });
     runEffect(initialApp, { type: 'writeOpts', opts: { seatCount: 3 } }, deps);
     expect(s.map.get(STORAGE_KEYS.players)).toBe('3');
     expect(readHome(store).opts).toEqual({ seatCount: 3 });
     // A later seat's name under its own key, read back into the shell at `home/init`.
     runEffect(initialApp, { type: 'rememberSeatName', seat: 3, name: 'Eve' }, deps);
-    expect(s.map.get(STORAGE_KEYS.p4Name)).toBe('Eve');
+    expect(s.map.get('uno_p4Name')).toBe('Eve');
     expect(readHome(store).seatNames).toEqual([null, 'Eve', ...Array<null>(8).fill(null)]);
     const app = atPosition();
     runEffect(app, { type: 'persist' }, deps);

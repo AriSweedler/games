@@ -55,8 +55,8 @@ import {
   withShell,
   withTable,
   type Ctx,
-  type CueMemory,
   type Effect as SharedEffect,
+  type GameTypes,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
   type Resume as SharedResume,
@@ -69,7 +69,7 @@ import {
   type TableReset,
   type TimerId as SharedTimerId,
 } from '../../../../shared/ui/shell.ts';
-import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
+import type { TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import { eventEffects } from '../../../../shared/ui/eventEffects.ts';
 import { isCardPackFor } from '../../../../shared/lib/cards/packs.ts';
@@ -188,20 +188,15 @@ export type Home = Readonly<{
  * two stored ones, no resume offer beyond the three roles, one timer (the settle beat), and the
  * table's own intents and effects are the unions below.
  */
-export type Briscola = Readonly<{
+export type Briscola = GameTypes<{
   Opts: GameOptions;
   Raw: Raw;
   State: State;
   View: View;
   Action: Action;
   Table: Table;
-  Tab: HomeTab;
-  Mode: PlayMode;
-  Screen: never;
   Timer: 'settle' | 'tip' | 'intent';
   Cue: Cue;
-  Cues: CueMemory;
-  Resume: never;
   Home: Home;
   Intent: TableIntent;
   Effect: TableEffect;
@@ -1285,4 +1280,3 @@ export const { initialApp, runEffect, readHome, resumeFor, hostContextOf, guestC
 export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
 
 /** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); briscola adds none. main.ts constructs the real ones, tests record. */
-export type EffectDeps = ShellEffectDeps<Briscola>;

@@ -27,20 +27,18 @@ import {
   SOUND_STATES,
   decodeName,
   decodePlayMode,
-  decodeSoundFont,
   decodeDigitsOf,
+  decodeSoundFont,
   decodeSoundState,
   digitsPref,
-  extraNamePrefs,
+  extraNamePref,
   seatCountPref,
   shellKeys,
   shellStore,
   textPref,
-  type GuestSave as ShellGuestSave,
-  type HostSave as ShellHostSave,
-  type LocalSave as ShellLocalSave,
   type PlayMode,
   type Save as ShellSave,
+  type TextPref,
   type SoundState,
   DEFAULT_PLAY_MODE,
 } from '../../../shared/edge/prefs.ts';
@@ -130,12 +128,9 @@ export const DEFAULT_OPTS: Opts = {
   watch: false,
 };
 
-/** One of three shapes by role; the keys are in the order `writeSave` emits them. */
-export type LocalSave = ShellLocalSave<State>;
 /** The host save's own fields, between `myName` and `game` in the literal: the room's five terms. */
 export type HostExtra = Opts;
-export type HostSave = ShellHostSave<State, HostExtra>;
-export type GuestSave = ShellGuestSave;
+/** One of three shapes by role; the keys are in the order `writeSave` emits them (ui/state.ts reads it). */
 export type Save = ShellSave<State, HostExtra>;
 
 export const decodeHomeTab: Decoder<HomeTab> = literal(...HOME_TABS);
@@ -172,11 +167,7 @@ export const { read: readName, write: writeName } = SHELL_STORE.name;
 export const { read: readP2Name, write: writeP2Name } = SHELL_STORE.p2Name;
 export const { read: readHomeTab, write: writeHomeTab } = SHELL_STORE.homeTab;
 export const { read: readPlayMode, write: writePlayMode } = SHELL_STORE.playMode;
-export const {
-  read: readSoundState,
-  write: writeSoundState,
-  enabled: soundEnabled,
-} = SHELL_STORE.sound;
+export const { read: readSoundState, write: writeSoundState } = SHELL_STORE.sound;
 export const { read: readSoundFont, write: writeSoundFont } = SHELL_STORE.soundFont;
 /** The finished games: the stored list or [], and one game put first under the cap. */
 export const {
@@ -190,8 +181,17 @@ export const {
 /** The seats beyond the shell's two: the third to sixth players (plan §3 `Seat: 2 | 3 | 4 | 5`). */
 export type ExtraSeat = 2 | 3 | 4 | 5;
 export const EXTRA_SEATS: ReadonlyArray<ExtraSeat> = [2, 3, 4, 5];
-/** The third to sixth pass-the-phone names, by seat (2..5), under `rememberName`'s rule. */
-export const EXTRA_NAME_PREFS = extraNamePrefs(PREFIX, EXTRA_SEATS);
+/**
+ * The third to sixth pass-the-phone names, by seat (2..5), under `rememberName`'s rule
+ * (prefs.ts `extraNamePref`): this page's own record until its `pname/typed` is the shell's
+ * `seatName/typed` (dry-review-2026-10.md §7 row 15), when the shell's `seatNames` list keeps them.
+ */
+export const EXTRA_NAME_PREFS: Readonly<Record<ExtraSeat, TextPref<string>>> = {
+  2: extraNamePref(PREFIX, 2),
+  3: extraNamePref(PREFIX, 3),
+  4: extraNamePref(PREFIX, 4),
+  5: extraNamePref(PREFIX, 5),
+};
 export const { read: readP3Name, write: writeP3Name } = EXTRA_NAME_PREFS[2];
 export const { read: readP4Name, write: writeP4Name } = EXTRA_NAME_PREFS[3];
 export const { read: readP5Name, write: writeP5Name } = EXTRA_NAME_PREFS[4];
@@ -203,7 +203,6 @@ const digits: Decoder<number> = map(
   (s) => Number(s),
 );
 
-export const decodeSeatCount: Decoder<SeatCount> = decodeDigitsOf(SEAT_COUNTS);
 /** `0`..`5` computers. */
 export const decodeBots: Decoder<number> = decodeDigitsOf(
   Array.from({ length: MAX_BOTS + 1 }, (_, i) => i),

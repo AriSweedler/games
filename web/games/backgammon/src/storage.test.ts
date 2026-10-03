@@ -33,7 +33,7 @@ import {
   readSoundFont,
   readSoundState,
   readVariant,
-  soundEnabled,
+  SHELL_STORE,
   writeCurtainMode,
   writeFlipTable,
   writeHomeTab,
@@ -287,16 +287,17 @@ describe('the bare-string preferences', () => {
   test('sound: on unless the key says off, including when the key is missing or garbage', () => {
     const s = fakeStorage();
     const store = createStore(s);
-    expect(soundEnabled(store)).toBe(true);
+    const { enabled } = SHELL_STORE.sound;
+    expect(enabled(store)).toBe(true);
     expect(writeSoundState(store, 'off').ok).toBe(true);
     expect(s.map.get(STORAGE_KEYS.sound)).toBe('off');
     expect(readSoundState(store)).toEqual({ ok: true, value: 'off' });
-    expect(soundEnabled(store)).toBe(false);
+    expect(enabled(store)).toBe(false);
     expect(writeSoundState(store, 'on').ok).toBe(true);
-    expect(soundEnabled(store)).toBe(true);
+    expect(enabled(store)).toBe(true);
     s.setItem(STORAGE_KEYS.sound, 'OFF');
     expect(readSoundState(store).ok).toBe(false);
-    expect(soundEnabled(store)).toBe(true);
+    expect(enabled(store)).toBe(true);
   });
 
   test('the sound font round-trips as a bare string; a missing or unknown value reads as an error', () => {

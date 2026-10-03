@@ -6,6 +6,7 @@ import {
   emptySeatName,
   leaveCopy,
   parseSeatCount,
+  seatCountOpts,
   seatedCopy,
 } from './seatCopy.ts';
 import { OPPONENT_LEFT_MSG, WAITING_FOR_GUEST_MSG, guestGoneMsg, joinedMsg } from './shell.ts';
@@ -68,5 +69,23 @@ describe('seatedCopy: the leave confirms ride with the seven N-seat forms', () =
     const copy = seatedCopy({ verb: 'start', waitingAtTwo: 'Hold on…', leave: { ends: 'match' } });
     expect(copy.waiting(2)).toBe('Hold on…');
     expect(copy.leaveLocal).toBe('End this match? The score will be cleared.');
+  });
+});
+
+describe('seatCountOpts (dry-review-2026-10.md §7 row 3): the option codec of a game that seats a count', () => {
+  test('the smallest table first; a count off either stepper, else the current; the table a game was dealt to; the one field; the capacity', () => {
+    const opts = seatCountOpts([2, 3, 4] as const, (game: ReadonlyArray<string>) => game.length);
+    expect(opts.initial).toEqual({ seatCount: 2 });
+    expect(opts.parse({ players: '3' }, { seatCount: 2 })).toEqual({ seatCount: 3 });
+    expect(opts.parse({ localPlayers: '4' }, { seatCount: 2 })).toEqual({ seatCount: 4 });
+    expect(opts.parse({ players: '2', localPlayers: '4' }, { seatCount: 3 })).toEqual({
+      seatCount: 2,
+    });
+    expect(opts.parse({ players: '9' }, { seatCount: 3 })).toEqual({ seatCount: 3 });
+    expect(opts.parse({}, { seatCount: 4 })).toEqual({ seatCount: 4 });
+    expect(opts.ofGame(['Ann', 'Bob', 'Cy'])).toEqual({ seatCount: 3 });
+    expect(opts.ofGame(['Ann', 'Bob', 'Cy', 'Di', 'Ed'])).toEqual({ seatCount: 2 });
+    expect(opts.pick({ seatCount: 4 })).toEqual({ seatCount: 4 });
+    expect(opts.capacity({ seatCount: 3 })).toBe(3);
   });
 });

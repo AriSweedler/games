@@ -20,7 +20,10 @@ import {
   langPref,
   readTextWith,
   recentGamesPref,
+  seatCountExtra,
+  seatCountOptsPref,
   seatCountPref,
+  seatedStore,
   shellKeys,
   shellSave,
   shellStore,
@@ -646,13 +649,76 @@ describe('extraNamePref and extraNamePrefs', () => {
     expect(extraNamePref('fidice_', 5).read(store)).toEqual({ ok: true, value: 'Fay' });
     expect(extraNamePref('briscola_', 3).read(store)).toEqual({ ok: true, value: 'Dan' });
 
-    const prefs = extraNamePrefs('briscola_', [2, 3]);
-    expect(Object.keys(prefs)).toEqual(['2', '3']);
-    prefs[2].write(store, 'abcdefghijklmnopqrstuvwxyz');
+    // The list the shell's `prefs.seatNames` wants: index 0 the third seat, up to the table's largest.
+    const prefs = extraNamePrefs('briscola_', 4);
+    expect(prefs).toHaveLength(2);
+    expect(extraNamePrefs('gin_', 2)).toEqual([]);
+    expect(extraNamePrefs('flip7_', 12)).toHaveLength(10);
+    prefs[0]?.write(store, 'abcdefghijklmnopqrstuvwxyz');
     expect(storage.map.get('briscola_p3Name')).toBe('abcdefghijklmnopqrst');
-    prefs[3].write(store, '');
+    prefs[1]?.write(store, '');
     expect(storage.map.has('briscola_p4Name')).toBe(false);
-    expect(prefs[3].read(store)).toMatchObject({ ok: false, error: { kind: 'missing' } });
+    expect(prefs[1]?.read(store)).toMatchObject({ ok: false, error: { kind: 'missing' } });
+  });
+});
+
+describe("the seat count as the room's one term (dry-review-2026-10.md §7 row 3)", () => {
+  const COUNTS = [2, 3, 4] as const;
+
+  test('seatCountExtra: the host save carries seatCount, one of the counts, and nothing else', () => {
+    const extra = seatCountExtra(COUNTS);
+    expect(extra.decode({ seatCount: 3, other: 1 })).toEqual({ ok: true, value: { seatCount: 3 } });
+    expect(extra.decode({ seatCount: 5 })).toMatchObject({ ok: false });
+    expect(extra.decode({})).toMatchObject({ ok: false });
+    expect(extra.literal({ seatCount: 4 })).toEqual({ seatCount: 4 });
+  });
+
+  test('seatCountOptsPref: the count as digits under the key, the smallest table when missing or foreign', () => {
+    const storage = fakeStorage();
+    const store = createStore(storage);
+    const pref = seatCountOptsPref('g_players', COUNTS);
+    expect(pref.read(store)).toEqual({ seatCount: 2 });
+    expect(pref.write(store, { seatCount: 4 })).toEqual({ ok: true, value: null });
+    expect(storage.map.get('g_players')).toBe('4');
+    expect(pref.read(store)).toEqual({ seatCount: 4 });
+    storage.map.set('g_players', '9');
+    expect(pref.read(store)).toEqual({ seatCount: 2 });
+  });
+
+  test('seatedStore: shellStore over the derived keys plus the players key, the one-field host save, the count and one name pref per seat past two', () => {
+    const storage = fakeStorage();
+    const store = createStore(storage);
+    const seated = seatedStore('g_', 'gMP_v1', {
+      game: 'uno',
+      decodeGame: object({ n: integer() }),
+      counts: COUNTS,
+    });
+    expect(seated.keys).toEqual({ ...shellKeys('g_', 'gMP_v1'), players: 'g_players' });
+    expect(seated.seatNames).toHaveLength(2);
+    expect(seated.opts.read(store)).toEqual({ seatCount: 2 });
+    seated.opts.write(store, { seatCount: 3 });
+    expect(storage.map.get('g_players')).toBe('3');
+    seated.seatNames[1]?.write(store, 'Dan');
+    expect(storage.map.get('g_p4Name')).toBe('Dan');
+    // The three tabs are the shell's; the host save's own field sits between myName and game.
+    expect(seated.homeTab.read(store)).toMatchObject({ ok: false });
+    expect(seated.homeTab.write(store, 'rules').ok).toBe(true);
+    expect(seated.homeTab.read(store)).toEqual({ ok: true, value: 'rules' });
+    const save = {
+      role: 'host',
+      code: 'ABCD',
+      myName: 'Ann',
+      seatCount: 3,
+      game: { n: 1 },
+      oppName: null,
+    } as const;
+    expect(seated.save.writeSave(store, save).ok).toBe(true);
+    expect(storage.map.get('gMP_v1')).toBe(
+      '{"role":"host","code":"ABCD","myName":"Ann","seatCount":3,"game":{"n":1},"oppName":null}',
+    );
+    expect(seated.save.readSave(store)).toEqual({ ok: true, value: save });
+    storage.map.set('gMP_v1', JSON.stringify({ ...save, seatCount: 7 }));
+    expect(seated.save.readSave(store)).toMatchObject({ ok: false });
   });
 });
 

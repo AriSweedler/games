@@ -78,4 +78,4 @@ export const SHELL_STORE = shellStore<State, HostExtra, HomeTab>(STORAGE_KEYS, {
   },
   decodeHomeTab: literal(...HOME_TABS),
 });
-export const { enabled: soundEnabled, write: writeSoundState } = SHELL_STORE.sound;
+export const { write: writeSoundState } = SHELL_STORE.sound;
