@@ -343,9 +343,6 @@ label {
 .row + .btn {
   margin-top: 10px;
 }
-.row.tight {
-  gap: 6px;
-}
 .row.between {
   justify-content: space-between;
 }
@@ -439,19 +436,12 @@ label {
 .badge.trump.s-bastoni {
   --suit-ink: var(--suit-B);
 }
+/* The other seats' dots (shape: shell.css .conn-dot): parchment until a peer answers, moss once it has. */
 .conn-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
   background: #b3a693;
-  flex-shrink: 0;
 }
 .conn-dot.on {
   background: #5f7133;
-}
-.conn-dot.off {
-  background: var(--danger);
 }
 :is(.btn, .icon-btn, .tab-btn, .mode-btn, .card, .slot, summary):focus-visible {
   outline: 3px solid var(--accent);

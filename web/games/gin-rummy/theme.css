@@ -99,8 +99,9 @@
   .opp-cards { display: flex; align-items: center; }
   .opp-cards .card.tiny + .card.tiny { margin-left: -14px; }
   .opp-count { margin-left: 8px; font-weight: 800; color: var(--muted); font-size: 0.85rem; }
-  .conn-dot { width: 10px; height: 10px; border-radius: 50%; background: #64748b; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(255,255,255,0.06); }
-  .conn-dot.on { background: var(--accent); } .conn-dot.off { background: var(--danger); }
+  /* The dot's shape and its red are shell.css's (.conn-dot); gin's is a point larger, slate, with a halo. */
+  .conn-dot { width: 10px; height: 10px; background: #64748b; box-shadow: 0 0 0 3px rgba(255,255,255,0.06); }
+  .conn-dot.on { background: var(--accent); }
 
   .table-center { position: relative; display: flex; justify-content: center; gap: 26px; padding: 10px 0 4px; flex-shrink: 0; }
   /* The peek at the discarded cards sits beside the discard pile, absolutely, so both piles keep

@@ -1145,6 +1145,24 @@ body[data-flip='1'] {
   white-space: nowrap;
   overflow: hidden;
 }
+/* The other seat's connection dot (topbar.ts `#oppDot`, gin's `#connDot`; web/shared/ui/shellPaint.ts
+   `connDotClass` toggles `on`/`off`): a 9px disc, muted until the peer answers, red once it drops. A
+   theme recolours it (backgammon's olive and sand, briscola's moss and parchment, gin's accent, and
+   gin's 10px with its halo). */
+.conn-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+.conn-dot.on {
+  background: var(--accent-dark);
+}
+.conn-dot.off {
+  background: var(--danger);
+}
 .stepper-num {
   min-width: 2ch;
   text-align: center;
