@@ -526,7 +526,7 @@ export type Sheet<I> = Readonly<{ overlay: string; close: string; intent: I }>;
 /**
  * Wire every sheet's close button and backdrop. With `escapeFallback`, Escape closes the open
  * sheet and, when none is open, dispatches the fallback (backgammon: the die-chip tray,
- * docs/design/backgammon-board.md §6); without it no key is listened to (gin).
+ * docs/design/backgammon-board.md §6); without it no key is listened to (fidice).
  */
 export const bindSheets = <I>(
   doc: PageLike,
