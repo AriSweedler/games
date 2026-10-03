@@ -16,7 +16,6 @@ import {
   bindLocal,
   curtainText,
   lastLineText,
-  listNames,
   lookAwayText,
   paintCurtain,
 } from './local.ts';
@@ -29,6 +28,7 @@ import {
   type HomeSnapshot,
   type Intent,
 } from './state.ts';
+import { listNames } from '../../../../shared/lib/name.ts';
 
 import MARKUP from '../../index.html?raw';
 
@@ -78,13 +78,6 @@ const view = (app: App): View => {
 };
 
 describe('the copy', () => {
-  test('listNames: one, two, three names', () => {
-    expect(listNames([])).toBe('');
-    expect(listNames(['Ann'])).toBe('Ann');
-    expect(listNames(['Ann', 'Bob'])).toBe('Ann and Bob');
-    expect(listNames(['Ann', 'Bob', 'Cara'])).toBe('Ann, Bob and Cara');
-  });
-
   test('lookAwayText names everyone but the incoming player; lastLineText the deal, then the trick as they read it', () => {
     expect(lookAwayText(cara, 2)).toBe('Ann and Bob, look away');
     expect(lookAwayText(cara, 0)).toBe('Bob and Cara, look away');

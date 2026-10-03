@@ -686,20 +686,8 @@ export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
 export const viewOf = (app: App): View | null => app.shell.view;
 export { keyOf, viewFor };
 
-/** `#handoffBtn`'s offer: White hosts, Black joins by invite. */
-export const handoffLabel = (game: State): string =>
-  `Continue online: ${game.game.names.white} hosts, ${game.game.names.black} joins by invite`;
-
-/** The resume box's line for an offer. */
-export const resumeLabel = (resume: Resume): string => {
-  switch (resume.kind) {
-    case 'local':
-      return `Resume pass & play: ${resume.game.game.names.white} vs ${resume.game.game.names.black}`;
-    case 'host':
-      return resume.handoff && resume.game !== null
-        ? handoffLabel(resume.game)
-        : `Resume hosting room ${resume.code}`;
-    case 'guest':
-      return `Rejoin room ${resume.code}`;
-  }
-};
+/** The seats' names in order: the shell's labels read them (web/shared/lib/name.ts `handoffLabel`, `resumeLabel`). */
+export const namesOf = (game: State): ReadonlyArray<string> => [
+  game.game.names.white,
+  game.game.names.black,
+];

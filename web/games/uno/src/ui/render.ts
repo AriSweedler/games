@@ -44,7 +44,8 @@ import { cardName } from '../engine/engine.ts';
 import type { View } from '../engine/view.ts';
 import { bindHome, paintHome } from './home.ts';
 import { flyCards, planFlights, type Flight } from './motion.ts';
-import { handoffLabel, listNames, type App, type Intent, type Uno } from './state.ts';
+import { handoffLabel, listNames } from '../../../../shared/lib/name.ts';
+import { namesOf, type App, type Intent, type Uno } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 
@@ -181,7 +182,7 @@ const paintOverlays = (doc: DocumentLike, app: App): void => {
 export const paint = (doc: PageLike, app: App): void => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
   paintShellChrome(doc, app.shell, {
-    handoff: game !== null && game.game.names.length === 2 ? handoffLabel(game) : null,
+    handoff: game !== null && game.game.names.length === 2 ? handoffLabel(namesOf(game)) : null,
     connDot: 'oppDot',
   });
   paintHome(doc, app);

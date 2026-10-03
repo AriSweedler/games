@@ -52,7 +52,6 @@ import {
   cuesBetween,
   guestContextOf,
   guestGoneMsg,
-  handoffLabel,
   hitMsg,
   hostContextOf,
   initialApp,
@@ -63,7 +62,8 @@ import {
   readHome,
   reduce,
   resumeFor,
-  resumeLabel,
+  namesOf,
+  type Resume,
   rollModalOpen,
   runEffect,
   saveFor,
@@ -75,6 +75,10 @@ import {
   type Intent,
   type Step,
 } from './state.ts';
+import { handoffLabel, resumeLabel as sharedResumeLabel } from '../../../../shared/lib/name.ts';
+
+/** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
+const resumeLabel = (resume: Resume): string => sharedResumeLabel(resume, namesOf);
 
 const ctx = { rng: mulberry32(7), now: () => NOW };
 
@@ -1550,8 +1554,8 @@ describe('resume', () => {
     expect(resumeFor({ ...hostSave, game: over })).toBeNull();
     const handed = resumeFor({ ...hostSave, handoff: true });
     if (handed === null) throw new Error('no offer');
-    expect(resumeLabel(handed)).toBe(handoffLabel(g));
-    expect(handoffLabel(g)).toBe('Continue online: Ann hosts, Bob joins by invite');
+    expect(resumeLabel(handed)).toBe(handoffLabel(namesOf(g)));
+    expect(handoffLabel(namesOf(g))).toBe('Continue online: Ann hosts, Bob joins by invite');
     expect(resumeFor({ role: 'guest', code: 'ABCD', myName: 'Bo' })).toEqual({
       kind: 'guest',
       code: 'ABCD',

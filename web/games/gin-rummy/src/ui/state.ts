@@ -69,6 +69,7 @@ import {
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { applyAction, canTakeBack, fitsOnto, idsOf, inPlay } from '../engine/index.ts';
+import { resumeLabel as shellResumeLabel } from '../../../../shared/lib/name.ts';
 import type { Action, Seat, State, View } from '../engine/types.ts';
 import type { GuestContext } from '../../../../shared/net/guest.ts';
 import { action as actionFrame } from '../protocol.ts';
@@ -475,26 +476,13 @@ const act = (app: App, action: Action, ctx: Context): Step => {
 /** The resume box `initHome` showed, in the legacy order of precedence, or null: the Score Counter's session first, then the shell's three save roles. */
 export const resumeFor = (save: Save | null, scorer: ScorerState | null): Resume | null =>
   scorer !== null ? { kind: 'scorer', state: scorer } : shellResumeFor(save, GIN);
-/** `#resumeBtn`'s label for a resume offer. */
-export const resumeLabel = (resume: Resume): string => {
-  switch (resume.kind) {
-    case 'scorer':
-      return `Resume scoring: ${resume.state.players.map((p) => p.name).join(' vs ')}`;
-    case 'local':
-      return `Resume pass & play: ${resume.game.players.map((p) => p.name).join(' vs ')}`;
-    case 'host':
-      // A room still waiting for its first guest has no game to hand off (lobby-resume.md D3).
-      return resume.handoff && resume.game !== null
-        ? handoffLabel(resume.game)
-        : `Resume hosting room ${resume.code}`;
-    case 'guest':
-      return `Rejoin room ${resume.code}`;
-  }
-};
-
-/** `#handoffBtn`'s tooltip, and a handed-off room's resume offer: seat 0 keeps this device and hosts; seat 1 joins through the invite. */
-export const handoffLabel = (game: State): string =>
-  `Continue online: ${game.players[0].name} hosts, ${game.players[1].name} joins by invite`;
+/** The seats' names in order: the shell's labels read them (web/shared/lib/name.ts `handoffLabel`, `resumeLabel`). */
+export const namesOf = (game: State): ReadonlyArray<string> => game.players.map((p) => p.name);
+/** `#resumeBtn`'s label for a resume offer: the Score Counter's session is gin's own, the shell's three offers read the shared label. */
+export const resumeLabel = (resume: Resume): string =>
+  resume.kind === 'scorer'
+    ? `Resume scoring: ${resume.state.players.map((p) => p.name).join(' vs ')}`
+    : shellResumeLabel(resume, namesOf);
 
 /** A `data-act` button. */
 const actionClick = (app: App, which: string, ctx: Context): Step => {

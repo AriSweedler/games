@@ -180,33 +180,8 @@ export const initialTable: Table = {
 export const waitingToDealMsg = (hostName: string): string =>
   `Waiting for ${hostName} to deal the next round`;
 
-/** "Ari, Lavi and Sandro". */
-export const listNames = (names: ReadonlyArray<string>): string =>
-  names.length < 2
-    ? names.join('')
-    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`;
-
-/** "Ann vs Bob" at two seats, "Ann, Bob and Cara" past two: the resume offer's names. */
-export const resumeNames = (names: ReadonlyArray<string>): string =>
-  names.length <= 2 ? names.join(' vs ') : listNames(names);
-
-/** The handoff's offer: who hosts and who joins by invite (a two-seat game only). */
-export const handoffLabel = (game: State): string =>
-  `Continue online: ${nameOf(game, 0)} hosts, ${nameOf(game, 1)} joins by invite`;
-
-export const resumeLabel = (resume: Resume): string => {
-  switch (resume.kind) {
-    case 'local':
-      return `Resume pass & play: ${resumeNames(resume.game.seats.map((s) => s.name))}`;
-    case 'host':
-      // A room still waiting for its first guest has no game to hand off.
-      return resume.handoff && resume.game !== null
-        ? handoffLabel(resume.game)
-        : `Resume hosting room ${resume.code}`;
-    case 'guest':
-      return `Rejoin room ${resume.code}`;
-  }
-};
+/** The seats' names in order: the shell's labels read them (web/shared/lib/name.ts `handoffLabel`, `resumeLabel`). */
+export const namesOf = (game: State): ReadonlyArray<string> => game.seats.map((s) => s.name);
 
 // ---- the shell's hooks into the table --------------------------------------------------------
 

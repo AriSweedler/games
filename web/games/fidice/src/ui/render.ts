@@ -44,11 +44,13 @@ import type {
   Ui,
 } from '../view/types.ts';
 import { mount } from '../view/vdom.ts';
-import { bindHome, handoffLabel, paintHome } from './home.ts';
+import { handoffLabel } from '../../../../shared/lib/name.ts';
+import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
 import {
   SCREENS,
   handoffable,
+  namesOf,
   viewedChair,
   type App,
   type ConfigTarget,
@@ -82,7 +84,7 @@ export const paintWaiting = (doc: DocumentLike, app: App): void => {
 /** `#handoffBtn`'s tooltip (the 🌐 on the table): a pass-the-phone game of two humans can go on as a hosted room (plan §7 D8), naming who hosts and who joins; null hides it. */
 export const handoffTitle = (app: App): string | null => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
-  return game !== null && handoffable(app) ? handoffLabel(game) : null;
+  return game !== null && handoffable(app) ? handoffLabel(namesOf(game)) : null;
 };
 
 /**

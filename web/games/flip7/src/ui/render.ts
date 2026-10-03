@@ -48,7 +48,8 @@ import {
   writeClock,
   type Moments,
 } from './motion.ts';
-import { handoffLabel, listNames, myTurn, type App, type Flip7, type Intent } from './state.ts';
+import { handoffLabel, listNames } from '../../../../shared/lib/name.ts';
+import { myTurn, namesOf, type App, type Flip7, type Intent } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 export { fillNameInputs, fillP2NameInput, setCodeInput } from './home.ts';
@@ -70,7 +71,7 @@ export const CURTAIN_SUB = 'Every card is face up: everyone can watch.';
 /** `#handoffBtn`'s tooltip: a two-seat pass-and-play game can go on as a hosted room; null hides it. */
 const handoffTitle = (app: App): string | null => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
-  return game !== null && game.seats.length === 2 ? handoffLabel(game) : null;
+  return game !== null && game.seats.length === 2 ? handoffLabel(namesOf(game)) : null;
 };
 
 /** The curtain for the seat the phone goes to: its name, and the round about to be dealt. */

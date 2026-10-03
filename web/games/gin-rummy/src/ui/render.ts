@@ -70,7 +70,8 @@ import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
-import { canDropDiscard, handoffLabel, SCREENS, type App, type Gin, type Intent } from './state.ts';
+import { handoffLabel } from '../../../../shared/lib/name.ts';
+import { canDropDiscard, SCREENS, namesOf, type App, type Gin, type Intent } from './state.ts';
 
 export type { PageLike };
 export type Dispatch = (intent: Intent) => void;
@@ -109,7 +110,7 @@ const bindSheets = (doc: PageLike, dispatch: Dispatch): void => {
  */
 export const handoffTitle = (app: App): string | null => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
-  return game === null ? null : handoffLabel(game);
+  return game === null ? null : handoffLabel(namesOf(game));
 };
 
 // ---- the table -----------------------------------------------------------------------------------

@@ -725,6 +725,9 @@ const hostDeal = (app: App, ctx: Context): Step => {
   );
 };
 
+/** The seats' names in order: the shell's labels read them (web/shared/lib/name.ts `handoffLabel`, `resumeLabel`). */
+export const namesOf = (game: State): ReadonlyArray<string> => game.players.map((p) => p.name);
+
 /** The handoff (plan §7 D8) is the shell's two-seat room: offered for a pass-the-phone game of exactly two humans and no computer (ui/render.ts paints `#handoffBtn` by it). */
 export const handoffable = (app: App): boolean => {
   const s = app.shell;

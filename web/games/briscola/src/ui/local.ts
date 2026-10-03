@@ -13,7 +13,8 @@ import {
   type CurtainText as ShellCurtainText,
 } from '../../../../shared/ui/curtain.ts';
 import { dealText, nameOf, type Seat, type View } from '../engine/index.ts';
-import { listNames, type App, type Intent } from './state.ts';
+import { listNames } from '../../../../shared/lib/name.ts';
+import type { App, Intent } from './state.ts';
 
 export type CurtainText = Readonly<{
   title: string;
@@ -26,9 +27,6 @@ export type CurtainText = Readonly<{
 
 /** `#curtainBtn`: what one tap does (the page's `revealLabel`). */
 export const REVEAL_LABEL = 'Show my cards';
-
-/** "Ann", "Ann and Cara", "Ann, Cara and Dan": the reducer's list (the pause names the seats down the same way). */
-export { listNames } from './state.ts';
 
 /** `#curtainSub`: "Bob, look away" / "Ann, Cara and Dan, look away" (D17). */
 export const lookAwayText = (v: View, incoming: Seat): string =>

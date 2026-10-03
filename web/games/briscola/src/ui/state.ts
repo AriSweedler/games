@@ -86,6 +86,7 @@ import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shel
 import { eventEffects } from '../../../../shared/ui/eventEffects.ts';
 import { isCardPackFor } from '../../../../shared/lib/cards/packs.ts';
 import { isLanguagePack, type LanguagePackName } from '../../../../shared/lib/lang/packs.ts';
+import { listNames } from '../../../../shared/lib/name.ts';
 import {
   HAND_SIZE,
   actorOf,
@@ -715,12 +716,6 @@ export const seatsDown = (app: App): ReadonlyArray<string> =>
       )
     : [];
 
-/** "Ann", "Ann and Cara", "Ann, Cara and Dan" (the curtain's and the pause's lists). */
-export const listNames = (names: ReadonlyArray<string>): string =>
-  names.length <= 1
-    ? (names[0] ?? '')
-    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`;
-
 /** The status line and the toast frame while a seat is down: "Waiting for Bob to reconnect…". */
 export const pausedMsg = (names: ReadonlyArray<string>): string =>
   `Waiting for ${listNames(names)} to reconnect…`;
@@ -908,30 +903,8 @@ const replayDecided = (app: App, game: State, ctx: Context): Step => {
 
 // ---- seats, names and labels -------------------------------------------------------------------
 
-/** "Ann vs Bob" for two (the shared shell specs' shape), "Ann, Bob and Cara" for more. */
-export const seatNames = (names: ReadonlyArray<string>): string =>
-  names.length <= 2
-    ? names.join(' vs ')
-    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`;
-
-/** `#resumeBtn`'s label for a resume offer. */
-export const resumeLabel = (resume: Resume): string => {
-  switch (resume.kind) {
-    case 'local':
-      return `Resume pass & play: ${seatNames(resume.game.players.map((p) => p.name))}`;
-    case 'host':
-      // A room still waiting for its first guest has no game to hand off (lobby-resume.md D3).
-      return resume.handoff && resume.game !== null
-        ? handoffLabel(resume.game)
-        : `Resume hosting room ${resume.code}`;
-    case 'guest':
-      return `Rejoin room ${resume.code}`;
-  }
-};
-
-/** `#handoffBtn`'s tooltip and a handed-off room's resume offer (two seats only, D17): seat 0 hosts, seat 1 joins by invite. */
-export const handoffLabel = (game: State): string =>
-  `Continue online: ${nameOf(game.players, 0)} hosts, ${nameOf(game.players, 1)} joins by invite`;
+/** The seats' names in order: the shell's labels read them (web/shared/lib/name.ts `handoffLabel`, `resumeLabel`). */
+export const namesOf = (game: State): ReadonlyArray<string> => game.players.map((p) => p.name);
 
 /** The seats at the table of the game in play or on offer; two when there is none (the handoff's gate). */
 const seatCountOf = (app: App): SeatCount => {

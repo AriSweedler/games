@@ -636,24 +636,8 @@ const rematch = (app: App, game: State, ctx: Context): Step => {
   }
 };
 // ---- home, resume, leave ---------------------------------------------------------------------
-/** `#resumeBtn`'s label for a resume offer (design §4 "Resume labels"). */
-export const resumeLabel = (resume: Resume): string => {
-  switch (resume.kind) {
-    case 'local':
-      return `Resume pass & play: ${resume.game.players.map((p) => p.name).join(' vs ')}`;
-    case 'host':
-      // A room still waiting for its first guest has no game to hand off (lobby-resume.md D3).
-      return resume.handoff && resume.game !== null
-        ? handoffLabel(resume.game)
-        : `Resume hosting room ${resume.code}`;
-    case 'guest':
-      return `Rejoin room ${resume.code}`;
-  }
-};
-
-/** `#handoffBtn`'s tooltip, and a handed-off room's resume offer: seat 0 keeps this device and hosts; seat 1 joins through the invite. */
-export const handoffLabel = (game: State): string =>
-  `Continue online: ${game.players[0].name} hosts, ${game.players[1].name} joins by invite`;
+/** The seats' names in order: the shell's labels read them (web/shared/lib/name.ts `handoffLabel`, `resumeLabel`). design §4 "Resume labels"). */
+export const namesOf = (game: State): ReadonlyArray<string> => game.players.map((p) => p.name);
 // ---- the table: taps, the tray, the dice, a drag (design §4.2-§4.4) -----------------------
 
 /** My view while I may act and the board is live; null under the curtain, while the dice tumble, or on the other seat's turn. */

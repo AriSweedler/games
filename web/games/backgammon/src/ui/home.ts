@@ -24,9 +24,10 @@ import {
   paintHomeShell,
   shellIntents,
 } from '../../../../shared/ui/home.ts';
+import { resumeLabel } from '../../../../shared/lib/name.ts';
 import {
   HOME_TABS,
-  resumeLabel,
+  namesOf,
   type App,
   type Backgammon,
   type Intent,
@@ -66,9 +67,13 @@ const paintOptions = (doc: DocumentLike, app: App): void => {
   });
 };
 
-/** The tabs and panels, the play mode, the submenu's `force-open`, and the resume box (the shell's view, labelled by Sheshbesh's `resumeLabel`); then the selects. */
+/** The tabs and panels, the play mode, the submenu's `force-open`, and the resume box (the shell's view, the shell's `resumeLabel` over Sheshbesh's seats); then the selects. */
 export const paintHome = (doc: DocumentLike, app: App): void => {
-  paintHomeShell(doc, homeView(app.shell, resumeLabel), { tabs: HOME_TABS, modes: PLAY_MODES });
+  paintHomeShell(
+    doc,
+    homeView(app.shell, (resume) => resumeLabel(resume, namesOf)),
+    { tabs: HOME_TABS, modes: PLAY_MODES },
+  );
   paintOptions(doc, app);
 };
 

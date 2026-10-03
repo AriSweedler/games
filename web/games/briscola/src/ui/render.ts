@@ -60,6 +60,7 @@ import type { Speed } from '../../../../shared/lib/speed.ts';
 import { resolveAspect, resolveBack } from '../../../../shared/lib/cards/resolve.ts';
 import { langByName, type LanguagePack } from '../../../../shared/lib/lang/packs.ts';
 import { suitSymbolId } from '../../../../shared/lib/cards/suits.ts';
+import { handoffLabel } from '../../../../shared/lib/name.ts';
 import { backImageCss } from '../../../../shared/ui/cardFace.ts';
 import { paintHistory } from '../../../../shared/ui/history.ts';
 import { HISTORY_IDS } from '../../../../shared/ui/ids.ts';
@@ -156,9 +157,9 @@ import { bindDrag } from './dragger.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
 import {
-  handoffLabel,
   awaitingDraw,
   liveView,
+  namesOf,
   pausedMsg,
   resultOpen,
   seatsDown,
@@ -182,7 +183,7 @@ export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 /** `#handoffBtn`'s tooltip (the 🌐 beside the menu button): a two-seat pass-and-play game can go on as a hosted room (D17), naming who hosts and who joins; null hides it. */
 const handoffTitle = (app: App): string | null => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
-  return game !== null && game.options.seatCount === 2 ? handoffLabel(game) : null;
+  return game !== null && game.options.seatCount === 2 ? handoffLabel(namesOf(game)) : null;
 };
 
 /**

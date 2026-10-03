@@ -32,7 +32,6 @@ import {
   WAITING_FOR_GUEST_MSG,
   guestContextOf,
   guestGoneMsg,
-  handoffLabel,
   hostContextOf,
   hostRoomMsg,
   initialApp,
@@ -42,6 +41,7 @@ import {
   readHome,
   reduce,
   resumeFor,
+  namesOf,
   resumeLabel,
   runEffect,
   saveFor,
@@ -51,6 +51,7 @@ import {
   type EffectDeps,
   type HomeSnapshot,
 } from './state.ts';
+import { handoffLabel } from '../../../../shared/lib/name.ts';
 
 const ctx = { rng: mulberry32(7), now: () => NOW };
 
@@ -1729,7 +1730,7 @@ describe('the remote handoff of a pass-and-play game', () => {
       .app;
 
   test('handoffLabel names who hosts and who joins', () => {
-    expect(handoffLabel(drawn)).toBe('Continue online: Ann hosts, Jeff joins by invite');
+    expect(handoffLabel(namesOf(drawn))).toBe('Continue online: Ann hosts, Jeff joins by invite');
   });
 
   test('handoff/click does nothing without a pass-and-play offer', () => {
