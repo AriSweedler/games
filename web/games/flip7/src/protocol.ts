@@ -1,75 +1,41 @@
-// Flip 7's wire (docs/design/flip7.md §8; web/shared/lib/protocol.ts): the shared seven frames over
-// this game's view and action decoders, the room's one term (`seatCount`) and, on every welcome and
-// lobby, the table as the host holds it (`seats`, one row per guest seat) and the receiver's seat
-// (`you`), which the shell reads off the frame (shell.ts `roomSeatingOf`). Flip 7 has no two-seat
-// corpus to keep, so the seating rides at every table size.
-import {
-  arrayOf,
-  boolean,
-  integer,
-  literal,
-  nullable,
-  object,
-  optional,
-  string,
-  type Decoded,
-  type Shape,
-} from '../../../shared/lib/json.ts';
-import {
-  twoSeatProtocol,
-  type GuestFrame as SharedGuestFrame,
-  type HostFrame as SharedHostFrame,
-  type LobbyFrame as SharedLobbyFrame,
-  type WelcomeFrame as SharedWelcomeFrame,
+// Flip 7's wire (docs/design/flip7.md §8): web/shared/lib's seated protocol over this game's view
+// and action decoders, the room's one term (`seatCount`) and, past two seats, the table as the
+// host holds it and the receiver's seat, which the shell reads off the frame (shell.ts
+// `roomSeatingOf`). Until docs/design/shell-hoist.md §3 L this file put the seating on every frame
+// and skipped the fit check the other N-seat games carry; it now speaks the one shared shape: at
+// two seats the seat count alone, and a seating that does not fit its seat count is refused.
+import { literal, type Shape } from '../../../shared/lib/json.ts';
+import type {
+  GuestFrame as SharedGuestFrame,
+  HostFrame as SharedHostFrame,
+  LobbyFrame as SharedLobbyFrame,
+  WelcomeFrame as SharedWelcomeFrame,
 } from '../../../shared/lib/protocol.ts';
-import {
-  MAX_SEAT,
-  SEAT_COUNTS,
-  decodeAction,
-  decodeView,
-  type Action,
-  type View,
-} from './engine/index.ts';
+import { seatedProtocol, type SeatedRoom } from '../../../shared/lib/seatedProtocol.ts';
+import { SEAT_COUNTS, decodeAction, decodeView, type Action, type View } from './engine/index.ts';
 
 export { isGuestFrame } from '../../../shared/lib/protocol.ts';
+export type { TableSeat } from '../../../shared/lib/seatedProtocol.ts';
 
-const tableSeat = object({ name: nullable(string), connected: boolean });
-export type TableSeat = Decoded<typeof tableSeat>;
-
-// The seating is optional in the type (the shell's frames type the room as its options alone) and
-// always sent: `welcome` and `lobby` below put it on every frame.
-const room = {
-  seatCount: literal(...SEAT_COUNTS),
-  seats: optional(arrayOf(tableSeat)),
-  you: optional(integer(1, MAX_SEAT)),
-};
-type RoomWire = Shape<typeof room>;
 /** The room's terms: the seat count alone. */
-export type Room = Pick<RoomWire, 'seatCount'>;
+const options = { seatCount: literal(...SEAT_COUNTS) };
+export type Room = Shape<typeof options>;
+type RoomWire = SeatedRoom<Room>;
 
 export type GuestFrame = SharedGuestFrame<Action>;
 export type HostFrame = SharedHostFrame<View, RoomWire>;
 export type WelcomeFrame = SharedWelcomeFrame<RoomWire>;
 export type LobbyFrame = SharedLobbyFrame<RoomWire>;
 
-const protocol = twoSeatProtocol({ decodeAction, decodeView, room });
-
-export const { decodeGuestFrame, decodeHostFrame, join, action, full, toast, state } = protocol;
-
-export const welcome = (
-  hostName: string,
-  opts: Room,
-  seats: ReadonlyArray<TableSeat>,
-  you: number,
-): WelcomeFrame => protocol.welcome(hostName, { seatCount: opts.seatCount, seats, you });
-
-export const lobby = (
-  hostName: string,
-  opts: Room,
-  seats: ReadonlyArray<TableSeat>,
-  you: number,
-): LobbyFrame => protocol.lobby(hostName, { seatCount: opts.seatCount, seats, you });
-
-/** The name a join carries, so a guest back from a dead tab is reseated where it last sat. */
-export const joinName = (frame: GuestFrame): string | null =>
-  frame.t === 'join' ? frame.name : null;
+export const {
+  decodeGuestFrame,
+  decodeHostFrame,
+  join,
+  action,
+  welcome,
+  lobby,
+  full,
+  toast,
+  state,
+  joinName,
+} = seatedProtocol({ decodeAction, decodeView, options, seatCounts: SEAT_COUNTS });
