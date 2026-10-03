@@ -13,7 +13,10 @@
 // it glides back to the tray; a board tile drags the same way over the lift the paint lays on it.
 // The Spider's path reads 1-2-3 over a lit hex the mouse is on while she is picked, and her move
 // hops along it (the owner: "the spider's moves must show the '1-2-3' when it moves, as a special
-// case"). Nothing is random, so no seed. The hook `window.__hive`
+// case"). A stack's count badge peeks at the column (the owner: "selecting or hovering the badge
+// showing how many bugs are underneath should show the stack of bugs"): hovered, focused or
+// tapped, a panel beside the hex lists every tile top to bottom, the top one marked; a tap
+// elsewhere or Escape closes it, and a tap on the badge is no tap on the hex. Nothing is random, so no seed. The hook `window.__hive`
 // (`view()`, `legal()`, `act`) reads the game back. On `pages` alone: this is about the page, not
 // the origin. The shell's own flows (the home, the room, the handoff, resume) are the shell specs'
 // `@hive` describes.
@@ -410,3 +413,136 @@ test('every tile crawls hex by hex; the ⚡ snaps them; the choice survives a re
   await expect(page.locator('#motionToggle')).toBeChecked();
   await expect(motion).toHaveAttribute('aria-pressed', 'true');
 });
+
+const peekAt = (viewport: Viewport): void => {
+  test(`the count badge on a stack peeks at the column at ${String(viewport.width)}x${String(viewport.height)}`, async ({
+    phone,
+    project,
+  }, testInfo) => {
+    test.skip(project !== 'pages', 'about the page, not the origin');
+    const { page } = phone;
+    await hiveStartLocal(page, pagePath(project, 'hive'), viewport, [...NAMES]);
+    // Both Queens down, White's Beetle beside hers; the Beetle climbs onto the Queen, then Black
+    // places a Spider on its own side so White, who may lift the Beetle, is on show.
+    const placements = [
+      ['queen', { q: 0, r: 0 }, 1],
+      ['queen', { q: 1, r: 0 }, 0],
+      ['beetle', { q: -1, r: 0 }, 1],
+      ['ant', { q: 2, r: 0 }, 0],
+    ] as const;
+    await placements.reduce(async (prev, [bug, to, seat]) => {
+      await prev;
+      await hiveAct(page, { type: 'place', bug, to });
+      await expect(page.locator('#myName')).toHaveText(seated(seat));
+    }, Promise.resolve());
+    await expect(page.locator('#board .stack-badge')).toHaveCount(0);
+    await hiveAct(page, { type: 'move', from: { q: -1, r: 0 }, to: { q: 0, r: 0 } });
+    await expect(page.locator('#myName')).toHaveText(seated(1));
+    await hiveAct(page, { type: 'place', bug: 'spider', to: { q: 3, r: 0 } });
+    await expect(page.locator('#myName')).toHaveText(seated(0));
+    const climbed = await requireView(page);
+    expect(climbed.game.board['0,0']).toEqual([
+      { side: 'white', bug: 'queen' },
+      { side: 'white', bug: 'beetle' },
+    ]);
+
+    // The stacked cell: the Beetle on top, movable, with a badge of 2 that names the whole column.
+    const cell = page.locator('#board .hex[data-hex="0,0"]');
+    await expect(cell).toHaveClass(/\bstack\b/);
+    await expect(cell).toHaveClass(/movable/);
+    const badge = cell.locator('.stack-badge');
+    await expect(badge).toHaveCount(1);
+    await expect(badge.locator('text.badge')).toHaveText('2');
+    await expect(badge).toHaveAttribute(
+      'aria-label',
+      '2 tiles: Beetle (White) over Queen Bee (White)',
+    );
+    await expect(badge).toHaveAttribute('aria-expanded', 'false');
+    const peek = page.locator('#board .peek');
+    await expect(peek).toHaveCount(0);
+
+    // A tap on the badge opens the peek: two mini tiles, the Beetle on top, the Queen under; it is
+    // no tap on the hex, so nothing is picked. A tap on another tile closes it.
+    const hit = badge.locator('.hit');
+    await hit.click();
+    await expect(peek).toHaveCount(1);
+    await expect(badge).toHaveAttribute('aria-expanded', 'true');
+    await expect(peek.locator('.peek-tile')).toHaveCount(2);
+    await expect(peek.locator('.peek-tile').nth(0)).toHaveClass(/\bw\b.*\btop\b|\btop\b.*\bw\b/);
+    await expect(peek.locator('.peek-tile').nth(0).locator('.bug')).toHaveAttribute(
+      'data-bug',
+      'beetle',
+    );
+    await expect(peek.locator('.peek-tile').nth(1).locator('.bug')).toHaveAttribute(
+      'data-bug',
+      'queen',
+    );
+    await expect(peek.locator('.peek-tile').nth(1)).not.toHaveClass(/top/);
+    await expect(page.locator('#board .hex.picked')).toHaveCount(0);
+    await testInfo.attach(`peek open ${String(viewport.width)}x${String(viewport.height)}`, {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+    await page.locator('#board .hex[data-hex="3,0"]').click();
+    await expect(peek).toHaveCount(0);
+    await expect(badge).toHaveAttribute('aria-expanded', 'false');
+
+    // Escape closes it, and it stays closed while the pointer rests on the badge (the repaint put
+    // a fresh badge under it: its pointerover is no reopen; the badge, focused by the tap, is
+    // refocused and that opens nothing either); a tap on the badge reopens it; and the hex's own
+    // face still picks the Beetle, which closes the peek.
+    await hit.click();
+    await expect(peek).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(peek).toHaveCount(0);
+    const badgeAt = await centreOf(page, '#board .hex[data-hex="0,0"] .stack-badge .hit');
+    await page.mouse.move(badgeAt.x + 1, badgeAt.y + 1);
+    await page.mouse.move(badgeAt.x - 1, badgeAt.y - 1);
+    await expect(peek).toHaveCount(0);
+    await expect(badge).toHaveAttribute('aria-expanded', 'false');
+    await hit.click();
+    await expect(peek).toHaveCount(1);
+    await cell.click();
+    await expect(page.locator('#board .hex.picked')).toHaveCount(1);
+    await expect(peek).toHaveCount(0);
+    await cell.click();
+    await expect(page.locator('#board .hex.picked')).toHaveCount(0);
+
+    // The keyboard: focus alone opens nothing; Enter on the focused badge does, and the badge keeps
+    // the focus through the repaint, through Escape too; focus moving on closes it. Then the mouse
+    // (where there is one) hovering the badge opens it, and leaving for another hex closes it.
+    await page.mouse.move(5, 5);
+    await badge.focus();
+    await expect(page.locator('#board .stack-badge')).toBeFocused();
+    await expect(peek).toHaveCount(0);
+    await page.keyboard.press('Enter');
+    await expect(peek).toHaveCount(1);
+    await expect(page.locator('#board .stack-badge')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(peek).toHaveCount(0);
+    await expect(page.locator('#board .stack-badge')).toBeFocused();
+    await page.keyboard.press(' ');
+    await expect(peek).toHaveCount(1);
+    await page.locator('#board .hex[data-hex="3,0"]').focus();
+    await expect(peek).toHaveCount(0);
+    if (viewport.width >= 1024) {
+      await hit.hover();
+      await expect(peek).toHaveCount(1);
+      await page.locator('#board .hex[data-hex="3,0"]').hover();
+      await expect(peek).toHaveCount(0);
+      // Dismissed under the resting mouse, it stays shut; off the badge and back, it opens again.
+      await hit.hover();
+      await expect(peek).toHaveCount(1);
+      await page.keyboard.press('Escape');
+      await expect(peek).toHaveCount(0);
+      await page.mouse.move(badgeAt.x + 1, badgeAt.y);
+      await expect(peek).toHaveCount(0);
+      await page.locator('#board .hex[data-hex="3,0"]').hover();
+      await hit.hover();
+      await expect(peek).toHaveCount(1);
+    }
+  });
+};
+
+peekAt(PHONE);
+peekAt(DESKTOP);

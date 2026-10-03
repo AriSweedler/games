@@ -4,8 +4,16 @@ import { apply, newGame, spiderPaths, type Game } from '../engine/engine.ts';
 import { keyOf, type Hex } from '../engine/hex.ts';
 import type { Bug } from '../engine/pieces.ts';
 import { viewFor, type View } from '../engine/view.ts';
-import { HEX_H, HEX_W, centerOf, type Hop } from './board.ts';
-import { TILE_VIEWBOX, boardHtml, cellHtml, liftHtml, stepsOf } from './render.ts';
+import { HEX_H, HEX_W, centerOf, fitCells, viewBoxOf, type Hop } from './board.ts';
+import {
+  TILE_VIEWBOX,
+  boardHtml,
+  cellHtml,
+  columnLabel,
+  liftHtml,
+  peekHtml,
+  stepsOf,
+} from './render.ts';
 import type { Picked } from './state.ts';
 
 const h = (q: number, r: number): Hex => ({ q, r });
@@ -146,5 +154,87 @@ describe('the lift over a dragged board tile', () => {
 
   test('an empty hex has no lift', () => {
     expect(liftHtml(game, h(5, 5))).toBe('');
+  });
+});
+
+describe('the peek at a stack', () => {
+  /** Black's Beetle climbed onto White's Ant, which stands on the Queen: three tiles at the origin. */
+  const stacked: Game = {
+    ...game,
+    board: {
+      ...game.board,
+      '0,0': [
+        { side: 'white', bug: 'queen' },
+        { side: 'white', bug: 'ant' },
+        { side: 'black', bug: 'beetle' },
+      ],
+    },
+  };
+  const stackedView: View = viewFor({ game: stacked, startedAt: 1 }, 0);
+  const label = '3 tiles: Beetle (Black) over Soldier Ant (White) over Queen Bee (White)';
+
+  test('the column reads aloud top first', () => {
+    expect(columnLabel(stacked.board['0,0'] ?? [])).not.toBe(label);
+    expect(columnLabel([...(stacked.board['0,0'] ?? [])].reverse())).toBe(label);
+  });
+
+  test('a stacked cell’s badge is a focusable control named with the whole column; a single tile has none', () => {
+    const cell = cellHtml(stacked, h(0, 0), false, false);
+    expect(cell).toContain('class="hex b stack"');
+    expect(cell).toContain(
+      `<g class="stack-badge" role="button" tabindex="0" aria-label="${label}" aria-expanded="false">`,
+    );
+    expect(cell).toContain('<circle class="hit"');
+    expect(cell).toContain('<text class="badge"');
+    expect(cell).toContain('>3</text>');
+    expect(cellHtml(stacked, h(0, 0), false, false, null, false, true)).toContain(
+      'aria-expanded="true"',
+    );
+    expect(cellHtml(stacked, h(1, 0), false, false)).not.toContain('stack-badge');
+  });
+
+  test('the peek: the column as mini tiles top to bottom in the side’s class, the top marked, on a panel beside the hex', () => {
+    const box = viewBoxOf(fitCells(stacked.board));
+    const markup = peekHtml(stacked, h(0, 0), box);
+    expect(
+      markup.startsWith(`<g class="peek" role="group" aria-label="${label}" data-for="0,0">`),
+    ).toBe(true);
+    expect(markup).toContain('<rect class="peek-bg"');
+    const tiles = markup.split('<g class="peek-tile').slice(1);
+    expect(tiles).toHaveLength(3);
+    expect(tiles[0]).toMatch(/^ b top"/);
+    expect(tiles[0]).toContain('data-bug="beetle"');
+    expect(tiles[1]).toMatch(/^ w"/);
+    expect(tiles[1]).toContain('data-bug="ant"');
+    expect(tiles[2]).toMatch(/^ w"/);
+    expect(tiles[2]).toContain('data-bug="queen"');
+    // Top to bottom: each tile lower than the one before.
+    const ys = tiles.map((t) => Number(/translate\([-\d.]+ ([-\d.]+)\)/.exec(t)?.[1] ?? NaN));
+    expect(ys[0]).toBeLessThan(ys[1] ?? NaN);
+    expect(ys[1]).toBeLessThan(ys[2] ?? NaN);
+    // Beside the hex, to its right, inside the frame.
+    const rect =
+      /<rect class="peek-bg" x="([-\d.]+)" y="([-\d.]+)" width="([-\d.]+)" height="([-\d.]+)"/.exec(
+        markup,
+      );
+    const [x, y, w, hh] = (rect ?? []).slice(1).map(Number);
+    if (x === undefined || y === undefined || w === undefined || hh === undefined)
+      throw new Error('a panel with a box');
+    expect(x).toBeGreaterThan(centerOf(h(0, 0)).x + HEX_W / 2);
+    expect(x + w).toBeLessThanOrEqual(box.x + box.w);
+    expect(y).toBeGreaterThanOrEqual(box.y);
+    expect(y + hh).toBeLessThanOrEqual(box.y + box.h);
+    expect(peekHtml(stacked, h(1, 0), box)).toBe('');
+  });
+
+  test('the board draws the peek last, over the hive, and marks its badge open; none without a peek', () => {
+    const markup = boardHtml(stackedView, null, null, null, null, h(0, 0));
+    expect(markup.split('<g class="peek"').length - 1).toBe(1);
+    expect(markup.indexOf('<g class="peek"')).toBeGreaterThan(markup.lastIndexOf('<g class="hex'));
+    expect(cellOf(markup, '0,0')).toContain('aria-expanded="true"');
+    expect(markup.endsWith('</g></svg>')).toBe(true);
+    const closed = boardHtml(stackedView, null);
+    expect(closed).not.toContain('class="peek"');
+    expect(cellOf(closed, '0,0')).toContain('aria-expanded="false"');
   });
 });

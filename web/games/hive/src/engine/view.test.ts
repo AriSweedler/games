@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { failureOf, viaJson } from '../../../../../test/shared/engine-helpers.ts';
+import { columnAt } from './engine.ts';
 import { ORIGIN } from './hex.ts';
 import {
   applyAction,
@@ -95,5 +96,24 @@ describe('the engine as the shell plays it', () => {
       expect(decodeAction(viaJson(a))).toEqual({ ok: true, value: a });
     });
     expect(decodeAction({ type: 'fly' }).ok).toBe(false);
+  });
+
+  test('a stacked cell comes through the wire as its whole column, and reads top first', () => {
+    const stack = [
+      { side: 'white', bug: 'queen' },
+      { side: 'white', bug: 'ant' },
+      { side: 'black', bug: 'beetle' },
+    ] as const;
+    const state = { ...fresh, game: { ...fresh.game, board: { '0,0': stack } } };
+    const view = viewFor(state, 1);
+    const decoded = decodeView(viaJson(view));
+    if (!decoded.ok) throw new Error(decoded.error.expected);
+    expect(decoded.value.game.board['0,0']).toEqual(stack);
+    expect(columnAt(decoded.value.game.board, ORIGIN)).toEqual([...stack].reverse());
+    expect(columnAt(decoded.value.game.board, ORIGIN)[0]).toEqual({
+      side: 'black',
+      bug: 'beetle',
+    });
+    expect(columnAt(decoded.value.game.board, { q: 3, r: 3 })).toEqual([]);
   });
 });

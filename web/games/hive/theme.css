@@ -387,6 +387,50 @@ label {
   stroke-linejoin: round;
   pointer-events: none;
 }
+/* The badge as a control (render.ts `stackBadgeHtml`): a hit circle under the numeral takes the
+   pointer and the focus, a ring on it while focused by keyboard; the numeral itself still lets the
+   pointer through. */
+.hex .stack-badge {
+  cursor: pointer;
+  outline: none;
+}
+.hex .stack-badge .hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+.hex .stack-badge:focus-visible .hit {
+  stroke: var(--accent);
+  stroke-width: 0.8;
+}
+/* The peek (render.ts `peekHtml`; ui/state.ts `table.peek`): the column beside its hex, top to
+   bottom, each a small tile in its side's colour with the bug engraved, the top one ringed in
+   amber; a dark panel under them so they read over the hive, and the pointer may rest on it. */
+.peek .peek-bg {
+  fill: rgba(8, 20, 14, 0.88);
+  stroke: var(--accent);
+  stroke-width: 0.5;
+}
+.peek-tile .face {
+  stroke-width: 0.8;
+}
+.peek-tile.w .face {
+  fill: var(--hive-white);
+  stroke: #cbbf9f;
+}
+.peek-tile.b .face {
+  fill: var(--hive-black);
+  stroke: #57555c;
+}
+.peek-tile.top .face {
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+.peek-tile .sheen {
+  fill: url(#hive-sheen);
+  stroke: none;
+  pointer-events: none;
+}
 /* The Spider's 1-2-3 (render.ts `stepsOf`, `boardHtml`): a numeral on each hex of the picked
    Spider's path to the lit hex the pointer is over, centred on an empty hex and in a tile's upper
    left; `trail` is an empty hex drawn only while the Spider hops along her path (ui/motion.ts

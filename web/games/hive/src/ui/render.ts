@@ -18,12 +18,22 @@
 // the tile hops (ui/motion.ts `hopAlong`), once a position (`#board[data-hop]`). Every other tile
 // crawls the same way as it lands, hex by hex with no numerals, and a placement glides in from its
 // tray tile; `#motionBtn` (🐌 crawl, ⚡ snap: `paintMotion`) is the player's choice.
+// A stack's count badge is a control (`g.stack-badge`, the owner: "selecting or hovering the badge
+// showing how many bugs are underneath should show the stack of bugs"): hovered, tapped, or
+// focused and pressed (Enter or Space) it opens the `peek` (`peekHtml`), a panel beside the hex drawn last in the SVG, over the hive,
+// with the column top to bottom as mini tiles, the top one marked; the reducer holds which hex
+// (`table.peek`) and closes it on a tap elsewhere, Escape, the pointer leaving, a pick, a drag or a
+// new position. A tap on the badge is not a tap on its hex; a press carried away still lifts the tile.
 import {
   addClass,
   closestFrom,
+  closestIn,
   dataOf,
+  focusElement,
+  keyOf as keyPressed,
   listenId,
   pointerTypeOf,
+  preventDefault,
   queryAllIn,
   queryIn,
   removeElement,
@@ -54,9 +64,9 @@ import {
   paintWaiting as paintShellWaiting,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
-import { spiderPaths, stackAt, type Game } from '../engine/engine.ts';
+import { columnAt, spiderPaths, stackAt, type Game } from '../engine/engine.ts';
 import { hexOf, keyOf, type Hex } from '../engine/hex.ts';
-import { BUG, BUGS, type Bug, type Side } from '../engine/pieces.ts';
+import { BUG, BUGS, type Bug, type Side, type Tile } from '../engine/pieces.ts';
 import { sideOf, turnSeat, winnerSeat, type Seat, type View } from '../engine/view.ts';
 import {
   HEX_H,
@@ -68,6 +78,7 @@ import {
   viewBoxAttr,
   viewBoxOf,
   type Point,
+  type ViewBox,
 } from './board.ts';
 import { bugHtml } from './bugs.ts';
 import { bindDrag } from './dragger.ts';
@@ -104,10 +115,38 @@ const STACK_OFFSET = { x: 0.7, y: 0.9 } as const;
 const faceHtml = (c: Point, bug: Bug | undefined): string =>
   `<polygon class="face" points="${cornersOf(c)}" /><polygon class="sheen" points="${cornersOf(c, 1.1)}" />${bug === undefined ? '' : bugHtml(bug, c)}`;
 
+const sideName = (side: Side): string => (side === 'white' ? 'White' : 'Black');
+
+/** A column read aloud, top first: "3 tiles: Beetle (Black) over Soldier Ant (White) over Queen Bee (White)". */
+export const columnLabel = (tiles: ReadonlyArray<Tile>): string =>
+  `${String(tiles.length)} tiles: ${tiles.map((t) => `${BUG[t.bug].name} (${sideName(t.side)})`).join(' over ')}`;
+
+/** Where a stack's count sits: the upper right of the tile, over the bug's corner. */
+const BADGE_OFFSET = { x: 5.2, y: -5.2 } as const;
+/** The badge's hit circle: a thumb's target in viewBox units (a hex is 20 tall and at least 44px on the page). */
+const BADGE_HIT = 4.6;
+
 /**
- * One cell of the board: the hexagon, the top tile's bug, a stack's lift and count, and a `step`
- * numeral where the hex is one of a Spider's path (1-2-3: centred on an empty hex, in the upper
- * left of a tile, clear of its bug); `trail` on an empty hex drawn only for a Spider's path.
+ * A stack's count as a control: the numeral (`text.badge`, no pointer of its own) over a hit
+ * circle, focusable, named with the whole column so a reader hears it, `aria-expanded` while its
+ * peek is open. The board's handlers read the hex off the enclosing cell. Focus alone opens
+ * nothing (the paint refocuses the badge after every repaint, and a focus that opened would
+ * reopen what the pointer just closed, without end): Enter or Space does, as on any button.
+ */
+const stackBadgeHtml = (c: Point, tiles: ReadonlyArray<Tile>, peeked: boolean): string => {
+  const x = (c.x + BADGE_OFFSET.x).toFixed(2);
+  const y = (c.y + BADGE_OFFSET.y).toFixed(2);
+  const open = safeHtml`<g class="stack-badge" role="button" tabindex="0" aria-label="${columnLabel(tiles)}" aria-expanded="${peeked ? 'true' : 'false'}">`;
+  const hit = safeHtml`<circle class="hit" cx="${x}" cy="${y}" r="${BADGE_HIT.toFixed(1)}" />`;
+  const count = safeHtml`<text class="badge" x="${x}" y="${y}">${String(tiles.length)}</text>`;
+  return `${open.markup}${hit.markup}${count.markup}</g>`;
+};
+
+/**
+ * One cell of the board: the hexagon, the top tile's bug, a stack's lift and count (the count a
+ * control, `stackBadgeHtml`; `peeked` while its column is on show), and a `step` numeral where the
+ * hex is one of a Spider's path (1-2-3: centred on an empty hex, in the upper left of a tile, clear
+ * of its bug); `trail` on an empty hex drawn only for a Spider's path.
  */
 export const cellHtml = (
   game: Game,
@@ -116,6 +155,7 @@ export const cellHtml = (
   picked: boolean,
   step: number | null = null,
   trail = false,
+  peeked = false,
 ): string => {
   const stack = stackAt(game.board, hex);
   const top = stack.at(-1);
@@ -143,11 +183,7 @@ export const cellHtml = (
     stack.length > 1
       ? `<polygon class="under" points="${cornersOf({ x: c.x + STACK_OFFSET.x, y: c.y + STACK_OFFSET.y })}" />`
       : '';
-  const badge =
-    stack.length > 1
-      ? safeHtml`<text class="badge" x="${(c.x + 5.2).toFixed(2)}" y="${(c.y - 5.2).toFixed(2)}">${String(stack.length)}</text>`
-          .markup
-      : '';
+  const badge = stack.length > 1 ? stackBadgeHtml(c, columnAt(game.board, hex), peeked) : '';
   const numeral =
     step === null
       ? ''
@@ -179,13 +215,51 @@ export const stepsOf = (
   aim: Hex | null,
 ): ReadonlyMap<string, number> => numbered(aimedPath(v, picked, aim));
 
+/** A peek's mini tile as a share of a board tile. */
+const PEEK_SCALE = 0.6;
+const PEEK_GAP = 1.2;
+const PEEK_PAD = 1.6;
+/** Air between the hex's edge and the panel, and between the panel and the frame. */
+const PEEK_AIR = 1.5;
+
+/**
+ * The peek (ui/state.ts `table.peek`): the column at `hex` top to bottom as mini tiles (the face
+ * and the engraved bug, `faceHtml` scaled, in the side's class so the ink reads as the hive's), the
+ * top one marked `top`, on a panel beside the hex: to its right, or to its left when the right
+ * would leave `box` (the board's viewBox), and never above or below the frame. Drawn last in the
+ * SVG, so it lies over the hive. Empty for a hex with fewer than two tiles.
+ */
+export const peekHtml = (game: Game, hex: Hex, box: ViewBox): string => {
+  const tiles = columnAt(game.board, hex);
+  if (tiles.length < 2) return '';
+  const c = centerOf(hex);
+  const tileW = HEX_W * PEEK_SCALE;
+  const tileH = HEX_H * PEEK_SCALE;
+  const w = tileW + 2 * PEEK_PAD;
+  const h = tiles.length * tileH + (tiles.length - 1) * PEEK_GAP + 2 * PEEK_PAD;
+  const right = c.x + HEX_W / 2 + PEEK_AIR;
+  const x = right + w <= box.x + box.w - PEEK_AIR ? right : c.x - HEX_W / 2 - PEEK_AIR - w;
+  const y = Math.min(Math.max(c.y - h / 2, box.y + PEEK_AIR), box.y + box.h - PEEK_AIR - h);
+  const open = safeHtml`<g class="peek" role="group" aria-label="${columnLabel(tiles)}" data-for="${keyOf(hex)}">`;
+  const bg = safeHtml`<rect class="peek-bg" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" rx="2" />`;
+  const items = tiles.map((t, i) => {
+    const cx = x + PEEK_PAD + tileW / 2;
+    const cy = y + PEEK_PAD + tileH / 2 + i * (tileH + PEEK_GAP);
+    const classes = ['peek-tile', sideClass(t.side), i === 0 ? 'top' : ''].filter((s) => s !== '');
+    const item = safeHtml`<g class="${classes.join(' ')}" transform="translate(${cx.toFixed(2)} ${cy.toFixed(2)}) scale(${String(PEEK_SCALE)})">`;
+    return `${item.markup}${faceHtml({ x: 0, y: 0 }, t.bug)}</g>`;
+  });
+  return `${open.markup}${bg.markup}${items.join('')}</g>`;
+};
+
 /**
  * The whole board as one SVG: the cells drawn (the hive and the lit hexes), the viewBox fitted to
  * the hive and its ring (board.ts `fitCells`), the same box with the pick lit or cleared; while a
  * board tile is dragged (`lift`), the lift over it for the ghost to clone (`liftHtml`). A
  * Spider's path (the aimed one on a pick, the `hop`'s as her move lands) is numbered 1-2-3, and
  * the hexes of it the board would not draw otherwise (the way: empty, not a destination) are
- * drawn first as `trail` cells, under the hive, so a hopping tile passes over them.
+ * drawn first as `trail` cells, under the hive, so a hopping tile passes over them. The `peek`'s
+ * panel (`peekHtml`) is drawn last, over everything, its cell's badge marked open.
  */
 export const boardHtml = (
   v: View,
@@ -193,6 +267,7 @@ export const boardHtml = (
   lift: Hex | null = null,
   aim: Hex | null = null,
   hop: Hop | null = null,
+  peek: Hex | null = null,
 ): string => {
   const lit = new Set(reachable(v, picked).map(keyOf));
   const cells = cellsOf(v.game.board, [...lit].map(hexOf));
@@ -202,6 +277,7 @@ export const boardHtml = (
   const steps = numbered(path);
   const drawn = new Set(cells.map(keyOf));
   const trail = path.filter((hex) => !drawn.has(keyOf(hex)));
+  const peekKey = peek === null ? null : keyOf(peek);
   const inner = [
     ...trail.map((hex) => cellHtml(v.game, hex, false, false, steps.get(keyOf(hex)) ?? null, true)),
     ...cells.map((hex) =>
@@ -211,10 +287,14 @@ export const boardHtml = (
         lit.has(keyOf(hex)),
         keyOf(hex) === pickedKey,
         steps.get(keyOf(hex)) ?? null,
+        false,
+        keyOf(hex) === peekKey,
       ),
     ),
   ].join('');
-  return `<svg class="hive" viewBox="${viewBoxAttr(viewBoxOf(fitCells(v.game.board)))}" role="group" aria-label="The hive">${inner}${lift === null ? '' : liftHtml(v.game, lift)}</svg>`;
+  const box = viewBoxOf(fitCells(v.game.board));
+  const over = `${lift === null ? '' : liftHtml(v.game, lift)}${peek === null ? '' : peekHtml(v.game, peek, box)}`;
+  return `<svg class="hive" viewBox="${viewBoxAttr(box)}" role="group" aria-label="The hive">${inner}${over}</svg>`;
 };
 
 /** A tray tile's own viewBox: one hex (board.ts HEX_W by HEX_H) about the origin. */
@@ -339,7 +419,16 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const board = requireId(doc, 'board');
   const hop = app.table.hop;
   const fresh = hop !== null && dataOf(board, 'hop') !== hop.key ? hop : null;
-  setHtml(board, trustedHtml(boardHtml(v, picked, lift, aim, fresh)));
+  // The board is rebuilt: a focused badge (a keyboard's peek, open or just dismissed) is found
+  // again and refocused, so the Tab order does not fall back to the top of the page.
+  const held = queryIn(board, '.stack-badge:focus');
+  const heldCell = held === null ? null : closestIn(held, '[data-hex]');
+  const focused = heldCell === null ? null : dataOf(heldCell, 'hex');
+  setHtml(board, trustedHtml(boardHtml(v, picked, lift, aim, fresh, app.table.peek)));
+  if (focused !== null) {
+    const badge = queryIn(board, `[data-hex="${focused}"] .stack-badge`);
+    if (badge !== null) focusElement(badge);
+  }
   setHtml(requireId(doc, 'whiteHand'), trustedHtml(handHtml(v, 'white', picked)));
   setHtml(requireId(doc, 'blackHand'), trustedHtml(handHtml(v, 'black', picked)));
   if (fresh !== null) {
@@ -430,24 +519,70 @@ const SHEETS: ReadonlyArray<Sheet<Intent>> = [
 
 const isBug = (raw: string | null): raw is Bug => BUGS.some((bug) => bug === raw);
 
+/** The hex of the cell the event's target is in, or null off every cell. */
+const hexFrom = (e: Readonly<Event>): Hex | null => {
+  const cell = closestFrom(e, '[data-hex]');
+  const key = cell === null ? null : dataOf(cell, 'hex');
+  return key === null || key === '' ? null : hexOf(key);
+};
+
+/**
+ * What an event over the board says about the peek: on a stack's badge, its cell's column (a
+ * `peek/hover`, which a dismissal the pointer never left holds back, or a tap's `peek/open`,
+ * which always opens); on the open panel itself, nothing (the pointer may rest on it); anywhere
+ * else, close.
+ */
+const peekIntentOf = (e: Readonly<Event>, by: 'hover' | 'open'): Intent | null => {
+  if (closestFrom(e, '.stack-badge') !== null) {
+    const hex = hexFrom(e);
+    return hex === null ? null : { type: `peek/${by}`, hex };
+  }
+  return closestFrom(e, '.peek') !== null ? null : { type: 'peek/close' };
+};
+
 const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
+  // A tap on a stack's badge opens its peek and is no tap on the hex; a tap on the panel is nothing.
   listenId(doc, 'board', 'click', (e) => {
-    const cell = closestFrom(e, '[data-hex]');
-    const key = cell === null ? null : dataOf(cell, 'hex');
-    if (key !== null && key !== '') dispatch({ type: 'tap/hex', hex: hexOf(key) });
+    const peek = peekIntentOf(e, 'open');
+    if (peek?.type === 'peek/open') {
+      dispatch(peek);
+      return;
+    }
+    if (peek === null) return;
+    const hex = hexFrom(e);
+    if (hex !== null) dispatch({ type: 'tap/hex', hex });
     else dispatch({ type: 'pick/clear' });
   });
-  // The aim: the lit hex a mouse or pen is over, none off them or off the board. Not a touch: a
-  // finger's pointerover comes with its tap, and the repaint would replace the cell under it
-  // before the click; a drag names its nearest hex itself.
+  // The aim: the lit hex a mouse or pen is over, none off them or off the board; and the peek: open
+  // over a badge, closed off it (the reducer repaints neither for the same answer twice). Not a
+  // touch: a finger's pointerover comes with its tap, and the repaint would replace the cell under
+  // it before the click; a drag names its nearest hex itself.
   listenId(doc, 'board', 'pointerover', (e) => {
     if (pointerTypeOf(e) === 'touch') return;
     const cell = closestFrom(e, '.hex.lit');
     const key = cell === null ? null : dataOf(cell, 'hex');
     dispatch({ type: 'aim/hex', hex: key === null || key === '' ? null : hexOf(key) });
+    const peek = peekIntentOf(e, 'hover');
+    if (peek !== null) dispatch(peek);
   });
   listenId(doc, 'board', 'pointerleave', () => {
     dispatch({ type: 'aim/hex', hex: null });
+    dispatch({ type: 'peek/close' });
+  });
+  // The keyboard: Enter or Space on the focused badge opens its peek (a tap's open: a dismissal
+  // does not hold it back); focus moving to anything else on the board closes it. Focus arriving
+  // on the badge itself is nothing: the paint puts it back there after every repaint.
+  listenId(doc, 'board', 'keydown', (e) => {
+    const key = keyPressed(e);
+    if (key !== 'Enter' && key !== ' ') return;
+    const peek = peekIntentOf(e, 'open');
+    if (peek?.type !== 'peek/open') return;
+    preventDefault(e);
+    dispatch(peek);
+  });
+  listenId(doc, 'board', 'focusin', (e) => {
+    const peek = peekIntentOf(e, 'hover');
+    if (peek?.type === 'peek/close') dispatch(peek);
   });
   const pickHand = (e: Readonly<Event>): void => {
     const button = closestFrom(e, 'button.hand-tile');
