@@ -12,20 +12,16 @@
 import { listenId, requireId, toggleClass, type PageLike } from '../../../../shared/edge/dom.ts';
 import {
   bindCurtain,
+  curtainText as shellCurtainText,
   paintCurtain as paintShellCurtain,
-  type CurtainText as ShellCurtainText,
+  type CurtainText,
 } from '../../../../shared/ui/curtain.ts';
 import { diceText, type Seat, type View } from '../engine/index.ts';
 import { hitsAgainst, lastTurnEntry } from './board.ts';
-import type { App, Intent } from './state.ts';
+import type { App, Backgammon, Intent } from './state.ts';
 
-export type CurtainText = Readonly<{
-  title: string;
-  sub: string;
-  /** The last `move`/`noMove` log line with its hits; empty on the first curtain (the sub says the roll). */
-  last: string;
-  button: string;
-}>;
+/** The shell's, with `last` the last `move`/`noMove` log line and its hits (empty on the first curtain, whose sub says the roll) and `button` the phase's words, always painted. */
+export type { CurtainText };
 
 /**
  * `#curtainLast` for the seat taking the phone: the turn just finished as one line, its hits in
@@ -114,12 +110,12 @@ export const curtainText = (v: View, incoming: Seat): CurtainText => {
   const other = v.players[incoming === 0 ? 1 : 0].name;
   return openingCurtain(v)
     ? { title: `${name} starts`, sub: openingRollText(v), last: '', button: buttonFor(v, name) }
-    : {
-        title: `Pass the phone to ${name}`,
+    : shellCurtainText({
+        to: name,
         sub: subFor(v, other),
         last: lastTurnText(v, incoming),
         button: buttonFor(v, name),
-      };
+      });
 };
 
 /**
@@ -131,15 +127,14 @@ export const curtainText = (v: View, incoming: Seat): CurtainText => {
 export const paintCurtain = (doc: PageLike, app: App): void => {
   const seat = app.table.curtain;
   const v = app.shell.view;
-  const text: ShellCurtainText | null = seat === null || v === null ? null : curtainText(v, seat);
-  paintShellCurtain(doc, text);
+  paintShellCurtain(doc, seat === null || v === null ? null : curtainText(v, seat));
   if (v !== null && seat !== null)
     toggleClass(requireId(doc, 'curtainHandoffBtn'), 'hidden', openingCurtain(v));
 };
 
 /** `#curtainBtn`: the incoming seat reveals (the roll modal then asks for the roll); `#curtainHandoffBtn` hands off. */
 export const bindLocal = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
-  bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
+  bindCurtain<Backgammon>(doc, dispatch);
   listenId(doc, 'curtainHandoffBtn', 'click', () => {
     dispatch({ type: 'handoff/click' });
   });

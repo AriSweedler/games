@@ -15,6 +15,7 @@
 import {
   blurElement,
   byId,
+  closestFrom,
   dataOf,
   escapeHtml,
   focusElement,
@@ -351,15 +352,31 @@ export const paintConnDot = (doc: DocumentLike, id: string, v: ConnDotView): voi
  * the shell's five, the handoff tooltip (shell.ts `handoffLabelOf`: null hides the button, the
  * two-seat gate the shell's), the dot's id (gin and fidice `connDot`, the rest
  * `oppDot`; a page without one leaves it out), and the rooms' painter when the page's rooms carry
- * more than the shell's (fidice's computers, ui/waiting.ts). The dot is painted while a view
- * stands, as the table paints that carried it ran: before the first deal the markup's class holds.
+ * more than the shell's (fidice's computers, ui/waiting.ts), and the names strip's words
+ * (`names`, off the view). The dot and the strip are painted while a view stands, as the table
+ * paints that carried them ran: before the first deal the markup's class and words hold.
  */
 export type ShellChrome<G extends ShellTypes> = Readonly<{
   screens?: ReadonlyArray<ScreenId<G>>;
   handoff: string | null;
   connDot?: string;
   waiting?: (doc: PageLike, shell: ShellChromeView<G>) => void;
+  /** The names strip's two texts off the view (`paintNames`), for a page that carries `#myName` and `#oppName`; painted while a view stands, as the dot is. */
+  names?: (view: G['View']) => NamesStrip;
 }>;
+
+/**
+ * The names strip on the table (`#myName`, `#oppName`; dry-review-2026-10.md §2.8 line 225): my
+ * name, and the others' as one line (a two-seat page the opponent's, an N-seat page `listNames`
+ * of the rest). A game whose strip says more (gin's points, backgammon's fitted names, fidice's
+ * "Watching") paints its own.
+ */
+export type NamesStrip = Readonly<{ me: string; others: string }>;
+
+const paintNames = (doc: DocumentLike, names: NamesStrip): void => {
+  setText(requireId(doc, 'myName'), names.me);
+  setText(requireId(doc, 'oppName'), names.others);
+};
 
 /** What the chrome reads of `app.shell`: the screen, whether a view stands, the rooms' fields and the dot's two. */
 export type ShellChromeView<G extends ShellTypes> = WaitingView &
@@ -373,8 +390,9 @@ export const paintShellChrome = <G extends ShellTypes>(
   paintScreen(doc, o.screens ?? SHELL_SCREENS, shell.screen, 'tableScreen');
   (o.waiting ?? paintWaiting)(doc, shell);
   paintHandoff(doc, o.handoff);
-  if (o.connDot !== undefined && shell.view !== null)
-    paintConnDot(doc, o.connDot, connDotView(shell));
+  if (shell.view === null) return;
+  if (o.connDot !== undefined) paintConnDot(doc, o.connDot, connDotView(shell));
+  if (o.names !== undefined) paintNames(doc, o.names(shell.view));
 };
 
 /** A sheet's overlay follows its flag. */
@@ -586,6 +604,33 @@ export const bindSheets = <I>(
 };
 
 /**
+ * The two sheets every shell page carries (shell-hoist.md row F; `paintShellSheets` paints them):
+ * the rules and the history with their close buttons, each closing on the shell's intent. Beside
+ * `shellButtons<G>()`: seven games listed these two rows word for word
+ * (dry-review-2026-10.md §2.8 line 289).
+ */
+export const shellSheets = <G extends ShellTypes>(): ReadonlyArray<Sheet<Intent<G>>> => [
+  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
+  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
+];
+
+/**
+ * `bindSheets` over the shell's two sheets and the game's own (`extra`: gin's meld and arrange
+ * sheets, backgammon's menu, fidice's ladder), with the Escape fallback built in: the shell's
+ * `escape` (shell.ts: the history, then the rules, then whatever the game holds up) unless the
+ * game names its own (backgammon's die-chip tray, `chip/cancel`). A game cannot leave the
+ * fallback out, which is how fidice's Escape came to do nothing with no sheet open (§5.2).
+ */
+export const bindShellSheets = <G extends ShellTypes>(
+  doc: PageLike,
+  dispatch: Dispatch<Intent<G>>,
+  extra: ReadonlyArray<Sheet<Intent<G>>> = [],
+  escapeFallback: Intent<G> = { type: 'escape' },
+): void => {
+  bindSheets(doc, [...shellSheets<G>(), ...extra], dispatch, { escapeFallback });
+};
+
+/**
  * A table of controls that each dispatch one constant intent on click, bound in one call
  * (docs/design/dry-round-2.md D2, item E4): the eleven `listenId(doc, id, 'click', () =>
  * dispatch({ ... }))` blocks gin's `bindTable` spelled and the sixteen `button(...)` lines
@@ -607,6 +652,38 @@ export const bindButtons = <I>(
     listen(el, 'click', () => {
       if (opts?.skipDisabled === true && isDisabled(el)) return;
       dispatch(intent);
+    });
+  });
+};
+
+/**
+ * A container whose children each carry a value in a data attribute, one click handler for all of
+ * them (flip7's taker picker, uno's hand and its colour picker; dry-review-2026-10.md §2.8 line
+ * 308): the click's nearest `selector` ancestor names the value under `data-<key>`, and
+ * `intent(value)` is dispatched when it is one (null for a value the table does not know: uno's
+ * colour must be one of its four). A click off every child, or on one carrying no value,
+ * dispatches nothing. The children are repainted freely: the listener is the container's.
+ */
+export type Delegated<I> = Readonly<{
+  id: string;
+  selector: string;
+  key: string;
+  intent: (value: string) => I | null;
+}>;
+
+export const bindDelegated = <G extends ShellTypes>(
+  doc: DocumentLike,
+  dispatch: Dispatch<Intent<G>>,
+  // Typed on the game's bag, as `shellButtons<G>()` is: left to inference, an arrow's literal return would widen `type` to `string`.
+  entries: ReadonlyArray<Delegated<Intent<G>>>,
+): void => {
+  entries.forEach(({ id, selector, key, intent }) => {
+    listenId(doc, id, 'click', (e) => {
+      const el = closestFrom(e, selector);
+      const value = el === null ? null : dataOf(el, key);
+      if (value === null || value === '') return;
+      const i = intent(value);
+      if (i !== null) dispatch(i);
     });
   });
 };

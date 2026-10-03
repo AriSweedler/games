@@ -8,24 +8,25 @@
 import type { PageLike } from '../../../../shared/edge/dom.ts';
 import {
   bindCurtain,
+  curtainText as shellCurtainText,
   paintCurtain as paintShellCurtain,
   type CurtainText,
 } from '../../../../shared/ui/curtain.ts';
 import type { State } from '../engine/types.ts';
-import type { App, Intent } from './state.ts';
+import type { App, Gin, Intent } from './state.ts';
 
 export type { CurtainText };
 
-/** `showCurtain(turnIdx)`: who takes the phone, who looks away, the last move, the button. */
+/** `showCurtain(turnIdx)`: who takes the phone, who looks away, the last move, and the button naming the seat (so it is painted, not the page's). */
 export const curtainText = (game: State, turn: 0 | 1): CurtainText => {
   const p = game.players[turn];
   const o = game.players[turn === 0 ? 1 : 0];
-  return {
-    title: `Pass the phone to ${p.name}`,
+  return shellCurtainText({
+    to: p.name,
     sub: `${o.name}, look away 👀`,
     last: game.lastAction?.text ?? '',
     button: `I'm ${p.name} — show my cards`,
-  };
+  });
 };
 
 /** `#curtainOverlay` and its texts from the App; hidden (texts untouched) when no seat is waiting. */
@@ -40,5 +41,5 @@ export const paintCurtain = (doc: PageLike, app: App): void => {
 
 /** `#curtainBtn`: the seat whose turn it is reveals its cards. */
 export const bindLocal = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
-  bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
+  bindCurtain<Gin>(doc, dispatch);
 };

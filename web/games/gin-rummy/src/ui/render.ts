@@ -59,7 +59,7 @@ import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindLongPress,
-  bindSheets as bindShellSheets,
+  bindShellSheets,
   connDotClass as shellConnDotClass,
   connDotView,
   paintSheet,
@@ -92,10 +92,9 @@ export { hideToast, paintSound, showToast } from '../../../../shared/ui/shellPai
 // ---- the shell (web/shared/ui/shellPaint.ts, each over the App's slice it reads) ------------------
 
 // A sheet is an overlay a flag shows; the same flag's close intent answers its button and a tap
-// on its backdrop (the overlay element itself, never its children). The list is this game's.
+// on its backdrop (the overlay element itself, never its children). The list is this game's own
+// beside the shell's rules and history (`bindShellSheets`).
 const SHEETS: ReadonlyArray<Sheet<Intent>> = [
-  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
-  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
   { overlay: 'meldOverlay', close: 'closeMeldBtn', intent: { type: 'meld/close' } },
   { overlay: 'arrangeOverlay', close: 'closeArrangeBtn', intent: { type: 'arrange/close' } },
   { overlay: 'discardsOverlay', close: 'closeDiscardsBtn', intent: { type: 'discards/close' } },
@@ -108,11 +107,10 @@ const SHEETS: ReadonlyArray<Sheet<Intent>> = [
 
 /**
  * The sheets' close buttons and backdrops; Escape closes the open sheet, else the shell's `escape`
- * (the history, then the rules, from the table and the Score Counter's screens alike). Without the
- * fallback `bindShellSheets` listens to no key, which is why gin's history ignored Escape.
+ * (the history, then the rules, from the table and the Score Counter's screens alike).
  */
 const bindSheets = (doc: PageLike, dispatch: Dispatch): void => {
-  bindShellSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'escape' } });
+  bindShellSheets<Gin>(doc, dispatch, SHEETS);
 };
 
 // ---- the table -----------------------------------------------------------------------------------

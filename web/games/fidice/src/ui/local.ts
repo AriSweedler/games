@@ -10,18 +10,16 @@
 import type { PageLike } from '../../../../shared/edge/dom.ts';
 import {
   bindCurtain,
+  curtainText as shellCurtainText,
   paintCurtain as paintShellCurtain,
-  type CurtainText as ShellCurtainText,
+  type CurtainText,
 } from '../../../../shared/ui/curtain.ts';
 import type { PublicState, Seat } from '../domain/types.ts';
 import { engineSeatOf } from '../shellConfig.ts';
 import { listNames } from '../../../../shared/lib/name.ts';
-import type { App, Intent } from './state.ts';
+import type { App, Fidice, Intent } from './state.ts';
 
-export type CurtainText = ShellCurtainText;
-
-/** `#curtainBtn`: what one tap does (page.ts `revealLabel`). */
-export const REVEAL_LABEL = 'Lift the cup';
+export type { CurtainText };
 /** `#curtainLast` before any table talk. */
 export const FRESH_ROLL_MSG = 'A fresh roll waits under the cup.';
 
@@ -35,13 +33,13 @@ export const lookAwayText = (v: PublicState, incoming: Seat): string => {
 export const lastLineText = (v: PublicState): string =>
   v.log[v.log.length - 1]?.text ?? FRESH_ROLL_MSG;
 
-/** The curtain for the chair the phone is handed to. */
-export const curtainText = (v: PublicState, incoming: Seat): CurtainText => ({
-  title: `Pass the phone to ${v.players[incoming]?.name ?? '?'}`,
-  sub: lookAwayText(v, incoming),
-  last: lastLineText(v),
-  button: REVEAL_LABEL,
-});
+/** The curtain for the chair the phone is handed to; the button is the page's `Lift the cup`. */
+export const curtainText = (v: PublicState, incoming: Seat): CurtainText =>
+  shellCurtainText({
+    to: v.players[incoming]?.name ?? '?',
+    sub: lookAwayText(v, incoming),
+    last: lastLineText(v),
+  });
 
 /** `#curtainOverlay` and its texts from the App; hidden (texts untouched) when no seat is waiting. */
 export const paintCurtain = (doc: PageLike, app: App): void => {
@@ -53,5 +51,5 @@ export const paintCurtain = (doc: PageLike, app: App): void => {
 
 /** `#curtainBtn`: the incoming seat lifts the curtain, one tap (D8). */
 export const bindLocal = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
-  bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
+  bindCurtain<Fidice>(doc, dispatch);
 };

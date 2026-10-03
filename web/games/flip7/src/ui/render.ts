@@ -9,9 +9,7 @@
 // and scores new to this paint carry the classes theme.css animates (`dealt`, `bust-card`,
 // `busting`, `flip7-now`, `reveal`); the clock they run on is written on the root once at bind.
 import {
-  closestFrom,
   dataOf,
-  listenId,
   queryAllIn,
   requireId,
   safeHtml,
@@ -26,16 +24,21 @@ import {
   type SafeHtml,
 } from '../../../../shared/edge/dom.ts';
 import { reducedMotion } from '../../../../shared/edge/motion.ts';
-import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
+import {
+  bindCurtain,
+  curtainText as shellCurtainText,
+  paintCurtain as paintShellCurtain,
+} from '../../../../shared/ui/curtain.ts';
 import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
-  bindSheets,
+  bindDelegated,
+  bindShellSheets,
   paintSheet,
   paintShellChrome,
   paintShellSheets,
-  type Sheet,
   shellButtons,
+  type Dispatch,
 } from '../../../../shared/ui/shellPaint.ts';
 import { cardName, type Card } from '../engine/cards.ts';
 import { lineScore } from '../engine/engine.ts';
@@ -63,13 +66,12 @@ export const STATUS_LABEL: Readonly<Record<Status, string>> = {
   flip7: 'Flip 7!',
 };
 
-export const REVEAL_LABEL = 'Start';
 /** `#curtainSub`: nothing on the table is hidden, so nobody looks away. */
 export const CURTAIN_SUB = 'Every card is face up: everyone can watch.';
 
 // ---- the shell's halves ---------------------------------------------------------------------
 
-/** The curtain for the seat the phone goes to: its name, and the round about to be dealt. */
+/** The curtain for the seat the phone goes to: its name, and the round about to be dealt; the button is the page's `Start`. */
 const paintCurtain = (doc: DocumentLike, app: App): void => {
   const seat = app.table.curtain;
   const v = app.shell.view;
@@ -77,12 +79,11 @@ const paintCurtain = (doc: DocumentLike, app: App): void => {
     doc,
     seat === null || v === null
       ? null
-      : {
-          title: `Pass the phone to ${nameOf(v, seat)}`,
+      : shellCurtainText({
+          to: nameOf(v, seat),
           sub: CURTAIN_SUB,
           last: `Round ${String(v.round)} · ${nameOf(v, v.dealer)} deals`,
-          button: REVEAL_LABEL,
-        },
+        }),
   );
   toggleHandoffUnderCurtain(doc, v);
 };
@@ -222,11 +223,6 @@ const paintTable = (doc: DocumentLike, app: App): void => {
   if (v === null) return;
   const mine = myTurn(app);
   const local = app.shell.role === 'local';
-  setText(requireId(doc, 'myName'), nameOf(v, v.me));
-  setText(
-    requireId(doc, 'oppName'),
-    listNames(v.seats.filter((_, i) => i !== v.me).map((s) => s.name)),
-  );
   setText(
     requireId(doc, 'roundLabel'),
     v.opening > 0 ? `Round ${String(v.round)} · dealing` : `Round ${String(v.round)}`,
@@ -278,6 +274,10 @@ export const paint = (doc: PageLike, app: App): void => {
   paintShellChrome(doc, app.shell, {
     handoff: handoffLabelOf(app.shell, FLIP7),
     connDot: 'oppDot',
+    names: (v) => ({
+      me: nameOf(v, v.me),
+      others: listNames(v.seats.filter((_, i) => i !== v.me).map((s) => s.name)),
+    }),
   });
   paintHome(doc, app);
   paintCurtain(doc, app);
@@ -286,16 +286,11 @@ export const paint = (doc: PageLike, app: App): void => {
   paintShellSheets(doc, app.shell);
 };
 
-const SHEETS: ReadonlyArray<Sheet<Intent>> = [
-  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
-  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
-];
-
-export const bindAll = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
+export const bindAll = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
   // The animations' clock, once: the design's numbers, or the reduced-motion stills.
   writeClock(doc, durationsFor(reducedMotion()));
   bindHome(doc, dispatch);
-  bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
+  bindCurtain<Flip7>(doc, dispatch);
   bindButtons(doc, dispatch, [
     ['curtainHandoffBtn', { type: 'handoff/click' }],
     ...shellButtons<Flip7>(),
@@ -305,10 +300,13 @@ export const bindAll = (doc: PageLike, dispatch: (intent: Intent) => void): void
     ['replayBtn', { type: 'replay/click' }],
     ['continueBtn', { type: 'continue/click' }],
   ]);
-  listenId(doc, 'targetSeats', 'click', (e) => {
-    const button = closestFrom(e, 'button[data-seat]');
-    const seat = button === null ? null : dataOf(button, 'seat');
-    if (seat !== null && seat !== '') dispatch({ type: 'give/click', seat: Number(seat) });
-  });
-  bindSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'escape' } });
+  bindDelegated<Flip7>(doc, dispatch, [
+    {
+      id: 'targetSeats',
+      selector: 'button[data-seat]',
+      key: 'seat',
+      intent: (seat) => ({ type: 'give/click', seat: Number(seat) }),
+    },
+  ]);
+  bindShellSheets<Flip7>(doc, dispatch);
 };

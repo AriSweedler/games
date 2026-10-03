@@ -25,7 +25,7 @@ import {
 import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
-  bindSheets as bindShellSheets,
+  bindShellSheets,
   paintSheet,
   paintShellChrome,
   paintShellSheets,
@@ -330,10 +330,8 @@ export const paint = (doc: PageLike, app: App): void => {
 
 // ---- input wiring -----------------------------------------------------------------------------------
 
-/** A sheet is an overlay a flag shows; the same flag's intent answers its close button and a tap on its backdrop. */
+/** The game's own sheet beside the shell's two (`bindShellSheets`): the ladder. */
 const SHEETS: ReadonlyArray<Sheet<Intent>> = [
-  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
-  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
   { overlay: 'ladderOverlay', close: 'closeLadderBtn', intent: { type: 'ladder/close' } },
 ];
 
@@ -349,5 +347,6 @@ export const bindAll = (doc: PageLike, dispatch: Dispatch): void => {
   bindWaiting(doc, dispatch);
   bindLocal(doc, dispatch);
   bindTable(doc, dispatch);
-  bindShellSheets(doc, SHEETS, dispatch);
+  // Escape closes the open sheet, else the shell's `escape` (the sheet binder's fallback, dry-review-2026-10.md §5.2).
+  bindShellSheets<Fidice>(doc, dispatch, SHEETS);
 };

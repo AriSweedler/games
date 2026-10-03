@@ -11,14 +11,7 @@ import {
   type TrickRecord,
   type View,
 } from '../engine/index.ts';
-import {
-  REVEAL_LABEL,
-  bindLocal,
-  curtainText,
-  lastLineText,
-  lookAwayText,
-  paintCurtain,
-} from './local.ts';
+import { bindLocal, curtainText, lastLineText, lookAwayText, paintCurtain } from './local.ts';
 import { briscolaPage } from './page.fake.ts';
 import {
   DEFAULT_OPTS,
@@ -84,12 +77,11 @@ describe('the copy', () => {
     expect(lastLineText({ ...cara, lastTrick: trick }, 0)).toBe('You took the trick · 14 points');
   });
 
-  test('curtainText: the title, the look-away line, the last line and the reveal label', () => {
+  test('curtainText: the title, the look-away line and the last line; the button is the page`s', () => {
     expect(curtainText({ ...cara, lastTrick: trick }, 1)).toEqual({
       title: 'Pass the phone to Bob',
       sub: 'Ann and Cara, look away',
       last: 'Ann took the trick · 14 points',
-      button: REVEAL_LABEL,
     });
   });
 });
@@ -110,7 +102,10 @@ describe('paintCurtain and bindLocal over the page', () => {
     expect(p.get('curtainTitle').text()).toBe(`Pass the phone to ${v.me.name}`);
     expect(p.get('curtainSub').text()).toBe(`${v.others[0]?.name ?? ''}, look away`);
     expect(p.get('curtainLast').text()).toBe(dealText(nameOf(v.players, v.dealer), v.trumpCard));
-    expect(p.get('curtainBtn').text()).toBe(REVEAL_LABEL);
+    // The button's words are the markup's (page.ts `revealLabel`): the paint writes none (the
+    // fake carries no text), and the page ships them.
+    expect(p.get('curtainBtn').text()).toBe('');
+    expect(MARKUP).toContain('id="curtainBtn">Show my cards<');
     expect(p.get('curtainHandoffBtn').hidden()).toBe(false);
     const revealed = run(start, { type: 'curtain/reveal' }).app;
     paintCurtain(p.doc, revealed);

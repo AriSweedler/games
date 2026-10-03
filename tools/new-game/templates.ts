@@ -1177,6 +1177,7 @@ describe('the helpers', () => {
 
 const renderTs = (
   slug: string,
+  pascal: string,
   title: string,
 ): string => `// ${title}'s paint (docs/design/${slug}.md §3): the App onto the composed shell page (page.ts) through the
 // DOM edge, and every control bound to an intent. The shell's half is web/shared/ui's (the screens,
@@ -1192,11 +1193,15 @@ import {
   type DocumentLike,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
-import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
+import {
+  bindCurtain,
+  curtainText as shellCurtainText,
+  paintCurtain as paintShellCurtain,
+} from '../../../../shared/ui/curtain.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
-  bindSheets,
+  bindShellSheets,
   connDotView,
   paintConnDot,
   paintHandoff as paintShellHandoff,
@@ -1204,15 +1209,13 @@ import {
   paintResult,
   paintSheet,
   paintWaiting as paintShellWaiting,
-  type Sheet,
+  type Dispatch,
 } from '../../../../shared/ui/shellPaint.ts';
 import { turnSeat, type Seat, type View } from '../engine/view.ts';
 import { bindHome, paintHome } from './home.ts';
-import { SCREENS, handoffLabel, type App, type Intent } from './state.ts';
+import { SCREENS, handoffLabel, type App, type Intent, type ${pascal} } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
-
-type Dispatch = (intent: Intent) => void;
 
 const nameAt = (v: View, seat: Seat): string => v.names[seat];
 
@@ -1242,20 +1245,13 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   paintResult(doc, pause !== null, pause === null ? null : { title: pause.title, score: pause.detail });
 };
 
-/** The curtain for the seat the phone goes to (ui/state.ts \`viewer\`): its name and the last note; hidden when no seat waits. */
+/** The curtain for the seat the phone goes to (ui/state.ts \`viewer\`): its name and the last note; hidden when no seat waits. The button is the page's \`revealLabel\`. */
 const paintCurtain = (doc: DocumentLike, app: App): void => {
   const seat = app.table.curtain;
   const v = app.shell.view;
   paintShellCurtain(
     doc,
-    seat === null || v === null
-      ? null
-      : {
-          title: \`Pass the phone to \${nameAt(v, seat)}\`,
-          sub: '',
-          last: v.game.note,
-          button: 'Show the table',
-        },
+    seat === null || v === null ? null : shellCurtainText({ to: nameAt(v, seat), sub: '', last: v.game.note }),
   );
 };
 
@@ -1277,12 +1273,7 @@ export const paint = (doc: PageLike, app: App): void => {
   paintOverlays(doc, app);
 };
 
-const SHEETS: ReadonlyArray<Sheet<Intent>> = [
-  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
-  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
-];
-
-const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
+const bindTable = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
   bindButtons(
     doc,
     dispatch,
@@ -1303,11 +1294,11 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
 };
 
 /** Every control of the page (home, table, sheets), once, at boot. */
-export const bindAll = (doc: PageLike, dispatch: Dispatch): void => {
+export const bindAll = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
   bindHome(doc, dispatch);
   bindTable(doc, dispatch);
-  bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
-  bindSheets(doc, SHEETS, dispatch, { escapeFallback: { type: 'escape' } });
+  bindCurtain<${pascal}>(doc, dispatch);
+  bindShellSheets<${pascal}>(doc, dispatch);
 };
 `;
 
@@ -1794,7 +1785,7 @@ export const generatedFiles = (spec: NewGameSpec): ReadonlyArray<GeneratedFile> 
       content: stateTs(n.slug, n.upper, n.pascal, n.title, spec.hidden),
     },
     { path: `${g}/src/ui/state.test.ts`, content: stateTestTs(spec.hidden) },
-    { path: `${g}/src/ui/render.ts`, content: renderTs(n.slug, n.title) },
+    { path: `${g}/src/ui/render.ts`, content: renderTs(n.slug, n.pascal, n.title) },
     {
       path: `e2e/fixtures/${n.slug}.ts`,
       content: e2eFixtureTs(n.slug, n.title, n.hook, spec.hidden),
