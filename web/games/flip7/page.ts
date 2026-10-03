@@ -1,6 +1,6 @@
 // Flip 7's shell page (docs/design/flip7.md §8): what tools/shell-markup.ts fills
 // web/shared/markup/shell/*.html with to compose ./index.html, which test/dist/shell-markup.test.ts
-// pins byte for byte. The residue here is the head, the two Players selects (two to six), the six
+// pins byte for byte. The residue here is the head, the two Players selects (two to twelve), the six
 // pass-and-play name inputs, the table (the topbar, the names strip, the round, every seat's line,
 // Hit and Stay, the taker picker, the round's scores) and the endgame screen the shell requires.
 import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
@@ -37,7 +37,7 @@ const copy: ShellCopy = {
 
 const notes: ShellNotes = {
   homeNote:
-    ' (docs/design/flip7.md §8): Online (the default) or Pass the phone, two to six players.',
+    ' (docs/design/flip7.md §8): Online (the default) or Pass the phone, two to twelve players.',
   rulesTabNote: ': ui/rules.ts fills both slots at boot (render.ts renderRules).',
   glossaryDoc: 'glossary-links.md',
   aboutClose: '',
@@ -49,12 +49,12 @@ const blocks: ShellBlocks = {
     slug: 'flip7',
     name: 'Flip 7',
     share:
-      'Flip 7, the press-your-luck card game for two to six: pass one phone, or open a table online and send the link.',
+      'Flip 7, the press-your-luck card game for two to twelve: pass one phone, or open a table online and send the link.',
     imageAlt: 'Flip 7: a line of number tiles, one of them a seven',
   }),
   masthead: `        <div class="masthead">
           <h1>Flip 7</h1>
-          <div class="subtitle">Press your luck, two to six players</div>
+          <div class="subtitle">Press your luck, two to twelve players</div>
         </div>`,
   submenuExtra: '',
   extraTabs: '',

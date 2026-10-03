@@ -457,12 +457,12 @@ describe('the games registry', () => {
 });
 
 describe('the conformance declarations (docs/design/game-conformance.md)', () => {
-  test('one row per shell game: the seat range, the pauses, the cues and the CSS floor', () => {
+  test('one row per shell game: the seat range, the pauses, the cues, the CSS floor and the felt', () => {
     expect(Object.keys(CONFORMANCE)).toEqual([...SHELL_GAMES]);
     const rows = Object.fromEntries(
       SHELL_GAMES.map((game) => {
-        const { seats, pauses, cues, cssFloor, hides } = CONFORMANCE[game];
-        return [game, { seats, pauses, cues, cssFloor, hides }];
+        const { seats, pauses, cues, cssFloor, hides, felt } = CONFORMANCE[game];
+        return [game, { seats, pauses, cues, cssFloor, hides, felt }];
       }),
     );
     expect(rows).toEqual({
@@ -472,14 +472,23 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
         cues: ['knockGood', 'gin', 'bad', 'neutral', 'oppStock', 'oppDiscard'],
         cssFloor: 160,
         hides: true,
+        felt: '--felt',
       },
-      fidice: { seats: { min: 1, max: 6 }, pauses: [], cues: [], cssFloor: 190, hides: true },
+      fidice: {
+        seats: { min: 1, max: 6 },
+        pauses: [],
+        cues: [],
+        cssFloor: 190,
+        hides: true,
+        felt: '--mist',
+      },
       backgammon: {
         seats: { min: 2, max: 2 },
         pauses: [],
         cues: ['roll', 'doubles', 'place', 'hit', 'bearOff', 'double'],
         cssFloor: 130,
         hides: false,
+        felt: '--bg',
       },
       briscola: {
         seats: { min: 2, max: 4 },
@@ -487,6 +496,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
         cues: ['start.deal', 'move.play', 'draw.stock', 'good.trick.small'],
         cssFloor: 145,
         hides: true,
+        felt: '--bg',
       },
       uno: {
         seats: { min: 2, max: 12 },
@@ -494,6 +504,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
         cues: ['play', 'draw', 'penalty', 'deal'],
         cssFloor: 80,
         hides: true,
+        felt: '--felt',
       },
       flip7: {
         seats: { min: 2, max: 12 },
@@ -501,6 +512,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
         cues: ['flip', 'bust', 'freeze', 'stay', 'deal'],
         cssFloor: 72,
         hides: false,
+        felt: '--felt',
       },
       hive: {
         seats: { min: 2, max: 2 },
@@ -508,6 +520,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
         cues: ['place', 'move'],
         cssFloor: 78,
         hides: false,
+        felt: '--felt',
       },
     });
   });
@@ -521,9 +534,9 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
       fidice: ['rules-fit', 'cues', 'stepper', 'pauses'],
       backgammon: ['rules-fit', 'pauses'],
       briscola: ['curtain', 'rules-fit', 'pauses'],
-      uno: ['pauses'],
+      uno: ['pauses', 'home-felt'],
       flip7: [],
-      hive: ['pauses'],
+      hive: ['pauses', 'home-felt'],
     });
   });
 

@@ -8,10 +8,13 @@
 // "The Rules tab fits one phone screen"). The table's two seats by name are e2e/shell-local.spec.ts's;
 // the N-seat table is each game's own spec. Each failure names the game and the rule in one line; a
 // rule the game is known to miss is a declared gap in its CONFORMANCE row, reported as fixme with its
-// follow-up. Page-only; a describe per game with its tag, run by that game's e2e job.
+// follow-up. The home sits on the game's declared felt and its title reads against it (`home-felt`:
+// the shell paints no body of its own, so Flip 7's home shipped white when its theme forgot the
+// rule, 2026-10-02). Page-only; a describe per game with its tag, run by that game's e2e job.
 import type { Page } from '@playwright/test';
 
 import { CONFORMANCE, SHELL, SHELL_GAMES, type ConformanceRule } from '../tools/games.ts';
+import { colorsIn, contrast, isOpaque, parseColor, spell, type Rgb } from './fixtures/contrast.ts';
 import { PHONE } from './fixtures/geometry.ts';
 import { gamePath } from './fixtures/player.ts';
 import { DEFAULT_NAMES, hasCurtain, startLocal } from './fixtures/shell.ts';
@@ -69,6 +72,51 @@ const curtainAlpha = (page: Page): Promise<number | null> =>
       return m[1] === undefined ? 1 : Number(m[1]);
     })()`,
   );
+
+/** The body's computed paint, a probe's painted with `var(<felt>)` beside it, and the title's ink. */
+type HomePaint = Readonly<{
+  bodyColor: string;
+  bodyImage: string;
+  probeColor: string;
+  probeImage: string;
+  titleColor: string | null;
+}>;
+
+/** Read the home's paint: the body, a probe filled with the declared felt token, the masthead's title. */
+const homePaint = (page: Page, felt: string): Promise<HomePaint> =>
+  // A string expression: the e2e project has no DOM types.
+  page.evaluate<HomePaint>(
+    `(() => {
+      const body = getComputedStyle(document.body);
+      const probe = document.createElement('div');
+      probe.style.background = 'var(${felt})';
+      document.body.appendChild(probe);
+      const painted = getComputedStyle(probe);
+      const title = document.querySelector('#homeScreen h1') ?? document.querySelector('h1');
+      const out = {
+        bodyColor: body.backgroundColor,
+        bodyImage: body.backgroundImage,
+        probeColor: painted.backgroundColor,
+        probeImage: painted.backgroundImage,
+        titleColor: title === null ? null : getComputedStyle(title).color,
+      };
+      probe.remove();
+      return out;
+    })()`,
+  );
+
+/** The WCAG floor the title holds against every opaque colour under it (AA for body text). */
+const TITLE_CONTRAST = 4.5;
+
+/** Whether the body's paint is the token's: its image, its colour, or a gradient over the colour. */
+const paintedWith = (p: HomePaint): boolean =>
+  (p.probeImage !== 'none' && p.bodyImage === p.probeImage) ||
+  (isOpaque(parseColor(p.probeColor)) &&
+    (p.bodyColor === p.probeColor || p.bodyImage.includes(p.probeColor)));
+
+/** The opaque colours the body shows: its colour and every opaque stop of its image. */
+const grounds = (p: HomePaint): ReadonlyArray<Rgb> =>
+  [parseColor(p.bodyColor), ...colorsIn(p.bodyImage)].filter(isOpaque);
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
@@ -216,6 +264,65 @@ SHELL_GAMES.forEach((game) => {
           `the curtain's scrim is ${String(alpha)} opaque over a visible table: paint .overlay.curtain opaque in theme.css or hide the table under it`,
         ),
       ).toBe(true);
+    });
+
+    test("home-felt: the home's body is painted with the game's felt and the title reads against it", async ({
+      player,
+    }) => {
+      const { page } = player;
+      const feltGap = gap('home-felt');
+      test.fixme(
+        feltGap !== undefined,
+        feltGap === undefined ? '' : why(game, 'home-felt', feltGap.followUp),
+      );
+      await expect(page.locator('#homeScreen')).toBeVisible();
+      const paint = await homePaint(page, conf.felt);
+      const bodyColor = parseColor(paint.bodyColor);
+      const white =
+        bodyColor !== null && bodyColor.r === 255 && bodyColor.g === 255 && bodyColor.b === 255;
+      expect(
+        paint.bodyImage !== 'none' || (isOpaque(bodyColor) && !white),
+        why(
+          game,
+          'home-felt',
+          `the body is ${paint.bodyImage === 'none' ? paint.bodyColor : paint.bodyImage}: paint \`html, body { background: var(${conf.felt}) }\` in theme.css (the shell paints no body)`,
+        ),
+      ).toBe(true);
+      expect(
+        paintedWith(paint),
+        why(
+          game,
+          'home-felt',
+          `the body's paint (${paint.bodyColor}; ${paint.bodyImage}) is not var(${conf.felt}) (${paint.probeColor}; ${paint.probeImage}): paint the body with the declared token, or declare the token the theme paints it with`,
+        ),
+      ).toBe(true);
+      const title = paint.titleColor === null ? null : parseColor(paint.titleColor);
+      expect(
+        isOpaque(title),
+        why(game, 'home-felt', `the home has no opaque title ink (${String(paint.titleColor)})`),
+      ).toBe(true);
+      const under = grounds(paint);
+      expect(
+        under.length,
+        why(
+          game,
+          'home-felt',
+          'no opaque colour under the title (a photo alone): set a background-color beneath it',
+        ),
+      ).toBeGreaterThan(0);
+      const ink = title ?? { r: 0, g: 0, b: 0, a: 1 };
+      const worst = under.reduce(
+        (low, c) => (contrast(ink, c) < contrast(ink, low) ? c : low),
+        under[0] ?? ink,
+      );
+      expect(
+        contrast(ink, worst),
+        why(
+          game,
+          'home-felt',
+          `the title's ${spell(ink)} is ${contrast(ink, worst).toFixed(2)}:1 on ${spell(worst)}; ${String(TITLE_CONTRAST)}:1 or better: a lighter ink, or a darker felt`,
+        ),
+      ).toBeGreaterThanOrEqual(TITLE_CONTRAST);
     });
 
     test('rules-fit: the Rules tab fits 390x844 with no scroll', async ({ player }) => {

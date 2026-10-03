@@ -177,6 +177,7 @@ const conformanceRow = (spec: NewGameSpec, indent: string, withGaps: boolean): s
     `${i}cues: ['pass'],`,
     `${i}cssFloor: 30,`,
     `${i}hides: ${String(spec.hidden)},`,
+    `${i}felt: '--felt',`,
     ...(withGaps ? gaps : []),
   ].join('\n');
 };
@@ -509,7 +510,12 @@ const ${s}: ShellDriver = {
           `      ${s}: {\n${conformanceRow(spec, '        ', false)}\n      },\n`,
           p,
         );
-        return insertAfter(t8, "      hive: ['pauses'],\n", `      ${s}: ${gapRules},\n`, p);
+        return insertAfter(
+          t8,
+          "      hive: ['pauses', 'home-felt'],\n",
+          `      ${s}: ${gapRules},\n`,
+          p,
+        );
       },
     },
     {

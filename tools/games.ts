@@ -684,7 +684,10 @@ export const ALIASES: Readonly<Record<string, string>> = { sheshbesh: 'backgammo
  * sound cue per key moment, over SHELL_CUES), `landing` (the card, the README row, the splash),
  * `tables` (a row in every per-game table: ROOM_CODE, SHELL, REGISTRY, ids.ts SHELL_GAMES) and
  * `curtain` (the pass-and-play curtain hides the table: an opaque scrim, or the table hidden under
- * it; the owner found UNO's hand showing through "Pass the phone to Lavi", 2026-10-02).
+ * it; the owner found UNO's hand showing through "Pass the phone to Lavi", 2026-10-02) and
+ * `home-felt` (the home sits on the game's declared felt: the body is painted, not white, with
+ * the `felt` token's paint, and the title reads at 4.5:1 or better against it; the shell paints no
+ * body of its own, so Flip 7's home shipped white when its theme forgot the rule, 2026-10-02).
  */
 export type ConformanceRule =
   | 'shell-home'
@@ -697,7 +700,8 @@ export type ConformanceRule =
   | 'cues'
   | 'landing'
   | 'tables'
-  | 'curtain';
+  | 'curtain'
+  | 'home-felt';
 
 /** A rule a game is known not to meet yet, with the follow-up that closes it: the suite marks the case fixme, naming both. */
 export type ConformanceGap = Readonly<{ rule: ConformanceRule; followUp: string }>;
@@ -734,6 +738,14 @@ export type ConformanceSpec = Readonly<{
    * curtain only names the starter or rises once (Sheshbesh, Flip 7; AGENT.md "Hidden hands").
    */
   hides: boolean;
+  /**
+   * The custom property the home's body is painted with (`home-felt`): the shared `--felt` (gin,
+   * UNO, Flip 7, Hive), or the theme's own ground (`--bg` under backgammon's parchment and
+   * briscola's linen, `--mist` under fidice's sky). The browser half paints a probe with
+   * `var(<felt>)` and holds the body's computed background to it (its image, its colour, or a
+   * gradient over it), so a theme that drops its body rule fails naming the token to restore.
+   */
+  felt: string;
   /** The rules the game is known to miss, each with its follow-up; the suite reports them as fixme, never as green. */
   gaps: ReadonlyArray<ConformanceGap>;
 }>;
@@ -749,6 +761,7 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     cues: ['knockGood', 'gin', 'bad', 'neutral', 'oppStock', 'oppDiscard'],
     cssFloor: 160,
     hides: true,
+    felt: '--felt',
     gaps: [
       {
         rule: 'rules-fit',
@@ -768,6 +781,7 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     cues: [],
     cssFloor: 190,
     hides: true,
+    felt: '--mist',
     gaps: [
       {
         rule: 'rules-fit',
@@ -796,6 +810,7 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     cues: ['roll', 'doubles', 'place', 'hit', 'bearOff', 'double'],
     cssFloor: 130,
     hides: false,
+    felt: '--bg',
     gaps: [
       {
         rule: 'rules-fit',
@@ -815,6 +830,7 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     cues: ['start.deal', 'move.play', 'draw.stock', 'good.trick.small'],
     cssFloor: 145,
     hides: true,
+    felt: '--bg',
     gaps: [
       {
         rule: 'curtain',
@@ -839,11 +855,17 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     cues: ['play', 'draw', 'penalty', 'deal'],
     cssFloor: 80,
     hides: true,
+    felt: '--felt',
     gaps: [
       {
         rule: 'pauses',
         followUp:
           "a penalty drawn shows the card that caused it and the cards drawn until Continue (AGENT.md table): a `pause` in ui/state.ts, Flip 7's pauseFor the model",
+      },
+      {
+        rule: 'home-felt',
+        followUp:
+          "the wordmark's red (--uno-red #d64541) is 1.85:1 on the felt's first stop (2026-10-02): a lighter red for the title alone, or a plate behind it",
       },
     ],
   },
@@ -853,6 +875,7 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     cues: ['flip', 'bust', 'freeze', 'stay', 'deal'],
     cssFloor: 72,
     hides: false,
+    felt: '--felt',
     gaps: [],
   },
   hive: {
@@ -861,11 +884,17 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     cues: ['place', 'move'],
     cssFloor: 78,
     hides: false,
+    felt: '--felt',
     gaps: [
       {
         rule: 'pauses',
         followUp:
           'a queen surrounded shows the hive until Continue (AGENT.md table); ui/state.ts has no `pause`',
+      },
+      {
+        rule: 'home-felt',
+        followUp:
+          "the title's amber (--accent #d9a441) is 3.62:1 on the felt's first stop (2026-10-02): a lighter amber for the h1, 4.5:1 or better",
       },
     ],
   },
