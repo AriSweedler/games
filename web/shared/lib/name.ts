@@ -20,7 +20,7 @@ export const normaliseName = (raw: string, rule: NameRule): string =>
 export const listNames = (names: ReadonlyArray<string>): string =>
   names.length <= 1
     ? (names[0] ?? '')
-    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`;
+    : `${names.slice(0, -1).join(', ')} and ${names.slice(-1).join('')}`;
 
 /** "Ann vs Bob" at two (the shell specs' shape), `listNames` past two: the resume box's players. */
 export const versusOrList = (names: ReadonlyArray<string>): string =>
