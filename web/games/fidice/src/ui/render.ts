@@ -22,14 +22,14 @@ import {
   type DocumentLike,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
-import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
   bindSheets as bindShellSheets,
   paintSheet,
   paintShellChrome,
-  shellButtons,
+  paintShellSheets,
   type Sheet,
+  shellButtons,
 } from '../../../../shared/ui/shellPaint.ts';
 import type { PublicState, Seat as EngineSeat } from '../domain/types.ts';
 import { configScreen } from '../view/screens/botConfig.ts';
@@ -102,11 +102,9 @@ export const paintNames = (doc: DocumentLike, app: App): void => {
   setText(requireId(doc, 'oppName'), names.filter((_, i) => i !== chair).join(' · '));
 };
 
-/** The rules and history sheets (the shell's), the finished games under the history, the ladder sheet's flag (its ladder is a mount, `paintTable`). */
+/** The rules and history sheets (the shell's, the finished games under the history), then the ladder sheet's flag (its ladder is a mount, `paintTable`). */
 const paintOverlays = (doc: DocumentLike, app: App): void => {
-  paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
-  paintSheet(doc, 'historyOverlay', app.table.historyOpen);
-  if (app.table.historyOpen) paintRecentGames(doc, app.shell.recentGames);
+  paintShellSheets(doc, app.shell);
   paintSheet(doc, 'ladderOverlay', app.table.ladderOpen);
 };
 
@@ -348,10 +346,7 @@ const SHEETS: ReadonlyArray<Sheet<Intent>> = [
 
 /** The table's shell controls (page.ts `table`): leave, sound, the handoff, the rules, the history and the ladder sheets. */
 export const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
-  bindButtons(doc, dispatch, [
-    ...shellButtons<Fidice>({ rules: { type: 'rules/open' }, history: { type: 'history/open' } }),
-    ['ladderBtn', { type: 'ladder/open' }],
-  ]);
+  bindButtons(doc, dispatch, [...shellButtons<Fidice>(), ['ladderBtn', { type: 'ladder/open' }]]);
 };
 
 /** Every control of the page (home, waiting rooms, curtain, table, sheets), once, at boot; the builders' handlers reach `dispatch` through `paintTable`. */

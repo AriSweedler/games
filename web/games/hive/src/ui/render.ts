@@ -54,14 +54,14 @@ import {
   type Element,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
-import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
   bindSheets,
   paintSheet,
   paintShellChrome,
-  shellButtons,
+  paintShellSheets,
   type Sheet,
+  shellButtons,
 } from '../../../../shared/ui/shellPaint.ts';
 import { columnAt, spiderPaths, stackAt, withIntent, type Game } from '../engine/engine.ts';
 import { hexOf, keyOf, type Hex } from '../engine/hex.ts';
@@ -493,19 +493,13 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   toggleClass(requireId(doc, 'resignBtn'), 'hidden', !mine);
   setDisabled(requireId(doc, 'resignBtn'), !mine);
   const over = v.game.result !== null;
-  toggleClass(requireId(doc, 'againBtn'), 'hidden', !(over && app.table.resultSeen));
+  toggleClass(requireId(doc, 'againBtn'), 'hidden', !(over && app.shell.resultDismissed));
   setText(requireId(doc, 'statusText'), statusText(v));
-  paintSheet(doc, 'resultOverlay', over && !app.table.resultSeen);
+  paintSheet(doc, 'resultOverlay', over && !app.shell.resultDismissed);
   if (over) {
     setText(requireId(doc, 'rsTitle'), resultTitle(v));
     setText(requireId(doc, 'rsNote'), v.game.note);
   }
-};
-
-const paintOverlays = (doc: DocumentLike, app: App): void => {
-  paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
-  paintSheet(doc, 'historyOverlay', app.table.historyOpen);
-  if (app.table.historyOpen) paintRecentGames(doc, app.shell.recentGames);
 };
 
 /**
@@ -549,7 +543,7 @@ export const paint = (doc: PageLike, app: App): void => {
   if (v !== null) paintTable(doc, app, v);
   paintMotion(doc, app.table.motion);
   paintHints(doc, app.table.hints);
-  paintOverlays(doc, app);
+  paintShellSheets(doc, app.shell);
 };
 
 const SHEETS: ReadonlyArray<Sheet<Intent>> = [
@@ -645,10 +639,10 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['passBtn', { type: 'act', action: { type: 'pass' } }],
       ['resignBtn', { type: 'act', action: { type: 'resign' } }],
       ['againBtn', { type: 'act', action: { type: 'again' } }],
-      ['rsContinueBtn', { type: 'result/continue' }],
+      ['rsContinueBtn', { type: 'result/dismiss' }],
       ['rsAgainBtn', { type: 'act', action: { type: 'again' } }],
       ['rsLeaveBtn', { type: 'leave/request' }],
-      ...shellButtons<Hive>({ rules: { type: 'rules/open' }, history: { type: 'history/open' } }),
+      ...shellButtons<Hive>(),
       ['motionBtn', { type: 'motion/toggle' }],
       ['hintsBtn', { type: 'hints/toggle' }],
       ['confirmBtn', { type: 'proposal/confirm' }],

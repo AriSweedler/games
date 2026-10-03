@@ -248,8 +248,6 @@ describe('the initial app', () => {
       selected: null,
       settle: null,
       drag: null,
-      resultDismissed: false,
-      historyOpen: false,
       deckOpen: false,
       deckWithHand: false,
       curtain: null,
@@ -268,7 +266,7 @@ describe('the initial app', () => {
       mirror: [null, null, null, null],
       budget: [null, null, null, null],
     });
-    expect(SHELL_INTENT_TYPES).toHaveLength(53);
+    expect(SHELL_INTENT_TYPES).toHaveLength(60);
     expect(EMPTY_SLOTS).toEqual([null, null, null]);
   });
 });
@@ -703,10 +701,10 @@ describe('pass and play: the lift, the play, the settle beat and the curtain', (
     });
     expect(run(lifted, { type: 'escape' }).app.table.selected).toBeNull();
     const sheets = run(start, { type: 'history/open' }, { type: 'rules/open' }).app;
-    expect(sheets.table.historyOpen).toBe(true);
+    expect(sheets.shell.historyOpen).toBe(true);
     expect(sheets.shell.rulesOpen).toBe(true);
     const once = run(sheets, { type: 'escape' }).app;
-    expect(once.table.historyOpen).toBe(false);
+    expect(once.shell.historyOpen).toBe(false);
     expect(once.shell.rulesOpen).toBe(true);
     expect(run(once, { type: 'escape' }).app.shell.rulesOpen).toBe(false);
     expect(run(start, { type: 'escape' }).app).toBe(start);
@@ -715,7 +713,7 @@ describe('pass and play: the lift, the play, the settle beat and the curtain', (
   test('the history and rules sheets toggle', () => {
     const start = revealed(local());
     expect(
-      run(start, { type: 'history/open' }, { type: 'history/close' }).app.table.historyOpen,
+      run(start, { type: 'history/open' }, { type: 'history/close' }).app.shell.historyOpen,
     ).toBe(false);
     expect(run(start, { type: 'rules/open' }, { type: 'rules/close' }).app.shell.rulesOpen).toBe(
       false,
@@ -743,7 +741,7 @@ describe('pass and play: whole games through the tap policy', () => {
       expect(v.matchOver).toBe(true);
       expect(over.shell.screen).toBe('tableScreen');
       expect(resultOpen(over)).toBe(true);
-      expect(run(over, { type: 'result/peek' }).app.table.resultDismissed).toBe(true);
+      expect(run(over, { type: 'result/dismiss' }).app.shell.resultDismissed).toBe(true);
       // The event stream: one deal, one trick per trick, one result.
       expect(v.events.map((e) => e.kind)).toEqual([
         'deal',
@@ -774,7 +772,7 @@ describe('pass and play: whole games through the tap policy', () => {
     expect(v2.stockCount).toBe(34);
     expect(v2.me.hand).toHaveLength(3);
     expect(resultOpen(again.app)).toBe(false);
-    expect(again.app.table.resultDismissed).toBe(false);
+    expect(again.app.shell.resultDismissed).toBe(false);
     expect(again.app.shell.revealed).toBeNull();
     // The curtain rises for the new leader (the shell's chime), then the deal.
     expect(again.app.table.curtain).toBe(game(again.app).turn);

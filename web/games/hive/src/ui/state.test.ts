@@ -120,12 +120,12 @@ describe('pass and play', () => {
     const over = run(app, { type: 'act', action: { type: 'resign' } }).app;
     expect(over.shell.game?.game.result).toEqual({ kind: 'win', winner: 'black', by: 'resign' });
     expect(over.table.curtain).toBeNull();
-    expect(over.table.resultSeen).toBe(false);
-    const seen = run(over, { type: 'result/continue' }).app;
-    expect(seen.table.resultSeen).toBe(true);
+    expect(over.shell.resultDismissed).toBe(false);
+    const seen = run(over, { type: 'result/dismiss' }).app;
+    expect(seen.shell.resultDismissed).toBe(true);
     const again = run(seen, { type: 'act', action: { type: 'again' } }).app;
     expect(again.shell.game?.game.board).toEqual({});
-    expect(again.table.resultSeen).toBe(false);
+    expect(again.shell.resultDismissed).toBe(false);
     expect(again.table.curtain).toBeNull();
     expect(viewOf(again)?.seat).toBe(0);
   });
@@ -134,11 +134,11 @@ describe('pass and play', () => {
     const app = started();
     expect(run(app, { type: 'rules/open' }).app.shell.rulesOpen).toBe(true);
     expect(run(app, { type: 'rules/open' }, { type: 'escape' }).app.shell.rulesOpen).toBe(false);
-    expect(run(app, { type: 'history/open' }).app.table.historyOpen).toBe(true);
+    expect(run(app, { type: 'history/open' }).app.shell.historyOpen).toBe(true);
     expect(
-      run(app, { type: 'history/open' }, { type: 'history/close' }).app.table.historyOpen,
+      run(app, { type: 'history/open' }, { type: 'history/close' }).app.shell.historyOpen,
     ).toBe(false);
-    expect(run(app, { type: 'history/open' }, { type: 'escape' }).app.table.historyOpen).toBe(
+    expect(run(app, { type: 'history/open' }, { type: 'escape' }).app.shell.historyOpen).toBe(
       false,
     );
     expect(

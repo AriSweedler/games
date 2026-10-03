@@ -89,20 +89,13 @@ export type Home = Readonly<{ extraNames: ExtraNames }>;
 export type Table = Readonly<{
   /** The pass-and-play seat the curtain names, or null (the shell writes it, `local.viewer`). */
   curtain: number | null;
-  /** `#historyOverlay` open. */
-  historyOpen: boolean;
   /** The third to twelfth pass-and-play names as last typed (web/shared/ui/seatNames.ts paints them). */
   extraNames: ExtraNames;
 }>;
 
 export type TableIntent =
   | Readonly<{ type: 'act'; action: Action }>
-  | Readonly<{ type: 'pname/typed'; seat: number; value: string }>
-  | Readonly<{ type: 'rules/open' }>
-  | Readonly<{ type: 'rules/close' }>
-  | Readonly<{ type: 'history/open' }>
-  | Readonly<{ type: 'history/close' }>
-  | Readonly<{ type: 'escape' }>;
+  | Readonly<{ type: 'pname/typed'; seat: number; value: string }>;
 
 export type TableEffect = Readonly<{ type: 'rememberPName'; seat: number; name: string }>;
 
@@ -141,7 +134,6 @@ export type HomeSnapshot = SharedHomeSnapshot<Uno>;
 
 export const initialTable: Table = {
   curtain: null,
-  historyOpen: false,
   extraNames: NO_EXTRA_NAMES,
 };
 
@@ -275,17 +267,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
         }),
         { type: 'rememberPName', seat: intent.seat, name: intent.value },
       );
-    case 'rules/open':
-      return pure(withShell(app, { rulesOpen: true }));
-    case 'rules/close':
-      return pure(withShell(app, { rulesOpen: false }));
-    case 'history/open':
-      return pure(withTable(app, { historyOpen: true }));
-    case 'history/close':
-      return pure(withTable(app, { historyOpen: false }));
-    case 'escape':
-      if (app.table.historyOpen) return pure(withTable(app, { historyOpen: false }));
-      return pure(app.shell.rulesOpen ? withShell(app, { rulesOpen: false }) : app);
   }
 };
 

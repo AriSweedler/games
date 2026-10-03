@@ -204,11 +204,6 @@ export type Table = Readonly<{
   /** `#meldOverlay` open. */
   meldChooser: boolean;
   /**
-   * `#historyOverlay` open, and whose list it shows: the game's (painted from the view) or the
-   * Score Counter's (scorer/main.ts writes the list itself).
-   */
-  history: 'game' | 'scorer' | null;
-  /**
    * The ghost draw slot (docs/design/gin-draw-ghost-slot.md §3): whether the drawn card is
    * awaited or shown. Not saved, not on the wire.
    */
@@ -241,6 +236,13 @@ export type Table = Readonly<{
 
 export type App = ShellApp<Gin>;
 
+/**
+ * Whose list the shell's history sheet shows: the Score Counter's (scorer/main.ts writes the list
+ * itself) from the home screen's Score tab, the game's (painted from the view) anywhere else.
+ */
+export const historyWho = (app: App): 'game' | 'scorer' =>
+  app.shell.screen === 'homeScreen' ? 'scorer' : 'game';
+
 // What a table leaves behind when a hand is dealt, left or lost: the ghost cell's stage, the kept
 // picture and the melds made by hand all belong to the hand that just ended.
 const HAND_CLEARED = { draw: null, picture: null, human: null, drag: null } as const;
@@ -251,7 +253,6 @@ export const initialTable: Table = {
   resultDismissed: false,
   curtain: null,
   meldChooser: false,
-  history: null,
   draw: null,
   picture: null,
   human: null,
@@ -310,10 +311,6 @@ export type TableIntent =
    * (no names: the shell's defaults, Ari and Lavi): the map dealt as a pass-and-play game, or its error shown.
    */
   | Readonly<{ type: 'sandbox/start'; map: string; p1?: string; p2?: string }>
-  | Readonly<{ type: 'rules/open' }>
-  | Readonly<{ type: 'rules/close' }>
-  | Readonly<{ type: 'history/open'; who: 'game' | 'scorer' }>
-  | Readonly<{ type: 'history/close' }>
   // ---- the table ----
   /** `act(action)`: every role. */
   | Readonly<{ type: 'act'; action: Action }>
@@ -575,14 +572,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
         localBroadcast(a, true, ctx, GIN),
       );
     }
-    case 'rules/open':
-      return pure(withShell(app, { rulesOpen: true }));
-    case 'rules/close':
-      return pure(withShell(app, { rulesOpen: false }));
-    case 'history/open':
-      return pure(withTable(app, { history: intent.who }));
-    case 'history/close':
-      return pure(withTable(app, { history: null }));
     // ---- the table ----
     case 'act':
       return act(app, intent.action, ctx);

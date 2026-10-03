@@ -64,7 +64,6 @@ import { handoffLabel } from '../../../../shared/lib/name.ts';
 import { backImageCss } from '../../../../shared/ui/cardFace.ts';
 import { paintHistory } from '../../../../shared/ui/history.ts';
 import { HISTORY_IDS } from '../../../../shared/ui/ids.ts';
-import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import { reducedMotion } from '../../../../shared/edge/motion.ts';
 import type { IntentSlot } from '../protocol.ts';
 import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
@@ -73,8 +72,9 @@ import {
   bindSheets as bindShellSheets,
   paintSheet,
   paintShellChrome,
-  shellButtons,
+  paintShellSheets,
   type Sheet,
+  shellButtons,
 } from '../../../../shared/ui/shellPaint.ts';
 import {
   HAND_SIZE,
@@ -819,7 +819,7 @@ const paintActions = (doc: DocumentLike, app: App, v: View, b: Beat): void => {
   toggleClass(
     requireId(doc, 'resultChipBtn'),
     'hidden',
-    !(v.phase === 'over' && app.table.resultDismissed && b.stage === null),
+    !(v.phase === 'over' && app.shell.resultDismissed && b.stage === null),
   );
 };
 
@@ -900,12 +900,11 @@ const paintResult = (doc: DocumentLike, app: App, v: View): void => {
 
 const paintOverlays = (doc: DocumentLike, app: App): void => {
   const v = app.shell.view;
-  paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
-  paintSheet(doc, 'historyOverlay', app.table.historyOpen);
   // One `<details>` per event (the shared panel over ui/history.ts's copy), the match's start
   // naming the stream: a repaint with nothing new leaves open rows open, a new event is appended
-  // after them, and a new match (whose ids start over) rebuilds the list.
-  if (app.table.historyOpen) {
+  // after them, and a new match (whose ids start over) rebuilds the list. The shell paints the
+  // sheets and the finished matches under the events after it.
+  if (app.shell.historyOpen)
     paintHistory(
       doc,
       HISTORY_IDS.list,
@@ -914,9 +913,7 @@ const paintOverlays = (doc: DocumentLike, app: App): void => {
       { players: v?.players ?? [], n: v?.options.seatCount ?? 2 },
       String(v?.startedAt ?? ''),
     );
-    // The finished matches under this match's events (web/shared/ui/recentGames.ts).
-    paintRecentGames(doc, app.shell.recentGames);
-  }
+  paintShellSheets(doc, app.shell);
 };
 
 // ---- the deck sheet (ui/deck.ts; the owner's ask of 2026-09-25, gin's discards sheet on the forty) ----------
@@ -1194,7 +1191,7 @@ const SHEETS: ReadonlyArray<Sheet<Intent>> = [
   { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
   { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
   { overlay: 'deckOverlay', close: 'closeDeckBtn', intent: { type: 'deck/close' } },
-  { overlay: 'resultOverlay', close: 'rsPeekBtn', intent: { type: 'result/peek' } },
+  { overlay: 'resultOverlay', close: 'rsPeekBtn', intent: { type: 'result/dismiss' } },
   { overlay: 'cardViewOverlay', close: 'closeCardViewBtn', intent: { type: 'cardView/close' } },
 ];
 
@@ -1360,10 +1357,7 @@ export const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['deckBtn', { type: 'deck/open' }],
       ['resultChipBtn', { type: 'result/open' }],
       ['rsReplayBtn', { type: 'replay/click' }],
-      ...shellButtons<Briscola>({
-        rules: { type: 'rules/open' },
-        history: { type: 'history/open' },
-      }),
+      ...shellButtons<Briscola>(),
     ],
     { skipDisabled: true },
   );

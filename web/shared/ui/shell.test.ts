@@ -1065,6 +1065,8 @@ describe('the initial shell and the partitions', () => {
       resume: null,
       openedAt: null,
       rulesOpen: false,
+      historyOpen: false,
+      resultDismissed: false,
       cues: { seen: null },
       submenuOpen: false,
       longPressed: false,
@@ -1086,9 +1088,9 @@ describe('the initial shell and the partitions', () => {
     ]);
   });
 
-  test('the 53 shell intents and 32 shell effects are listed once; the guards partition a game`s unions', () => {
-    expect(SHELL_INTENT_TYPES).toHaveLength(53);
-    expect(new Set(SHELL_INTENT_TYPES).size).toBe(53);
+  test('the 60 shell intents and 32 shell effects are listed once; the guards partition a game`s unions', () => {
+    expect(SHELL_INTENT_TYPES).toHaveLength(60);
+    expect(new Set(SHELL_INTENT_TYPES).size).toBe(60);
     expect(SHELL_INTENT_TYPES).toContain('opts/set');
     expect(SHELL_INTENT_TYPES).toContain('flip/set');
     expect(SHELL_INTENT_TYPES).toContain('name/rename');
@@ -1261,6 +1263,63 @@ describe('home', () => {
     expect(fromTable.effects).toEqual([
       { type: 'revealRule', slot: 'rulesOverlayList', rule: 'gin' },
     ]);
+  });
+
+  // ---- the sheets over the table (shell-hoist.md row F) ----
+
+  test('rules/open|close and history/open|close set their flags; result/dismiss puts the result away and result/open brings it back', () => {
+    const t = withShell(initialApp, { screen: 'tableScreen' });
+    expect(run(t, { type: 'rules/open' }).app.shell.rulesOpen).toBe(true);
+    expect(run(t, { type: 'rules/open' }, { type: 'rules/close' }).app.shell.rulesOpen).toBe(false);
+    expect(run(t, { type: 'history/open' }).app.shell.historyOpen).toBe(true);
+    expect(run(t, { type: 'history/open' }, { type: 'history/close' }).app.shell.historyOpen).toBe(
+      false,
+    );
+    const away = run(t, { type: 'result/dismiss' });
+    expect(away.app.shell.resultDismissed).toBe(true);
+    expect(away.effects).toEqual([]);
+    expect(run(away.app, { type: 'result/open' }).app.shell.resultDismissed).toBe(false);
+  });
+
+  test('escape: the game`s own thing first, then the history, then the rules, then nothing', () => {
+    const both = withShell(initialApp, { historyOpen: true, rulesOpen: true });
+    const one = run(both, { type: 'escape' });
+    expect(one.app.shell).toMatchObject({ historyOpen: false, rulesOpen: true });
+    const two = run(one.app, { type: 'escape' });
+    expect(two.app.shell).toMatchObject({ historyOpen: false, rulesOpen: false });
+    expect(run(two.app, { type: 'escape' })).toEqual({ app: two.app, effects: [] });
+    // A game with a lifted card: Escape drops it and leaves both sheets as they were.
+    const lifting: ShellConfig<Fake> = {
+      ...FAKE,
+      table: {
+        ...FAKE.table,
+        escape: (app) =>
+          app.table.marks.includes('lift')
+            ? pure({ ...app, table: { ...app.table, marks: ['dropped'] } })
+            : null,
+      },
+    };
+    const lifted: App = { ...both, table: { ...both.table, marks: ['lift'] } };
+    const dropped = runIn(ctx, lifting, lifted, { type: 'escape' });
+    expect(dropped.app.shell).toMatchObject({ historyOpen: true, rulesOpen: true });
+    expect(marks(dropped.app)).toEqual(['dropped']);
+    // Nothing of its own up: the shell's order.
+    expect(runIn(ctx, lifting, both, { type: 'escape' }).app.shell.historyOpen).toBe(false);
+  });
+
+  test('the sheets and the result`s dismissal go away with the table at a deal, the host lost and a pass-and-play start', () => {
+    const open = { rulesOpen: true, historyOpen: true, resultDismissed: true } as const;
+    const dealt = run(withShell(lobby(), open), { type: 'host/deal' }).app.shell;
+    expect(dealt).toMatchObject({ rulesOpen: false, historyOpen: false, resultDismissed: false });
+    const lost = run(withShell(seated(), open), { type: 'guest/lost' }).app.shell;
+    expect(lost).toMatchObject({ rulesOpen: false, historyOpen: false, resultDismissed: false });
+    const started = run(withShell(initialApp, open), {
+      type: 'local/click',
+      p1: 'Ann',
+      p2: 'Bob',
+      level: '2',
+    }).app.shell;
+    expect(started).toMatchObject({ rulesOpen: false, historyOpen: false, resultDismissed: false });
   });
 
   test('mode/set: a stored mode is shown and written, a shown-only mode is shown alone, an unknown one is ignored', () => {
@@ -2903,9 +2962,16 @@ describe('leaving and cancelling', () => {
     ]);
     // The rules sheet open at the leave goes with the table: the home has no sheet (shellPaint.ts
     // `paintScreen` puts every overlay away there; a `rulesOpen` left true would bring it back).
-    const finished = run(withShell(h, { revealed: 1, handoff: true, rulesOpen: true }), {
-      type: 'leave/finish',
-    });
+    const finished = run(
+      withShell(h, {
+        revealed: 1,
+        handoff: true,
+        rulesOpen: true,
+        historyOpen: true,
+        resultDismissed: true,
+      }),
+      { type: 'leave/finish' },
+    );
     expect(finished.app.shell).toMatchObject({
       role: null,
       game: null,
@@ -2915,6 +2981,8 @@ describe('leaving and cancelling', () => {
       revealed: null,
       handoff: false,
       rulesOpen: false,
+      historyOpen: false,
+      resultDismissed: false,
       cues: { seen: null },
       netAttempt: h.shell.netAttempt + 1,
     });

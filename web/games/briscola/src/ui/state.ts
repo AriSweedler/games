@@ -296,10 +296,6 @@ export type Table = Readonly<{
   selected: string | null;
   settle: Settle | null;
   drag: Drag | null;
-  /** `#resultOverlay` put away with "Look at the table" (`resultOpen` derives the sheet from this and the view). */
-  resultDismissed: boolean;
-  /** `#historyOverlay` shown. */
-  historyOpen: boolean;
   /** `#deckOverlay` (ui/deck.ts) shown, and whether it greys the cards in my hand too. Session only. */
   deckOpen: boolean;
   deckWithHand: boolean;
@@ -351,8 +347,6 @@ export const initialTable: Table = {
   selected: null,
   settle: null,
   drag: null,
-  resultDismissed: false,
-  historyOpen: false,
   deckOpen: false,
   deckWithHand: false,
   curtain: null,
@@ -416,19 +410,10 @@ export type TableIntent =
   | Readonly<{ type: 'exchange/click' }>
   /** `#rsReplayBtn` "Play again": a new deal for the same players and terms, the deal passed on. */
   | Readonly<{ type: 'replay/click' }>
-  /** `#rsPeekBtn` "Look at the table" / `#resultChipBtn` "Result". */
-  | Readonly<{ type: 'result/peek' }>
-  | Readonly<{ type: 'result/open' }>
-  | Readonly<{ type: 'history/open' }>
-  | Readonly<{ type: 'history/close' }>
   /** `#deckBtn` (the deck sheet, ui/deck.ts), `#closeDeckBtn` and `#deckIncludeHand`. */
   | Readonly<{ type: 'deck/open' }>
   | Readonly<{ type: 'deck/close' }>
   | Readonly<{ type: 'deck/toggleHand' }>
-  | Readonly<{ type: 'rules/open' }>
-  | Readonly<{ type: 'rules/close' }>
-  /** Escape (§5.5): cancels a drag, drops a lift, closes a sheet, in that order of what is up. */
-  | Readonly<{ type: 'escape' }>
   /** The `settle` timer fired: the beat moves to its next stage or ends. */
   | Readonly<{ type: 'settle/elapsed' }>
   /** `#stock`, my awaiting slot or the felt tapped while my draw waits (§3.1 DRAW): my back flies and flips; dropped at any other moment. */
@@ -683,13 +668,12 @@ const settled = (table: Table, v: View): Table => {
     slots: settleSlots(table.slots, v.me.hand),
     selected: table.selected !== null && v.legal.includes(table.selected) ? table.selected : null,
     drag: drag !== null && v.me.hand.some((c) => c.id === drag.card) ? drag : null,
-    resultDismissed: v.phase === 'over' ? table.resultDismissed : false,
   };
 };
 
-/** `#resultOverlay` is up: the game is over, the last trick has settled and nobody has put it away. */
+/** `#resultOverlay` is up: the game is over, the last trick has settled and nobody has put it away (the shell's `resultDismissed`). */
 export const resultOpen = (app: App): boolean =>
-  app.shell.view?.phase === 'over' && app.table.settle === null && !app.table.resultDismissed;
+  app.shell.view?.phase === 'over' && app.table.settle === null && !app.shell.resultDismissed;
 
 /**
  * The guest seats whose channel is down mid-game, by name (a seat never named by its number): the
@@ -773,7 +757,13 @@ const rendered = (app: App, prev: View | null, ctx: Context): Step => {
   const keeps = settle !== null && settle === running;
   return step(
     {
-      shell: { ...app.shell, cues: { key }, screen: 'tableScreen' },
+      shell: {
+        ...app.shell,
+        cues: { key },
+        screen: 'tableScreen',
+        // A put-away result lifts with the next deal: a view not over shows the next one.
+        resultDismissed: view.phase === 'over' ? app.shell.resultDismissed : false,
+      },
       table: {
         ...settled(app.table, view),
         settle,
@@ -941,16 +931,14 @@ const tableCleared = (table: Table): Table => ({
   extraNames: table.extraNames,
 });
 
-/** Escape (§5.5): what is up goes, one thing per press: the card view, a drag, a lift, the deck, the history, the rules. */
-const escape = (app: App): Step => {
+/** Escape (§5.5; the shell's hook): what is up goes, one thing per press: the card view, a drag, a lift, the deck; null leaves the history and the rules to the shell. */
+const escape = (app: App): Step | null => {
   const t = app.table;
   if (t.cardView !== null) return pure(withTable(app, { cardView: null }));
   if (t.drag !== null) return pure(withTable(app, { drag: null, selected: null }));
   if (t.selected !== null) return pure(withTable(app, { selected: null }));
   if (t.deckOpen) return pure(withTable(app, { deckOpen: false }));
-  if (t.historyOpen) return pure(withTable(app, { historyOpen: false }));
-  if (app.shell.rulesOpen) return pure(withShell(app, { rulesOpen: false }));
-  return pure(app);
+  return null;
 };
 
 /**
@@ -1036,26 +1024,12 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
     }
     case 'replay/click':
       return replay(app, ctx);
-    case 'result/peek':
-      return pure(withTable(app, { resultDismissed: true }));
-    case 'result/open':
-      return pure(withTable(app, { resultDismissed: false }));
-    case 'history/open':
-      return pure(withTable(app, { historyOpen: true }));
-    case 'history/close':
-      return pure(withTable(app, { historyOpen: false }));
     case 'deck/open':
       return app.shell.view === null ? pure(app) : step(withTable(app, { deckOpen: true }), tap);
     case 'deck/close':
       return pure(withTable(app, { deckOpen: false }));
     case 'deck/toggleHand':
       return pure(withTable(app, { deckWithHand: !t.deckWithHand }));
-    case 'rules/open':
-      return pure(withShell(app, { rulesOpen: true }));
-    case 'rules/close':
-      return pure(withShell(app, { rulesOpen: false }));
-    case 'escape':
-      return escape(app);
     case 'settle/elapsed':
       return settleElapsed(app, ctx);
     case 'draw/tap':
@@ -1283,7 +1257,7 @@ const reset = (table: Table, at: TableReset): Table => {
 /** Briscola's shell config: shellConfig.ts's half completed with the table hooks and the home snapshot's own part. */
 export const BRISCOLA: ShellConfig<Briscola> = {
   ...BRISCOLA_SHELL,
-  table: { initial: initialTable, reset, rendered, refuse, ephemeral },
+  table: { initial: initialTable, reset, rendered, refuse, ephemeral, escape },
   local: { viewer, revealer },
   home: {
     ...BRISCOLA_SHELL.home,

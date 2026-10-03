@@ -27,14 +27,14 @@ import {
 } from '../../../../shared/edge/dom.ts';
 import { reducedMotion } from '../../../../shared/edge/motion.ts';
 import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
-import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
   bindSheets,
   paintSheet,
   paintShellChrome,
-  shellButtons,
+  paintShellSheets,
   type Sheet,
+  shellButtons,
 } from '../../../../shared/ui/shellPaint.ts';
 import { cardName, type Card } from '../engine/cards.ts';
 import { lineScore } from '../engine/engine.ts';
@@ -285,9 +285,7 @@ export const paint = (doc: PageLike, app: App): void => {
   paintCurtain(doc, app);
   paintTable(doc, app);
   paintPause(doc, app);
-  paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
-  paintSheet(doc, 'historyOverlay', app.table.historyOpen);
-  if (app.table.historyOpen) paintRecentGames(doc, app.shell.recentGames);
+  paintShellSheets(doc, app.shell);
 };
 
 const SHEETS: ReadonlyArray<Sheet<Intent>> = [
@@ -302,7 +300,7 @@ export const bindAll = (doc: PageLike, dispatch: (intent: Intent) => void): void
   bindCurtain(doc, dispatch, (): ReadonlyArray<Intent> => [{ type: 'curtain/reveal' }]);
   bindButtons(doc, dispatch, [
     ['curtainHandoffBtn', { type: 'handoff/click' }],
-    ...shellButtons<Flip7>({ rules: { type: 'rules/open' }, history: { type: 'history/open' } }),
+    ...shellButtons<Flip7>(),
     ['hitBtn', { type: 'hit/click' }],
     ['stayBtn', { type: 'stay/click' }],
     ['nextRoundBtn', { type: 'nextRound/click' }],

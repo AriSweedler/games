@@ -151,9 +151,6 @@ export type Table = Readonly<{
   /** With the hints hidden: the hex the picked tile is proposed on, shown there until Confirm or Cancel; null for none. */
   proposal: Hex | null;
   /** The result sheet's Continue was tapped: the final board stays on show. */
-  resultSeen: boolean;
-  /** `#historyOverlay` open. */
-  historyOpen: boolean;
 }>;
 
 export type TableIntent =
@@ -168,17 +165,10 @@ export type TableIntent =
   | Readonly<{ type: 'peek/hover'; hex: Hex }>
   | Readonly<{ type: 'peek/open'; hex: Hex }>
   | Readonly<{ type: 'peek/close' }>
-  | Readonly<{ type: 'result/continue' }>
-  | Readonly<{ type: 'rules/open' }>
-  | Readonly<{ type: 'rules/close' }>
-  | Readonly<{ type: 'history/open' }>
-  | Readonly<{ type: 'history/close' }>
   | Readonly<{ type: 'motion/toggle' }>
   | Readonly<{ type: 'hints/toggle' }>
   | Readonly<{ type: 'proposal/confirm' }>
-  | Readonly<{ type: 'proposal/cancel' }>
-  | Readonly<{ type: 'escape' }>;
-
+  | Readonly<{ type: 'proposal/cancel' }>;
 /** The tiles' motion, or the hints, into the device's storage (settings.ts `writeSetting`). */
 export type TableEffect =
   | Readonly<{ type: 'motion/write'; motion: Motion }>
@@ -225,8 +215,6 @@ export const initialTable: Table = {
   peekShut: null,
   hints: HIVE_HINTS.initial,
   proposal: null,
-  resultSeen: false,
-  historyOpen: false,
 };
 
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
@@ -325,10 +313,18 @@ const rendered = (app: App, prev: View | null, ctx: Ctx): Step => {
     // A tile that landed hops once, on this position; any other fresh position hops nothing.
     hop:
       moved !== null ? { key, ...moved, reduced: snap } : fresh || newGame ? null : app.table.hop,
-    resultSeen: newGame ? false : app.table.resultSeen,
   };
   return step(
-    { shell: { ...app.shell, cues: { key }, screen: 'tableScreen' }, table },
+    {
+      shell: {
+        ...app.shell,
+        cues: { key },
+        screen: 'tableScreen',
+        // A rematch lifts a put-away result: the next one shows.
+        resultDismissed: newGame ? false : app.shell.resultDismissed,
+      },
+      table,
+    },
     ...cues.map(fx),
   );
 };
@@ -373,9 +369,22 @@ const revealer: ShellConfig<Hive>['local']['revealer'] = (game) => ({
   seat: turnSeat(game.game) ?? 0,
 });
 
+/**
+ * Escape with no sheet open (the shell's `escape`): a peek shuts first; a shell sheet (the
+ * history, the rules) is the shell's to close; then a proposal is cancelled, then the pick
+ * dropped.
+ */
+const escape = (app: App, ctx: Ctx): Step | null => {
+  if (app.table.peek !== null)
+    return pure(withTable(app, { peek: null, peekShut: app.table.peek }));
+  if (app.shell.historyOpen || app.shell.rulesOpen) return null;
+  if (app.table.proposal !== null) return cancel(app, ctx);
+  return pure(pick(app, null));
+};
+
 export const HIVE: ShellConfig<Hive> = {
   ...HIVE_SHELL,
-  table: { initial: initialTable, reset, rendered, refuse },
+  table: { initial: initialTable, reset, rendered, refuse, escape },
   local: { viewer, revealer },
   home: {
     ...HIVE_SHELL.home,
@@ -621,16 +630,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       return app.table.peek === null && app.table.peekShut === null
         ? pure(app)
         : pure(withTable(app, { peek: null, peekShut: null }));
-    case 'result/continue':
-      return pure(withTable(app, { resultSeen: true }));
-    case 'rules/open':
-      return pure(withShell(app, { rulesOpen: true }));
-    case 'rules/close':
-      return pure(withShell(app, { rulesOpen: false }));
-    case 'history/open':
-      return pure(withTable(app, { historyOpen: true }));
-    case 'history/close':
-      return pure(withTable(app, { historyOpen: false }));
     case 'motion/toggle': {
       const motion = nextMotion(app.table.motion);
       return step(withTable(app, { motion }), { type: 'motion/write', motion });
@@ -647,13 +646,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       return confirm(app, ctx);
     case 'proposal/cancel':
       return cancel(app, ctx);
-    case 'escape':
-      if (app.table.historyOpen) return pure(withTable(app, { historyOpen: false }));
-      if (app.table.peek !== null)
-        return pure(withTable(app, { peek: null, peekShut: app.table.peek }));
-      if (app.shell.rulesOpen) return pure(withShell(app, { rulesOpen: false }));
-      if (app.table.proposal !== null) return cancel(app, ctx);
-      return pure(pick(app, null));
   }
 };
 

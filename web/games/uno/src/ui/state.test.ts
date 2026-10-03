@@ -319,9 +319,9 @@ describe('the table’s own intents', () => {
     expect(run(rules, { type: 'rules/close' }).app.shell.rulesOpen).toBe(false);
     expect(run(rules, { type: 'escape' }).app.shell.rulesOpen).toBe(false);
     const history = run(initialApp, { type: 'history/open' }).app;
-    expect(history.table.historyOpen).toBe(true);
-    expect(run(history, { type: 'history/close' }).app.table.historyOpen).toBe(false);
-    expect(run(history, { type: 'escape' }).app.table.historyOpen).toBe(false);
+    expect(history.shell.historyOpen).toBe(true);
+    expect(run(history, { type: 'history/close' }).app.shell.historyOpen).toBe(false);
+    expect(run(history, { type: 'escape' }).app.shell.historyOpen).toBe(false);
     expect(run(initialApp, { type: 'escape' }).app).toEqual(initialApp);
   });
 

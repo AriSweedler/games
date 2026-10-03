@@ -114,7 +114,6 @@ export type Pause = Readonly<{
 export type Table = Readonly<{
   curtain: number | null;
   pause: Pause | null;
-  historyOpen: boolean;
   extraNames: ExtraNames;
 }>;
 
@@ -128,12 +127,7 @@ export type TableIntent =
   | Readonly<{ type: 'nextRound/click' }>
   | Readonly<{ type: 'replay/click' }>
   | Readonly<{ type: 'continue/click' }>
-  | Readonly<{ type: 'pname/typed'; seat: ExtraSeat; value: string }>
-  | Readonly<{ type: 'rules/open' }>
-  | Readonly<{ type: 'rules/close' }>
-  | Readonly<{ type: 'history/open' }>
-  | Readonly<{ type: 'history/close' }>
-  | Readonly<{ type: 'escape' }>;
+  | Readonly<{ type: 'pname/typed'; seat: ExtraSeat; value: string }>;
 
 export type TableEffect = Readonly<{ type: 'rememberPName'; seat: ExtraSeat; name: string }>;
 
@@ -170,7 +164,6 @@ export type HomeSnapshot = SharedHomeSnapshot<Flip7>;
 export const initialTable: Table = {
   curtain: null,
   pause: null,
-  historyOpen: false,
   extraNames: NO_EXTRA_NAMES,
 };
 
@@ -383,26 +376,19 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
         }),
         { type: 'rememberPName', seat: intent.seat, name: intent.value },
       );
-    case 'rules/open':
-      return pure(withShell(app, { rulesOpen: true }));
-    case 'rules/close':
-      return pure(withShell(app, { rulesOpen: false }));
-    case 'history/open':
-      return pure(withTable(app, { historyOpen: true }));
-    case 'history/close':
-      return pure(withTable(app, { historyOpen: false }));
-    case 'escape':
-      if (app.table.pause !== null) return pure(withTable(app, { pause: null }));
-      return app.table.historyOpen
-        ? pure(withTable(app, { historyOpen: false }))
-        : pure(withShell(app, { rulesOpen: false }));
   }
 };
 
 /** Flip 7's shell config: shellConfig.ts's half completed with the table hooks and the home snapshot's own part. */
 export const FLIP7: ShellConfig<Flip7> = {
   ...FLIP7_SHELL,
-  table: { initial: initialTable, reset, rendered },
+  table: {
+    initial: initialTable,
+    reset,
+    rendered,
+    // Escape with no sheet open: the pause's Continue first; the shell's sheets after.
+    escape: (app) => (app.table.pause === null ? null : pure(withTable(app, { pause: null }))),
+  },
   local: { viewer, revealer },
   home: {
     ...FLIP7_SHELL.home,

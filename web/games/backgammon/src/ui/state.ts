@@ -214,10 +214,7 @@ export type Table = Readonly<{
   drag: Readonly<{ from: Place; over: To | null }> | null;
   /** A tapped point that is neither source nor target, for `SHAKE_MS`. */
   shake: PointIndex | null;
-  /** `#resultOverlay` shown (put away with "Look at the table"). */
-  resultOpen: boolean;
   menuOpen: boolean;
-  historyOpen: boolean;
   /** Pass-and-play: the seat the phone is handed to, or null when the curtain is down. */
   curtain: Seat | null;
   /** `backgammon_curtain`: `never` skips the overlay (nothing is hidden either way, Q4). */
@@ -244,9 +241,7 @@ export const initialTable: Table = {
   pending: null,
   drag: null,
   shake: null,
-  resultOpen: false,
   menuOpen: false,
-  historyOpen: false,
   curtain: null,
   curtainMode: DEFAULT_CURTAIN_MODE,
   noMoveUntil: null,
@@ -319,15 +314,10 @@ export type TableIntent =
   | Readonly<{ type: 'pass/click' }>
   /** `#rsNextBtn` "Next game", and `#nextGameBtn` "Rematch" once the match is over. */
   | Readonly<{ type: 'next/click' }>
-  /** `#rsPeekBtn` "Look at the table" / `#resultChipBtn` "Result". */
-  | Readonly<{ type: 'result/peek' }>
-  | Readonly<{ type: 'result/open' }>
   | Readonly<{ type: 'checker/dragStart'; from: Place }>
   | Readonly<{ type: 'checker/dragOver'; over: To | null }>
   | Readonly<{ type: 'checker/dragEnd' }>
   | Readonly<{ type: 'menu/toggle' }>
-  | Readonly<{ type: 'history/toggle' }>
-  | Readonly<{ type: 'rules/toggle' }>
   /** `#menuCurtainToggle`: remembered under `backgammon_curtain`. */
   | Readonly<{ type: 'curtain/mode'; mode: CurtainMode }>
   /** The `noMove` timer fired: the forfeited roll has been seen. */
@@ -508,13 +498,17 @@ const rendered = (app: App, prev: View | null, ctx: Context): Step => {
   const hitToasts = since && app.shell.role !== 'local' ? hitToastsBetween(prev, view) : [];
   const beat = changed && freshNoMove(prev, view);
   const screen: ScreenId<Backgammon> = view.matchOver ? 'endgameScreen' : 'tableScreen';
-  const resultOpen = view.phase === 'over' ? prev?.phase !== 'over' || app.table.resultOpen : false;
   return step(
     {
-      shell: { ...app.shell, cues: mem, screen },
+      shell: {
+        ...app.shell,
+        cues: mem,
+        screen,
+        // A put-away result lifts with the next game: a view not over shows the next one.
+        resultDismissed: view.phase === 'over' ? app.shell.resultDismissed : false,
+      },
       table: {
         ...settled(app.table, view),
-        resultOpen,
         lastPainted: prev,
         noMoveUntil: beat ? ctx.now() + NO_MOVE_MS : app.table.noMoveUntil,
         rolling: rolled || app.table.rolling,
@@ -808,10 +802,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
       const game = app.shell.game;
       return game === null ? pure(app) : rematch(app, game, ctx);
     }
-    case 'result/peek':
-      return pure(withTable(app, { resultOpen: false }));
-    case 'result/open':
-      return pure(withTable(app, { resultOpen: true }));
     case 'checker/dragStart':
       return dragStart(app, intent.from);
     case 'checker/dragOver':
@@ -820,10 +810,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
       return dragEnd(app, ctx);
     case 'menu/toggle':
       return pure(withTable(app, { menuOpen: !t.menuOpen }));
-    case 'history/toggle':
-      return pure(withTable(app, { historyOpen: !t.historyOpen }));
-    case 'rules/toggle':
-      return pure(withShell(app, { rulesOpen: !app.shell.rulesOpen }));
     case 'curtain/mode': {
       // Turning the curtain off while it is up is a reveal: the seat behind it is told of its hits.
       const dropped = intent.mode === 'never' ? t.curtain : null;

@@ -30,14 +30,14 @@ import {
 } from '../../../../shared/edge/dom.ts';
 import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
 import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
-import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
   bindSheets,
   paintSheet,
   paintShellChrome,
-  shellButtons,
+  paintShellSheets,
   type Sheet,
+  shellButtons,
 } from '../../../../shared/ui/shellPaint.ts';
 import { COLORS, type Card, type Color } from '../engine/cards.ts';
 import { cardName } from '../engine/engine.ts';
@@ -173,12 +173,6 @@ const paintCurtain = (doc: DocumentLike, app: App): void => {
   );
 };
 
-const paintOverlays = (doc: DocumentLike, app: App): void => {
-  paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
-  paintSheet(doc, 'historyOverlay', app.table.historyOpen);
-  if (app.table.historyOpen) paintRecentGames(doc, app.shell.recentGames);
-};
-
 export const paint = (doc: PageLike, app: App): void => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
   paintShellChrome(doc, app.shell, {
@@ -192,7 +186,7 @@ export const paint = (doc: PageLike, app: App): void => {
   const flights: ReadonlyArray<Flight> = v === null ? [] : planFlights(doc, v);
   if (v !== null) paintTable(doc, app, v);
   flyCards(doc, flights);
-  paintOverlays(doc, app);
+  paintShellSheets(doc, app.shell);
 };
 
 const SHEETS: ReadonlyArray<Sheet<Intent>> = [
@@ -225,7 +219,7 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['callOutBtn', { type: 'act', action: { type: 'callOut' } }],
       ['rsAgainBtn', { type: 'act', action: { type: 'again' } }],
       ['rsLeaveBtn', { type: 'leave/request' }],
-      ...shellButtons<Uno>({ rules: { type: 'rules/open' }, history: { type: 'history/open' } }),
+      ...shellButtons<Uno>(),
     ],
     { skipDisabled: true },
   );

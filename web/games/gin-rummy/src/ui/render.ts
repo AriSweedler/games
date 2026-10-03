@@ -71,7 +71,15 @@ import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
 import { handoffLabel } from '../../../../shared/lib/name.ts';
-import { canDropDiscard, SCREENS, namesOf, type App, type Gin, type Intent } from './state.ts';
+import {
+  canDropDiscard,
+  historyWho,
+  SCREENS,
+  namesOf,
+  type App,
+  type Gin,
+  type Intent,
+} from './state.ts';
 
 export type { PageLike };
 export type Dispatch = (intent: Intent) => void;
@@ -605,12 +613,13 @@ export const historyHtml = (v: View | null): SafeHtml => {
 const paintOverlays = (doc: DocumentLike, app: App): void => {
   paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
   paintSheet(doc, 'sandboxHelpOverlay', app.table.sandbox.helpOpen);
-  paintSheet(doc, 'historyOverlay', app.table.history !== null);
-  if (app.table.history === 'game')
+  paintSheet(doc, 'historyOverlay', app.shell.historyOpen);
+  const who = historyWho(app);
+  if (app.shell.historyOpen && who === 'game')
     setHtml(requireId(doc, 'historyList'), historyHtml(app.shell.view));
   // The finished games under the game's hands (web/shared/ui/recentGames.ts); the Score Counter's
   // sheet lists its own rounds alone.
-  paintRecentGames(doc, app.table.history === 'game' ? app.shell.recentGames : []);
+  paintRecentGames(doc, who === 'game' ? app.shell.recentGames : []);
 };
 
 // ---- the whole paint -----------------------------------------------------------------------------
@@ -674,10 +683,7 @@ export const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
   bindButtons(doc, dispatch, [
     ['stockPile', { type: 'stock/tap' }],
     ['discardPile', { type: 'discard/tap' }],
-    ...shellButtons<Gin>({
-      rules: { type: 'rules/open' },
-      history: { type: 'history/open', who: 'game' },
-    }),
+    ...shellButtons<Gin>(),
     ['deadwoodInfo', { type: 'meld/open' }],
     ['discardsBtn', { type: 'discards/open' }],
     ['arrangeBtn', { type: 'arrange/open' }],
@@ -685,7 +691,7 @@ export const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
     ['rrHideBtn', { type: 'result/hide' }],
     ['rematchBtn', { type: 'act', action: { type: 'ready' } }],
     ['leaveBtnEnd', { type: 'leave/request' }],
-    ['historyBtnEnd', { type: 'history/open', who: 'game' }],
+    ['historyBtnEnd', { type: 'history/open' }],
   ]);
   listenId(doc, 'hand', 'click', (e) => {
     const id = cardIdFrom(e);
