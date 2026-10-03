@@ -47,6 +47,26 @@ dist guard checks. `test/dist/link-previews.test.ts` reads the PNG's IHDR and ho
 1200 x 630, holds `og:image` absolute on the Worker origin and resolving through `mapPath` to a file
 the build ships, `og:url` to the page's own short URL, and the card to `summary_large_image`.
 
+**Hive's card is composed, not drawn** (the owner, 2026-10-02: "The richlink for hive still
+contains the old art", "fix the splash pipeline first"). The hand-drawn hexagons with letters went
+stale the day the engraved bug art landed, so `tools/splash-hive.ts` builds
+`web/games/hive/assets/splash.svg` from what the page draws: the five files under
+`web/games/hive/assets/bugs/` become the same `<symbol>`s the page's sprite holds, each tile is the
+board's hexagon (`ui/board.ts cornersOf`) with the sheen and bevel and the bug's four engraving
+layers (`ui/engrave.ts symbolOf`, `bugHtml`, `TILE_DEFS`: rim, shade, gleam, ink), the colours are
+the tokens read off `web/games/hive/theme.css`, and the felt is the shared one. A flower of seven
+tiles, White's Queen at the centre, every bug once, the amber name and one line of copy. The
+composition is pure and deterministic, so the committed SVG stays the one source the renderer
+reads and a test can recompose it.
+
+**The guard.** `tools/splash.ts` writes Hive's SVG, renders every card, then records each render in
+a sidecar beside the SVG, `web/games/<game>/assets/splash.sha256`: the SHA-256 of the SVG and of
+the PNG, in `shasum -a 256 -c` form. `tools/splash.test.ts` (harness suite) fails when Hive's SVG
+is not the composition byte for byte, or when any game's SVG or PNG no longer matches its sidecar,
+each with the one line to run: `node --experimental-strip-types tools/splash.ts`. So a bug file,
+the engraving, Hive's palette or a hand-drawn SVG changed without a re-render fails CI, and a PNG
+left uncommitted after one does too. Re-run the tool and commit the SVG, the PNG and the sidecar.
+
 Fidice keeps its own head (its page is not composed by tools/shell-markup.ts) and has no splash
 yet; the landing page is untouched. Both are one more SVG and a head edit when wanted.
 

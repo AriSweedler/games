@@ -38,8 +38,17 @@ const typed = debundled.modules.filter((m) => portedOnDisk(m.section.name));
 const generated = debundled.modules.filter((m) => !portedOnDisk(m.section.name));
 /** `main.ts` once the entry is typed (docs/MIGRATION.md step 9), `main.js` before. */
 const entryFile = portedOnDisk('src/app/main') ? 'main.ts' : 'main.js';
-/** The page files beside the modules, hand-owned since docs/MIGRATION.md step 14; the splash art since M5 of docs/design/fidice-shell-adoption.md. */
-const PAGE_FILES: ReadonlyArray<string> = ['index.html', 'theme.css', 'assets/splash.svg'];
+/**
+ * The page files beside the modules, hand-owned since docs/MIGRATION.md step 14; the splash art
+ * since M5 of docs/design/fidice-shell-adoption.md, and its sidecar since tools/splash.ts writes
+ * one per game (docs/design/link-previews.md §2: the staleness guard).
+ */
+const PAGE_FILES: ReadonlyArray<string> = [
+  'index.html',
+  'theme.css',
+  'assets/splash.svg',
+  'assets/splash.sha256',
+];
 
 /** Every regular file under web/games/fidice except the manifest, as posix paths relative to it. */
 const committedFiles = (): ReadonlyArray<string> =>
