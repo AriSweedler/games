@@ -749,9 +749,9 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.controls .btn',
     '.target',
     '.choices',
-    '.result',
-    '.scores',
-    '.scores li',
+    '#rsScore',
+    '#rsScore .score-row',
+    '#rsNextBtn',
   ],
   // Hive (docs/design/hive.md §7; page.ts, ui/render.ts): after the shell's 43, the home's subtitle
   // and the names box, the table's top bar (the names strip, the connection dot), the board and
@@ -2032,7 +2032,7 @@ const driveFlip7 = async (page: Page, shot: Shot): Promise<void> => {
   await shot('table: rules sheet');
   await page.keyboard.press('Escape');
   await fastForwardFlip7(page, shot);
-  await visible(page, '#result');
+  await visible(page, '#resultOverlay');
   await shot('round over: the scores');
 };
 

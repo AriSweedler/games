@@ -261,7 +261,7 @@ describe('the games registry', () => {
             'hitBtn',
             'stayBtn',
             'target',
-            'result',
+            'resultOverlay',
             'pauseOverlay',
             'continueBtn',
             'toast',
@@ -508,7 +508,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
       },
       flip7: {
         seats: { min: 2, max: 12 },
-        pauses: ['bust', 'frozen', 'flip7'],
+        pauses: ['busted', 'frozen', 'flip7'],
         cues: ['flip', 'bust', 'freeze', 'stay', 'deal'],
         cssFloor: 72,
         hides: false,

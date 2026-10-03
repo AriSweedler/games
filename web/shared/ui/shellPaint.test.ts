@@ -643,11 +643,21 @@ describe('paintShellSheets', () => {
 
   test('both sheets follow their flags; the finished games paint under an open history alone', () => {
     const p = sheets();
-    paintShellSheets(p.doc, { rulesOpen: true, historyOpen: false, recentGames: games });
+    paintShellSheets(p.doc, {
+      rulesOpen: true,
+      historyOpen: false,
+      recentGames: games,
+      pause: null,
+    });
     expect(p.get('rulesOverlay').hidden()).toBe(false);
     expect(p.get('historyOverlay').hidden()).toBe(true);
     expect(p.get('recentGames').text()).toBe('');
-    paintShellSheets(p.doc, { rulesOpen: false, historyOpen: true, recentGames: games });
+    paintShellSheets(p.doc, {
+      rulesOpen: false,
+      historyOpen: true,
+      recentGames: games,
+      pause: null,
+    });
     expect(p.get('rulesOverlay').hidden()).toBe(true);
     expect(p.get('historyOverlay').hidden()).toBe(false);
     expect(p.get('recentGames').text()).toContain('Ann');

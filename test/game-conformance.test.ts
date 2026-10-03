@@ -208,7 +208,7 @@ describe('game conformance: the sources and the tables', () => {
     rule(
       game,
       'pauses',
-      'every declared pause kind is in ui/state.ts and continue/click clears it',
+      'every declared pause is raised in ui/state.ts through the shell`s table.pause adapter (pause/continue clears it)',
       () => {
         const state = read(gameFile(game, 'src/ui/state.ts'));
         expect(
@@ -219,10 +219,14 @@ describe('game conformance: the sources and the tables', () => {
             'declare the Pause kinds in CONFORMANCE (or a pauses gap with its follow-up)',
           ),
         ).toBeGreaterThan(0);
-        expect(state, why(game, 'pauses', 'ui/state.ts has no `pause` slice')).toMatch(/\bpause:/);
-        expect(state, why(game, 'pauses', 'no `continue/click` intent clears the pause')).toContain(
-          "'continue/click'",
-        );
+        expect(
+          state,
+          why(
+            game,
+            'pauses',
+            'ui/state.ts supplies no `table.pause` adapter (shell.ts `ShellConfig`)',
+          ),
+        ).toMatch(/\bpause:/);
         conf.pauses.forEach((kind) => {
           expect(
             state,

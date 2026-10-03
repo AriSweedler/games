@@ -1,6 +1,7 @@
 // Flip 7's reducer on the shared shell (docs/design/flip7.md §8; web/shared/ui/shell.ts): the shell
 // runs the home screen, the waiting rooms, the sessions, the curtain, the resume offer and the leave
-// flow; this file keeps the table's slice (the curtain, the pause) and its hooks.
+// flow, the pause (its `table.pause` adapter is `pauseFor` below) and Play again; this file keeps
+// the table's slice (the curtain) and its hooks.
 // Every card is face up, so online there is nothing to hide, only turn authority: the host deals
 // and holds the game, each seat's Hit, Stay or give goes to the host as an action frame and the
 // engine checks it against the seat that sent it (engine/index.ts `applyAction`); every seat is
@@ -8,33 +9,26 @@
 // it the table follows whoever must act (nothing is hidden, so the phone just goes round).
 import {
   act as shellAct,
-  andThen as then,
-  broadcast,
+  again,
   cueStep,
-  localBroadcast,
-  pure,
   refuse,
-  startsOver,
-  withShell,
-  withTable,
   type Ctx,
   type CueMachine,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
+  type Pause,
   type Resume as SharedResume,
   type ShellApp,
   type ShellConfig,
   type ShellState,
   type GameTypes,
   type Step as SharedStep,
-  type TableReset,
 } from '../../../../shared/ui/shell.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import type { SeatedRaw } from '../../../../shared/ui/seatCopy.ts';
 import {
   actorOf,
-  createGame,
   isMyTurn,
   nameOf,
   type Action,
@@ -52,24 +46,9 @@ export { HOME_TABS, type HomeTab, type PlayMode };
 /** The raw values `host/click` and `local/click` carry: the seated home's (the two Players steppers; the third to twelfth names ride as the shell's `names`). */
 export type Raw = SeatedRaw;
 
-/**
- * What just happened to a seat, held on this phone until its Continue (the owner, 2026-10-02: "When
- * you the player bust, you need to confirm before proceeding"): a bust (the card that did it and
- * the points lost), a freeze (what it banked) or a Flip 7 (the bonus, the round's end). Online it is
- * this phone's own seat's; on one phone, any seat's (the active seat confirms). Nothing on the table
- * moves for this phone while it is up.
- */
-export type Pause = Readonly<{
-  seat: number;
-  kind: 'bust' | 'frozen' | 'flip7';
-  title: string;
-  detail: string;
-}>;
-
-/** The table's slice: the curtain (the shell's), the pause and the history sheet (the names past the second are the shell's `seatNames`). */
+/** The table's slice: the curtain (the shell's); the pause and the sheets are the shell's state, the names past the second its `seatNames`. */
 export type Table = Readonly<{
   curtain: number | null;
-  pause: Pause | null;
 }>;
 
 /** The seats past the shell's two: the third to the twelfth (the shell's `SeatOf<Flip7>` adds its own two). */
@@ -81,9 +60,8 @@ export type TableIntent =
   | Readonly<{ type: 'hit/click' }>
   | Readonly<{ type: 'stay/click' }>
   | Readonly<{ type: 'give/click'; seat: number }>
-  | Readonly<{ type: 'nextRound/click' }>
-  | Readonly<{ type: 'replay/click' }>
-  | Readonly<{ type: 'continue/click' }>;
+  /** The result sheet's one primary (`#rsNextBtn`): Next round between rounds, Play again (the shell's `again`) once the game is over. */
+  | Readonly<{ type: 'next/click' }>;
 
 /** Flip 7's types for the shared shell (`GameTypes` over what it names; the rest are the shell's defaults). */
 export type Flip7 = GameTypes<{
@@ -107,7 +85,7 @@ export type Step = SharedStep<Flip7>;
 export type Resume = SharedResume<Flip7>;
 export type HomeSnapshot = SharedHomeSnapshot<Flip7>;
 
-export const initialTable: Table = { curtain: null, pause: null };
+export const initialTable: Table = { curtain: null };
 
 export const waitingToDealMsg = (hostName: string): string =>
   `Waiting for ${hostName} to deal the next round`;
@@ -117,16 +95,15 @@ export const namesOf = (game: State): ReadonlyArray<string> => game.seats.map((s
 
 // ---- the shell's hooks into the table --------------------------------------------------------
 
-/** The shell's split (a start, the handoff, a leave and the host lost start the table over), and a deal drops the pause. */
-const reset = (table: Table, at: TableReset): Table =>
-  startsOver(at) ? initialTable : at === 'deal' ? { ...table, pause: null } : table;
-
 const PAUSE_STATUSES: ReadonlyArray<Status> = ['busted', 'frozen', 'flip7'];
 
 /**
+ * The shell's `table.pause` adapter (the owner, 2026-10-02: "When you the player bust, you need to
+ * confirm before proceeding"): what just happened to a seat, held on this phone until its Continue.
  * The pause a new view raises, against the view it replaces: the first seat (this phone's own
- * online; any on one phone) that went from active to busted, frozen or a Flip 7 within one round.
- * A cold paint (a resume, a reconnect) raises none.
+ * online; any on one phone) that went from active to busted (the card that did it and the points
+ * lost), frozen (what it banked) or a Flip 7 (the bonus, the round's end) within one round. A cold
+ * paint (a resume, a reconnect) raises none.
  */
 export const pauseFor = (local: boolean, prev: View | null, view: View): Pause | null => {
   if (prev?.round !== view.round || prev.startedAt !== view.startedAt) return null;
@@ -144,23 +121,17 @@ export const pauseFor = (local: boolean, prev: View | null, view: View): Pause |
       const last = s.line[s.line.length - 1];
       const lost = scoreLine(s.line.slice(0, -1));
       return {
-        seat,
-        kind: 'bust',
         title: local ? `${who} busts` : 'You bust',
         detail: `Another ${last === undefined ? 'number' : cardName(last)}: ${String(lost)} points lost this round.`,
       };
     }
     case 'frozen':
       return {
-        seat,
-        kind: 'frozen',
         title: local ? `${who} is frozen` : 'You are frozen',
         detail: `${String(scoreLine(s.line))} points banked this round.`,
       };
     case 'flip7':
       return {
-        seat,
-        kind: 'flip7',
         title: local ? `${who} flips 7!` : 'You flip 7!',
         detail: `+${String(FLIP7_BONUS)} bonus: the round ends for everyone.`,
       };
@@ -181,16 +152,6 @@ const CUE_MACHINE: CueMachine<Flip7> = {
   myTurn: isMyTurn,
 };
 
-/** The paint's state side: the shell's cue step, then the pause a new view raises (`pauseFor`) unless one is up. */
-const rendered = (app: App, prev: View | null): Step => {
-  const view = app.shell.view;
-  if (view === null) return pure(app);
-  const local = app.shell.role === 'local';
-  return then(cueStep(CUE_MACHINE)(app, prev), (a) =>
-    pure(withTable(a, { pause: a.table.pause ?? pauseFor(local, prev, view) })),
-  );
-};
-
 /** Pass-and-play: the actor's view (the host's between rounds is anybody's: the phone holder's); the curtain once, for the first player. */
 const viewer: ShellConfig<Flip7>['local']['viewer'] = (app, game) => {
   const actor = actorOf(game);
@@ -207,33 +168,21 @@ const revealer: ShellConfig<Flip7>['local']['revealer'] = (game) => ({
 // ---- the table's reducer ---------------------------------------------------------------------
 
 /**
- * `act(action)`: the shell's by role, behind flip7's two guards: nothing moves on this phone while
- * a pause waits for its Continue, and a guest between rounds waits for the host to deal.
+ * `act(action)`: the shell's by role (a pause up holds it there), behind flip7's one guard: a
+ * guest between rounds waits for the host to deal.
  */
 const act = (app: App, action: Action, ctx: Ctx): Step => {
-  if (app.table.pause !== null) return pure(app);
   const view = app.shell.view;
   if (app.shell.role === 'guest' && view?.phase.kind === 'roundOver')
     return refuse(app, waitingToDealMsg(nameOf(view, 0)));
   return shellAct(app, action, ctx, FLIP7);
 };
 
-/** Play again once the game is over: a fresh deal for the same seats (host or phone); a guest waits. */
-const replay = (app: App, ctx: Ctx): Step => {
-  const game = app.shell.game;
-  const view = app.shell.view;
-  if (view?.phase.kind !== 'gameOver') return pure(app);
-  if (app.shell.role === 'guest') return refuse(app, waitingToDealMsg(nameOf(view, 0)));
-  if (game === null) return pure(app);
-  const next = createGame(
-    game.seats.map((s) => s.name),
-    ctx.rng,
-    ctx.now,
-  );
-  return app.shell.role === 'local'
-    ? localBroadcast(withShell(app, { game: next, revealed: null }), false, ctx, FLIP7)
-    : broadcast(withShell(app, { game: next }), ctx, FLIP7);
-};
+/** The result sheet's primary: the next round's deal between rounds, the shell's Play again once the game is over. */
+const next = (app: App, ctx: Ctx): Step =>
+  app.shell.view?.phase.kind === 'gameOver'
+    ? again(app, ctx, FLIP7)
+    : act(app, { type: 'nextRound' }, ctx);
 
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
   switch (intent.type) {
@@ -245,24 +194,20 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       return act(app, { type: 'stay' }, ctx);
     case 'give/click':
       return act(app, { type: 'give', seat: intent.seat }, ctx);
-    case 'nextRound/click':
-      return act(app, { type: 'nextRound' }, ctx);
-    case 'replay/click':
-      return replay(app, ctx);
-    case 'continue/click':
-      return pure(withTable(app, { pause: null }));
+    case 'next/click':
+      return next(app, ctx);
   }
 };
 
 /** Flip 7's shell config: shellConfig.ts's half completed with the table hooks and the home snapshot's own part. */
 export const FLIP7: ShellConfig<Flip7> = {
   ...FLIP7_SHELL,
+  // The shell's reset (a start, the handoff, a leave and the host lost start the table over); the
+  // paint's state side is the shell's cue step, and the pause a new view raises is `pauseFor`'s.
   table: {
     initial: initialTable,
-    reset,
-    rendered,
-    // Escape with no sheet open: the pause's Continue first; the shell's sheets after.
-    escape: (app) => (app.table.pause === null ? null : pure(withTable(app, { pause: null }))),
+    rendered: cueStep(CUE_MACHINE),
+    pause: (app, prev, view) => pauseFor(app.shell.role === 'local', prev, view),
   },
   local: { viewer, revealer },
 };
@@ -280,5 +225,5 @@ export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf
 /** My seat may act on the view now (the paint's buttons). */
 export const myTurn = (app: App): boolean => {
   const view = app.shell.view;
-  return view !== null && app.table.curtain === null && app.table.pause === null && isMyTurn(view);
+  return view !== null && app.table.curtain === null && app.shell.pause === null && isMyTurn(view);
 };

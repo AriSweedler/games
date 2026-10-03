@@ -206,7 +206,8 @@ describe('pass and play', () => {
     expect(out.app.table.curtain).toBeNull();
     expect(out.effects).toContainEqual({ type: 'fx', cue: 'win' });
     expect(out.effects).toContainEqual(expect.objectContaining({ type: 'recordGame' }));
-    const next = run(out.app, { type: 'act', action: { type: 'again' } });
+    // Play again is the shell's: the same seats and terms dealt anew, the reveal cleared.
+    const next = run(out.app, { type: 'again/click' });
     expect(next.app.shell.game?.game.names).toEqual(['Ann', 'Bob', 'Cy']);
     expect(next.app.shell.game?.startedAt).toBe(NOW);
     expect(next.app.shell.view?.phase).not.toBe('gameOver');

@@ -14,9 +14,9 @@ code: the games landed in order, and the oldest ones carry shapes the newer rule
   _Why:_ the owner, 2026-10-02, on Flip 7: "When you the player bust, you need to confirm before
   proceeding. That way it's not so instant and you can understand what happened before
   proceeding." The fun of a press-your-luck game is the anticipation; an instant cut to the next
-  turn throws it away. The pause is state in the game's reducer (`pause: Pause | null`, with a
-  `continue/click` intent that clears it), never a timer: Flip 7's `web/games/flip7/src/ui/state.ts`
-  `pauseFor` is the model.
+  turn throws it away. The pause is shell state (`ShellState.pause`, raised by the game's
+  `table.pause` adapter, cleared by the shell's `pause/continue`), never a timer: Flip 7's
+  `web/games/flip7/src/ui/state.ts` `pauseFor` is the model.
 - **Every game is a shared-shell game.** The home, the host and join cards, the waiting rooms, the
   N-seat online sessions over PeerJS, the curtain for hidden hands, the Rules and About tabs, the
   sound toggle, resume and leave are the shell's (`web/shared/ui/shell.ts`, booted by
@@ -107,9 +107,10 @@ its state machine. The events that pause, so a new game can find its own on the 
 
 How it is built (Flip 7 today; the shape for every game):
 
-- The pause is a value in the table slice of the game's reducer (`pause`), raised when a new view
-  arrives (`pauseFor(local, prev, view)`) and cleared by one intent (`continue/click`). While it is
-  set, every other table intent is a no-op (`if (app.table.pause !== null) return pure(app)`).
+- The pause is shell state (`ShellState.pause`, web/shared/ui/shell.ts), raised when a new view
+  is painted through the game's `table.pause` adapter (Flip 7's `pauseFor(local, prev, view)`) and
+  cleared by one shell intent (`pause/continue`, the `pause.html` partial's Continue; Escape is the
+  same). While it is set no action moves (the shell's `actAll` returns the App as it is).
 - The pause carries what to show; the painter paints it from the pause, not from the live view, so
   the player reads the state that caused the event even after the host has moved on.
 - Online, the pause is this phone's seat's alone; on one phone it is any seat's.
@@ -135,7 +136,7 @@ one with the pause (`web/games/flip7/src/`). The shell's design is `docs/design/
 - `protocol.ts`: pure, the trust boundary. Every inbound frame through a `Result` decoder.
 - `net/sessions.ts`: `sessionsFor(game, codec)` over protocol.ts; the sessions themselves are the shell's (`web/shared/net`), edges over a `Transport`; never import `peerjs`.
 - `storage.ts`: the only localStorage reader, keys prefixed `<g>_`, the save under `<g>MP_v1`.
-- `ui/state.ts`: the table slice and its reducer (the curtain, the pause, the game's intents);
+- `ui/state.ts`: the table slice and its reducer (the curtain, the `table.pause` adapter, the game's intents);
   `ui/render.ts` paints it through `edge/dom.ts`; `ui/home.ts` the home's game-specific inputs;
   `ui/rules.ts`, `ui/glossary.ts`, `ui/about.ts` the two tabs; `ui/sound.ts` the cue table.
 - No `fx.ts`: the boot plays `shellConfig.cues.table` through the shared cue player (`shellFx`)

@@ -740,8 +740,9 @@ const stateTs = (
     ? 'Pass-and-play raises the curtain on every change of turn: a seat holds something the other must not see (AGENT.md "Hidden hands").'
     : "Pass-and-play raises no curtain: nothing is hidden, so both players share the one screen and the view changes hands as the turn does (Hive's shape)."
 }
-// The game's end is a pause (AGENT.md "Understand what happened before proceeding"): the result
-// sheet over the table waits for Continue. Pure: the clock and the rng come in through \`Ctx\`.
+// The game's end is a pause (AGENT.md "Understand what happened before proceeding"): the shell's
+// pause sheet holds the table until Continue (\`table.pause\` below), then the result sheet offers
+// Play again (the shell's \`again/click\`). Pure: the clock and the rng come in through \`Ctx\`.
 import {
   act as shellAct,
   andThen as then,
@@ -757,6 +758,7 @@ import {
   type GameTypes,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
+  type Pause,
   type Resume as SharedResume,
   type ShellApp,
   type ShellConfig,
@@ -802,21 +804,15 @@ export type Raw = Readonly<{ seats?: never }>;
 /** \`initHome\` reads nothing beyond the shell's keys. */
 export type Home = Readonly<{ opts?: never }>;
 
-/** A consequential event shown with its state until Continue (AGENT.md): the game's end, for now. */
-export type Pause = Readonly<{ kind: 'over'; title: string; detail: string }>;
-
 export type Table = Readonly<{
   /** The shell's pass-and-play curtain seat (\`ShellTypes.Table\`; the shell writes it from \`local.viewer\`). */
   curtain: Seat | null;
-  /** The pause waiting for Continue, or none. */
-  pause: Pause | null;
   /** \`#historyOverlay\` open. */
   historyOpen: boolean;
 }>;
 
 export type TableIntent =
   | Readonly<{ type: 'act'; action: Action }>
-  | Readonly<{ type: 'continue/click' }>
   | Readonly<{ type: 'rules/open' }>
   | Readonly<{ type: 'rules/close' }>
   | Readonly<{ type: 'history/open' }>
@@ -850,7 +846,7 @@ export type Step = SharedStep<${pascal}>;
 export type Resume = SharedResume<${pascal}>;
 export type HomeSnapshot = SharedHomeSnapshot<${pascal}>;
 
-export const initialTable: Table = { curtain: null, pause: null, historyOpen: false };
+export const initialTable: Table = { curtain: null, historyOpen: false };
 
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
@@ -864,18 +860,22 @@ export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
   return next.game.turns > prev.game.turns ? ['pass'] : [];
 };
 
-/** The pause a new view raises against the one it replaces: the end, with how it came. */
-export const pauseFor = (prev: View | null, next: View): Pause | null => {
-  const result = next.game.result;
-  if (result === null || (prev !== null && prev.game.result !== null)) return null;
+/** The end's words: who won (or a draw) and how it came, for the pause and the result sheet alike. */
+export const endWords = (view: View): Pause | null => {
+  const result = view.game.result;
+  if (result === null) return null;
   const title =
     result.kind === 'draw'
       ? 'A draw'
-      : result.winner === next.seat
+      : result.winner === view.seat
         ? 'You win!'
-        : \`\${next.names[result.winner]} wins!\`;
-  return { kind: 'over', title, detail: next.game.note };
+        : \`\${view.names[result.winner]} wins!\`;
+  return { title, detail: view.game.note };
 };
+
+/** The shell's \`table.pause\` adapter (AGENT.md "Understand what happened before proceeding"): the pause a new view raises against the one it replaces: the end, with how it came; a cold paint raises none. */
+export const pauseFor = (prev: View | null, next: View): Pause | null =>
+  prev === null || prev.game.result !== null ? null : endWords(next);
 
 /** One key per position, so a re-sent frame plays nothing. */
 const cueKey = (v: View): string =>
@@ -883,8 +883,8 @@ const cueKey = (v: View): string =>
 
 /**
  * The state side of a paint: the table is the screen while a view is held; the cues come from the
- * change since \`prev\`, once per position, and "your turn" when an online turn lands on my seat;
- * the end raises its pause.
+ * change since \`prev\`, once per position, and "your turn" when an online turn lands on my seat
+ * (the end's pause is the shell's, through \`table.pause\`).
  */
 const rendered = (app: App, prev: View | null): Step => {
   const view = app.shell.view;
@@ -897,11 +897,7 @@ const rendered = (app: App, prev: View | null): Step => {
   const cues: ReadonlyArray<Cue> = fresh
     ? [...cuesBetween(prev, view), ...(myTurnNow ? (['yourTurn'] as const) : [])]
     : [];
-  const pause = fresh || prev === null ? (app.table.pause ?? pauseFor(prev, view)) : app.table.pause;
-  return step(
-    { shell: { ...app.shell, cues: { key }, screen: 'tableScreen' }, table: { ...app.table, pause } },
-    ...cues.map(fx),
-  );
+  return step(withShell(app, { cues: { key }, screen: 'tableScreen' }), ...cues.map(fx));
 };
 
 const reset = (table: Table, at: TableReset): Table => {
@@ -936,25 +932,20 @@ const revealer: ShellConfig<${pascal}>['local']['revealer'] = (game) => ({
   seat: turnSeat(game.game) ?? 0,
 });
 
-/** Only \`again\` applies to a decided game: it is the new game, and it shows seat 0's view. */
-const newGame: ShellConfig<${pascal}>['local']['newGame'] = (prev) => prev.game.result !== null;
-
 export const ${upper}: ShellConfig<${pascal}> = {
   ...${upper}_SHELL,
-  table: { initial: initialTable, reset, rendered },
-  local: { viewer, revealer, newGame },
+  // The end is a pause (the shell holds it until Continue; nothing moves meanwhile); Play again is the shell's \`again/click\`.
+  table: { initial: initialTable, reset, rendered, pause: (_app, prev, view) => pauseFor(prev, view) },
+  local: { viewer, revealer },
 };
 
-/** \`act(action)\`: the shell's by role (the mover acts on a pass-and-play phone: \`revealer\`), behind the game's one guard: nothing moves while a pause waits for its Continue. */
-const act = (app: App, action: Action, ctx: Ctx): Step =>
-  app.table.pause !== null ? pure(app) : shellAct(app, action, ctx, ${upper});
+/** \`act(action)\`: the shell's by role (the mover acts on a pass-and-play phone: \`revealer\`; a pause up holds it there). */
+const act = (app: App, action: Action, ctx: Ctx): Step => shellAct(app, action, ctx, ${upper});
 
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
   switch (intent.type) {
     case 'act':
       return then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
-    case 'continue/click':
-      return pure(withTable(app, { pause: null }));
     case 'rules/open':
       return pure(withShell(app, { rulesOpen: true }));
     case 'rules/close':
@@ -1068,22 +1059,19 @@ describe('pass and play', () => {
     expect(over.effects.map((e) => e.type)).toContain('toast');
   });
 
-  test('the end is a pause: the result waits for Continue, nothing moves meanwhile, Continue clears it', () => {
+  test('the end is a pause the shell holds: nothing moves meanwhile, Continue clears it for the result, Play again deals the same seats anew', () => {
     const app = started();
     const resigned = run(app, { type: 'act', action: { type: 'resign' } }).app;
     expect(resigned.shell.game?.game.result).toEqual({ kind: 'win', winner: 1, by: 'resign' });
-    expect(resigned.table.pause).toEqual({
-      kind: 'over',
-      title: 'Bob wins!',
-      detail: 'Ann resigned.',
-    });
+    expect(resigned.shell.pause).toEqual({ title: 'Bob wins!', detail: 'Ann resigned.' });
     const stuck = run(resigned, { type: 'act', action: { type: 'again' } }).app;
     expect(stuck.shell.game?.game.result).not.toBeNull();
-    const cleared = run(resigned, { type: 'continue/click' }).app;
-    expect(cleared.table.pause).toBeNull();
-    const again = run(cleared, { type: 'act', action: { type: 'again' } }).app;
+    const cleared = run(resigned, { type: 'pause/continue' }).app;
+    expect(cleared.shell.pause).toBeNull();
+    const again = run(cleared, { type: 'again/click' }).app;
     expect(again.shell.game?.game.result).toBeNull();
     expect(again.shell.game?.game.turns).toBe(0);
+    expect(again.shell.game?.game.names).toEqual(['Ann', 'Bob']);
   });
 
   test('the draw after MAX_TURNS passes ends the game on a pause too', () => {
@@ -1092,7 +1080,7 @@ describe('pass and play', () => {
       return i < MAX_TURNS - 1 && next.table.curtain !== null ? run(next, reveal).app : next;
     }, started());
     expect(end.shell.game?.game.result).toMatchObject({ kind: 'win', by: 'luck' });
-    expect(end.table.pause?.kind).toBe('over');
+    expect(end.shell.pause?.title).toMatch(/wins!$/);
   });
 });
 
@@ -1123,8 +1111,8 @@ const renderTs = (
 // DOM edge, and every control bound to an intent. The shell's half is web/shared/ui's (the screens,
 // the waiting rooms, the home tabs, the sheets, the curtain); the table is this file's: the names
 // strip (\`#myName\`, \`#oppName\`, \`#oppDot\`), the board slot (\`#board\`: TODO, the game's own), the
-// status line, Pass and Resign while the game is on, and the result sheet the end's pause raises
-// (Continue clears it, Play again starts anew).
+// status line, Pass and Resign while the game is on, and the result sheet after the end's pause
+// (the shell's sheet, cleared by Continue) with Play again.
 import {
   requireId,
   setDisabled,
@@ -1138,19 +1126,18 @@ import {
   curtainText as shellCurtainText,
   paintCurtain as paintShellCurtain,
 } from '../../../../shared/ui/curtain.ts';
-import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindShellSheets,
   paintResult,
-  paintSheet,
   paintShellChrome,
+  paintShellSheets,
   type Dispatch,
 } from '../../../../shared/ui/shellPaint.ts';
 import { turnSeat, type Seat, type View } from '../engine/view.ts';
 import { bindHome, paintHome } from './home.ts';
-import { ${upper}, type App, type Intent, type ${pascal} } from './state.ts';
+import { ${upper}, endWords, type App, type Intent, type ${pascal} } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 
@@ -1173,10 +1160,11 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   setDisabled(requireId(doc, 'passBtn'), !mine);
   toggleClass(requireId(doc, 'resignBtn'), 'hidden', !mine);
   setDisabled(requireId(doc, 'resignBtn'), !mine);
-  toggleClass(requireId(doc, 'againBtn'), 'hidden', !(over && app.table.pause === null));
+  toggleClass(requireId(doc, 'againBtn'), 'hidden', !(over && app.shell.pause === null));
   setText(requireId(doc, 'statusText'), statusText(v));
-  const pause = app.table.pause;
-  paintResult(doc, pause !== null, pause === null ? null : { title: pause.title, score: pause.detail });
+  // The end's words on the result sheet once its pause (the shell's) was read.
+  const end = endWords(v);
+  paintResult(doc, over && app.shell.pause === null, end === null ? null : { title: end.title, score: end.detail });
 };
 
 /** The curtain for the seat the phone goes to (ui/state.ts \`viewer\`): its name and the last note; hidden when no seat waits. The button is the page's \`revealLabel\`; "Continue online" shows under it when the shell says the game can go on as a room. */
@@ -1190,10 +1178,9 @@ const paintCurtain = (doc: DocumentLike, app: App): void => {
   );
 };
 
+/** The shell's sheets (the rules, the history with the recent games, the pause the page opts into): the history flag is this table's. */
 const paintOverlays = (doc: DocumentLike, app: App): void => {
-  paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
-  paintSheet(doc, 'historyOverlay', app.table.historyOpen);
-  if (app.table.historyOpen) paintRecentGames(doc, app.shell.recentGames);
+  paintShellSheets(doc, { ...app.shell, historyOpen: app.table.historyOpen });
 };
 
 /** The shell's chrome first (the screens, the rooms, the 🌐, the dot and the names strip off the view), then the page's own. */
@@ -1217,8 +1204,8 @@ const bindTable = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
     [
       ['passBtn', { type: 'act', action: { type: 'pass' } }],
       ['resignBtn', { type: 'act', action: { type: 'resign' } }],
-      ['againBtn', { type: 'act', action: { type: 'again' } }],
-      ['rsContinueBtn', { type: 'continue/click' }],
+      ['againBtn', { type: 'again/click' }],
+      ['rsAgainBtn', { type: 'again/click' }],
       ['rsLeaveBtn', { type: 'leave/request' }],
       ['leaveBtn', { type: 'leave/request' }],
       ['soundBtn', { type: 'sound/toggle' }],
@@ -1361,14 +1348,15 @@ const blocks: ShellBlocks = {
       </div>\`,
   // No endgame block: the shell's placeholder says the game ends on the result sheet over the table.
   result: resultMarkup({
-    note: 'the end over the final table (the owner: "understand what happened before proceeding"); Continue clears the pause, Play again starts anew.',
+    note: 'the end over the final table, after its pause (the owner: "understand what happened before proceeding"); Play again starts anew.',
     score: 'note',
-    continueBtn: true,
+    primary: { id: 'rsAgainBtn', label: 'Play again' },
     secondary: { id: 'rsLeaveBtn', label: 'Leave the table' },
   }),
 };
 
-export const ${upper}_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };
+/** The pause (\`pause: true\`, the shell's partial): the end held until Continue (ui/state.ts \`pauseFor\`). */
+export const ${upper}_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks, pause: true };
 // The title the shell heading, the share sheet and the registry spell: '${tsTitle}'.
 `;
 };
@@ -1564,8 +1552,8 @@ const e2eSpecTs = (
   hidden: boolean,
 ): string => `// ${title} pass-and-play through the shared shell (docs/design/${slug}.md §3): a two-seat game on the
 // shell page at a phone. Pass the phone with two names, Start${hidden ? ', lift the curtain,' : ','} and the table is seat 0's;
-// a Pass hands it to seat 1${hidden ? ' under the curtain' : ' on screen'}; Resign ends the game on the result sheet, whose Continue
-// clears the pause and offers Play again. On \`pages\` alone: this is about the page, not the origin.
+// a Pass hands it to seat 1${hidden ? ' under the curtain' : ' on screen'}; Resign ends the game on the shell's pause sheet, whose
+// Continue clears it for the result sheet and Play again. On \`pages\` alone: this is about the page, not the origin.
 // The shell's own flows (the home, the room, the handoff, resume) are the shell specs' \`@${slug}\` describes.
 import { PHONE } from './fixtures/geometry.ts';
 import { requireView, ${slug}StartLocal } from './fixtures/${slug}.ts';
@@ -1589,10 +1577,12 @@ test('pass, resign, continue at a phone', async ({ phone, project }) => {
   await expect(page.locator('#statusText')).toContainText('Your turn');
 
   await page.locator('#resignBtn').click();
+  await expect(page.locator('#pauseOverlay')).toBeVisible();
+  await expect(page.locator('#pauseTitle')).toHaveText(\`\${NAMES[0]} wins!\`);
+  await page.locator('#continueBtn').click();
+  await expect(page.locator('#pauseOverlay')).toBeHidden();
   await expect(page.locator('#resultOverlay')).toBeVisible();
   await expect(page.locator('#rsTitle')).toHaveText(\`\${NAMES[0]} wins!\`);
-  await page.locator('#rsContinueBtn').click();
-  await expect(page.locator('#resultOverlay')).toBeHidden();
   await expect(page.locator('#againBtn')).toBeVisible();
   expect((await requireView(page)).game.result).toEqual({ kind: 'win', winner: 0, by: 'resign' });
 });
@@ -1621,8 +1611,8 @@ plays whole bot games at every seat count with the counts checked at every step.
 ## 3. The page
 
 On the shared shell (AGENT.md "Every game is a shared-shell game"): \`page.ts\` composes the home,
-\`shellConfig.ts\` is the \`ShellGameData\`, \`src/ui/state.ts\` the reducer with the pause every
-consequential event raises (\`pause: Pause | null\`, cleared by \`continue/click\`), \`src/ui/sound.ts\`
+\`shellConfig.ts\` is the \`ShellGameData\`, \`src/ui/state.ts\` the reducer with the \`table.pause\` adapter every
+consequential event is raised through (the shell holds it until its \`pause/continue\`), \`src/ui/sound.ts\`
 the cue table over \`SHELL_CUES\`, \`src/ui/render.ts\` the table's paint. Seats: ${String(seats.min)}-${String(seats.max)}.
 ${
   seats.min < seats.max

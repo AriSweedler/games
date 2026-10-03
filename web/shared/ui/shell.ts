@@ -411,6 +411,17 @@ export type ShellState<G extends ShellTypes> = Readonly<{
    * moves on (hive's rematch, briscola's and backgammon's next game) clears it in `rendered`.
    */
   resultDismissed: boolean;
+  /**
+   * A consequential event held with its state until the player's Continue (AGENT.md "Understand
+   * what happened before proceeding"; the owner, 2026-10-02: "When you the player bust, you need
+   * to confirm before proceeding"; shell-hoist.md row H): what to show, raised by the game's
+   * `table.pause` adapter as a new view is painted (`painted`, once: a pause already up is kept),
+   * painted by `paintShellSheets` into `#pauseOverlay` (the `pause.html` partial a page opts into),
+   * cleared by `pause/continue` and wherever the table is reset for a start, a deal, the handoff, a
+   * leave or the host lost (`SHEETS_AWAY`). While it is up no action moves (`actAll`), and Escape
+   * is its Continue. Online it is this phone's own seat's; on one phone, any seat's.
+   */
+  pause: Pause | null;
   cues: G['Cues'];
   /** `#playSubmenu` held open by a long press on the Play tab (`force-open`). */
   submenuOpen: boolean;
@@ -443,6 +454,9 @@ export type ShellState<G extends ShellTypes> = Readonly<{
    */
   recorded: string | null;
 }>;
+
+/** What a pause shows: its title large ("Ari busts") and the line under it (the card and the points lost). */
+export type Pause = Readonly<{ title: string; detail: string }>;
 
 export type ShellApp<G extends ShellTypes> = Readonly<{ shell: ShellState<G>; table: G['Table'] }>;
 
@@ -532,10 +546,18 @@ export type ShellIntent<G extends ShellTypes> =
   | Readonly<{ type: 'result/dismiss' }>
   /** The chip that brings a put-away result back (`#resultChipBtn`). */
   | Readonly<{ type: 'result/open' }>
+  /** The pause's `#continueBtn` (`pause.html`): the event was read, the table moves on (`ShellState.pause`). */
+  | Readonly<{ type: 'pause/continue' }>
+  /**
+   * Play again once the game is over (`#rsAgainBtn`, flip7's `#rsNextBtn` at the game's end): a
+   * fresh `engine.create` for the same seats and terms, dealt by the host or the phone (`again`);
+   * a guest waits for the host's.
+   */
+  | Readonly<{ type: 'again/click' }>
   /**
    * Escape with no listed sheet open (shellPaint.ts `bindSheets`' fallback): the game's own thing
-   * first (`cfg.table.escape`: a lifted card, a drag, a pause, a peek), then the history, then the
-   * rules; nothing when nothing is up.
+   * first (`cfg.table.escape`: a lifted card, a drag, a peek), then the history, then the rules;
+   * nothing when nothing is up. A pause up is its Continue, before any of them.
    */
   | Readonly<{ type: 'escape' }>
   /** The hook's `soundFont(name)` (the console, for now): a valid font plays from now on and is remembered. */
@@ -640,6 +662,8 @@ export const SHELL_INTENT_TYPES = [
   'history/close',
   'result/dismiss',
   'result/open',
+  'pause/continue',
+  'again/click',
   'escape',
   'soundFont/set',
   'flip/set',
@@ -1094,14 +1118,21 @@ export type ShellConfigBase<G extends ShellTypes> = Readonly<{
      */
     rendered: (app: ShellApp<G>, prev: G['View'] | null, ctx: Ctx) => Step<G>;
     /**
+     * The pause a new view raises against the one it replaces (`ShellState.pause`; flip7's
+     * `pauseFor`: the first seat that went from active to busted, frozen or a Flip 7), or null.
+     * Read after `rendered` at every paint while no pause is up; a cold paint (`prev` null: a
+     * resume, a reconnect) is the adapter's to refuse. Absent, the game never pauses.
+     */
+    pause?: (app: ShellApp<G>, prev: G['View'] | null, view: G['View']) => Pause | null;
+    /**
      * A refused action: the toast, and whatever the table drops (gin a waiting draw stage,
      * backgammon its taps, hive its pick). Absent, the toast alone (`refuse`): a table with
      * nothing picked up to drop (uno, flip7) leaves it out.
      */
     refuse?: (app: ShellApp<G>, message: string) => Step<G>;
     /**
-     * Escape with no sheet open: what of the game's own goes first (briscola's card view, drag,
-     * lift and deck; flip7's pause; hive's peek, proposal and pick), or null when nothing of its
+     * Escape with no sheet open (a pause up took it first): what of the game's own goes first
+     * (briscola's card view, drag, lift and deck; hive's peek, proposal and pick), or null when nothing of its
      * own is up, so the shell closes the history, then the rules. Absent, the shell's two alone.
      */
     escape?: (app: ShellApp<G>, ctx: Ctx) => Step<G> | null;
@@ -1346,8 +1377,7 @@ const STARTS_OVER: Readonly<Record<TableReset, boolean>> = {
 export const startsOver = (at: TableReset): boolean => STARTS_OVER[at];
 /**
  * `table.reset` absent: at a site that starts over, the initial table with `keeps` carried from
- * the old one; elsewhere the table as it is. Exported for the game that spells one more site over
- * it (flip7's deal drops its pause).
+ * the old one; elsewhere the table as it is.
  */
 const tableReset =
   <T extends object>(initial: T, keeps: ReadonlyArray<keyof T>) =>
@@ -1869,10 +1899,9 @@ export const fx = <C extends string>(cue: C): Readonly<{ type: 'fx'; cue: C }> =
   cue,
 });
 /**
- * The `rendered` of the shared shape (uno's and fidice's whole, flip7's first half): the table is
- * the screen while a view is held, the cues since `prev` play once per position and the memory
- * is keyed on it. A game with more to do at a paint runs its own over `cuesFor` (hive) or maps
- * this step (flip7's pause).
+ * The `rendered` of the shared shape (uno's, flip7's and fidice's whole): the table is the screen
+ * while a view is held, the cues since `prev` play once per position and the memory is keyed on
+ * it. A game with more to do at a paint runs its own over `cuesFor` (hive).
  */
 export const cueStep =
   <G extends CuedTypes>(machine: CueMachine<G>) =>
@@ -1929,7 +1958,23 @@ const recordResult = <G extends ShellTypes>(
  * initial table at a start, the handoff, a leave and the host lost; the #20 rule: Leave puts every
  * sheet away) and the result's dismissal with them.
  */
-const SHEETS_AWAY = { rulesOpen: false, historyOpen: false, resultDismissed: false } as const;
+const SHEETS_AWAY = {
+  rulesOpen: false,
+  historyOpen: false,
+  resultDismissed: false,
+  pause: null,
+} as const;
+
+/** The pause the game's `table.pause` raises for this paint, unless one is already up (it waits for its Continue). */
+const paused = <G extends ShellTypes>(
+  app: ShellApp<G>,
+  prev: G['View'] | null,
+  cfg: ShellConfig<G>,
+): ShellApp<G> => {
+  const view = app.shell.view;
+  if (view === null || app.shell.pause !== null || cfg.table.pause === undefined) return app;
+  return withShell(app, { pause: cfg.table.pause(app, prev, view) });
+};
 
 const painted = <G extends ShellTypes>(
   app: ShellApp<G>,
@@ -1938,7 +1983,9 @@ const painted = <G extends ShellTypes>(
   cfg: ShellConfig<G>,
 ): Step<G> =>
   andThen(
-    andThen(cfg.table.rendered(app, prev, ctx), (a) => recordResult(a, ctx, cfg)),
+    andThen(cfg.table.rendered(app, prev, ctx), (a) =>
+      recordResult(paused(a, prev, cfg), ctx, cfg),
+    ),
     (a) => rotationHint(a, ctx, cfg),
   );
 
@@ -2059,8 +2106,9 @@ export const localBroadcast = <G extends ShellTypes>(
  * the reveal cleared when a new game began (`cfg.local.newGame`), then `localBroadcast`; the host
  * applies it for seat 0 and broadcasts once; a connected guest sends one `action` frame per
  * action, in order (the host applies them one by one); a guest without its host, or no role at
- * all, hears `NOT_CONNECTED_MSG`. A refusal is the table's `refuse` hook (`refuseWith`). What a
- * game guards before the shell acts stays its own (flip7's pause, gin's draw stage).
+ * all, hears `NOT_CONNECTED_MSG`. A refusal is the table's `refuse` hook (`refuseWith`). Nothing
+ * moves while a pause waits for its Continue (`ShellState.pause`); what else a game guards before
+ * the shell acts stays its own (flip7's guest between rounds, gin's draw stage).
  */
 export const actAll = <G extends ShellTypes>(
   app: ShellApp<G>,
@@ -2069,6 +2117,7 @@ export const actAll = <G extends ShellTypes>(
   cfg: ShellConfig<G>,
 ): Step<G> => {
   const game = app.shell.game;
+  if (app.shell.pause !== null) return pure(app);
   switch (app.shell.role) {
     case 'local': {
       if (game === null) return pure(app);
@@ -2107,6 +2156,48 @@ export const act = <G extends ShellTypes>(
   ctx: Ctx,
   cfg: ShellConfig<G>,
 ): Step<G> => actAll(app, [action], ctx, cfg);
+
+/** `again/click` at a guest: the host deals the next game; the toast names it. */
+export const hostDealsAgainMsg = (hostName: string | null): string =>
+  `Waiting for ${hostName ?? 'the host'} to deal again.`;
+
+/** A seat's player id as the shell deals it: `localSeats`' `p1`, `p2`… on a phone, `host/deal`'s `host`, `guest`, `guest2`… in a room. */
+const seatId = (role: Role, i: number): string =>
+  role === 'local'
+    ? `p${String(i + 1)}`
+    : i === 0
+      ? 'host'
+      : i === 1
+        ? 'guest'
+        : `guest${String(i + 1)}`;
+
+/**
+ * `again/click` (docs/design/dry-review-2026-10.md §2.6 line 270: flip7's `replay`, uno's and
+ * hive's engine `again` dispatched from the result sheet): once the game is over, the same seats
+ * (the names off my view, `cfg.result.playersOf`) and the room's terms through `engine.create`, as
+ * `host/deal` deals (the sheets away, the table reset for a deal); on a phone the reveal is
+ * cleared too, so the curtain names the new game's starter; the host broadcasts; a guest is told
+ * the host deals (`hostDealsAgainMsg`). Nothing before the game is over. Exported for the game
+ * whose one primary is Next round until the game's end (flip7's `next/click`).
+ */
+export const again = <G extends ShellTypes>(
+  app: ShellApp<G>,
+  ctx: Ctx,
+  cfg: ShellConfig<G>,
+): Step<G> => {
+  const s = app.shell;
+  const view = s.view;
+  if (view === null || s.role === null || !cfg.engine.over(view)) return pure(app);
+  if (s.role === 'guest') return refuseWith(app, hostDealsAgainMsg(s.oppName), cfg);
+  const role = s.role;
+  const players = cfg.result.playersOf(view).map((name, i) => ({ id: seatId(role, i), name }));
+  const game = cfg.engine.create(playersFor<G>(players), s.opts, ctx.rng, ctx.now);
+  const dealt: ShellApp<G> = {
+    shell: { ...s, game, ...SHEETS_AWAY, ...(role === 'local' ? { revealed: null } : {}) },
+    table: resetWith(app.table, 'deal', cfg),
+  };
+  return role === 'local' ? localBroadcast(dealt, false, ctx, cfg) : broadcast(dealt, ctx, cfg);
+};
 
 /** The shell seated for pass-and-play with `game` and the table reset for it: what `startLocal` broadcasts (gin's sandbox seats its hand-made melds in between). */
 export const localSeated = <G extends ShellTypes>(
@@ -2998,7 +3089,13 @@ export const reduceShell = <G extends ShellTypes>(
       return pure(withShell(app, { resultDismissed: true }));
     case 'result/open':
       return pure(withShell(app, { resultDismissed: false }));
+    case 'pause/continue':
+      return pure(withShell(app, { pause: null }));
+    case 'again/click':
+      return again(app, ctx, cfg);
     case 'escape': {
+      // The pause's Continue first: nothing else of the table moves while it is up.
+      if (s.pause !== null) return pure(withShell(app, { pause: null }));
       const own = cfg.table.escape?.(app, ctx) ?? null;
       if (own !== null) return own;
       if (s.historyOpen) return pure(withShell(app, { historyOpen: false }));
@@ -3191,6 +3288,7 @@ export const initialShell = <G extends ShellTypes>(cfg: ShellConfig<G>): ShellSt
   rulesOpen: false,
   historyOpen: false,
   resultDismissed: false,
+  pause: null,
   cues: initialCuesOf(cfg),
   submenuOpen: false,
   longPressed: false,

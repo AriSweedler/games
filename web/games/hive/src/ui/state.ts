@@ -345,14 +345,11 @@ const escape = (app: App, ctx: Ctx): Step | null => {
   return pure(pick(app, null));
 };
 
-/** Only `again` applies to a decided game: it is the new game, and it shows White's view. */
-const newGame: ShellConfig<Hive>['local']['newGame'] = (prev) => prev.game.result !== null;
-
 export const HIVE: ShellConfig<Hive> = {
   ...HIVE_SHELL,
   table: { initial: initialTable, reset, rendered, refuse, escape },
-  // Pass-and-play: the seat whose turn it is acts (`revealer`; either seat may play again).
-  local: { viewer, revealer, newGame },
+  // Pass-and-play: the seat whose turn it is acts (`revealer`); Play again is the shell's `again/click`, White's view first.
+  local: { viewer, revealer },
   home: {
     ...HIVE_SHELL.home,
     apply: (app, home) => withTable(app, { motion: home.motion, hints: home.hints }),

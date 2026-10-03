@@ -229,7 +229,7 @@ const bindTable = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
       ['passBtn', { type: 'act', action: { type: 'pass' } }],
       ['unoBtn', { type: 'act', action: { type: 'uno' } }],
       ['callOutBtn', { type: 'act', action: { type: 'callOut' } }],
-      ['rsAgainBtn', { type: 'act', action: { type: 'again' } }],
+      ['rsAgainBtn', { type: 'again/click' }],
       ['rsLeaveBtn', { type: 'leave/request' }],
       ...shellButtons<Uno>(),
     ],
