@@ -52,9 +52,9 @@ export const DEFAULT_NAME = 'Ari';
 export const LOCAL_NAMES: readonly [string, string] = ['Ari', 'Ethan'];
 export const LEAVE_LOCAL_MSG = 'End this match? The score will be cleared.';
 export const LEAVE_ONLINE_MSG = 'Leave this match? The room will close.';
-/** A match length from a select's raw value: one of MATCH_LENGTHS, else `fallback`. */
-export const parseMatchLength = (raw: string | number | undefined, fallback: number): number => {
-  const n = typeof raw === 'number' ? raw : parseInt(raw ?? '', 10);
+/** A match length from a select's raw value (the shell's `opts/set` and the start buttons carry strings alone): one of MATCH_LENGTHS, else `fallback`. */
+export const parseMatchLength = (raw: string | undefined, fallback: number): number => {
+  const n = parseInt(raw ?? '', 10);
   return MATCH_LENGTHS.includes(n) ? n : fallback;
 };
 

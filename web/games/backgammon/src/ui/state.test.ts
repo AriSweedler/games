@@ -1729,6 +1729,27 @@ describe('storage', () => {
     storage.map.set(STORAGE_KEYS.matchLength, '4');
     expect(readHome(store)).toMatchObject({ opts: { matchLength: 5, variant: 'portes' } });
   });
+
+  test('prefs.opts: the two selects under their own keys, each read to its default alone; the write stores both', () => {
+    const storage = fakeStorage();
+    const store = createStore(storage);
+    const pref = BACKGAMMON.prefs.opts;
+    if (pref === undefined) throw new Error('backgammon remembers its terms');
+    expect(pref.read(store)).toEqual({ matchLength: 5, variant: 'portes' });
+    storage.map.set(STORAGE_KEYS.matchLength, '7');
+    expect(pref.read(store)).toEqual({ matchLength: 7, variant: 'portes' });
+    storage.map.set(STORAGE_KEYS.variant, 'backgammon');
+    expect(pref.read(store)).toEqual({ matchLength: 7, variant: 'backgammon' });
+    storage.map.set(STORAGE_KEYS.matchLength, 'nine');
+    expect(pref.read(store)).toEqual({ matchLength: 5, variant: 'backgammon' });
+    storage.map.delete(STORAGE_KEYS.matchLength);
+    storage.map.set(STORAGE_KEYS.variant, 'fevga');
+    expect(pref.read(store)).toEqual({ matchLength: 5, variant: 'portes' });
+    pref.write(store, { matchLength: 3, variant: 'backgammon' });
+    expect(storage.map.get(STORAGE_KEYS.matchLength)).toBe('3');
+    expect(storage.map.get(STORAGE_KEYS.variant)).toBe('backgammon');
+    expect(pref.read(store)).toEqual({ matchLength: 3, variant: 'backgammon' });
+  });
 });
 
 describe('the sessions read back', () => {
