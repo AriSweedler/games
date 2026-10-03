@@ -518,10 +518,10 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
     );
     expect(gaps).toEqual({
       'gin-rummy': ['rules-fit', 'pauses'],
-      fidice: ['curtain', 'rules-fit', 'cues', 'stepper', 'pauses'],
+      fidice: ['rules-fit', 'cues', 'stepper', 'pauses'],
       backgammon: ['rules-fit', 'pauses'],
       briscola: ['curtain', 'rules-fit', 'pauses'],
-      uno: ['curtain', 'pauses'],
+      uno: ['pauses'],
       flip7: [],
       hive: ['pauses'],
     });

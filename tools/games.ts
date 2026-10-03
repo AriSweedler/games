@@ -841,8 +841,6 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     hides: true,
     gaps: [
       {
-      },
-      {
         rule: 'pauses',
         followUp:
           "a penalty drawn shows the card that caused it and the cards drawn until Continue (AGENT.md table): a `pause` in ui/state.ts, Flip 7's pauseFor the model",
