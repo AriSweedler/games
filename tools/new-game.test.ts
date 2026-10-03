@@ -7,7 +7,10 @@
 // one-commit git history (tools/ci/affected.test.ts diffs HEAD against itself). The two shapes the
 // flags pick between are proved: two seats with nothing hidden (Hive's), and a hidden hand with a
 // seat range, whose stepper is a declared gap. Pure helpers (the arg parser, the anchored edits)
-// are pinned beside, without a copy. Runs in the harness suite (tools/ci/suites.ts).
+// are pinned beside, without a copy, and so is the table block the template spells
+// (docs/design/dry-review-2026-10.md §6: the shell's partials, pause, sheets and types, and none
+// of the pre-hoist shapes), so a row that edits the template is held to it without the copy's
+// minute. Runs in the harness suite (tools/ci/suites.ts).
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -178,6 +181,98 @@ describe('the arguments', () => {
       upper: 'TALLY',
       hook: '__tally',
       title: 'Tally',
+    });
+  });
+});
+
+/** The scaffold's file whose path ends with `suffix`, read off the template without a copy. */
+const generated = (spec: NewGameSpec, suffix: string): string => {
+  const file = generatedFiles(spec).find((f) => f.path.endsWith(suffix));
+  if (file === undefined) throw new Error(`no generated file ends with ${suffix}`);
+  return file.content;
+};
+
+/** The two shapes the flags pick between, as the copies above prove them. */
+const OPEN: NewGameSpec = {
+  slug: 'tally',
+  title: 'Tally',
+  seats: { min: 2, max: 2 },
+  hidden: false,
+};
+const VEILED: NewGameSpec = {
+  slug: 'veil',
+  title: 'Veil',
+  seats: { min: 2, max: 4 },
+  hidden: true,
+};
+
+/** What a game made before the hoists carried and the shell owns since (dry-review-2026-10.md §6): none may be in a scaffold. */
+const PRE_HOIST: ReadonlyArray<string> = [
+  'historyOpen',
+  'SCREENS',
+  'paintConnDot',
+  'paintHandoff',
+  'paintScreen',
+  'soundEnabled',
+  'LEAVE_',
+  'DEFAULT_NAME',
+  'rulesItemsHtml',
+  'continue/click',
+  'rsContinueBtn',
+];
+
+describe('the table block the template spells (dry-review-2026-10.md §6)', () => {
+  test('the page: the topbar partial, the pause and the result through the shell, the curtain words by shape', () => {
+    [OPEN, VEILED].forEach((spec) => {
+      const page = generated(spec, '/page.ts');
+      expect(page).toContain("topbarHtml({ dot: 'last'");
+      expect(page).toContain('result: resultMarkup({');
+      expect(page).toMatch(
+        /_PAGE: ShellPage = \{ copy, notes, look: THEME_LOOK, blocks, pause: true \};/,
+      );
+      expect(page).toContain("revealLabel: 'Show the table'");
+      // The partials spell these; a page that did would compose them twice.
+      expect(page).not.toContain('pauseOverlay');
+      expect(page).not.toContain('resultOverlay');
+      expect(page).not.toContain('seated: true');
+    });
+    expect(generated(VEILED, '/page.ts')).toContain(
+      "curtainNote: ': raised on every change of turn",
+    );
+    expect(generated(OPEN, '/page.ts')).toContain(
+      "curtainNote: ': composed by the shell, never raised",
+    );
+  });
+
+  test("the reducer and the paint: GameTypes over a Table of the curtain alone, the pause through table.pause, the sheets and the chrome the shell's", () => {
+    const state = generated(OPEN, '/src/ui/state.ts');
+    expect(state).toContain('export type Tally = GameTypes<{');
+    expect(state).toContain('export const initialTable: Table = { curtain: null };');
+    expect(state).toContain("export type TableIntent = Readonly<{ type: 'act'; action: Action }>;");
+    expect(state).toContain('pause: (_app, prev, view) => pauseFor(prev, view)');
+    expect(state).toContain('export const reducer = shellReducer(TALLY, {');
+    const render = generated(OPEN, '/src/ui/render.ts');
+    expect(render).toContain('paintShellChrome(doc, app.shell, {');
+    expect(render).toContain('paintShellSheets(doc, app.shell);');
+    expect(render).toContain("['historyBtn', { type: 'history/open' }]");
+  });
+
+  test('the wire and the store: a game for two, through twoSeatProtocol and shellStore (the seat range is the declared gap)', () => {
+    [OPEN, VEILED].forEach((spec) => {
+      expect(generated(spec, '/src/protocol.ts')).toContain(
+        'twoSeatProtocol({ decodeAction, decodeView, room })',
+      );
+      expect(generated(spec, '/src/storage.ts')).toContain('shellStore<State, Opts, HomeTab>(');
+    });
+  });
+
+  test('no pre-hoist shape anywhere in either scaffold', () => {
+    [OPEN, VEILED].forEach((spec) => {
+      generatedFiles(spec).forEach(({ path, content }) => {
+        PRE_HOIST.forEach((token) => {
+          expect(content, `${path} spells ${token}`).not.toContain(token);
+        });
+      });
     });
   });
 });

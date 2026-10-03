@@ -290,16 +290,24 @@ shapes it would adopt (1, 3, 6), so fidice adopts them once.
 
 ## 6. The new-game template
 
-`tools/new-game/templates.ts` (1,843 lines) is what `npm run new-game` scaffolds. It has
-`shellReducer`, `sessionsFor`, `THEME_LOOK`, `headHtml` and `resultMarkup` (graphs 8, row K, J,
-G), but still spells `SCREENS` (4 mentions), `paintConnDot` (2), `paintHandoff`, `paintScreen`,
-`hostContextOf`, a local `refuse` (`:920`), `DEFAULT_NAME`, `LEAVE_*_MSG`, `HOME_TABS`,
-`DEFAULT_PLAY_MODE`, `frames: { lobby, … }` and `soundEnabled`, and has no `paintShellChrome`,
-`shellButtons`, `seatedCopy`, `cueStep` or `paintShellSheets`. A game made from it today is a
-pre-graph-4 game. Fix: every row in §7 edits the template in the same PR (it is one file, so the
-rows stay disjoint only if each touches its own template lines; order them), and
-a `test/tools/new-game.test.ts` (there is none today; `npm run new-game` is `tools/new-game.ts`)
-scaffolds a game into a temp dir and runs `npm run typecheck` on it, so the template cannot drift again.
+`tools/new-game/templates.ts` is what `npm run new-game` scaffolds. Rows 1-15 each edited their own
+template lines, and row 16 took the two copies they left (`Table.historyOpen` with its five sheet
+arms, which the shell has reduced since shell-hoist.md row F, and `SCREENS`), so a game made from
+it today is the post-hoist game: `shellReducer`, `THEME_LOOK`, `headHtml`, `topbarHtml`,
+`resultMarkup`, `pause: true` with the end through `table.pause`, `paintShellChrome`,
+`paintShellSheets` off the shell's flags, `GameTypes<Own>` over a `Table` of the curtain alone,
+`twoSeatProtocol` and `shellStore` (it is a game for two; the seat range is its declared gap).
+
+The proof is `tools/new-game.test.ts` (beside its module, as every test here is; the harness
+suite's `tools/**/*.test.ts` glob runs it; it predates this review, which wrongly said there was
+none). It copies the checkout to a temp dir (node_modules linked, one commit), scaffolds a game and
+runs `tsc -b`, eslint, prettier, the game's suite, the harness pins with the conformance suite, the
+shared pins and the dist guards' pure half, for both shapes the flags pick (two seats open; a hidden
+hand with a seat range). Without a copy it pins the table block the template spells (the partials,
+the pause and result through the shell, the types, the wire and the store) and that no pre-hoist
+token (`historyOpen`, `SCREENS`, `paintConnDot`, `paintHandoff`, `paintScreen`, `soundEnabled`,
+`LEAVE_*`, `DEFAULT_NAME`, `rulesItemsHtml`, `continue/click`) is anywhere in either scaffold. A
+row that edits the template is held to both, so the template cannot drift again.
 
 ## 7. The rows
 
@@ -326,7 +334,7 @@ it adds a module.
 | 13  | Row H: the pause as shell state (`table.pause: pauseFor`, `pause/continue`, a `pause.html` partial), flip7's `#result` onto `resultMarkup`/`paintResult` with the phase's primary; the shell's `again/click` (uno's `again` action, flip7's `replay`, hive's go)                         | `web/shared/ui/shell.ts`, `shellPaint.ts`, `web/shared/markup/shell/`, `web/games/flip7/**`, uno and hive `state.ts`/`render.ts`                                                                                                 | **bytes** (flip7 index.html, a story PNG, `flip7-local.spec` round-end case) | 120 |
 | 14  | `topbarHtml` partial for the two pages that share the strip's ids                                                                                                                                                                                                                     | `web/shared/markup/shell/`, uno and flip7 `page.ts`/`index.html`                                                                                                                                                                 | **bytes** | 30  |
 | 15  | Fidice: `pname/typed` → the shell's `seatName/typed`, the sheet binder's fallback, `ui/waiting.ts` onto `paintWaiting`, `protocol.ts` onto `seatedProtocol` (§5.2); `localStart` per the adoption doc                                                                                 | `web/games/fidice/**`                                                                                                                                                                                                            | unchanged | 90  |
-| 16  | The template scaffolds a game and typechecks it in a test (§6)                                                                                                                                                                                                                        | `tools/new-game/templates.ts`, `tools/new-game.ts`, a test under `test/tools/`                                                                                                                                                   | unchanged | 45  |
+| 16 | The template scaffolds a game and typechecks it in a test (§6) | `tools/new-game/templates.ts`, `tools/new-game.test.ts` (the proof, beside its module), `AGENT.md` | unchanged | 45 |
 
 Waves: rows 1, 4, 5, 7, 9 are disjoint and go first (row 9 is flip7's own files; row 1 touches
 `state.ts`, 4 `main.ts`, 5 `render.ts`); then 2, 3, 6, 8, 10 (2 and 3 both edit `shellConfig.ts`
