@@ -1752,6 +1752,7 @@ describe('the sessions read back', () => {
       handoff: false,
       oppName: 'Jeff',
       oppConnected: true,
+      seats: [{ name: 'Jeff', connected: true }],
     });
     const g = run(initialApp, { type: 'join/click', name: 'Bo', code: 'ABCD' }).app;
     expect(guestContextOf(g)).toEqual({

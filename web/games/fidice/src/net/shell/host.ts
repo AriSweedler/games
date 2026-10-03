@@ -12,8 +12,8 @@
 // bots (a term of the room the reducer seats at the deal), spectators (Watch is a local mode),
 // tokens, seat swaps, a mixed local/remote table. The legacy src/net/host.ts (its own transport,
 // tokens, spectators and the bot loop) stays on disk unimported until M6; the bot loop's semantics
-// live in ui/state.ts's timers. The context is the shell's host context plus `seats`
-// (`HostContext`): the reducer's `hostContextOf` supplies them from `ShellState.seats`. Every
+// live in ui/state.ts's timers. The context is the shell's host context (`HostContext`), whose
+// `seats` the shell's `hostContextOf` fills from `ShellState.seats`. Every
 // constant and message ui/state.ts, main.ts and the tests import is re-exported.
 import {
   HostSession as SharedHostSession,

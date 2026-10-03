@@ -72,7 +72,6 @@ import {
   type Intent as SharedIntent,
   type Resume as SharedResume,
   type Role,
-  type SeatState,
   type ShellApp,
   type ShellConfig,
   type ShellIntent as SharedShellIntent,
@@ -136,7 +135,6 @@ import {
   type CardPack,
   type Speed,
   type HomeTab,
-  type HostExtra,
   type PlayMode,
   type Save,
   type Store,
@@ -1475,15 +1473,10 @@ export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, BRI
 // ---- what the sessions read back ---------------------------------------------------------------
 
 /** The host session's context: the shell's fields, the room's six options and the guest seats as the shell holds them, which the codec's welcome lists past two seats (net/host.ts `HostContext`). */
-export type HostContext = HostContextOf<Briscola> &
-  HostExtra &
-  Readonly<{ seats: ReadonlyArray<SeatState> }>;
+export type HostContext = HostContextOf<Briscola>;
 export type GuestContext = GuestContextOf;
 
-export const hostContextOf = (app: App): HostContext => ({
-  ...shellHostContextOf(app.shell),
-  seats: app.shell.seats,
-});
+export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
 
 export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
 

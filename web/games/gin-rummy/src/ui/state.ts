@@ -63,13 +63,13 @@ import {
   type ShellState,
   type Step as SharedStep,
   type TableReset,
+  type HostContextOf,
   type TimerId as SharedTimerId,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { applyAction, canTakeBack, fitsOnto, idsOf, inPlay } from '../engine/index.ts';
 import type { Action, Seat, State, View } from '../engine/types.ts';
 import type { GuestContext } from '../net/guest.ts';
-import type { HostContext } from '../net/host.ts';
 import { action as actionFrame } from '../protocol.ts';
 import type { ScorerState } from '../scorer/scores.ts';
 import { GIN_SHELL } from '../shellConfig.ts';
@@ -901,7 +901,7 @@ export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, GIN
 
 // ---- what the sessions read back ---------------------------------------------------------------
 
-export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
+export const hostContextOf = (app: App): HostContextOf<Gin> => shellHostContextOf(app.shell);
 
 export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
 

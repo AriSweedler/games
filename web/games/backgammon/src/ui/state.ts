@@ -59,6 +59,7 @@ import {
   type Ctx,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
+  type HostContextOf,
   type Intent as SharedIntent,
   type Resume as SharedResume,
   type ShellApp,
@@ -98,7 +99,6 @@ import type {
   View,
 } from '../engine/types.ts';
 import type { GuestContext } from '../net/guest.ts';
-import type { HostContext } from '../net/host.ts';
 import { action as actionFrame } from '../protocol.ts';
 import { BACKGAMMON_SHELL, parseMatchLength } from '../shellConfig.ts';
 import {
@@ -1058,7 +1058,7 @@ export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, BAC
 
 // ---- what the sessions read back ---------------------------------------------------------------
 
-export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
+export const hostContextOf = (app: App): HostContextOf<Backgammon> => shellHostContextOf(app.shell);
 
 export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
 

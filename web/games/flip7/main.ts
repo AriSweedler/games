@@ -30,10 +30,9 @@ import {
   runEffect,
   type App,
   type Flip7,
-  type HostContext,
 } from './src/ui/state.ts';
 
-bootShell<Flip7, App, object, HostContext>({
+bootShell<Flip7, App>({
   page: { doc: document, win: window, nav: navigator, store: browserStore(), clock: realClock },
   game: { hook: '__flip7', title: 'Flip 7', debug: 0 },
   sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },

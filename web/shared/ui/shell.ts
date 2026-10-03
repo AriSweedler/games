@@ -2702,6 +2702,8 @@ export type HostContextOf<G extends ShellTypes> = Readonly<{
   handoff: boolean;
   oppName: string | null;
   oppConnected: boolean;
+  /** The guest seats as the shell holds them; an N-seat codec lists them in its welcome, a two-seat codec reads none of it. */
+  seats: ReadonlyArray<SeatState>;
 }> &
   G['Opts'];
 export type GuestContextOf = Readonly<{
@@ -2722,6 +2724,7 @@ export const hostContextOf = <G extends ShellTypes>(s: ShellState<G>): HostConte
   handoff: s.handoff,
   oppName: s.oppName,
   oppConnected: s.oppConnected,
+  seats: s.seats,
 });
 
 export const guestContextOf = <G extends ShellTypes>(s: ShellState<G>): GuestContextOf => ({

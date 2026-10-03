@@ -35,7 +35,6 @@ import {
   type HostContextOf,
   type Intent as SharedIntent,
   type Resume as SharedResume,
-  type SeatState,
   type ShellApp,
   type ShellConfig,
   type ShellState,
@@ -350,13 +349,10 @@ export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(sa
 export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, UNO);
 
 /** The host session's context: the shell's fields, the seat count and the guest seats (net/host.ts `HostContext`). */
-export type HostContext = HostContextOf<Uno> & Opts & Readonly<{ seats: ReadonlyArray<SeatState> }>;
+export type HostContext = HostContextOf<Uno>;
 export type GuestContext = GuestContextOf;
 
-export const hostContextOf = (app: App): HostContext => ({
-  ...shellHostContextOf(app.shell),
-  seats: app.shell.seats,
-});
+export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
 
 export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
 

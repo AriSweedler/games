@@ -1553,6 +1553,7 @@ describe('the sessions read back', () => {
       handoff: false,
       oppName: 'Jeff',
       oppConnected: true,
+      seats: [{ name: 'Jeff', connected: true }],
     });
     expect(guestContextOf(app)).toEqual({
       attempt: 1,
