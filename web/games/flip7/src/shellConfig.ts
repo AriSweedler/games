@@ -1,21 +1,14 @@
 // The half of Flip 7's shell config the game spells from its engine, protocol and storage alone
 // (docs/design/flip7.md §8; docs/design/shared-shell.md §4.3): the id the room codes are made for,
-// the default names, the tabs, the two stored modes, the copy the shared flows paint (briscola's
-// N-seat forms: the two-seat string at a table of two), the option codec (the room's one term, the
+// the default names, the tabs, the two stored modes, the copy the shared flows paint (the shell's
+// N-seat forms, web/shared/ui/seatCopy.ts, dealt), the option codec (the room's one term, the
 // seat count), the engine adapters (engine/index.ts: every action is checked against the seat that
 // sent it), the frame builders, the finished game's record and the shell's store. Two to twelve at a
 // table online and on one phone (the owner, 2026-10-02: "flip7 caps out at 12"); a room starts
 // when every seat is taken (`fixed`), so the host deals to the table it opened. ui/state.ts
 // completes the record with the table hooks.
-import {
-  OPPONENT_LEFT_MSG,
-  WAITING_FOR_GUEST_MSG,
-  guestGoneMsg,
-  joinedMsg,
-  type Player,
-  type ShellGameData,
-  INITIAL_CUE_MEMORY,
-} from '../../../shared/ui/shell.ts';
+import { parseSeatCount, seatedCopy } from '../../../shared/ui/seatCopy.ts';
+import { INITIAL_CUE_MEMORY, type Player, type ShellGameData } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../shared/net/host.ts';
 import {
@@ -27,7 +20,6 @@ import {
   decodeState,
   nameOf,
   viewFor,
-  type SeatCount,
 } from './engine/index.ts';
 import { action, join, lobby, state, toast } from './protocol.ts';
 import {
@@ -59,41 +51,9 @@ export const LOCAL_NAMES: ReadonlyArray<string> = [
 export const LEAVE_LOCAL_MSG = 'End this game? The score will be cleared.';
 export const LEAVE_ONLINE_MSG = 'Leave this game? The table will close.';
 
-/** "Seat 3": a seat nobody has named yet (the host is Seat 1). */
-export const emptySeatName = (seat: number): string => `Seat ${String(seat + 1)}`;
-/** `#guestWaitStatus` once the host's welcome or lobby names the room; past two seats the count rides in front. */
-export const hostRoomMsg = (hostName: string, seated = 2, capacity = 2): string =>
-  capacity === 2
-    ? `Connected — waiting for ${hostName} to deal`
-    : `Connected — ${String(seated)} of ${String(capacity)} seated · waiting for ${hostName} to deal`;
-export const waitingMsg = (capacity: number): string =>
-  capacity === 2 ? WAITING_MSG : `Waiting for ${String(capacity - 1)} players to join`;
-export const joinedText = (name: string, remaining: number): string =>
-  remaining === 0 ? joinedMsg(name) : `${name} joined! Waiting for ${String(remaining)} more.`;
-export const seatLeftMsg = (
-  name: string | null,
-  seat: number,
-  seated: number,
-  capacity: number,
-): string =>
-  capacity === 2
-    ? OPPONENT_LEFT_MSG
-    : `${name ?? emptySeatName(seat)} left. ${String(seated)} of ${String(capacity)} seated.`;
-export const seatGoneMsg = (name: string | null, code: string | null, seat: number): string =>
-  guestGoneMsg(name ?? emptySeatName(seat), code);
-export const notEnoughMsg = (seated: number, min: number): string =>
-  min === 2
-    ? WAITING_FOR_GUEST_MSG
-    : `${String(seated)} of ${String(min)} seated — waiting for ${String(min - seated)} more.`;
-export const TABLE_FULL_MSG = 'That table is full.';
-
-/** A seat count from the stepper's raw value (`"3"`), else `fallback`. */
-export const parseSeatCount = (raw: string | undefined, fallback: SeatCount): SeatCount =>
-  SEAT_COUNTS.find((n) => String(n) === raw) ?? fallback;
-
-/** The room's terms off the raw inputs: the Online select or its pass-and-play twin, whichever the click carried. */
+/** The room's terms off the raw inputs: the Online stepper or its pass-and-play twin, whichever the click carried. */
 export const parseOpts = (raw: Raw, current: Opts): Opts => ({
-  seatCount: parseSeatCount(raw.players ?? raw.localPlayers, current.seatCount),
+  seatCount: parseSeatCount(SEAT_COUNTS, raw.players ?? raw.localPlayers, current.seatCount),
 });
 
 /** The names the engine deals to: the shell's seats in order, a missing one `Player N`. */
@@ -116,24 +76,18 @@ export const FLIP7_SHELL: ShellGameData<Flip7> = {
     },
   },
   copy: {
+    ...seatedCopy({ verb: 'deal', waitingAtTwo: WAITING_MSG }),
     leaveLocal: LEAVE_LOCAL_MSG,
     leaveOnline: LEAVE_ONLINE_MSG,
     opening: OPENING_MSG,
     connecting: connectingMsg,
     handoff: handoffMsg,
-    hostRoom: (hostName, _opts, seated, capacity) => hostRoomMsg(hostName, seated, capacity),
-    waiting: waitingMsg,
-    joined: (name, _names, remaining) => joinedText(name, remaining),
-    seatLeft: seatLeftMsg,
-    guestGone: seatGoneMsg,
-    roomFull: TABLE_FULL_MSG,
-    notEnough: notEnoughMsg,
   },
   seats: { min: MIN_SEATS, max: MAX_SEATS, fixed: true },
   opts: {
     initial: DEFAULT_OPTS,
     parse: parseOpts,
-    ofGame: (game) => ({ seatCount: parseSeatCount(String(game.seats.length), 2) }),
+    ofGame: (game) => ({ seatCount: parseSeatCount(SEAT_COUNTS, String(game.seats.length), 2) }),
     pick: (from) => ({ seatCount: from.seatCount }),
     capacity: (opts) => opts.seatCount,
   },

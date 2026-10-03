@@ -1,7 +1,7 @@
 // The half of backgammon's shell config the game spells from its engine, protocol and storage
 // alone (docs/design/shared-shell.md §4.3; C2): the id the room codes are made for, the default
 // host name, the tabs, the two stored modes, the copy the shared flows paint (the two leave
-// confirms, the room named by its host, and the sessions' three status strings the shell paints
+// confirms, the room named by its host (the shell's seatCopy.ts, started), and the sessions' three status strings the shell paints
 // before a session speaks), the option codec (`{ matchLength, variant }`: the host save's own
 // fields, the welcome frame's, the resume offer's, each select falling back to the shell's
 // current value), the engine adapters, the frame builders, the cue memory's start and the
@@ -10,6 +10,7 @@
 // completes this record: they use its own helpers, and a value import both ways would be a cycle.
 // Every literal here was ui/state.ts's before the move; the constants and helpers the tests
 // import are re-exported there.
+import { hostRoomMsg } from '../../../shared/ui/seatCopy.ts';
 import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
 import {
   applyAction,
@@ -50,9 +51,6 @@ export const DEFAULT_NAME = 'Ari';
 export const LOCAL_NAMES: readonly [string, string] = ['Ari', 'Ethan'];
 export const LEAVE_LOCAL_MSG = 'End this match? The score will be cleared.';
 export const LEAVE_ONLINE_MSG = 'Leave this match? The room will close.';
-export const hostRoomMsg = (hostName: string): string =>
-  `Connected — waiting for ${hostName} to start`;
-
 /** A match length from a select's raw value: one of MATCH_LENGTHS, else `fallback`. */
 export const parseMatchLength = (raw: string | number | undefined, fallback: number): number => {
   const n = typeof raw === 'number' ? raw : parseInt(raw ?? '', 10);
@@ -84,7 +82,7 @@ export const BACKGAMMON_SHELL: ShellGameData<Backgammon> = {
     opening: OPENING_MSG,
     connecting: connectingMsg,
     handoff: handoffMsg,
-    hostRoom: (hostName) => hostRoomMsg(hostName),
+    hostRoom: hostRoomMsg('start'),
   },
   opts: {
     initial: { matchLength: DEFAULT_MATCH_LENGTH, variant: DEFAULT_VARIANT },

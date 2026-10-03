@@ -36,9 +36,8 @@ import { err, ok } from '../../../shared/lib/result.ts';
 import type { Rng } from '../../../shared/lib/rng.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../shared/net/host.ts';
+import { parseSeatCount, seatedCopy } from '../../../shared/ui/seatCopy.ts';
 import {
-  OPPONENT_LEFT_MSG,
-  guestGoneMsg,
   joinedMsg,
   type Player,
   type SeatOf,
@@ -67,16 +66,7 @@ import {
   type State,
   type Viewer,
 } from './domain/types.ts';
-import {
-  MAX_BOTS,
-  SEAT_COUNTS,
-  action,
-  join,
-  lobby,
-  state,
-  toast,
-  type SeatCount,
-} from './protocol.ts';
+import { MAX_BOTS, SEAT_COUNTS, action, join, lobby, state, toast } from './protocol.ts';
 import {
   DEFAULT_HOME_TAB,
   DEFAULT_OPTS,
@@ -112,14 +102,9 @@ export const LEAVE_ONLINE_MSG =
   'Leave this game? If you are the host, the table closes for everyone.';
 
 // ---- the N-seat copy (n-seat-sessions.md §7; the two-seat string at a table of two) ------------
+// The forms are the shell's (web/shared/ui/seatCopy.ts, started); fidice's own two below: its
+// chairs are counted, not its empty seats, since a table starts whenever the host says.
 
-/** "Seat 3": a seat nobody has named yet, numbered as the waiting room lists it (the host is Seat 1). */
-export const emptySeatName = (seat: number): string => `Seat ${String(seat + 1)}`;
-/** `#guestWaitStatus` once the host's welcome or lobby frame names the room; past two seats the count rides in front. */
-export const hostRoomMsg = (hostName: string, seated = 2, capacity = 2): string =>
-  capacity === 2
-    ? `Connected — waiting for ${hostName} to start`
-    : `Connected — ${String(seated)} of ${String(capacity)} seated · waiting for ${hostName} to start`;
 /** `#hostWaitStatus` while the room waits with nobody dealt in (`HostOptions.waiting`): the session's line at two, the chairs past. */
 export const waitingMsg = (capacity: number): string =>
   capacity === 2 ? WAITING_MSG : `Waiting for players — ${String(capacity)} chairs at the table`;
@@ -128,31 +113,13 @@ export const joinedText = (name: string, seated: number, capacity: number): stri
   seated === capacity
     ? joinedMsg(name)
     : `${name} joined! ${String(seated)} of ${String(capacity)} seated — start when ready.`;
-/** A seat that left the lobby: the shell's line at two seats; past two, who left and the count. */
-export const seatLeftMsg = (
-  name: string | null,
-  seat: number,
-  seated: number,
-  capacity: number,
-): string =>
-  capacity === 2
-    ? OPPONENT_LEFT_MSG
-    : `${name ?? emptySeatName(seat)} left. ${String(seated)} of ${String(capacity)} seated.`;
-/** A seat's channel down mid-game: the shell's toast, the seat's player named (or its number, for a seat never named). */
-export const seatGoneMsg = (name: string | null, code: string | null, seat: number): string =>
-  guestGoneMsg(name ?? emptySeatName(seat), code);
 /** The engine's own gate on Start (game.ts `startGame`; plan §6 risk 12): the shell's `notEnough` never fires at `min` 1, so the deal toasts this. */
 export const NEED_PLAYERS_MSG = `Need at least ${String(MIN_PLAYERS)} players.`;
-/** A spare peer at a full table; the `full` frame carries no count, so the line names none. */
-export const TABLE_FULL_MSG = 'That table is full.';
 /** `engine.apply` for a shell seat with no chair (a guest whose seat was empty at the deal). */
 export const NOT_SEATED_MSG = 'You are not seated at this table.';
 
 // ---- the options -------------------------------------------------------------------------------
 
-/** A chair count from a select's raw value (`"3"`), else `fallback`. */
-export const parseSeatCount = (raw: string | undefined, fallback: SeatCount): SeatCount =>
-  SEAT_COUNTS.find((n) => String(n) === raw) ?? fallback;
 /** A count of computers, `0`..MAX_BOTS, else `fallback`. */
 export const parseBots = (raw: string | undefined, fallback: number): number => {
   const n = raw === undefined ? NaN : Number(raw);
@@ -182,7 +149,7 @@ export const parseBotChoice = (raw: Raw, fallback: string): string =>
  */
 export const parseOpts = (raw: Raw, current: Opts): Opts => ({
   lives: parseLives(raw.lives, current.lives),
-  seatCount: parseSeatCount(raw.seats, current.seatCount),
+  seatCount: parseSeatCount(SEAT_COUNTS, raw.seats, current.seatCount),
   bots: parseBots(raw.bots, current.bots),
   botChoice: parseBotChoice(raw, current.botChoice),
   watch: current.watch,
@@ -280,18 +247,15 @@ export const FIDICE_SHELL: ShellGameData<Fidice> = {
           : { shown: 'online', stored: 'online' },
   },
   copy: {
+    ...seatedCopy({ verb: 'start', waitingAtTwo: WAITING_MSG }),
     leaveLocal: LEAVE_LOCAL_MSG,
     leaveOnline: LEAVE_ONLINE_MSG,
     opening: OPENING_MSG,
     connecting: connectingMsg,
     handoff: handoffMsg,
-    hostRoom: (hostName, _opts, seated, capacity) => hostRoomMsg(hostName, seated, capacity),
     waiting: waitingMsg,
     joined: (name, names, remaining) =>
       joinedText(name, names.length + 1, names.length + 1 + remaining),
-    seatLeft: seatLeftMsg,
-    guestGone: seatGoneMsg,
-    roomFull: TABLE_FULL_MSG,
     notEnough: () => NEED_PLAYERS_MSG,
   },
   /** One to six at a table (the host alone opens one; computers fill chairs), never fixed: the engine gates the start. */
@@ -302,7 +266,7 @@ export const FIDICE_SHELL: ShellGameData<Fidice> = {
     // The terms a game was made under (the handoff): its kayaks, its chairs as dealt, its computers.
     ofGame: (game) => ({
       lives: game.lives,
-      seatCount: parseSeatCount(String(game.players.length), DEFAULT_OPTS.seatCount),
+      seatCount: parseSeatCount(SEAT_COUNTS, String(game.players.length), DEFAULT_OPTS.seatCount),
       bots: game.players.filter((p) => p.bot !== null).length,
       botChoice: game.players.find((p) => p.bot !== null)?.bot?.strategy ?? DEFAULT_OPTS.botChoice,
       watch: game.hostSeat === null,

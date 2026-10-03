@@ -1,30 +1,16 @@
 // The half of UNO's shell config the game spells from its engine, protocol and storage alone
 // (docs/design/uno.md §9; web/shared/ui/shell.ts `ShellGameData`): the id the table codes are made
 // for, the default names, the tabs, the two stored modes, the copy the shared flows paint (the
-// N-seat forms are briscola's: the shell's two-seat string at a table of two), the option codec
+// N-seat forms are the shell's, web/shared/ui/seatCopy.ts, dealt), the option codec
 // (the seat count alone), the engine adapters (engine/view.ts: the host deals, every seat sees its
 // own hand), the frame builders, the cue memory's start and the shell's store. The table hooks and
 // the rest of `home` are the reducer's (ui/state.ts `UNO`). Online seats two to twelve (the owner,
 // 2026-10-02: "uno caps out at 12"), fixed when the room opens and started full (`seats.fixed`).
-import {
-  OPPONENT_LEFT_MSG,
-  WAITING_FOR_GUEST_MSG,
-  guestGoneMsg,
-  joinedMsg,
-  type Player,
-  type ShellGameData,
-  INITIAL_CUE_MEMORY,
-} from '../../../shared/ui/shell.ts';
+import { parseSeatCount, seatedCopy } from '../../../shared/ui/seatCopy.ts';
+import { INITIAL_CUE_MEMORY, type Player, type ShellGameData } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../shared/net/host.ts';
-import {
-  SEAT_COUNTS,
-  applyAction,
-  createState,
-  decodeState,
-  viewFor,
-  type SeatCount,
-} from './engine/view.ts';
+import { SEAT_COUNTS, applyAction, createState, decodeState, viewFor } from './engine/view.ts';
 import { action, join, lobby, state, toast } from './protocol.ts';
 import {
   DEFAULT_HOME_TAB,
@@ -49,40 +35,9 @@ export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi', 'Sandro', 'Gra
 export const LEAVE_LOCAL_MSG = 'End this game? The score will be cleared.';
 export const LEAVE_ONLINE_MSG = 'Leave this game? The table will close.';
 
-/** "Seat 3": a seat nobody has named yet (the host is Seat 1). */
-export const emptySeatName = (seat: number): string => `Seat ${String(seat + 1)}`;
-export const hostRoomMsg = (hostName: string, seated = 2, capacity = 2): string =>
-  capacity === 2
-    ? `Connected — waiting for ${hostName} to deal`
-    : `Connected — ${String(seated)} of ${String(capacity)} seated · waiting for ${hostName} to deal`;
-export const waitingMsg = (capacity: number): string =>
-  capacity === 2 ? WAITING_MSG : `Waiting for ${String(capacity - 1)} players to join`;
-export const joinedText = (name: string, remaining: number): string =>
-  remaining === 0 ? joinedMsg(name) : `${name} joined! Waiting for ${String(remaining)} more.`;
-export const seatLeftMsg = (
-  name: string | null,
-  seat: number,
-  seated: number,
-  capacity: number,
-): string =>
-  capacity === 2
-    ? OPPONENT_LEFT_MSG
-    : `${name ?? emptySeatName(seat)} left. ${String(seated)} of ${String(capacity)} seated.`;
-export const seatGoneMsg = (name: string | null, code: string | null, seat: number): string =>
-  guestGoneMsg(name ?? emptySeatName(seat), code);
-export const notEnoughMsg = (seated: number, min: number): string =>
-  min === 2
-    ? WAITING_FOR_GUEST_MSG
-    : `${String(seated)} of ${String(min)} seated — waiting for ${String(min - seated)} more.`;
-export const TABLE_FULL_MSG = 'That table is full.';
-
-/** A seat count from a select's raw value (`"3"`), else `fallback`. */
-export const parseSeatCount = (raw: string | undefined, fallback: SeatCount): SeatCount =>
-  SEAT_COUNTS.find((n) => String(n) === raw) ?? fallback;
-
-/** The room's terms off the raw inputs: the Online select or its pass-and-play twin, whichever the click carried. */
+/** The room's terms off the raw inputs: the Online stepper or its pass-and-play twin, whichever the click carried. */
 export const parseOpts = (raw: Raw, current: Opts): Opts => ({
-  seatCount: parseSeatCount(raw.players ?? raw.localPlayers, current.seatCount),
+  seatCount: parseSeatCount(SEAT_COUNTS, raw.players ?? raw.localPlayers, current.seatCount),
 });
 
 /** Every seat's name in order for a table of `n` (the shell lists the host, then every guest seat). */
@@ -102,24 +57,20 @@ export const UNO_SHELL: ShellGameData<Uno> = {
     },
   },
   copy: {
+    ...seatedCopy({ verb: 'deal', waitingAtTwo: WAITING_MSG }),
     leaveLocal: LEAVE_LOCAL_MSG,
     leaveOnline: LEAVE_ONLINE_MSG,
     opening: OPENING_MSG,
     connecting: connectingMsg,
     handoff: handoffMsg,
-    hostRoom: (hostName, _opts, seated, capacity) => hostRoomMsg(hostName, seated, capacity),
-    waiting: waitingMsg,
-    joined: (name, _names, remaining) => joinedText(name, remaining),
-    seatLeft: seatLeftMsg,
-    guestGone: seatGoneMsg,
-    roomFull: TABLE_FULL_MSG,
-    notEnough: notEnoughMsg,
   },
   seats: { min: MIN_SEATS, max: MAX_SEATS, fixed: true },
   opts: {
     initial: DEFAULT_OPTS,
     parse: parseOpts,
-    ofGame: (game) => ({ seatCount: parseSeatCount(String(game.game.names.length), 2) }),
+    ofGame: (game) => ({
+      seatCount: parseSeatCount(SEAT_COUNTS, String(game.game.names.length), 2),
+    }),
     pick: (from) => ({ seatCount: from.seatCount }),
     capacity: (opts) => opts.seatCount,
   },

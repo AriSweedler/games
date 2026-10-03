@@ -24,7 +24,7 @@ import {
 } from '../engine/index.ts';
 import type { Card, GameEvent, Seat, State, TrickRecord, View } from '../engine/index.ts';
 import { EMPTY_SEAT } from '../../../../shared/ui/shell.ts';
-import { WAITING_MSG } from '../../../../shared/net/host.ts';
+import { TABLE_FULL_MSG } from '../../../../shared/ui/seatCopy.ts';
 import { isHeartbeat } from '../../../../shared/net/liveness.ts';
 import { peerIdFor } from '../../../../shared/lib/roomCode.ts';
 import { guests, world, type Guest, type Party } from '../../../../shared/net/sessions.harness.ts';
@@ -63,7 +63,6 @@ import {
   SANDBOX_LOCAL_ONLY_MSG,
   SCREENS,
   SHELL_INTENT_TYPES,
-  TABLE_FULL_MSG,
   TIP_HOVER_MS,
   TIP_PRESS_MS,
   WAITING_FOR_GUEST_MSG,
@@ -75,7 +74,6 @@ import {
   handoffLabel,
   hostContextOf,
   hostLeftMsg,
-  hostRoomMsg,
   initialApp,
   initialTable,
   continuedEvents,
@@ -94,7 +92,6 @@ import {
   resumeLabel,
   runEffect,
   saveFor,
-  seatGoneMsg,
   seatNames,
   seatPlayers,
   awaitingDraw,
@@ -102,7 +99,6 @@ import {
   settleMs,
   settleSlots,
   trickResolvedBetween,
-  waitingMsg,
   waitingToDealMsg,
   type App,
   type Effect,
@@ -999,7 +995,7 @@ describe('hosting and joining (two seats)', () => {
       type: 'guest/frame',
       frame: lobby('Ann', { ...DEFAULT_OPTS, scoperta: true }, [], 1),
     }).app;
-    expect(named.shell.guestStatus.text).toBe(hostRoomMsg('Ann'));
+    expect(named.shell.guestStatus.text).toBe('Connected — waiting for Ann to deal');
     expect(named.shell.opts).toEqual({ ...DEFAULT_OPTS, scoperta: true });
     // A room whose frame turns scoperta on at three seats is normalised as it is picked.
     expect(
@@ -1809,8 +1805,6 @@ describe('hosting and joining three and four seats (docs/design/n-seat-sessions.
       capacity: 3,
       waiting: 'Waiting for 2 players to join',
     });
-    expect(waitingMsg(3)).toBe('Waiting for 2 players to join');
-    expect(waitingMsg(2)).toBe(WAITING_MSG);
     expect(effects.at(-1)).toEqual({ type: 'writeOpts', opts: opts3 });
     expect(hostContextOf(app)).toMatchObject({ seatCount: 3, seats: [EMPTY_SEAT, EMPTY_SEAT] });
     expect(opened('4').app.shell.seats).toEqual([EMPTY_SEAT, EMPTY_SEAT, EMPTY_SEAT]);
@@ -1940,8 +1934,7 @@ describe('hosting and joining three and four seats (docs/design/n-seat-sessions.
     expect(sent(back.effects)[1]?.frame).toEqual(lobby('Ann', opts3, back.app.shell.seats, 2));
     expect(seatsDown(back.app)).toEqual([]);
     expect(liveView(back.app)).toEqual(view(back.app).isMyTurn ? view(back.app) : null);
-    // A seat never named is its number; ICE failed is the status alone, the seat kept as down.
-    expect(seatGoneMsg(null, 'ABCD', 2)).toBe(guestGoneMsg('Seat 3', 'ABCD'));
+    // ICE failed is the status alone, the seat kept as down.
     const iced = run(app, { type: 'host/guestGone', iceFailed: 'ICE failed', seat: 1 }).app;
     expect(iced.shell.hostStatus.text).toBe('ICE failed');
     expect(seatsDown(iced)).toEqual(['Bob']);
@@ -1983,7 +1976,7 @@ describe('hosting and joining three and four seats (docs/design/n-seat-sessions.
       code: app.shell.code,
       resume: true,
       capacity: 3,
-      waiting: waitingMsg(3),
+      waiting: 'Waiting for 2 players to join',
     });
     expect(seatsDown(resumed.app)).toEqual(['Bob', 'Cara']);
     expect(liveView(resumed.app)).toBeNull();

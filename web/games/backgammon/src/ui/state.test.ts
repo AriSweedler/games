@@ -56,7 +56,6 @@ import {
   handoffLabel,
   hitMsg,
   hostContextOf,
-  hostRoomMsg,
   initialApp,
   joinedMsg,
   newMovesBetween,
@@ -684,7 +683,7 @@ describe('joining', () => {
     expect(welcomed.app.shell).toMatchObject({
       oppName: 'Ann',
       opts: { matchLength: 7, variant: 'backgammon' },
-      guestStatus: { text: hostRoomMsg('Ann'), pulse: true },
+      guestStatus: { text: 'Connected — waiting for Ann to start', pulse: true },
     });
     expect(
       run(guest(), { type: 'guest/frame', frame: { t: 'full' } }).app.shell.guestStatus.text,

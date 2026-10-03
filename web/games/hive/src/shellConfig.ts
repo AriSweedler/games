@@ -4,6 +4,7 @@
 // the option codec (two seats, always), the engine adapters (engine/view.ts: the host holds the
 // game, both seats see the whole board), the frame builders, the cue memory's start and the
 // shell's store. The table hooks and the rest of `home` are the reducer's (ui/state.ts `HIVE`).
+import { hostRoomMsg } from '../../../shared/ui/seatCopy.ts';
 import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
@@ -35,9 +36,6 @@ export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi'];
 export const LEAVE_LOCAL_MSG = 'End this game? The board will be cleared.';
 export const LEAVE_ONLINE_MSG = 'Leave this game? The table will close.';
 
-export const hostRoomMsg = (hostName: string): string =>
-  `Connected — waiting for ${hostName} to start`;
-
 /** The side a seat plays: "White" or "Black". */
 export const sideName = (seat: Seat): string => (seat === 0 ? 'White' : 'Black');
 
@@ -59,7 +57,7 @@ export const HIVE_SHELL: ShellGameData<Hive> = {
     opening: OPENING_MSG,
     connecting: connectingMsg,
     handoff: handoffMsg,
-    hostRoom: (hostName) => hostRoomMsg(hostName),
+    hostRoom: hostRoomMsg('start'),
   },
   opts: {
     initial: DEFAULT_OPTS,

@@ -550,6 +550,7 @@ const shellConfigTs = (
 // option codec (two seats, always), the engine adapters (engine/view.ts), the frame builders, the
 // cue memory's start, the cue table and the shell's store. The table hooks and the rest of \`home\` are the
 // reducer's (ui/state.ts \`${upper}\`).
+import { hostRoomMsg } from '../../../shared/ui/seatCopy.ts';
 import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
@@ -572,9 +573,6 @@ export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi'];
 export const LEAVE_LOCAL_MSG = 'End this game? The table will be cleared.';
 export const LEAVE_ONLINE_MSG = 'Leave this game? The table will close.';
 
-export const hostRoomMsg = (hostName: string): string =>
-  \`Connected — waiting for \${hostName} to start\`;
-
 export const ${upper}_SHELL: ShellGameData<${pascal}> = {
   id: '${slug}',
   names: { default: DEFAULT_NAME },
@@ -593,7 +591,7 @@ export const ${upper}_SHELL: ShellGameData<${pascal}> = {
     opening: OPENING_MSG,
     connecting: connectingMsg,
     handoff: handoffMsg,
-    hostRoom: (hostName) => hostRoomMsg(hostName),
+    hostRoom: hostRoomMsg('start'),
   },
   opts: {
     initial: DEFAULT_OPTS,
@@ -637,7 +635,7 @@ const shellConfigTestTs = (
 
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { viewFor } from './engine/view.ts';
-import { ${upper}_SHELL, hostRoomMsg } from './shellConfig.ts';
+import { ${upper}_SHELL } from './shellConfig.ts';
 
 const PLAYERS = [
   { id: 'h', name: 'Ann' },
@@ -646,8 +644,9 @@ const PLAYERS = [
 
 describe('the shell config', () => {
   test('the copy and the modes', () => {
-    expect(hostRoomMsg('Ann')).toBe('Connected — waiting for Ann to start');
-    expect(${upper}_SHELL.copy.hostRoom('Ann', { seatCount: 2 }, 2, 2)).toBe(hostRoomMsg('Ann'));
+    expect(${upper}_SHELL.copy.hostRoom('Ann', { seatCount: 2 }, 2, 2)).toBe(
+      'Connected — waiting for Ann to start',
+    );
     expect(${upper}_SHELL.modes.parse('local', {} as never)).toEqual({
       shown: 'local',
       stored: 'local',

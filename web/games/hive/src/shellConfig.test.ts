@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { ORIGIN } from './engine/hex.ts';
 import { viewFor } from './engine/view.ts';
-import { HIVE_SHELL, hostRoomMsg, sideName } from './shellConfig.ts';
+import { HIVE_SHELL, sideName } from './shellConfig.ts';
 
 const PLAYERS = [
   { id: 'h', name: 'Ann' },
@@ -12,8 +12,9 @@ const PLAYERS = [
 
 describe('the shell config', () => {
   test('the copy and the modes', () => {
-    expect(hostRoomMsg('Ann')).toBe('Connected — waiting for Ann to start');
-    expect(HIVE_SHELL.copy.hostRoom('Ann', { seatCount: 2 }, 2, 2)).toBe(hostRoomMsg('Ann'));
+    expect(HIVE_SHELL.copy.hostRoom('Ann', { seatCount: 2 }, 2, 2)).toBe(
+      'Connected — waiting for Ann to start',
+    );
     expect(sideName(0)).toBe('White');
     expect(sideName(1)).toBe('Black');
     expect(HIVE_SHELL.modes.parse('local', {} as never)).toEqual({
