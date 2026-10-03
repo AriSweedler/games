@@ -9,10 +9,11 @@
 // fields, the welcome frame's, the resume offer's; the host card sets lives, chairs, computers and
 // their strategy, the waiting room's toggle sets `watch`), the engine adapters over the domain
 // (KEEP, byte for byte: `apply`, `redactFor`, lobby.ts's seating), the frame builders, the cue
-// memory's start and the shell's store. The table hooks (`rendered`, `refuse`, the per-site
-// `reset`, pass the phone's `viewer`/`revealer` from the legacy `handoffFor`, plan §7 D8) and the
-// rest of `home` are the reducer's (ui/state.ts `FIDICE`), which completes this record; a value
-// import both ways would be a cycle.
+// memory's start and the shell's store (the third to sixth pass-the-phone names as the shell's
+// `seatNames`, dry-review-2026-10.md §7 row 15). The table hooks (`rendered`, `refuse`, the
+// per-site `reset`, pass the phone's `viewer`/`revealer` from the legacy `handoffFor`, plan §7 D8)
+// are the reducer's (ui/state.ts `FIDICE`), which completes this record; a value import both ways
+// would be a cycle.
 //
 // Seats (docs/design/n-seat-sessions.md §7; plan §7 D10, §6 risk 12): `seats {min: 1, max: 6}`,
 // not fixed, so Start is enabled with the host alone (a human and a computer make a table) and
@@ -65,17 +66,15 @@ import {
   type State,
   type Viewer,
 } from './domain/types.ts';
-import { MAX_BOTS, SEAT_COUNTS, action, join, lobby, state, toast } from './protocol.ts';
+import { PROTOCOL, SEAT_COUNTS } from './protocol.ts';
 import {
   DEFAULT_HOME_TAB,
   DEFAULT_OPTS,
+  EXTRA_NAME_PREFS,
   HOME_TABS,
+  MAX_BOTS,
   SHELL_STORE,
   readOpts,
-  readP3Name,
-  readP4Name,
-  readP5Name,
-  readP6Name,
   writeOpts,
   type Opts,
 } from './storage.ts';
@@ -298,25 +297,14 @@ export const FIDICE_SHELL: ShellGameData<Fidice> = {
       view.players.map((p) => String(keepsScore(view) ? p.losses : p.lives)).join('–'),
     winnerOf: (view) => (view.winner === null ? null : shellSeatOfChair(view, view.winner)),
   },
-  frames: { lobby, state, toast, action, join },
+  frames: PROTOCOL,
   cues: { table: CUES },
-  home: {
-    // This page's own keys: the host card's last terms (the defaults when unreadable) and the third to sixth names.
-    read: (store) => {
-      const p3 = readP3Name(store);
-      const p4 = readP4Name(store);
-      const p5 = readP5Name(store);
-      const p6 = readP6Name(store);
-      return {
-        extraNames: {
-          2: p3.ok ? p3.value : null,
-          3: p4.ok ? p4.value : null,
-          4: p5.ok ? p5.value : null,
-          5: p6.ok ? p6.value : null,
-        },
-      };
-    },
+  // The host card's terms are the shell's remembered terms (`opts/set`, `writeOpts`), under this
+  // game's four keys; the third to sixth pass-the-phone names its `seatNames` (`seatName/typed`,
+  // `rememberSeatName`), under `p3Name` to `p6Name`. No `home`: the page reads nothing else.
+  prefs: {
+    ...SHELL_STORE,
+    opts: { read: readOpts, write: writeOpts },
+    seatNames: EXTRA_NAME_PREFS,
   },
-  // The host card's terms are the shell's remembered terms (`opts/set`, `writeOpts`), under this game's four keys.
-  prefs: { ...SHELL_STORE, opts: { read: readOpts, write: writeOpts } },
 };
