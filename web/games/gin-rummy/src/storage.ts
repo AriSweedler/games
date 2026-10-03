@@ -28,6 +28,7 @@ import {
   decodePlayMode,
   decodeSoundFont,
   decodeSoundState,
+  shellKeys,
   shellStore,
   textPref,
   type GuestSave as ShellGuestSave,
@@ -69,21 +70,12 @@ import type { State } from './engine/types.ts';
 import type { ScorerState } from './scorer/scores.ts';
 
 export const STORAGE_KEYS = {
-  /** The game in progress: pass-and-play, or the host's room and game, or the guest's room. */
-  save: 'ginRummyMP_v1',
-  /** The player's name, as typed (bare string, at most 20 characters). */
-  name: 'ginRummy_name',
   /**
-   * The pass-and-play second name, as typed (bare string, at most 20 characters). Not a legacy
-   * key: the legacy page read `#p2NameInput` only at the Start button and never stored it.
+   * The shell's keys (prefs.ts `ShellKeysOf`) under the legacy prefix: the save and the eight
+   * preferences every shell keeps. `p2Name` is not a legacy key: the legacy page read
+   * `#p2NameInput` only at the Start button and never stored it.
    */
-  p2Name: 'ginRummy_p2Name',
-  /** The home tab last shown (bare string). */
-  homeTab: 'ginRummy_homeTab',
-  /** Online or pass-and-play (bare string). */
-  playMode: 'ginRummy_playMode',
-  /** `on` or `off` (bare string); anything but `off` counts as on. */
-  sound: 'ginRummy_sound',
+  ...shellKeys('ginRummy_', 'ginRummyMP_v1'),
   /** How the hand is arranged: `suit`, `rank` or `manual` (bare string). This page's own key. */
   sort: 'ginRummy_sort',
   /**
@@ -93,18 +85,6 @@ export const STORAGE_KEYS = {
    * once at boot (RETIRED_KEYS).
    */
   cardPack: 'ginRummy_cardPack',
-  /**
-   * The sound font (web/shared/lib/sound/fonts.ts, bare string). This page's own key, so another
-   * game on the origin keeps its own choice (docs/design/sound-fonts.md §6); set from the console for now.
-   */
-  soundFont: 'ginRummy_soundFont',
-  /** The far seat's flip, `on`/`off` (the shell's `flipForFar`; no toggle on this page yet, the key is the shell's). */
-  flipTable: 'ginRummy_flipTable',
-  /**
-   * The finished games this device remembers (web/shared/lib/recentGames.ts, JSON, newest first,
-   * at most 20; the owner's game history of 2026-09-25). This page's own key, like the sound font.
-   */
-  recentGames: 'ginRummy_recentGames',
   /**
    * The Score Counter's session. Its players' names are `name` and `p2Name` above (the legacy
    * `ginRummy_scorerNames` list is retired: the Score Counter scores the two pass-and-play players).

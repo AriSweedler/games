@@ -7,7 +7,7 @@
 // it over a Map. The save is JSON; every preference is a bare string (`backgammon_name`,
 // `backgammon_homeTab`, `backgammon_playMode`, `backgammon_sound`, `backgammon_soundFont`,
 // `backgammon_flipTable`, `backgammon_variant`, `backgammon_matchLength`, `backgammon_curtain`), as
-// gin's are. The readers
+// gin's are. The shell's keys come off the prefix (`shellKeys`, shell-hoist.md §3 M); the readers
 // and writers both shells share (the name rule, the bare-string preferences, the save's three
 // roles) are built by web/shared/edge/prefs.ts (docs/design/shared-shell.md §5 A3) over the keys,
 // the engine decoder and the host save's own fields spelled here, grouped as the `SHELL_STORE` the
@@ -20,9 +20,11 @@ import {
   decodeName,
   decodePlayMode,
   decodeFlipState,
+  decodeDigitsOf,
   decodeSoundFont,
   decodeSoundState,
-  readTextWith,
+  digitsPref,
+  shellKeys,
   shellStore,
   textPref,
   type FlipState,
@@ -51,16 +53,7 @@ export {
   type PlayMode,
   type SoundState,
 };
-import {
-  integer,
-  literal,
-  map,
-  object,
-  refine,
-  string,
-  type Decoder,
-} from '../../../shared/lib/json.ts';
-import type { Result } from '../../../shared/lib/result.ts';
+import { integer, literal, object, type Decoder } from '../../../shared/lib/json.ts';
 import {
   decodeState,
   MATCH_LENGTHS,
@@ -70,33 +63,8 @@ import {
 } from './engine/index.ts';
 
 export const STORAGE_KEYS = {
-  /** The game in progress: pass-and-play, or the host's room and game, or the guest's room. */
-  save: 'backgammonMP_v1',
-  /** The player's name, as typed (bare string, at most 20 characters). */
-  name: 'backgammon_name',
-  /** The pass-and-play second name, as typed (bare string, at most 20 characters). */
-  p2Name: 'backgammon_p2Name',
-  /** The home tab last shown (bare string). */
-  homeTab: 'backgammon_homeTab',
-  /** Online or pass-and-play (bare string). */
-  playMode: 'backgammon_playMode',
-  /** `on` or `off` (bare string); anything but `off` counts as on. */
-  sound: 'backgammon_sound',
-  /**
-   * The sound font (web/shared/lib/sound/fonts.ts, bare string): this game's own key, so another
-   * game on the origin keeps its own choice (docs/design/sound-fonts.md §6); set from the console for now.
-   */
-  soundFont: 'backgammon_soundFont',
-  /**
-   * The finished matches this device remembers (web/shared/lib/recentGames.ts, JSON, newest
-   * first, at most 20; the owner's game history of 2026-09-25). This game's own key, like the font.
-   */
-  recentGames: 'backgammon_recentGames',
-  /**
-   * The pass-and-play table turned for the far seat: `on` or `off` (bare string; the shell's
-   * `flipForFar`, `#menuFlipToggle`; docs/design/backgammon-landscape.md §6 item 7). Missing reads as off.
-   */
-  flipTable: 'backgammon_flipTable',
+  /** The shell's keys (prefs.ts `ShellKeysOf`): the save and the eight preferences every shell keeps. */
+  ...shellKeys('backgammon_', 'backgammonMP_v1'),
   /** The ruleset the home screen last chose (bare string, a shipped variant only). */
   variant: 'backgammon_variant',
   /** The match length the home screen last chose (bare string naming one of MATCH_LENGTHS). */
@@ -141,14 +109,7 @@ export const decodeHomeTab: Decoder<HomeTab> = literal(...HOME_TABS);
 /** Shipped literals only: a stored plakoto or fevga reads as an error until they ship (Q1). */
 export const decodeVariant: Decoder<ShippedVariant> = shippedVariant;
 /** A bare string naming one of MATCH_LENGTHS (`"5"`), read back as the number. */
-export const decodeMatchLength: Decoder<number> = map(
-  refine(
-    string,
-    (s) => MATCH_LENGTHS.some((n) => String(n) === s),
-    `one of ${MATCH_LENGTHS.map(String).join(' | ')}`,
-  ),
-  Number,
-);
+export const decodeMatchLength: Decoder<number> = decodeDigitsOf(MATCH_LENGTHS);
 export const decodeCurtainMode: Decoder<CurtainMode> = literal(...CURTAIN_MODES);
 
 // ---- the shell's store: the game save and the bare-string preferences every shell keeps -----
@@ -190,11 +151,11 @@ export const { read: readVariant, write: writeVariant } = textPref(
   decodeVariant,
 );
 
-/** The match length is a number in the app and its digits in the store, so it is not a `textPref`. */
-export const readMatchLength = (store: Store): Result<number, StorageError> =>
-  readTextWith(store, STORAGE_KEYS.matchLength, decodeMatchLength);
-export const writeMatchLength = (store: Store, length: number): Result<null, StorageError> =>
-  store.writeText(STORAGE_KEYS.matchLength, String(length));
+/** The match length is a number in the app and its digits in the store (prefs.ts `digitsPref`). */
+export const { read: readMatchLength, write: writeMatchLength } = digitsPref(
+  STORAGE_KEYS.matchLength,
+  decodeMatchLength,
+);
 
 export const { read: readCurtainMode, write: writeCurtainMode } = textPref(
   STORAGE_KEYS.curtain,
