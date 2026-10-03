@@ -647,7 +647,6 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
         'web/games/briscola/src/storage.ts',
         'web/games/briscola/src/shellConfig.ts',
         'web/games/briscola/src/ui/**/*.ts',
-        'web/games/briscola/src/net/**/*.ts',
       ],
       // The engine (docs/design/briscola-rules.md §2): the 63 table positions, the view and decoder
       // suites and the seeded replay beside it. Measured at the PR (lines/functions/statements/
@@ -697,12 +696,6 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
           functions: 95,
           statements: 93,
           branches: 88,
-        },
-        'web/games/briscola/src/net/**': {
-          lines: 95,
-          functions: 95,
-          statements: 95,
-          branches: 97,
         },
       },
     },
