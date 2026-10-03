@@ -40,6 +40,7 @@ import {
   string,
   type Decoder,
 } from '../lib/json.ts';
+import { handoffLabel } from '../lib/name.ts';
 import { appendCapped, outcomeFor, type RecentGame } from '../lib/recentGames.ts';
 import type { Result } from '../lib/result.ts';
 import type { Rng } from '../lib/rng.ts';
@@ -957,6 +958,11 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
     finished: (game: G['State']) => boolean;
     /** The two seats' names, for the handoff (seat 0 hosts, seat 1 joins). */
     names: (game: G['State']) => Readonly<[string, string]>;
+    /**
+     * The game's own rule for the handoff, over the shell's two seats (`handoffable`): fidice
+     * offers it for two humans and no computer. Absent, every two-seat game may go online.
+     */
+    handoffable?: (game: G['State']) => boolean;
     /** `game.players[seat].name = name` on a rejoin; `seat` is 1 for a two-seat game, whose builder takes the first two. */
     renameGuest: (game: G['State'], name: string, seat: SeatOf<G>) => G['State'];
     /** The engine state off `position/load`'s hand-made object (the save's decoder); its error names the path. */
@@ -2288,6 +2294,47 @@ const resume = <G extends ShellTypes>(
 };
 
 /**
+ * The pass-and-play game a handoff would host, when it can go on as a two-seat room: the game in
+ * play, else the home's pass-and-play offer; null when there is neither, or the table seats more
+ * than two. A game with no seat table seats two; an N-seat game's terms (`opts.ofGame`, through
+ * `capacityOf`) must say two, and the game may add its own rule (`engine.handoffable`).
+ */
+const handoffGameOf = <G extends ShellTypes>(
+  s: ShellState<G>,
+  cfg: ShellConfig<G>,
+): G['State'] | null => {
+  const game =
+    s.role === 'local' && s.game !== null
+      ? s.game
+      : s.resume !== null && isShellResume(s.resume) && s.resume.kind === 'local'
+        ? s.resume.game
+        : null;
+  return game !== null &&
+    capacityOf(cfg.opts.ofGame(game), cfg) === 2 &&
+    (cfg.engine.handoffable?.(game) ?? true)
+    ? game
+    : null;
+};
+
+/** `handoff/click` would open a room: a pass-and-play game or offer stands and seats two (`handoffGameOf`). */
+export const handoffable = <G extends ShellTypes>(s: ShellState<G>, cfg: ShellConfig<G>): boolean =>
+  handoffGameOf(s, cfg) !== null;
+
+/**
+ * `#handoffBtn`'s tooltip (shellPaint.ts `paintHandoff`): who hosts and who joins, for the
+ * pass-and-play game in play that can go on as a two-seat room; null hides the button (nothing in
+ * play, a room online already, a table of more than two). The home's offer is the resume box's
+ * (web/shared/lib/name.ts `resumeLabel`), not this button's.
+ */
+export const handoffLabelOf = <G extends ShellTypes>(
+  s: ShellState<G>,
+  cfg: ShellConfig<G>,
+): string | null =>
+  s.role === 'local' && s.game !== null && handoffable(s, cfg)
+    ? handoffLabel(cfg.engine.names(s.game))
+    : null;
+
+/**
  * `#handoffBtn`: the pass-and-play game goes on as a hosted room with a fresh code. Seat 0 keeps
  * this device as the host; seat 1 joins from its own through the invite, and the host's join
  * handler takes it as a rejoin (the seat is kept, the name refreshed, the game broadcast). The
@@ -2515,12 +2562,9 @@ export const reduceShell = <G extends ShellTypes>(
       return own !== null && resumesItself(own, ctx.now()) ? resume(app, own, ctx, cfg) : pure(app);
     }
     case 'handoff/click': {
-      // The home screen's offer, or the game in play on the pass-and-play curtain.
-      if (s.role === 'local' && s.game !== null) return handoff(app, s.game, ctx, cfg);
-      const offer = s.resume;
-      return offer !== null && isShellResume(offer) && offer.kind === 'local'
-        ? handoff(app, offer.game, ctx, cfg)
-        : pure(app);
+      // The home screen's offer, or the game in play on the pass-and-play curtain, when it seats two.
+      const game = handoffGameOf(s, cfg);
+      return game === null ? pure(app) : handoff(app, game, ctx, cfg);
     }
     case 'name/rename': {
       // Only a guest whose channel to the host is open: a second join on the same channel is the

@@ -99,6 +99,7 @@ import { name as cappedName } from './copy.ts';
 import { NAME_CAP } from './copy-budget.ts';
 import { bindDrag } from './board/dragger.ts';
 import { flyMoves } from './board/fly.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindSheets as bindShellSheets,
@@ -119,8 +120,7 @@ import { bindLocal, paintCurtain } from './local.ts';
 import { ABOUT_PARAGRAPHS } from './about.ts';
 import { GLOSSARY } from './glossary.ts';
 import { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
-import { handoffLabel } from '../../../../shared/lib/name.ts';
-import { namesOf, rollModalOpen, type App, type Backgammon, type Intent } from './state.ts';
+import { BACKGAMMON, rollModalOpen, type App, type Backgammon, type Intent } from './state.ts';
 
 export type { PageLike };
 export type Dispatch = (intent: Intent) => void;
@@ -750,9 +750,8 @@ const paintGame = (doc: PageLike, app: App): void => {
 
 /** Everything, from the App alone. */
 export const paint = (doc: PageLike, app: App): void => {
-  const game = app.shell.role === 'local' ? app.shell.game : null;
   paintShellChrome(doc, app.shell, {
-    handoff: game === null ? null : handoffLabel(namesOf(game)),
+    handoff: handoffLabelOf(app.shell, BACKGAMMON),
     connDot: 'oppDot',
   });
   paintHome(doc, app);

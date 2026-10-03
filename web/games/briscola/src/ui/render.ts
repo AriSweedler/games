@@ -60,13 +60,13 @@ import type { Speed } from '../../../../shared/lib/speed.ts';
 import { resolveAspect, resolveBack } from '../../../../shared/lib/cards/resolve.ts';
 import { langByName, type LanguagePack } from '../../../../shared/lib/lang/packs.ts';
 import { suitSymbolId } from '../../../../shared/lib/cards/suits.ts';
-import { handoffLabel } from '../../../../shared/lib/name.ts';
 import { backImageCss } from '../../../../shared/ui/cardFace.ts';
 import { paintHistory } from '../../../../shared/ui/history.ts';
 import { HISTORY_IDS } from '../../../../shared/ui/ids.ts';
 import { reducedMotion } from '../../../../shared/edge/motion.ts';
 import type { IntentSlot } from '../protocol.ts';
 import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindSheets as bindShellSheets,
@@ -158,8 +158,8 @@ import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
 import {
   awaitingDraw,
+  BRISCOLA,
   liveView,
-  namesOf,
   pausedMsg,
   resultOpen,
   seatsDown,
@@ -179,12 +179,6 @@ export { RULES_SLOT_IDS } from './rules.ts';
 // ---- the shell (web/shared/ui/shellPaint.ts, each over the App's shell slice) ---------------------
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
-
-/** `#handoffBtn`'s tooltip (the 🌐 beside the menu button): a two-seat pass-and-play game can go on as a hosted room (D17), naming who hosts and who joins; null hides it. */
-const handoffTitle = (app: App): string | null => {
-  const game = app.shell.role === 'local' ? app.shell.game : null;
-  return game !== null && game.options.seatCount === 2 ? handoffLabel(namesOf(game)) : null;
-};
 
 /**
  * Whether a seat's channel is up, as this device knows it (n-seat-sessions.md §7): the host reads
@@ -1168,7 +1162,7 @@ export const paintCardView = (
 export const paint = (doc: PageLike, app: App): void => {
   const pack = packByName(app.table.cardPack);
   const lang = langByName(app.table.lang);
-  paintShellChrome(doc, app.shell, { handoff: handoffTitle(app) });
+  paintShellChrome(doc, app.shell, { handoff: handoffLabelOf(app.shell, BRISCOLA) });
   paintHome(doc, app);
   paintPack(doc, app.table.cardPack);
   // Measured before the table repaints: the played card's slot and the seat's back go with it.

@@ -708,18 +708,6 @@ const hostDeal = (app: App, ctx: Context): Step => {
 /** The seats' names in order: the shell's labels read them (web/shared/lib/name.ts `handoffLabel`, `resumeLabel`). */
 export const namesOf = (game: State): ReadonlyArray<string> => game.players.map((p) => p.name);
 
-/** The handoff (plan §7 D8) is the shell's two-seat room: offered for a pass-the-phone game of exactly two humans and no computer (ui/render.ts paints `#handoffBtn` by it). */
-export const handoffable = (app: App): boolean => {
-  const s = app.shell;
-  const game =
-    s.role === 'local' && s.game !== null
-      ? s.game
-      : s.resume?.kind === 'local'
-        ? s.resume.game
-        : null;
-  return game !== null && game.players.length === 2 && humansAt(game) === 2;
-};
-
 // ---- the actions -------------------------------------------------------------------------------
 
 /** The next state broadcast for the role: the host's wire, pass the phone's curtain. */
@@ -1049,8 +1037,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
 const reduceInner = (app: App, intent: Intent, ctx: Context): Step => {
   if (intent.type === 'local/click') return localStart(app, intent, ctx);
   if (intent.type === 'host/deal') return hostDeal(app, ctx);
-  // The handoff is a two-seat room (plan §7 D8): offered for two humans and no computer.
-  if (intent.type === 'handoff/click' && !handoffable(app)) return pure(app);
   return isShellIntent(intent)
     ? reduceShell(app, intent, ctx, FIDICE)
     : tableIntent(app, intent, ctx);

@@ -344,13 +344,6 @@ export const initialApp: App = { shell: initialShell, table: initialTable };
 
 /** The shell's `local/click` seats two to twelve (its `seatNames` where the click carries none) and deals through `engine.create`. */
 export const reduce = (app: App, intent: Intent, ctx: Ctx): Step => {
-  // The handoff hands a two-seat room on: at two players only.
-  if (
-    intent.type === 'handoff/click' &&
-    app.shell.game !== null &&
-    app.shell.game.seats.length !== 2
-  )
-    return pure(app);
   return isShellIntent(intent)
     ? reduceShell(app, intent, ctx, FLIP7)
     : tableIntent(app, intent, ctx);

@@ -27,6 +27,7 @@ import {
 } from '../../../../shared/edge/dom.ts';
 import { reducedMotion } from '../../../../shared/edge/motion.ts';
 import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindSheets,
@@ -48,8 +49,8 @@ import {
   writeClock,
   type Moments,
 } from './motion.ts';
-import { handoffLabel, listNames } from '../../../../shared/lib/name.ts';
-import { myTurn, namesOf, type App, type Flip7, type Intent } from './state.ts';
+import { listNames } from '../../../../shared/lib/name.ts';
+import { FLIP7, myTurn, type App, type Flip7, type Intent } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 export { fillNameInputs, fillP2NameInput, setCodeInput } from './home.ts';
@@ -67,12 +68,6 @@ export const REVEAL_LABEL = 'Start';
 export const CURTAIN_SUB = 'Every card is face up: everyone can watch.';
 
 // ---- the shell's halves ---------------------------------------------------------------------
-
-/** `#handoffBtn`'s tooltip: a two-seat pass-and-play game can go on as a hosted room; null hides it. */
-const handoffTitle = (app: App): string | null => {
-  const game = app.shell.role === 'local' ? app.shell.game : null;
-  return game !== null && game.seats.length === 2 ? handoffLabel(namesOf(game)) : null;
-};
 
 /** The curtain for the seat the phone goes to: its name, and the round about to be dealt. */
 const paintCurtain = (doc: DocumentLike, app: App): void => {
@@ -280,7 +275,10 @@ const paintPause = (doc: DocumentLike, app: App): void => {
 };
 
 export const paint = (doc: PageLike, app: App): void => {
-  paintShellChrome(doc, app.shell, { handoff: handoffTitle(app), connDot: 'oppDot' });
+  paintShellChrome(doc, app.shell, {
+    handoff: handoffLabelOf(app.shell, FLIP7),
+    connDot: 'oppDot',
+  });
   paintHome(doc, app);
   paintCurtain(doc, app);
   paintTable(doc, app);

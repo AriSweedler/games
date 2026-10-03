@@ -291,6 +291,8 @@ export const FIDICE_SHELL: ShellGameData<Fidice> = {
     over: (view) => view.phase === 'over',
     finished: (game) => game.phase === 'over',
     names: (game) => [game.players[0]?.name ?? '', game.players[1]?.name ?? ''],
+    /** The handoff (plan §7 D8) is for two humans at one phone: a table with a computer stays where it is. */
+    handoffable: (game) => game.players.every((p) => p.bot === null),
     /** A rejoin (D5): the seat's chair marked back at the table under the name the join carried, as the legacy `greet` did. */
     renameGuest: (game, name, seat) =>
       setConnected(game, seatId(seat), true, normaliseName(name, NAME_RULE)),

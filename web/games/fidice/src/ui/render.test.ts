@@ -10,6 +10,7 @@ import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
 import { byId, fakeDocument, fire, serialize } from '../../../../shared/edge/dom.fake.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
 import { aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import { renderCopy } from '../../../../shared/ui/shellPaint.ts';
 import { asRank } from '../domain/hands.ts';
 import type { Intent as OldIntent } from '../view/types.ts';
@@ -19,7 +20,6 @@ import {
   MOUNT_IDS,
   bindAll,
   intentOf,
-  handoffTitle,
   paint,
   paintNames,
   paintTable,
@@ -30,6 +30,7 @@ import {
 import { GLOSSARY, rulesItemsHtml } from './rules.ts';
 import {
   DEFAULT_OPTS,
+  FIDICE,
   SCREENS,
   initialApp,
   reduce,
@@ -185,10 +186,11 @@ describe('the shell painters over the App', () => {
     expect(list).toContain('data-bot-remove data-bot="1"');
   });
 
-  test('handoffTitle offers the two-seat room for two humans at one phone and nothing otherwise', () => {
-    expect(handoffTitle(local())).toBe('Continue online: Ann hosts, Bob joins by invite');
-    expect(handoffTitle(local('1'))).toBeNull();
-    expect(handoffTitle(hosted())).toBeNull();
+  test('the handoff is offered for two humans at one phone (engine.handoffable) and nothing otherwise', () => {
+    const title = (app: App): string | null => handoffLabelOf(app.shell, FIDICE);
+    expect(title(local())).toBe('Continue online: Ann hosts, Bob joins by invite');
+    expect(title(local('1'))).toBeNull();
+    expect(title(hosted())).toBeNull();
     const p = fidicePage(MARKUP);
     paint(p.doc, local());
     expect(p.get('handoffBtn').hidden()).toBe(false);

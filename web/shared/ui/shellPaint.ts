@@ -347,8 +347,8 @@ export const paintConnDot = (doc: DocumentLike, id: string, v: ConnDotView): voi
  * What every game's `paint` spelled before its table (docs/design/shell-call-graph.md §4.4): the
  * screens, the waiting rooms, the handoff button and the opponent's connection dot, each off
  * `app.shell` alone. What differs per game is data: the screen list when the page has more than
- * the shell's five, the handoff tooltip (null hides the button; its two-seat gate is the game's
- * until the shell's `handoffable` lands), the dot's id (gin and fidice `connDot`, the rest
+ * the shell's five, the handoff tooltip (shell.ts `handoffLabelOf`: null hides the button, the
+ * two-seat gate the shell's), the dot's id (gin and fidice `connDot`, the rest
  * `oppDot`; a page without one leaves it out), and the rooms' painter when the page's rooms carry
  * more than the shell's (fidice's computers, ui/waiting.ts). The dot is painted while a view
  * stands, as the table paints that carried it ran: before the first deal the markup's class holds.
