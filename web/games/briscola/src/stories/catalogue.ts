@@ -99,8 +99,7 @@ const localStart = (ctx: Context, n: 2 | 3 | 4): App =>
       p1: NAMES[0] ?? '',
       p2: NAMES[1] ?? '',
       localPlayers: String(n),
-      ...(n >= 3 ? { p3: NAMES[2] } : {}),
-      ...(n === 4 ? { p4: NAMES[3] } : {}),
+      names: NAMES.slice(2, n),
     },
   ]);
 

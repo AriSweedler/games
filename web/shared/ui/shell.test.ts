@@ -59,6 +59,7 @@ import {
   localPlayers,
   localSeated,
   localSeats,
+  noSeatNames,
   playsOrientation,
   pure,
   readHome,
@@ -1050,6 +1051,7 @@ describe('the initial shell and the partitions', () => {
       playMode: 'online',
       p1Name: '',
       p2Name: '',
+      seatNames: [],
       screen: 'homeScreen',
       portraitPhone: false,
       landscapePhone: false,
@@ -1088,9 +1090,11 @@ describe('the initial shell and the partitions', () => {
     ]);
   });
 
-  test('the 60 shell intents and 32 shell effects are listed once; the guards partition a game`s unions', () => {
-    expect(SHELL_INTENT_TYPES).toHaveLength(60);
-    expect(new Set(SHELL_INTENT_TYPES).size).toBe(60);
+  test('the 61 shell intents and 33 shell effects are listed once; the guards partition a game`s unions', () => {
+    expect(SHELL_INTENT_TYPES).toHaveLength(61);
+    expect(new Set(SHELL_INTENT_TYPES).size).toBe(61);
+    expect(SHELL_INTENT_TYPES).toContain('seatName/typed');
+    expect(SHELL_EFFECT_TYPES).toContain('rememberSeatName');
     expect(SHELL_INTENT_TYPES).toContain('opts/set');
     expect(SHELL_INTENT_TYPES).toContain('flip/set');
     expect(SHELL_INTENT_TYPES).toContain('name/rename');
@@ -1103,8 +1107,8 @@ describe('the initial shell and the partitions', () => {
     expect(SHELL_INTENT_TYPES).toContain('curtain/reveal');
     expect(SHELL_INTENT_TYPES).toContain('position/load');
     expect(SHELL_INTENT_TYPES).toContain('persist');
-    expect(SHELL_EFFECT_TYPES).toHaveLength(32);
-    expect(new Set(SHELL_EFFECT_TYPES).size).toBe(32);
+    expect(SHELL_EFFECT_TYPES).toHaveLength(33);
+    expect(new Set(SHELL_EFFECT_TYPES).size).toBe(33);
     expect(SHELL_EFFECT_TYPES).toContain('writeOpts');
     expect(SHELL_EFFECT_TYPES).toContain('writeFlip');
     expect(SHELL_EFFECT_TYPES).toContain('orientationLock');
@@ -4214,5 +4218,135 @@ describe("the room's terms remembered by the shell (shell-call-graph.md §4.6): 
     expect(store.get(KEYS.level)).toBe('6');
     runShellEffect(initialApp.shell, { type: 'writeOpts', opts: { level: 2 } }, deps, FAKE);
     expect(store.get(KEYS.level)).toBe('6');
+  });
+});
+
+describe('the extra seat names as shell state (shell-call-graph.md §4.7): `seatNames`, `seatName/typed`, `rememberSeatName`, an N-seat `local/click`', () => {
+  /** The four-seat fake whose prefs remember the third and fourth names under their own keys (the name rule: an empty write drops the key). */
+  const NAMED4: ShellConfig<Fake4> = {
+    ...FAKE4,
+    prefs: {
+      ...FAKE4.prefs,
+      seatNames: [pref('fake_p3Name', null), pref('fake_p4Name', null)],
+    },
+  };
+  const named4 = (app: App4, ...intents: ReadonlyArray<Intent<Fake4>>): Step<Fake4> =>
+    intents.reduce<Step<Fake4>>(
+      (st, intent) => {
+        if (!isShellIntent(intent)) throw new Error(`not a shell intent: ${intent.type}`);
+        const next = reduceShell(st.app, intent, ctx, NAMED4);
+        return { app: next.app, effects: [...st.effects, ...next.effects] };
+      },
+      { app, effects: [] },
+    );
+  const players4 = (app: App4): ReadonlyArray<string> =>
+    (app.shell.game?.players ?? []).map((p) => p.name);
+
+  test('the initial shell holds one null per seat past the second up to the table`s max; a two-seat game holds none', () => {
+    expect(noSeatNames(FAKE)).toEqual([]);
+    expect(noSeatNames({ seats: { min: 2, max: 2 } })).toEqual([]);
+    expect(noSeatNames(FAKE4)).toEqual([null, null]);
+    expect(initialShell(FAKE4).seatNames).toEqual([null, null]);
+    expect(initialShell(FAKE).seatNames).toEqual([]);
+  });
+
+  test('seatName/typed keeps the name as typed at its seat and remembers it trimmed; a cleared seat is "" (not null); a seat the table has not is left alone', () => {
+    const typed = named4(initialApp4, { type: 'seatName/typed', seat: 2, value: ' Cy ' });
+    expect(typed.app.shell.seatNames).toEqual([' Cy ', null]);
+    expect(typed.effects).toEqual([{ type: 'rememberSeatName', seat: 2, name: 'Cy' }]);
+    const cleared = named4(typed.app, { type: 'seatName/typed', seat: 2, value: '' });
+    expect(cleared.app.shell.seatNames).toEqual(['', null]);
+    expect(cleared.effects).toEqual([{ type: 'rememberSeatName', seat: 2, name: '' }]);
+    expect(
+      named4(typed.app, { type: 'seatName/typed', seat: 9, value: 'Zed' }).app.shell.seatNames,
+    ).toEqual([' Cy ', null]);
+    // A two-seat game has no such seat: nothing changes, and the effect reaches a runner with no pref (below).
+    expect(run(initialApp, { type: 'seatName/typed', seat: 2, value: 'Cy' }).app.shell).toEqual(
+      initialApp.shell,
+    );
+  });
+
+  test('local/click seats every seat the terms hold: the click`s names first, else the remembered ones, else the defaults; a cleared seat takes its default; the names survive the table', () => {
+    const carried = named4(initialApp4, {
+      type: 'local/click',
+      p1: 'Ann',
+      p2: 'Bob',
+      level: '4',
+      names: ['Cy', ''],
+    });
+    expect(players4(carried.app)).toEqual(['Ann', 'Bob', 'Cy', 'Player 4']);
+    expect(carried.app.shell).toMatchObject({
+      role: 'local',
+      opts: { level: 4 },
+      localNames: ['Ann', 'Bob', 'Cy', 'Player 4'],
+      localSeats: [0, 1, 2, 3],
+    });
+    const remembered = named4(
+      initialApp4,
+      { type: 'seatName/typed', seat: 2, value: 'Cy' },
+      { type: 'seatName/typed', seat: 3, value: 'cy' },
+      { type: 'local/click', p1: 'Ann', p2: 'Bob', level: '4' },
+    );
+    // The remembered names under the `localSeats` rule: a clash is numbered by its seat.
+    expect(players4(remembered.app)).toEqual(['Ann', 'Bob', 'Cy', 'cy 4']);
+    expect(remembered.app.shell.seatNames).toEqual(['Cy', 'cy']);
+    // Nothing typed anywhere: the shell's defaults, then `Player N`.
+    expect(
+      players4(named4(initialApp4, { type: 'local/click', p1: '', p2: '', level: '4' }).app),
+    ).toEqual(['Ari', 'Lavi', 'Player 3', 'Player 4']);
+    // Fewer seats than names: the terms' capacity wins.
+    expect(
+      players4(
+        named4(initialApp4, {
+          type: 'local/click',
+          p1: 'Ann',
+          p2: 'Bob',
+          level: '3',
+          names: ['Cy', 'Di'],
+        }).app,
+      ),
+    ).toEqual(['Ann', 'Bob', 'Cy']);
+    // The names are a preference: a leave keeps them for the next table.
+    expect(named4(remembered.app, { type: 'leave/finish' }).app.shell.seatNames).toEqual([
+      'Cy',
+      'cy',
+    ]);
+  });
+
+  test('readHome reads the seat names through the prefs (null where nothing is stored), nothing for a game without; home/init puts them in the shell and keeps the current ones otherwise', () => {
+    const store: Store = new Map();
+    expect(readHome(store, NAMED4).seatNames).toEqual([null, null]);
+    store.set('fake_p4Name', 'Dan');
+    expect(readHome(store, NAMED4).seatNames).toEqual([null, 'Dan']);
+    expect(readHome(store, FAKE4)).not.toHaveProperty('seatNames');
+    const snapshot = readHome(store, NAMED4);
+    expect(named4(initialApp4, { type: 'home/init', home: snapshot }).app.shell.seatNames).toEqual([
+      null,
+      'Dan',
+    ]);
+    const typed = named4(initialApp4, { type: 'seatName/typed', seat: 2, value: 'Cy' }).app;
+    expect(
+      named4(typed, { type: 'home/init', home: { ...snapshot, seatNames: null } }).app.shell
+        .seatNames,
+    ).toEqual(['Cy', null]);
+  });
+
+  test('rememberSeatName writes the seat`s pref, drops the key for "", and does nothing for a seat or a game without one', () => {
+    const store: Store = new Map();
+    const deps = { store } as unknown as ShellEffectDeps<Fake4>;
+    const shell4 = initialShell(NAMED4);
+    runShellEffect(shell4, { type: 'rememberSeatName', seat: 3, name: 'Dan' }, deps, NAMED4);
+    expect(store.get('fake_p4Name')).toBe('Dan');
+    runShellEffect(shell4, { type: 'rememberSeatName', seat: 9, name: 'Zed' }, deps, NAMED4);
+    runShellEffect(shell4, { type: 'rememberSeatName', seat: 3, name: '' }, deps, NAMED4);
+    expect([...store.keys()]).toEqual([]);
+    runShellEffect(shell4, { type: 'rememberSeatName', seat: 2, name: 'Cy' }, deps, FAKE4);
+    runShellEffect(
+      initialApp.shell,
+      { type: 'rememberSeatName', seat: 2, name: 'Cy' },
+      { store } as unknown as ShellEffectDeps<Fake>,
+      FAKE,
+    );
+    expect([...store.keys()]).toEqual([]);
   });
 });

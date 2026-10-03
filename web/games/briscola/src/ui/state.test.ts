@@ -167,11 +167,10 @@ const home: HomeSnapshot = {
   save: null,
   recentGames: [],
   opts: DEFAULT_OPTS,
+  seatNames: [null, null],
   cardPack: DEFAULT_CARD_PACK,
   lang: 'it',
   speed: 'normal',
-  p3Name: null,
-  p4Name: null,
 };
 
 const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => {
@@ -258,7 +257,6 @@ describe('the initial app', () => {
       tip: null,
       swallowTap: null,
       cardView: null,
-      extraNames: { 2: null, 3: null },
       hover: null,
       sent: null,
       intentArmed: false,
@@ -266,26 +264,25 @@ describe('the initial app', () => {
       mirror: [null, null, null, null],
       budget: [null, null, null, null],
     });
-    expect(SHELL_INTENT_TYPES).toHaveLength(60);
+    expect(SHELL_INTENT_TYPES).toHaveLength(61);
     expect(EMPTY_SLOTS).toEqual([null, null, null]);
   });
 });
 
 describe('home', () => {
-  test('home/init puts the options into the shell and the card pack and the extra names onto the table; the offer follows the save', () => {
+  test('home/init puts the options and the extra names into the shell and the card pack onto the table; the offer follows the save', () => {
     const snapshot: HomeSnapshot = {
       ...home,
       name: 'Ann',
       opts: { ...DEFAULT_OPTS, seatCount: 3, removedTwo: 'D' },
       cardPack: 'default',
-      p3Name: 'Cara',
-      p4Name: null,
+      seatNames: ['Cara', null],
     };
     const { app, effects } = run(initialApp, { type: 'home/init', home: snapshot });
     expect(app.shell.opts).toEqual({ ...DEFAULT_OPTS, seatCount: 3, removedTwo: 'D' });
     expect(app.table.cardPack).toBe('default');
     // A seat with nothing remembered is null: the paint shows its default, marked for the first-tap clear.
-    expect(app.table.extraNames).toEqual({ 2: 'Cara', 3: null });
+    expect(app.shell.seatNames).toEqual(['Cara', null]);
     expect(app.shell.resume).toBeNull();
     expect(kinds(effects)).toEqual(['scrollTop', 'fillName', 'fillP2Name']);
   });
@@ -312,16 +309,16 @@ describe('home', () => {
     );
   });
 
-  test('pname/typed keeps the third and fourth names and remembers them trimmed; cardPack/set takes a pack of the deck and refuses another', () => {
+  test('seatName/typed keeps the third and fourth names in the shell and remembers them trimmed; cardPack/set takes a pack of the deck and refuses another', () => {
     const typed = run(
       initialApp,
-      { type: 'pname/typed', seat: 2, value: ' Cara ' },
-      { type: 'pname/typed', seat: 3, value: 'Dan' },
+      { type: 'seatName/typed', seat: 2, value: ' Cara ' },
+      { type: 'seatName/typed', seat: 3, value: 'Dan' },
     );
-    expect(typed.app.table.extraNames).toEqual({ 2: ' Cara ', 3: 'Dan' });
+    expect(typed.app.shell.seatNames).toEqual([' Cara ', 'Dan']);
     expect(typed.effects).toEqual([
-      { type: 'rememberPName', seat: 2, name: 'Cara' },
-      { type: 'rememberPName', seat: 3, name: 'Dan' },
+      { type: 'rememberSeatName', seat: 2, name: 'Cara' },
+      { type: 'rememberSeatName', seat: 3, name: 'Dan' },
     ]);
     const pack = run(initialApp, { type: 'cardPack/set', pack: 'default' });
     expect(pack.app.table.cardPack).toBe('default');
@@ -384,32 +381,32 @@ describe('pass and play: seating two, three and four', () => {
   });
 
   test('local/click at three and four: the extra names off the raw inputs, else as remembered, else the defaults; the deck and the sides follow', () => {
-    const three = local({ localPlayers: '3', p3: 'Cara' });
+    const three = local({ localPlayers: '3', names: ['Cara'] });
     expect(game(three).players.map((p) => p.name)).toEqual(['Ann', 'Bob', 'Cara']);
     expect(game(three).options.seatCount).toBe(3);
     expect(view(three).stockCount).toBe(30);
     expect(view(three).sides).toHaveLength(3);
     expect(three.table.curtain).toBe(game(three).turn);
 
-    const remembered = local({ localPlayers: '4' }, { ...home, p3Name: 'Cara', p4Name: 'Dan' });
+    const remembered = local({ localPlayers: '4' }, { ...home, seatNames: ['Cara', 'Dan'] });
     expect(game(remembered).players.map((p) => p.name)).toEqual(['Ann', 'Bob', 'Cara', 'Dan']);
     expect(view(remembered).stockCount).toBe(28);
     expect(view(remembered).sides).toHaveLength(4);
 
     // An empty seat is this game's default (shellConfig.ts LOCAL_NAMES: the owner's "Ari and Lavi
     // (with p3 Sandro and p4 Grant)"); a clash with an earlier seat is suffixed by its number.
-    const defaults = local({ localPlayers: '4', p3: '', p4: 'ann' });
+    const defaults = local({ localPlayers: '4', names: ['', 'ann'] });
     expect(game(defaults).players.map((p) => p.name)).toEqual(['Ann', 'Bob', 'Sandro', 'ann 4']);
     expect(LOCAL_NAMES).toEqual(['Ari', 'Lavi', 'Sandro', 'Grant']);
     const untouched = run(
       initialApp,
       { type: 'home/init', home },
-      { type: 'local/click', p1: '', p2: '', localPlayers: '4', p3: '', p4: '' },
+      { type: 'local/click', p1: '', p2: '', localPlayers: '4', names: ['', ''] },
     ).app;
     expect(game(untouched).players.map((p) => p.name)).toEqual(LOCAL_NAMES);
     // A fourth name typed into the input but not carried by the click is not used: the click is the truth.
     const typed = run(local({ localPlayers: '3' }), {
-      type: 'pname/typed',
+      type: 'seatName/typed',
       seat: 2,
       value: 'Zed',
     }).app;
@@ -417,7 +414,7 @@ describe('pass and play: seating two, three and four', () => {
   });
 
   test('the handoff is offered at two seats only: at three the intent is dropped, at two it opens a room', () => {
-    const three = revealed(local({ localPlayers: '3', p3: 'Cara' }));
+    const three = revealed(local({ localPlayers: '3', names: ['Cara'] }));
     const dropped = run(three, { type: 'handoff/click' });
     expect(dropped.app).toBe(three);
     expect(dropped.effects).toEqual([]);
@@ -725,7 +722,7 @@ describe('pass and play: whole games through the tap policy', () => {
   test.each([2, 3, 4] as const)(
     'a game of %i seats plays to its end: every trick settles, the result sheet opens once the beat is done, the score sums to 120',
     (n) => {
-      const start = local({ localPlayers: String(n), p3: 'Cara', p4: 'Dan' });
+      const start = local({ localPlayers: String(n), names: ['Cara', 'Dan'] });
       const over = playUntil(
         start,
         (app) => view(app).phase === 'over' && app.table.settle === null,
@@ -1104,7 +1101,7 @@ const withView = (app: App, v: View): App => ({ ...app, shell: { ...app.shell, v
 describe('resume, storage and what the sessions read back', () => {
   test('resumeFor offers each save role, not a decided game; the labels name the players (vs at two, a list at more) or the room', () => {
     const two = game(local());
-    const three = game(local({ localPlayers: '3', p3: 'Cara' }));
+    const three = game(local({ localPlayers: '3', names: ['Cara'] }));
     expect(resumeFor(null)).toBeNull();
     expect(resumeFor({ role: 'local', game: two })).toEqual({ kind: 'local', game: two });
     expect(resumeLabel({ kind: 'local', game: two })).toBe('Resume pass & play: Ann vs Bob');
@@ -1225,9 +1222,9 @@ describe('resume, storage and what the sessions read back', () => {
 
   test('leave/request confirms with the role`s message; the finish resets the table but keeps the pack and the names', () => {
     const start = run(
-      local({ localPlayers: '3', p3: 'Cara' }),
+      local({ localPlayers: '3', names: ['Cara'] }),
       { type: 'cardPack/set', pack: 'default' },
-      { type: 'pname/typed', seat: 2, value: 'Cara' },
+      { type: 'seatName/typed', seat: 2, value: 'Cara' },
     ).app;
     const asked = run(start, { type: 'leave/request' });
     expect(asked.effects).toEqual([
@@ -1236,11 +1233,8 @@ describe('resume, storage and what the sessions read back', () => {
     const left = run(start, { type: 'leave/confirmed' }, { type: 'leave/finish' }).app;
     expect(left.shell.role).toBeNull();
     expect(left.shell.game).toBeNull();
-    expect(left.table).toEqual({
-      ...initialTable,
-      cardPack: 'default',
-      extraNames: { 2: 'Cara', 3: null },
-    });
+    expect(left.table).toEqual({ ...initialTable, cardPack: 'default' });
+    expect(left.shell.seatNames).toEqual(['Cara', null]);
   });
 });
 
@@ -1257,8 +1251,8 @@ describe('runEffect', () => {
     );
     // The seat count alone: the house rules have no key any more.
     expect([...s.map.entries()]).toEqual([[STORAGE_KEYS.players, '4']]);
-    runEffect(l, { type: 'rememberPName', seat: 2, name: 'Cara' }, deps);
-    runEffect(l, { type: 'rememberPName', seat: 3, name: 'Dan' }, deps);
+    runEffect(l, { type: 'rememberSeatName', seat: 2, name: 'Cara' }, deps);
+    runEffect(l, { type: 'rememberSeatName', seat: 3, name: 'Dan' }, deps);
     expect(s.map.get(STORAGE_KEYS.p3Name)).toBe('Cara');
     expect(s.map.get(STORAGE_KEYS.p4Name)).toBe('Dan');
     runEffect(l, { type: 'writeCardPack', pack: 'default' }, deps);

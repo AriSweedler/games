@@ -1,9 +1,10 @@
 // The seat-name inputs' behaviour (web/shared/markup/seatNames.ts places them): the paint shows
 // the first `n` seats and fills every seat past the shell's two with its remembered name or the
 // game's default (marked `data-default`, so the first tap clears it, as the shared binder does for
-// the first two seats: web/shared/ui/home.ts); the binder reports each keystroke on those seats;
-// the reader hands their raw values to the game's `local/click`. The first two seats stay the
-// shell's (`bindHomeShell`), so a game's home binds this beside it.
+// the first two seats: web/shared/ui/home.ts); the binder dispatches each keystroke on those seats
+// as the shell's `seatName/typed` (shell.ts keeps them in `ShellState.seatNames`, which the paint
+// reads back); the reader hands their raw values to the game's `local/click`. The first two seats
+// stay the shell's (`bindHomeShell`), so a game's home binds this beside it.
 import {
   dataOf,
   listen,
@@ -16,7 +17,7 @@ import {
 } from '../edge/dom.ts';
 import { extraSeats, seatNameInputId } from '../markup/seatNames.ts';
 import { DEFAULT_MARK, clearDefault } from './home.ts';
-import { localNameFor } from './shell.ts';
+import { localNameFor, type ShellIntent, type ShellTypes } from './shell.ts';
 
 /** The page's seat cap and the game's pass-and-play defaults (shell.ts `localNamesOf`). */
 export type SeatNamesSpec = Readonly<{ max: number; names: ReadonlyArray<string> }>;
@@ -50,25 +51,28 @@ export const paintSeatNames = (
   });
 };
 
+/** The one intent this module dispatches: a game's `dispatch` takes it, its `Intent` being the shell's and its own. */
+export type SeatNameTyped = Extract<ShellIntent<ShellTypes>, Readonly<{ type: 'seatName/typed' }>>;
+
 /**
- * Seats 3+: each keystroke reaches `onTyped(seat, value)` (seat 0-based), and a prefilled default
- * clears on its first focus or tap, reported as an empty name.
+ * Seats 3+: each keystroke is dispatched as `seatName/typed` (seat 0-based), and a prefilled
+ * default clears on its first focus or tap, dispatched as an empty name.
  */
 export const bindSeatNames = (
   doc: DocumentLike,
   spec: SeatNamesSpec,
-  onTyped: (seat: number, value: string) => void,
+  dispatch: (intent: SeatNameTyped) => void,
 ): void => {
   extraSeats(spec.max).forEach((seat) => {
     const input = requireId(doc, seatNameInputId(seat));
     listen(input, 'input', () => {
-      onTyped(seat, readValue(input));
+      dispatch({ type: 'seatName/typed', seat, value: readValue(input) });
     });
     ['focus', 'pointerdown'].forEach((type) => {
       listen(input, type, () => {
         if (dataOf(input, 'default') === null) return;
         clearDefault(input);
-        onTyped(seat, '');
+        dispatch({ type: 'seatName/typed', seat, value: '' });
       });
     });
   });

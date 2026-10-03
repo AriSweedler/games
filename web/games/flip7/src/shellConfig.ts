@@ -32,7 +32,6 @@ import {
   SHELL_STORE,
   readOpts,
   writeOpts,
-  type ExtraSeat,
   type Opts,
 } from './storage.ts';
 import { CUES } from './ui/sound.ts';
@@ -106,16 +105,11 @@ export const FLIP7_SHELL: ShellGameData<Flip7> = {
   },
   frames: { lobby, state, toast, action, join },
   cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
-  home: {
-    read: (store) => ({
-      extraNames: Object.fromEntries(
-        EXTRA_SEATS.map((seat) => {
-          const name = EXTRA_NAME_PREFS[seat].read(store);
-          return [seat, name.ok ? name.value : null];
-        }),
-      ) as Record<ExtraSeat, string | null>,
-    }),
+  home: { read: () => ({}) },
+  // The seat count is the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key; the third to twelfth names its `seatNames` (`seatName/typed`, `rememberSeatName`), under `p3Name` on.
+  prefs: {
+    ...SHELL_STORE,
+    opts: { read: readOpts, write: writeOpts },
+    seatNames: EXTRA_SEATS.map((seat) => EXTRA_NAME_PREFS[seat]),
   },
-  // The seat count is the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key.
-  prefs: { ...SHELL_STORE, opts: { read: readOpts, write: writeOpts } },
 };

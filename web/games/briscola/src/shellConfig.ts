@@ -51,8 +51,7 @@ import {
   readCardPack,
   readSpeed,
   readOpts,
-  readP3Name,
-  readP4Name,
+  EXTRA_NAME_PREFS,
   writeOpts,
 } from './storage.ts';
 import { CUES } from './ui/sound.ts';
@@ -172,21 +171,21 @@ export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
   frames: { lobby, state, toast, action, join },
   cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   home: {
-    // This page's own keys: the seat count (the default when unreadable) on the fixed terms, the card pack, the language pack, the beat's speed, the third and fourth names.
+    // This page's own keys: the card pack, the language pack, the beat's speed.
     read: (store) => {
       const pack = readCardPack(store);
-      const p3 = readP3Name(store);
-      const p4 = readP4Name(store);
       const speed = readSpeed(store);
       return {
         cardPack: pack.ok ? pack.value : DEFAULT_CARD_PACK,
         lang: LANG_PREF.orDefault(store),
         speed: speed.ok ? speed.value : DEFAULT_SPEED,
-        p3Name: p3.ok ? p3.value : null,
-        p4Name: p4.ok ? p4.value : null,
       };
     },
   },
-  // The room options are the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key.
-  prefs: { ...SHELL_STORE, opts: { read: readOpts, write: writeOpts } },
+  // The room options are the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key; the third and fourth names its `seatNames` (`seatName/typed`, `rememberSeatName`), under `p3Name` and `p4Name`.
+  prefs: {
+    ...SHELL_STORE,
+    opts: { read: readOpts, write: writeOpts },
+    seatNames: [EXTRA_NAME_PREFS[2], EXTRA_NAME_PREFS[3]],
+  },
 };

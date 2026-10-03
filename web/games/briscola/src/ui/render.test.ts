@@ -92,8 +92,6 @@ const home: HomeSnapshot = {
   cardPack: 'linea',
   lang: 'it',
   speed: 'normal',
-  p3Name: null,
-  p4Name: null,
 };
 /** A pass-and-play table, curtain up for the leader; `raw` picks the seats and the rules. */
 const local = (raw: Raw = {}): App =>
@@ -759,7 +757,7 @@ describe('the two-player table', () => {
 
   test('four players: three cells with their seats, the strip per player (no teams), the handoff not offered', () => {
     const p = page();
-    const app = local({ localPlayers: '4', p3: 'Cara', p4: 'Dan' });
+    const app = local({ localPlayers: '4', names: ['Cara', 'Dan'] });
     paint(p.doc, app);
     const v = view(app);
     const me = v.me.idx;
@@ -847,7 +845,7 @@ describe('the history sheet', () => {
     paint(p.doc, run(after, { type: 'history/close' }).app);
     expect(p.get('historyOverlay').hidden()).toBe(true);
     // Another table whose stream ends at the same id is another list: its own deal, not the last game's.
-    const other = run(local({ localPlayers: '4', p3: 'Cara', p4: 'Dan' }), {
+    const other = run(local({ localPlayers: '4', names: ['Cara', 'Dan'] }), {
       type: 'history/open',
     }).app;
     const o = view(other);
@@ -1310,7 +1308,7 @@ describe('the live intent mirror (docs/design/briscola-battle.md §4.4): the pai
       },
     });
     const p4 = pageOfCells();
-    const four = local({ localPlayers: '4', p3: 'Cara', p4: 'Dan' });
+    const four = local({ localPlayers: '4', names: ['Cara', 'Dan'] });
     const me4 = view(four).me.idx;
     paint(
       p4.doc,
@@ -1325,7 +1323,7 @@ describe('the live intent mirror (docs/design/briscola-battle.md §4.4): the pai
     expect(p4.lifts()).toEqual([[], ['hover@1'], []]);
     // Three: the second other seat sits in #seatR3; #seatR2 is hidden and its backs are never painted.
     const p3 = pageOfCells();
-    const three = local({ localPlayers: '3', p3: 'Cara' });
+    const three = local({ localPlayers: '3', names: ['Cara'] });
     const me3 = view(three).me.idx;
     paint(p3.doc, mirrored(three, [[(me3 + 2) % 3, 1, 'hover']]));
     expect(p3.lifts()).toEqual([[], [], ['hover@1']]);
@@ -1541,7 +1539,7 @@ describe('three and four seats online (docs/design/n-seat-sessions.md §7)', () 
   });
 
   test('the result sheet at four lists every seat by points, the winner first (a free-for-all, no teams); one row per seat', () => {
-    const app = local({ localPlayers: '4', p3: 'Cara', p4: 'Dan' });
+    const app = local({ localPlayers: '4', names: ['Cara', 'Dan'] });
     const v = view(app);
     const totals = [30, 20, 50, 20];
     const over: View = {

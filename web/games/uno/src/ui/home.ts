@@ -68,7 +68,7 @@ export const paintHome = (doc: DocumentLike, app: App): void => {
   const n = app.shell.opts.seatCount;
   paintStepper(doc, ONLINE_STEPPER, n);
   paintStepper(doc, LOCAL_STEPPER, n);
-  paintSeatNames(doc, SEAT_NAMES, n, app.table.extraNames);
+  paintSeatNames(doc, SEAT_NAMES, n, app.shell.seatNames);
 };
 
 /** Every control of the home screen and the two waiting screens; each count is remembered as it steps, each extra name as it is typed. */
@@ -84,7 +84,5 @@ export const bindHome = (doc: PageLike, dispatch: (intent: Intent) => void): voi
   bindStepper(doc, LOCAL_STEPPER, (n) => {
     dispatch({ type: 'opts/set', raw: { localPlayers: String(n) } });
   });
-  bindSeatNames(doc, SEAT_NAMES, (seat, value) => {
-    dispatch({ type: 'pname/typed', seat, value });
-  });
+  bindSeatNames(doc, SEAT_NAMES, dispatch);
 };
