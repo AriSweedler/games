@@ -1,8 +1,9 @@
 // Hive's storage (docs/design/hive.md §7): the shared shell's keys under this game's prefix
 // (web/shared/edge/prefs.ts `shellStore`: the save of the game in progress, the names, the tab,
-// the mode, sound, the font, the finished games, the far seat's flip) and one option of its own,
-// the tiles' motion (crawl or snap), a row of the shell's settings table (web/shared/edge/settings.ts
-// `HIVE_MOTION`, under `hive_motion`) read and written through it. tools/games.ts REGISTRY pins
+// the mode, sound, the font, the finished games, the far seat's flip) and two options of its own,
+// the tiles' motion (crawl or snap) and the hints (show or hide), rows of the shell's settings
+// table (web/shared/edge/settings.ts `HIVE_MOTION` under `hive_motion`, `HIVE_HINTS` under
+// `hive_hints`) read and written through it. tools/games.ts REGISTRY pins
 // the save key and the prefix.
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
 import {
@@ -14,6 +15,7 @@ import {
   type Save as ShellSave,
 } from '../../../shared/edge/prefs.ts';
 import {
+  HIVE_HINTS,
   HIVE_MOTION,
   nextSetting,
   readSetting,
@@ -47,6 +49,17 @@ export const writeMotion = (store: Store, motion: Motion): void => {
 };
 /** The other motion: what `#motionBtn` switches to. */
 export const nextMotion = (motion: Motion): Motion => nextSetting(HIVE_MOTION, motion);
+
+/** The hints: `show` (a picked tile's hexes light, the default) or `hide` (place anywhere, then confirm). */
+export type Hints = (typeof HIVE_HINTS.values)[number];
+export { HIVE_HINTS };
+/** The stored hints, or `show`. */
+export const readHints = (store: Store): Hints => readSetting(store, HIVE_HINTS);
+export const writeHints = (store: Store, hints: Hints): void => {
+  writeSetting(store, HIVE_HINTS, hints);
+};
+/** The other hints: what `#hintsBtn` switches to. */
+export const nextHints = (hints: Hints): Hints => nextSetting(HIVE_HINTS, hints);
 
 export const HOME_TABS = ['play', 'rules', 'about'] as const;
 export type HomeTab = (typeof HOME_TABS)[number];

@@ -37,7 +37,7 @@ import {
 } from '../edge/dom.ts';
 import { NAME_MAX } from '../lib/protocol.ts';
 import { ensureKeyed } from './keyed.ts';
-import type { Role, SeatState, ShellState, ShellTypes } from './shell.ts';
+import type { Role, SeatState, ShellState, ShellTypes, ToastKind } from './shell.ts';
 
 export type Dispatch<I> = (intent: I) => void;
 
@@ -245,13 +245,24 @@ export const paintWaiting = (doc: DocumentLike, w: WaitingView): void => {
  */
 export type ToastMarks = Readonly<Record<string, boolean>>;
 
-/** `toast(msg)`'s DOM half: the text, the marks and the `show` class; toast.ts keeps the hide timer. */
-export const showToast = (doc: DocumentLike, message: string, marks: ToastMarks = {}): void => {
+/**
+ * `toast(msg)`'s DOM half: the text, the marks, the kind and the `show` class; toast.ts keeps the
+ * hide timer. An `error` wears `error` (shell.css: the red fill) and is an alert, read out at once
+ * by a screen reader; the plain toast is a status, and the one after an error is a status again.
+ */
+export const showToast = (
+  doc: DocumentLike,
+  message: string,
+  marks: ToastMarks = {},
+  kind?: ToastKind,
+): void => {
   const el = requireId(doc, 'toast');
   setText(el, message);
   Object.entries(marks).forEach((mark: readonly [string, boolean]) => {
     toggleClass(el, mark[0], mark[1]);
   });
+  toggleClass(el, 'error', kind === 'error');
+  setAttr(el, 'role', kind === 'error' ? 'alert' : 'status');
   toggleClass(el, 'show', true);
 };
 

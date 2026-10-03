@@ -594,8 +594,8 @@ export type ShellEffect<G extends ShellTypes> =
   | Readonly<{ type: 'recordGame'; game: RecentGame }>
   /** Scroll `rule` into view inside the rules `slot` that is on screen and flash it (web/shared/edge/glossary.ts). */
   | Readonly<{ type: 'revealRule'; slot: RulesSlot; rule: string }>
-  /** `ms` null is the default duration. */
-  | Readonly<{ type: 'toast'; message: string; ms: number | null }>
+  /** `ms` null is the default duration; `kind` `error` is the red one (`errorToast`), absent the plain one. */
+  | Readonly<{ type: 'toast'; message: string; ms: number | null; kind?: ToastKind }>
   /** To the current session's channel, if open; `seat` names one of a host's channels (an N-seat game), absent every open one, which at capacity 2 is the one channel. */
   | Readonly<{ type: 'send'; frame: HostFrameOf<G> | GuestFrameOf<G>; seat?: SeatOf<G> }>
   | Readonly<{ type: 'fx'; cue: Cue<G> }>
@@ -1029,14 +1029,29 @@ export const andThen = <G extends ShellTypes>(
   const next = f(s.app);
   return { app: next.app, effects: [...s.effects, ...next.effects] };
 };
+/**
+ * The toast's kinds beyond the plain one: `error` is red and read out at once (shellPaint.ts
+ * `showToast`: the `error` class, `role="alert"`), for a refusal the player must read (Hive's
+ * hints-off play: "yell at you with a red toast and tell you why it's no good").
+ */
+export type ToastKind = 'error';
+/** An error toast lasts this long: a sentence to read, not a notice to glance at. */
+export const ERROR_TOAST_MS = 4000;
 export const toast = (
   message: string,
   ms: number | null = null,
-): Readonly<{ type: 'toast'; message: string; ms: number | null }> => ({
+  kind?: ToastKind,
+): Readonly<{ type: 'toast'; message: string; ms: number | null; kind?: ToastKind }> => ({
   type: 'toast',
   message,
   ms,
+  ...(kind === undefined ? {} : { kind }),
 });
+/** The red toast: `message` as an error for ERROR_TOAST_MS. */
+export const errorToast = (
+  message: string,
+): Readonly<{ type: 'toast'; message: string; ms: number | null; kind?: ToastKind }> =>
+  toast(message, ERROR_TOAST_MS, 'error');
 const tap = { type: 'fx', cue: 'tap' } as const;
 export const withShell = <G extends ShellTypes>(
   app: ShellApp<G>,

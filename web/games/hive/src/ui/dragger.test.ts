@@ -31,7 +31,7 @@ type Table = Readonly<{
  * White's playable Ant in the tray at (100, 600), 50 by 58; my movable Queen at the origin, drawn at
  * (200, 300), 60 by 70, with the lift the paint lays over her; two lit hexes, east and south-east.
  */
-const table = (): Table => {
+const table = (free = false): Table => {
   const tileGhost = fakeEl('tileGhost', { classes: ['hand-tile', 'w', 'playable', 'dragging'] });
   const tile = fakeEl('ant', {
     classes: ['hand-tile', 'w', 'playable'],
@@ -61,7 +61,13 @@ const table = (): Table => {
     attrs: { 'data-hex': '0,1' },
   });
   Object.assign(south.el, { getBoundingClientRect: () => rect(230, 352, 60, 70) });
-  const board = fakeEl('board', { queries: { '.hex.lit': [east, south], 'svg.lift': [lift] } });
+  // Black's tile west of the Queen: never lit, a target only on a `free` board (the hints hidden).
+  const taken = fakeEl('cell-taken', { classes: ['hex', 'b'], attrs: { 'data-hex': '-1,0' } });
+  Object.assign(taken.el, { getBoundingClientRect: () => rect(140, 300, 60, 70) });
+  const board = fakeEl('board', {
+    classes: free ? ['board', 'free'] : ['board'],
+    queries: { '.hex.lit': [east, south], 'g.hex': [east, south, taken], 'svg.lift': [lift] },
+  });
   const white = fakeEl('whiteHand', { queries: { '.hand-tile[data-bug="ant"]': [tile] } });
   const black = fakeEl('blackHand');
   const page = fakePage([board, white, black]);
@@ -116,6 +122,25 @@ describe('nearestLit', () => {
     expect(nearestLit(targets, { x: 255, y: 378 }, home)).toBe('south');
     // A home never measured (a fake's) holds nothing back.
     expect(nearestLit(targets, { x: 245, y: 335 }, rect(0, 0, 0, 0))).toBe('east');
+  });
+});
+
+describe('bindDrag on a free board (the hints hidden)', () => {
+  test('every cell is a target, not the lit ones alone', () => {
+    const t = table(true);
+    const on = { '.hand-tile.playable': t.tile };
+    t.white.fire('pointerdown', at(on, 125, 629));
+    t.white.fire('pointermove', at(on, 125 + DRAG_THRESHOLD, 629));
+    t.white.fire('pointermove', at(on, 170, 335));
+    expect(t.intents.at(-1)).toEqual({ type: 'drag/over', hex: { q: -1, r: 0 } });
+    t.white.fire('pointerup', at(on, 170, 335));
+    expect(t.intents.at(-1)).toEqual({ type: 'drag/end' });
+    // Not free: the same cell is no target.
+    const lit = table();
+    lit.white.fire('pointerdown', at(on, 125, 629));
+    lit.white.fire('pointermove', at(on, 125 + DRAG_THRESHOLD, 629));
+    lit.white.fire('pointermove', at(on, 170, 335));
+    expect(lit.intents.filter((i) => i.type === 'drag/over')).toEqual([]);
   });
 });
 

@@ -625,6 +625,14 @@ details.history-row > .history-detail dd {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+/* The red toast (shellPaint.ts `showToast` with the `error` kind; shell.ts `errorToast`): a refusal
+   the player must read, over whatever fill the theme paints the plain one. Dark ink on the danger
+   red (the shared `--danger`, every theme's own red): a theme may name `--toast-error-ink`. */
+#toast.error {
+  background: var(--danger);
+  color: var(--toast-error-ink, #2a0b0b);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
 
 /* ---------- top tabs and the mode switch (home.ts) ---------- */
 .tabbar {

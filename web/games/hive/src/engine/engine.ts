@@ -3,7 +3,8 @@
 // is, how many turns each side has taken and the result. `legalPlacements` and `legalMoves` list
 // what the side to move may do, and `apply` plays one intent (place, move, pass, resign) and returns
 // the next state with a one-line note for the paint; an intent that does not apply leaves the
-// state as it was and says why in the note. No randomness: the tests' bots bring their own Rng.
+// state as it was and says why in the note; `explainMove` names the first rule an intent breaks
+// (null where `legalTurns` allows it) for the page that lets a player put a tile anywhere first. No randomness: the tests' bots bring their own Rng.
 // Not here (§2): the expansions, the tournament opening rule, a draw by repetition (the page's
 // draw button, a follow-up).
 import {
@@ -21,6 +22,7 @@ import {
   route,
   sameHex,
   scale,
+  sharedNeighbours,
   walkEnds,
   walks,
   type Hex,
@@ -286,6 +288,18 @@ export const pathOf = (game: Game, from: Hex, to: Hex, bug: Bug): ReadonlyArray<
   }
 };
 
+/**
+ * The board with `intent` played by `side`, rules aside: a placement's tile pushed on its hex, a
+ * move's top tile lifted off `from` and pushed on `to` (no tile at `from`: the board as it was).
+ * For the page's hints-off play (ui/render.ts): the proposed tile drawn where the player put it
+ * before `explainMove` says whether it may stay. `apply` alone changes a game.
+ */
+export const withIntent = (board: Board, side: Side, intent: Place | Move): Board => {
+  if (intent.type === 'place') return pushTile(board, intent.to, { side, bug: intent.bug });
+  const tile = topAt(board, intent.from);
+  return tile === undefined ? board : pushTile(liftTop(board, intent.from), intent.to, tile);
+};
+
 /** Every placement and then every move the side to move may make. */
 export const legalTurns = (game: Game): ReadonlyArray<Place | Move> => [
   ...legalPlacements(game),
@@ -293,6 +307,104 @@ export const legalTurns = (game: Game): ReadonlyArray<Place | Move> => [
     legalMoves(game, from).map((to): Move => ({ type: 'move', from, to })),
   ),
 ];
+
+// ---- why a move is refused (the page's hints-off play: ui/state.ts `proposal/confirm`) ----------
+
+/** The gap rule's one line, for a slide that would squeeze between two tiles (§4.4). */
+const GAP_MSG = 'A tile cannot squeeze through a gap between two tiles.';
+/** A slide that would leave the hive, even for a step (§4.3 mid-move). */
+const OFF_HIVE_MSG = 'A tile must slide along the hive, never off it.';
+
+/**
+ * A ground slide with the gap rule waived: the step keeps touching the hive (at least one of the
+ * two hexes beside the way is occupied), whether or not both are. Where a destination is reached
+ * this way but not by `slidesOn`, the gap alone refused it.
+ */
+const looseSlidesOn =
+  (board: Board) =>
+  (h: Hex): ReadonlyArray<Hex> =>
+    neighbours(h).filter((n) => {
+      if (heightAt(board, n) > 0) return false;
+      const beside = sharedNeighbours(h, n).map((s) => heightAt(board, s));
+      return beside.some((k) => k > 0);
+    });
+
+/** The first rule a placement breaks, or null when `placementHexes` and `placeableBugs` allow it. */
+const explainPlace = (game: Game, bug: Bug, to: Hex): string | null => {
+  const hand = game.hands[game.turn];
+  if (hand[bug] === 0) return `No ${BUG[bug].name} left in your hand.`;
+  if (heightAt(game.board, to) > 0) return 'That hex is taken.';
+  if (!placeableBugs(game).includes(bug)) return 'Your fourth tile must be your Queen Bee.';
+  if (placementHexes(game).some((h) => sameHex(h, to))) return null;
+  const cells = occupied(game.board);
+  if (cells.length === 0) return 'The first tile goes at the centre.';
+  if (!neighbours(to).some((n) => heightAt(game.board, n) > 0))
+    return 'A new tile must touch the hive.';
+  return 'A new tile may touch only your own colour.';
+};
+
+/** Why `bug`'s own move does not reach `to` off `from` over `board` (the tile lifted): the gap, the hive's edge, or the bug's shape. */
+const explainReach = (board: Board, from: Hex, to: Hex, bug: Bug): string => {
+  const name = BUG[bug].name;
+  const loose = looseSlidesOn(board);
+  switch (bug) {
+    case 'queen':
+    case 'beetle': {
+      if (distance(from, to) !== 1) return `The ${name} moves one step.`;
+      const beside = sharedNeighbours(from, to).map((s) => heightAt(board, s));
+      const level = Math.max(heightAt(board, from), heightAt(board, to));
+      if (level === 0 && beside.every((k) => k === 0)) return OFF_HIVE_MSG;
+      return GAP_MSG;
+    }
+    case 'grasshopper':
+      return 'The Grasshopper jumps a straight line of tiles to the first empty hex.';
+    case 'spider':
+      return walkEnds(from, SPIDER_STEPS, loose).some((h) => sameHex(h, to))
+        ? GAP_MSG
+        : 'The Spider slides exactly 3 steps around the hive.';
+    case 'ant':
+      return flood([from], loose).has(keyOf(to))
+        ? GAP_MSG
+        : 'The Ant slides any distance around the hive, never off it.';
+    default: {
+      const never: never = bug;
+      return never;
+    }
+  }
+};
+
+/** The first rule a move breaks, or null when `legalMoves` allows it. */
+const explainMoveOf = (game: Game, from: Hex, to: Hex): string | null => {
+  const tile = topAt(game.board, from);
+  if (tile === undefined) return 'No tile stands on that hex.';
+  if (tile.side !== game.turn) return 'That tile is not yours to move.';
+  if (!queenDown(game, game.turn)) return 'Place your Queen Bee before you move.';
+  const board = liftTop(game.board, from);
+  if (heightAt(board, from) === 0 && !isConnected(occupied(board)))
+    return 'One hive: lifting that tile would split it in two.';
+  if (destinations(board, from, tile.bug).some((h) => sameHex(h, to))) return null;
+  if (sameHex(from, to)) return 'A tile must move to a different hex.';
+  if (heightAt(board, to) > 0 && tile.bug !== 'beetle')
+    return 'Only the Beetle may climb onto another tile.';
+  return explainReach(board, from, to, tile.bug);
+};
+
+/**
+ * Why the side to move may not play `intent` now, or null when it may: null exactly where
+ * `legalTurns` lists the placement or the move, else the first rule it breaks, in the Rules tab's
+ * words (docs/design/hive.md §4), one short sentence: the game over; a placement with no such
+ * tile left, onto a taken hex, not the Queen by the fourth tile (§4.2), off the hive or touching
+ * the other colour (§4.1); a move of no tile or another's, before the Queen is down, one that
+ * splits the hive (§4.3), to the hex it stands on, onto a tile for any bug but the Beetle, through
+ * a gap (§4.4) or off the hive, or not the bug's own move (§4.5-§4.6). `apply` refuses with its
+ * own shorter notes; this is for the page that lets a player put a tile anywhere and confirm.
+ */
+export const explainMove = (game: Game, intent: Place | Move): string | null => {
+  if (game.result !== null) return 'The game is over.';
+  return intent.type === 'place'
+    ? explainPlace(game, intent.bug, intent.to)
+    : explainMoveOf(game, intent.from, intent.to);
+};
 
 /** §4.7: no legal placement and no legal move: the side to move passes. */
 export const mustPass = (game: Game): boolean =>

@@ -4,6 +4,7 @@ import { mulberry32 } from '../../../../shared/lib/rng.ts';
 import {
   QUEEN_BY,
   apply,
+  explainMove,
   heightAt,
   legalMoves,
   legalPlacements,
@@ -493,5 +494,149 @@ describe('a seeded random bot game stays legal for 200 turns', () => {
         });
       });
     });
+  });
+
+  /** The hexes a player could put a tile on with the hints hidden: the hive and the ring around it. */
+  const ringOf = (game: Game): ReadonlyArray<Hex> => {
+    const hive = occupied(game.board);
+    const cells = hive.length === 0 ? [ORIGIN] : hive;
+    const all = [...cells, ...cells.flatMap(neighbours)];
+    return all.filter((x, i) => all.findIndex((y) => sameHex(x, y)) === i);
+  };
+
+  test('null exactly where legalTurns allows, on every position the bots reached (a sample), for every bug and every tile', () => {
+    const sample = GAMES.flat().filter((_, i) => i % 7 === 0);
+    expect(sample.length).toBeGreaterThan(20);
+    sample.forEach(({ before }) => {
+      const legal = new Set(
+        legalTurns(before).map((t) =>
+          t.type === 'place' ? `p:${t.bug}:${keyOf(t.to)}` : `m:${keyOf(t.from)}:${keyOf(t.to)}`,
+        ),
+      );
+      const ring = ringOf(before);
+      ring.forEach((to) => {
+        BUGS.forEach((bug) => {
+          const reason = explainMove(before, place(bug, to) as Intent & { type: 'place' });
+          expect(reason === null).toBe(legal.has(`p:${bug}:${keyOf(to)}`));
+        });
+        occupied(before.board).forEach((from) => {
+          const reason = explainMove(before, move(from, to) as Intent & { type: 'move' });
+          expect(reason === null).toBe(legal.has(`m:${keyOf(from)}:${keyOf(to)}`));
+          if (reason !== null) expect(reason).toMatch(/^[A-Z].*\.$/);
+        });
+      });
+    });
+  });
+});
+
+describe('explainMove: why a move is refused (the hints-off play)', () => {
+  test('the reasons, one by one, in the Rules tab\u2019s words', () => {
+    const start = newGame(NAMES);
+    expect(explainMove(start, { type: 'place', bug: 'ant', to: h(2, 2) })).toBe(
+      'The first tile goes at the centre.',
+    );
+    const three = play(start, [
+      place('spider', h(0, 0)),
+      place('spider', h(1, 0)),
+      place('ant', h(-1, 0)),
+      place('ant', h(2, 0)),
+      place('ant', h(-2, 0)),
+      place('ant', h(3, 0)),
+    ]);
+    // White's fourth tile must be the Queen; nothing moves before her.
+    expect(explainMove(three, { type: 'place', bug: 'ant', to: h(-3, 0) })).toBe(
+      'Your fourth tile must be your Queen Bee.',
+    );
+    expect(explainMove(three, { type: 'move', from: h(-2, 0), to: h(-2, 1) })).toBe(
+      'Place your Queen Bee before you move.',
+    );
+    expect(explainMove(three, { type: 'place', bug: 'queen', to: h(-3, 0) })).toBeNull();
+    expect(explainMove(three, { type: 'place', bug: 'queen', to: h(0, 0) })).toBe(
+      'That hex is taken.',
+    );
+    expect(explainMove(three, { type: 'place', bug: 'queen', to: h(5, 5) })).toBe(
+      'A new tile must touch the hive.',
+    );
+    expect(explainMove(three, { type: 'place', bug: 'queen', to: h(4, 0) })).toBe(
+      'A new tile may touch only your own colour.',
+    );
+    expect(explainMove(three, { type: 'move', from: h(3, 0), to: h(3, 1) })).toBe(
+      'That tile is not yours to move.',
+    );
+    expect(explainMove(three, { type: 'move', from: h(9, 9), to: h(3, 1) })).toBe(
+      'No tile stands on that hex.',
+    );
+
+    // Both Queens down: the bugs' own moves.
+    const game = position({
+      '0,0': ['wQ'],
+      '1,0': ['bQ'],
+      '-1,0': ['wA'],
+      '2,0': ['bA'],
+      '0,1': ['wG'],
+      '-1,1': ['wS'],
+      '1,1': ['bB'],
+    });
+    expect(explainMove(game, { type: 'place', bug: 'queen', to: h(-2, 0) })).toBe(
+      'No Queen Bee left in your hand.',
+    );
+    expect(explainMove(game, { type: 'move', from: h(0, 1), to: h(0, 1) })).toBe(
+      'A tile must move to a different hex.',
+    );
+    // The Ant may not climb; the Grasshopper only jumps a line; the Spider exactly three.
+    expect(explainMove(game, { type: 'move', from: h(-1, 0), to: h(0, 0) })).toBe(
+      'Only the Beetle may climb onto another tile.',
+    );
+    expect(explainMove(game, { type: 'move', from: h(0, 1), to: h(0, 2) })).toBe(
+      'The Grasshopper jumps a straight line of tiles to the first empty hex.',
+    );
+    expect(explainMove(game, { type: 'move', from: h(0, 1), to: h(0, -1) })).toBeNull();
+    expect(explainMove(game, { type: 'move', from: h(-1, 1), to: h(5, 5) })).toBe(
+      'The Spider slides exactly 3 steps around the hive.',
+    );
+    expect(explainMove(game, { type: 'move', from: h(-1, 0), to: h(5, 5) })).toBe(
+      'The Ant slides any distance around the hive, never off it.',
+    );
+    expect(explainMove(game, { type: 'move', from: h(-1, 0), to: h(-2, 1) })).toBeNull();
+    const black: Game = { ...game, turn: 'black' };
+    expect(explainMove(black, { type: 'move', from: h(1, 1), to: h(3, 3) })).toBe(
+      'The Beetle moves one step.',
+    );
+    expect(explainMove(black, { type: 'move', from: h(1, 1), to: h(1, 0) })).toBeNull();
+    const over: Game = { ...game, result: { kind: 'win', winner: 'white', by: 'resign' } };
+    expect(explainMove(over, { type: 'move', from: h(-1, 0), to: h(-2, 1) })).toBe(
+      'The game is over.',
+    );
+  });
+
+  test('one hive, the gap, and a step off the hive, each told in one line', () => {
+    // A line of four: the Queen at the centre holds the hive together.
+    const line = position({ '0,0': ['wQ'], '1,0': ['bQ'], '-1,0': ['wA'], '2,0': ['bA'] });
+    expect(explainMove(line, { type: 'move', from: h(0, 0), to: h(0, -1) })).toBe(
+      'One hive: lifting that tile would split it in two.',
+    );
+    // The Ant at the end slides round; off the end it would leave the hive.
+    expect(explainMove(line, { type: 'move', from: h(-1, 0), to: h(-2, 0) })).toBe(
+      'The Ant slides any distance around the hive, never off it.',
+    );
+    // A Queen at the end told the same of her one step.
+    const queenEnd = position({ '0,0': ['wA'], '1,0': ['bQ'], '-1,0': ['wQ'], '2,0': ['bA'] });
+    expect(explainMove(queenEnd, { type: 'move', from: h(-1, 0), to: h(-2, 0) })).toBe(
+      'A tile must slide along the hive, never off it.',
+    );
+    expect(explainMove(queenEnd, { type: 'move', from: h(-1, 0), to: h(-1, 1) })).toBeNull();
+    // The gap: the Ant at the centre would squeeze between the two tiles beside its way.
+    const walled = position({
+      '0,0': ['wA'],
+      '1,0': ['wQ'],
+      '0,-1': ['bQ'],
+      '2,-1': ['bA'],
+      '2,-2': ['wS'],
+      '1,-2': ['bS'],
+    });
+    expect(legalMoves(walled, h(0, 0)).some((x) => sameHex(x, h(1, -1)))).toBe(false);
+    expect(explainMove(walled, { type: 'move', from: h(0, 0), to: h(1, -1) })).toBe(
+      'A tile cannot squeeze through a gap between two tiles.',
+    );
   });
 });

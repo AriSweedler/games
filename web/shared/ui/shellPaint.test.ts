@@ -389,6 +389,16 @@ describe('showToast / hideToast', () => {
     showToast(p.doc, 'plain', { hit: false, warm: true });
     expect(p.get('toast').classes()).toEqual(['show', 'warm']);
   });
+
+  test('an error toast wears `error` and is an alert; the next plain one is a status again, the class gone', () => {
+    const p = page();
+    showToast(p.doc, 'That hex is taken.', {}, 'error');
+    expect(p.get('toast').classes()).toEqual(['error', 'show']);
+    expect(p.get('toast').attr('role')).toBe('alert');
+    showToast(p.doc, 'Connected directly');
+    expect(p.get('toast').classes()).toEqual(['show']);
+    expect(p.get('toast').attr('role')).toBe('status');
+  });
 });
 
 describe('paintSound', () => {

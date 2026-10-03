@@ -12,6 +12,7 @@ import {
   columnLabel,
   liftHtml,
   peekHtml,
+  proposedGame,
   stepsOf,
 } from './render.ts';
 import type { Picked } from './state.ts';
@@ -131,6 +132,54 @@ describe("the Spider's 1-2-3 as it moves", () => {
     expect(stepX(empty)).toBeCloseTo(centerOf(h(5, 5)).x, 1);
     const tile = cellHtml(after, to, false, false, 3);
     expect(stepX(tile)).toBeLessThan(centerOf(to).x);
+  });
+});
+
+describe('the hints hidden: the free board and the proposal', () => {
+  const cellCount = (markup: string): number => markup.split('<g class="hex').length - 1;
+
+  test('with a pick nothing lights and the whole ring is drawn as plain cells, the viewBox the same', () => {
+    const shown = boardHtml(view, spiderPicked);
+    const free = boardHtml(view, spiderPicked, null, null, null, null, 'hide');
+    expect(shown).toContain(' lit');
+    expect(free).not.toContain(' lit');
+    expect(free).not.toContain('proposed');
+    // The hive (a line of four) and the twelve hexes beside it: more cells than the lit ones, every one tappable.
+    expect(cellCount(free)).toBeGreaterThan(cellCount(shown));
+    expect(cellCount(free)).toBe(4 + 12);
+    expect(/viewBox="([^"]+)"/.exec(free)?.[1]).toBe(/viewBox="([^"]+)"/.exec(shown)?.[1]);
+    expect(cellOf(free, keyOf(SPIDER))).toContain('picked');
+    // Without a pick the board is the plain one, whatever the hints.
+    expect(boardHtml(view, null, null, null, null, null, 'hide')).toBe(boardHtml(view, null));
+  });
+
+  test('a proposal draws the tile where it was put, marked `proposed`, over the board as it would be; the game itself is untouched', () => {
+    const to = h(0, -1);
+    const markup = boardHtml(view, spiderPicked, null, null, null, null, 'hide', to);
+    const cell = cellOf(markup, keyOf(to));
+    expect(cell).toContain('hex w');
+    expect(cell).toContain('proposed');
+    expect(cell).toContain('data-bug="spider"');
+    expect(cell).toContain('proposed: Confirm to play it');
+    expect(cellOf(markup, keyOf(SPIDER))).toContain('hex empty picked');
+    const proposed = proposedGame(view, spiderPicked, to);
+    expect(proposed.board[keyOf(to)]).toEqual([{ side: 'white', bug: 'spider' }]);
+    expect(proposed.board[keyOf(SPIDER)]).toBeUndefined();
+    expect(game.board[keyOf(SPIDER)]).toEqual([{ side: 'white', bug: 'spider' }]);
+    // A hand tile proposed on a taken hex: drawn on top of it as a stack.
+    const onQueen = proposedGame(view, { kind: 'hand', bug: 'beetle' }, h(0, 0));
+    expect(onQueen.board['0,0']).toEqual([
+      { side: 'white', bug: 'queen' },
+      { side: 'white', bug: 'beetle' },
+    ]);
+    expect(
+      cellOf(
+        boardHtml(view, { kind: 'hand', bug: 'beetle' }, null, null, null, null, 'hide', h(0, 0)),
+        '0,0',
+      ),
+    ).toContain('stack');
+    expect(proposedGame(view, null, to)).toBe(game);
+    expect(proposedGame(view, spiderPicked, null)).toBe(game);
   });
 });
 

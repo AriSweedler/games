@@ -10,12 +10,14 @@
 // (render.ts `liftHtml`; a `g` cloned onto the body would not render, a nested `<svg>` does). Every
 // move looks for the lit hex nearest the pointer within SNAP of a hex's width (`nearestLit`), none
 // while the tile's own place is nearer still, and says when that changes (`drag/over`; the painter
-// marks it `drop`). On release over one `drag/end` plays the tile at once; off every one the ghost
+// marks it `drop`); on a board the paint marked `free` (the hints hidden: render.ts) every cell is
+// a target, since the drop is a proposal the player confirms. On release over one `drag/end` plays the tile at once; off every one the ghost
 // glides back first (LAND_MS) and the end drops the pick. The click a release fires is the
 // reducer's to ignore while its `drag` stands. Only the DOM edge is reached.
 import {
   closestFrom,
   dataOf,
+  hasClass,
   queryAllIn,
   queryIn,
   rectOf,
@@ -114,10 +116,10 @@ const pickAt = (
 export const bindDrag = (doc: PageLike, dispatch: DragDispatch): void => {
   const board = requireId(doc, 'board');
   const hands = [requireId(doc, 'whiteHand'), requireId(doc, 'blackHand')];
-  /** The lit hex nearest the pointer (its key), or null; none while the tile's own place is nearer. */
+  /** The lit hex nearest the pointer (its key), or null; none while the tile's own place is nearer. Every cell on a `free` board. */
   const targetAt = (p: Point, home: Rect): string | null =>
     nearestLit(
-      queryAllIn(board, '.hex.lit').map((el) => ({
+      queryAllIn(board, hasClass(board, 'free') ? 'g.hex' : '.hex.lit').map((el) => ({
         key: dataOf(el, 'hex') ?? '',
         rect: rectOf(el),
       })),
