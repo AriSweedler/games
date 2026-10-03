@@ -143,8 +143,8 @@ const blocks: ShellBlocks = {
         </div>
         <div class="muted" id="guestNameNote"></div>
       </div>`,
-  table: `      <!-- TABLE (docs/design/hive.md §7): the names strip (me and my side, the other seat and
-           its connection), Black's hand above the board and White's below, the SVG hive between
+  table: `      <!-- TABLE (docs/design/hive.md §7): the names strip (a hex swatch for each seat's side, its
+           name, the other seat's connection; it fits 390px between six icon buttons), Black's hand above the board and White's below, the SVG hive between
            them (render.ts boardHtml: a g.hex per cell), Pass and Resign, the status line; in the
            topbar, the tiles' motion (🐌 crawl / ⚡ snap: render.ts paintMotion, the device's remembered
            setting) and the hints (💡: render.ts paintHints) beside the sound. -->
@@ -155,8 +155,10 @@ const blocks: ShellBlocks = {
             <button class="icon-btn hidden" id="handoffBtn" title="Continue online" aria-label="Continue online">🌐</button>
           </div>
           <div class="names-strip">
+            <svg class="side-swatch" id="mySide" viewBox="0 0 20 22" role="img" aria-label="White" data-side="w"><polygon points="10,1 18.5,5.75 18.5,16.25 10,21 1.5,16.25 1.5,5.75" /></svg>
             <span id="myName">You</span>
-            <span class="vs">vs</span>
+            <span class="vs" aria-hidden="true"></span>
+            <svg class="side-swatch" id="oppSide" viewBox="0 0 20 22" role="img" aria-label="Black" data-side="b"><polygon points="10,1 18.5,5.75 18.5,16.25 10,21 1.5,16.25 1.5,5.75" /></svg>
             <span id="oppName">Opponent</span>
             <span class="conn-dot" id="oppDot"></span>
           </div>
