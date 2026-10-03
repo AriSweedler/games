@@ -33,19 +33,12 @@ import {
   SHELL_SCREENS,
   LONG_PRESS_MS,
   NOT_CONNECTED_MSG,
-  guestContextOf as shellGuestContextOf,
-  hostContextOf as shellHostContextOf,
   hostDispatch,
-  initialShell as shellInitial,
-  isShellEffect,
-  isShellIntent,
   localBroadcast,
   localNamesOf,
   localPlayers,
   localSeated,
   pure,
-  readHome as shellReadHome,
-  reduceShell,
   resumeFor as shellResumeFor,
   saveFor as shellSaveFor,
   step,
@@ -64,14 +57,13 @@ import {
   type ShellState,
   type Step as SharedStep,
   type TableReset,
-  type HostContextOf,
   type TimerId as SharedTimerId,
 } from '../../../../shared/ui/shell.ts';
-import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
+import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import { applyAction, canTakeBack, fitsOnto, idsOf, inPlay } from '../engine/index.ts';
 import { resumeLabel as shellResumeLabel } from '../../../../shared/lib/name.ts';
 import type { Action, Seat, State, View } from '../engine/types.ts';
-import type { GuestContext } from '../../../../shared/net/guest.ts';
 import { action as actionFrame } from '../protocol.ts';
 import type { ScorerState } from '../scorer/scores.ts';
 import { GIN_SHELL } from '../shellConfig.ts';
@@ -847,51 +839,25 @@ export const GIN: ShellConfig<Gin> = {
   },
 };
 
-export const initialShell: Shell = shellInitial(GIN);
-
-export const initialApp: App = { shell: initialShell, table: initialTable };
-
-// ---- the reducer -------------------------------------------------------------------------------
-
-export const reduce = (app: App, intent: Intent, ctx: Context): Step => {
-  if (!isShellIntent(intent)) return tableIntent(app, intent, ctx);
-  const s = reduceShell(app, intent, ctx, GIN);
-  // The typed first name unlocks or locks the sandbox mode: gin's alone, after the shell's step.
-  return intent.type === 'name/typed' || intent.type === 'p1name/typed'
-    ? { ...s, app: withP1Name(s.app) }
-    : s;
-};
-
-// ---- storage: persist and resume -------------------------------------------------------------
+// ---- storage: persist -------------------------------------------------------------------------
 
 /** `persist()`: the save for the current role, or null when there is nothing to save. */
 export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
 
-/** `initHome`'s reads: the names, the tab and mode (defaults when unreadable), the save, the scorer session. */
-export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, GIN);
-
-// ---- what the sessions read back ---------------------------------------------------------------
-
-export const hostContextOf = (app: App): HostContextOf<Gin> => shellHostContextOf(app.shell);
-
-export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
-
 // ---- running the effects -----------------------------------------------------------------------
 
-/** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts) plus gin's Score Counter and clipboard; main.ts constructs the real ones, tests record. */
-export type EffectDeps = ShellEffectDeps<Gin> &
-  Readonly<{
-    scorer: Readonly<{ resume: () => void }>;
-    /** `text` to the clipboard, silently (the reducer toasts). */
-    copy: (text: string) => void;
-  }>;
+/** Gin's effect adapters beside the shell's: the Score Counter and the clipboard; main.ts constructs the real ones, tests record. */
+export type GinDeps = Readonly<{
+  scorer: Readonly<{ resume: () => void }>;
+  /** `text` to the clipboard, silently (the reducer toasts). */
+  copy: (text: string) => void;
+}>;
 
-/** One effect against the adapters; `app` is the state after the step that produced it. Gin's four first, then the shell's runner. */
-export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
-  if (isShellEffect(effect)) {
-    runShellEffect(app.shell, effect, deps, GIN);
-    return;
-  }
+/** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts) plus gin's. */
+export type EffectDeps = ShellEffectDeps<Gin> & GinDeps;
+
+/** Gin's four effects: two table preferences, the Score Counter, the clipboard; the shell's are its runner's. */
+const tableEffect: TableEffectRunner<Gin, GinDeps> = (_app, effect, deps) => {
   switch (effect.type) {
     case 'writeSort':
       writeSort(deps.store, effect.sort);
@@ -907,3 +873,17 @@ export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
       return;
   }
 };
+
+// ---- the reducer -------------------------------------------------------------------------------
+
+/** The boot's reducer block (web/shared/ui/shellReducer.ts): the shell's flows over `GIN`, the table's intents and gin's effects, and one step of gin's after the shell's. */
+export const reducer = shellReducer(GIN, {
+  intent: tableIntent,
+  effect: tableEffect,
+  // The typed first name unlocks or locks the sandbox mode: gin's alone, after the shell's step.
+  after: (_before, s, intent) =>
+    intent.type === 'name/typed' || intent.type === 'p1name/typed'
+      ? { ...s, app: withP1Name(s.app) }
+      : s,
+});
+export const { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf } = reducer;

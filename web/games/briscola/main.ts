@@ -25,17 +25,7 @@ import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
 import { GLOSSARY } from './src/ui/glossary.ts';
 import { bindAll, paint } from './src/ui/render.ts';
 import { rulesItemsHtml } from './src/ui/rules.ts';
-import {
-  BRISCOLA,
-  guestContextOf,
-  hostContextOf,
-  initialApp,
-  readHome,
-  reduce,
-  runEffect,
-  type App,
-  type Briscola,
-} from './src/ui/state.ts';
+import { BRISCOLA, reducer, type App, type Briscola } from './src/ui/state.ts';
 
 /**
  * The card pack (docs/design/card-packs.md §2): a value the console left in storage that names no
@@ -77,7 +67,7 @@ const boot = (): void => {
     // PeerJS log level 0 as the other shell pages (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__briscola', title: 'Briscola', debug: 0 },
     sound: { fontKey: STORAGE_KEYS.soundFont },
-    reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
+    reducer,
     paint: { paint, bindAll },
     config: BRISCOLA,
     // The rules into both slots and the About copy (ui/rules.ts, ui/about.ts).

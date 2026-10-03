@@ -20,24 +20,14 @@ import { isGuestFrame } from './src/protocol.ts';
 import { STORAGE_KEYS } from './src/storage.ts';
 import { bindAll, paint, toastMarks } from './src/ui/render.ts';
 import { watchSafeArea } from './src/safeArea.ts';
-import {
-  BACKGAMMON,
-  guestContextOf,
-  hostContextOf,
-  initialApp,
-  readHome,
-  reduce,
-  runEffect,
-  type App,
-  type Backgammon,
-} from './src/ui/state.ts';
+import { BACKGAMMON, reducer, type App, type Backgammon } from './src/ui/state.ts';
 
 bootShell<Backgammon, App>({
   page: browserPage(),
   // PeerJS log level 0 as gin's page (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
   game: { hook: '__backgammon', title: 'Sheshbesh', debug: 0 },
   sound: { fontKey: STORAGE_KEYS.soundFont },
-  reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
+  reducer,
   // The Kapará toast wears `hit` (`toastMarks`).
   paint: { paint, bindAll, toastMarks },
   config: BACKGAMMON,

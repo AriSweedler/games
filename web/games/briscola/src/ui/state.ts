@@ -46,16 +46,8 @@ import {
   andThen as then,
   badPositionMsg,
   broadcast,
-  guestContextOf as shellGuestContextOf,
-  hostContextOf as shellHostContextOf,
-  initialShell as shellInitial,
-  isShellEffect,
-  isShellIntent,
   localBroadcast,
   pure,
-  readHome as shellReadHome,
-  reduceShell,
-  resumeFor as shellResumeFor,
   saveFor as shellSaveFor,
   step,
   toast,
@@ -63,9 +55,7 @@ import {
   withTable,
   type Ctx,
   type Effect as SharedEffect,
-  type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
-  type HostContextOf,
   type Intent as SharedIntent,
   type Resume as SharedResume,
   type Role,
@@ -79,7 +69,8 @@ import {
   INITIAL_CUE_MEMORY,
   type CueMemory,
 } from '../../../../shared/ui/shell.ts';
-import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
+import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import { eventEffects } from '../../../../shared/ui/eventEffects.ts';
 import { isCardPackFor } from '../../../../shared/lib/cards/packs.ts';
 import { isLanguagePack, type LanguagePackName } from '../../../../shared/lib/lang/packs.ts';
@@ -1241,10 +1232,6 @@ export const BRISCOLA: ShellConfig<Briscola> = {
   },
 };
 
-export const initialShell: Shell = shellInitial(BRISCOLA);
-
-export const initialApp: App = { shell: initialShell, table: initialTable };
-
 /**
  * `guest/lost` once the game is over (decided or drawn): the result stays up; the session's rejoin
  * finds a destroyed Peer and the save would only offer a dead table, so both go. Taken in `reduce`
@@ -1286,63 +1273,8 @@ const forIntent = (app: App, intent: Intent): Step => {
   return pure(rejoined ? withTable(app, { sent: null }) : app);
 };
 
-const reduceInner = (app: App, intent: Intent, ctx: Context): Step => {
-  const v = app.shell.view;
-  if (intent.type === 'guest/lost' && v?.phase === 'over') return hostLeft(app, v, ctx);
-  // A seat is down mid-game: the trick waits for it, so a guest's play is refused with who is missing.
-  if (intent.type === 'host/frame' && intent.frame.t === 'action') {
-    const down = seatsDown(app);
-    if (down.length > 0)
-      return step(app, {
-        type: 'send',
-        frame: toastFrame(pausedMsg(down)),
-        seat: intent.seat ?? 1,
-      });
-  }
-  return isShellIntent(intent)
-    ? reduceShell(app, intent, ctx, BRISCOLA)
-    : tableIntent(app, intent, ctx);
-};
-
-/** Every intent, then the live intent mirror's sender over the result (§4.2). */
-export const reduce = (app: App, intent: Intent, ctx: Context): Step => {
-  const before = forIntent(app, intent);
-  const after = reduceInner(before.app, intent, ctx);
-  return withIntent(step(after.app, ...before.effects, ...after.effects));
-};
-
-// ---- storage: persist and resume -------------------------------------------------------------
-
-/** The resume box `initHome` shows, or null (a decided game is not offered). */
-export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(save, BRISCOLA);
-
-/** `persist()`: the save for the current role, or null when there is nothing to save. */
-export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
-
-/** `initHome`'s reads: the names, the tab, mode and options (defaults when unreadable), the card pack, the save. */
-export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, BRISCOLA);
-
-// ---- what the sessions read back ---------------------------------------------------------------
-
-/** The host session's context: the shell's fields, the room's six options and the guest seats as the shell holds them, which the codec's welcome lists past two seats (net/host.ts `HostContext`). */
-export type HostContext = HostContextOf<Briscola>;
-export type GuestContext = GuestContextOf;
-
-export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
-
-export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
-
-// ---- running the effects -----------------------------------------------------------------------
-
-/** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); briscola adds none. main.ts constructs the real ones, tests record. */
-export type EffectDeps = ShellEffectDeps<Briscola>;
-
-/** One effect against the adapters; `app` is the state after the step that produced it. Briscola's three first, then the shell's runner. */
-export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
-  if (isShellEffect(effect)) {
-    runShellEffect(app.shell, effect, deps, BRISCOLA);
-    return;
-  }
+/** Briscola's three effects, the preferences this page alone keeps (the room options are the shell's `writeOpts`, the seat names its `rememberSeatName`); the shell's are its runner's. */
+const tableEffect: TableEffectRunner<Briscola> = (_app, effect, deps) => {
   switch (effect.type) {
     case 'writeCardPack':
       writeCardPack(deps.store, effect.pack);
@@ -1355,3 +1287,45 @@ export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
       return;
   }
 };
+
+/**
+ * The shell's flows over `BRISCOLA` and the table's intents (web/shared/ui/shellReducer.ts), with
+ * briscola's two refusals before the shell's case: `guest/lost` once the game is over, and a
+ * guest's play while a seat is down (the trick waits for it, so the play is refused with who is
+ * missing).
+ */
+const inner = shellReducer(BRISCOLA, {
+  intent: tableIntent,
+  effect: tableEffect,
+  before: (app, intent, ctx) => {
+    const v = app.shell.view;
+    if (intent.type === 'guest/lost' && v?.phase === 'over') return hostLeft(app, v, ctx);
+    if (intent.type === 'host/frame' && intent.frame.t === 'action') {
+      const down = seatsDown(app);
+      if (down.length > 0)
+        return step(app, {
+          type: 'send',
+          frame: toastFrame(pausedMsg(down)),
+          seat: intent.seat ?? 1,
+        });
+    }
+    return null;
+  },
+});
+
+/** Every intent: the live intent mirror's prelude (`forIntent`, whose App the step starts from), the step, then the mirror's sender over the result (§4.2). */
+export const reduce: typeof inner.reduce = (app, intent, ctx) => {
+  const before = forIntent(app, intent);
+  const after = inner.reduce(before.app, intent, ctx);
+  return withIntent(step(after.app, ...before.effects, ...after.effects));
+};
+
+/** The boot's reducer block: the shell's over `BRISCOLA`, with the mirror's `reduce` in place of the plain one. */
+export const reducer = { ...inner, reduce };
+export const { initialApp, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } = inner;
+
+/** `persist()`: the save for the current role, or null when there is nothing to save. */
+export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
+
+/** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); briscola adds none. main.ts constructs the real ones, tests record. */
+export type EffectDeps = ShellEffectDeps<Briscola>;

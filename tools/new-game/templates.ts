@@ -798,18 +798,10 @@ import {
   NOT_CONNECTED_MSG,
   andThen as then,
   broadcast,
-  guestContextOf as shellGuestContextOf,
-  hostContextOf as shellHostContextOf,
-  initialShell as shellInitial,
-  isShellEffect,
-  isShellIntent,
   localBroadcast,
   localNamesOf,
   localSeats,
   pure,
-  readHome as shellReadHome,
-  reduceShell,
-  resumeFor as shellResumeFor,
   startLocal,
   step,
   toast,
@@ -818,9 +810,7 @@ import {
   type Ctx,
   type CueMemory,
   type Effect as SharedEffect,
-  type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
-  type HostContextOf,
   type Intent as SharedIntent,
   type Resume as SharedResume,
   type ShellApp,
@@ -829,7 +819,8 @@ import {
   type Step as SharedStep,
   type TableReset,
 } from '../../../../shared/ui/shell.ts';
-import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import {
   applyAction,
   createState,
@@ -848,7 +839,6 @@ import {
   type HomeTab,
   type Opts,
   type PlayMode,
-  type Save,
   type Store,
 } from '../storage.ts';
 import type { Cue } from './sound.ts';
@@ -1018,9 +1008,6 @@ export const ${upper}: ShellConfig<${pascal}> = {
   home: { ...${upper}_SHELL.home, apply: (app) => app },
 };
 
-export const initialShell: Shell = shellInitial(${upper});
-export const initialApp: App = { shell: initialShell, table: initialTable };
-
 /** Pass-and-play: the seat whose turn it is acts (either seat may play again); a new game shows seat 0's view. */
 const localAct = (app: App, action: Action, ctx: Ctx): Step => {
   const game = app.shell.game;
@@ -1087,29 +1074,20 @@ const localStart = (app: App, intent: Readonly<{ p1: string; p2: string }>, ctx:
   return startLocal(app, game, ctx, ${upper});
 };
 
-export const reduce = (app: App, intent: Intent, ctx: Ctx): Step => {
-  if (intent.type === 'local/click') return localStart(app, intent, ctx);
-  if (!isShellIntent(intent)) return tableIntent(app, intent, ctx);
-  return reduceShell(app, intent, ctx, ${upper});
-};
-
-/** The resume box \`initHome\` shows, or null (a finished game is not offered). */
-export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(save, ${upper});
-
-export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, ${upper});
-
-export type HostContext = HostContextOf<${pascal}>;
-export type GuestContext = GuestContextOf;
-
-export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
-export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
+/**
+ * The boot's reducer block (web/shared/ui/shellReducer.ts): the shell's flows over \`${upper}\` and
+ * the table's intents, with the pass-and-play start before the shell's case; every effect is the
+ * shell's (the table has none of its own).
+ */
+export const reducer = shellReducer(${upper}, {
+  intent: tableIntent,
+  before: (app, intent, ctx) =>
+    intent.type === 'local/click' ? localStart(app, intent, ctx) : null,
+});
+export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
+  reducer;
 
 export type EffectDeps = ShellEffectDeps<${pascal}>;
-
-/** One effect against the adapters: the shell's runner (the table has none of its own). */
-export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
-  if (isShellEffect(effect)) runShellEffect(app.shell, effect, deps, ${upper});
-};
 
 /** The view the table paints: my seat's, or null at home. */
 export const viewOf = (app: App): View | null => app.shell.view;
@@ -1396,12 +1374,7 @@ import { STORAGE_KEYS } from './src/storage.ts';
 import { bindAll, paint } from './src/ui/render.ts';
 import { ABOUT_PARAGRAPHS, GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
 import {
-  guestContextOf,
-  hostContextOf,
-  initialApp,
-  readHome,
-  reduce,
-  runEffect,
+  reducer,
   ${upper},
   type App,
   type ${pascal},
@@ -1411,7 +1384,7 @@ bootShell<${pascal}, App>({
   page: browserPage(),
   game: { hook: '${hook}', title: '${title.replace(/'/g, "\\'")}', debug: 0 },
   sound: { fontKey: STORAGE_KEYS.soundFont },
-  reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
+  reducer,
   paint: { paint, bindAll },
   config: ${upper},
   copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },

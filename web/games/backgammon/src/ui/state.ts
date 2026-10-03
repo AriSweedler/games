@@ -37,19 +37,11 @@ import {
   andThen as then,
   broadcast,
   fresh as freshKey,
-  guestContextOf as shellGuestContextOf,
-  hostContextOf as shellHostContextOf,
-  initialShell as shellInitial,
-  isShellEffect,
-  isShellIntent,
   localBroadcast,
   localNamesOf,
   localPlayers,
   lockSideways,
   pure,
-  readHome as shellReadHome,
-  reduceShell,
-  resumeFor as shellResumeFor,
   saveFor as shellSaveFor,
   startLocal,
   step,
@@ -59,7 +51,6 @@ import {
   type Ctx,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
-  type HostContextOf,
   type Intent as SharedIntent,
   type Resume as SharedResume,
   type ShellApp,
@@ -73,7 +64,8 @@ import {
   type TimerId as SharedTimerId,
   type CueMemory,
 } from '../../../../shared/ui/shell.ts';
-import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
+import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import { ok, type Result } from '../../../../shared/lib/result.ts';
 import {
   actorOf,
@@ -97,7 +89,6 @@ import type {
   To,
   View,
 } from '../engine/types.ts';
-import type { GuestContext } from '../../../../shared/net/guest.ts';
 import { action as actionFrame } from '../protocol.ts';
 import { BACKGAMMON_SHELL } from '../shellConfig.ts';
 import {
@@ -920,10 +911,6 @@ export const BACKGAMMON: ShellConfig<Backgammon> = {
   },
 };
 
-export const initialShell: Shell = shellInitial(BACKGAMMON);
-
-export const initialApp: App = { shell: initialShell, table: initialTable };
-
 /**
  * `guest/lost` once the match is over: the result stays up; the session's rejoin finds a
  * destroyed Peer and the save would only offer a dead room, so both go. Backgammon's alone (the
@@ -967,42 +954,30 @@ const localStart = (
   return startLocal(withShell(app, { opts }), game, ctx, BACKGAMMON);
 };
 
-export const reduce = (app: App, intent: Intent, ctx: Context): Step => {
-  const v = app.shell.view;
-  if (intent.type === 'guest/lost' && v?.matchOver === true) return hostLeft(app, v, ctx);
-  if (intent.type === 'local/click') return localStart(app, intent, ctx);
-  return isShellIntent(intent)
-    ? reduceShell(app, intent, ctx, BACKGAMMON)
-    : tableIntent(app, intent, ctx);
+/** Backgammon's one effect: the curtain mode the menu remembers; the shell's are its runner's. */
+const tableEffect: TableEffectRunner<Backgammon> = (_app, effect, deps) => {
+  writeCurtainMode(deps.store, effect.mode);
 };
 
-// ---- storage: persist and resume -------------------------------------------------------------
-
-/** The resume box `initHome` shows, or null (a finished match is not offered). */
-export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(save, BACKGAMMON);
+/**
+ * The boot's reducer block (web/shared/ui/shellReducer.ts): backgammon's two steps before the
+ * shell's (`hostLeft` at match over, the pass-and-play deal with `manualTurnEnd`), then the shell's
+ * flows over `BACKGAMMON` or the table's intents.
+ */
+export const reducer = shellReducer(BACKGAMMON, {
+  intent: tableIntent,
+  effect: tableEffect,
+  before: (app, intent, ctx) => {
+    const v = app.shell.view;
+    if (intent.type === 'guest/lost' && v?.matchOver === true) return hostLeft(app, v, ctx);
+    return intent.type === 'local/click' ? localStart(app, intent, ctx) : null;
+  },
+});
+export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
+  reducer;
 
 /** `persist()`: the save for the current role, or null when there is nothing to save. */
 export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
 
-/** `initHome`'s reads: the names, the tab, mode and options (defaults when unreadable), the curtain mode, the save. */
-export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, BACKGAMMON);
-
-// ---- what the sessions read back ---------------------------------------------------------------
-
-export const hostContextOf = (app: App): HostContextOf<Backgammon> => shellHostContextOf(app.shell);
-
-export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
-
-// ---- running the effects -----------------------------------------------------------------------
-
 /** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); backgammon adds none. main.ts constructs the real ones, tests record. */
 export type EffectDeps = ShellEffectDeps<Backgammon>;
-
-/** One effect against the adapters; `app` is the state after the step that produced it. Backgammon's own first, then the shell's runner. */
-export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
-  if (isShellEffect(effect)) {
-    runShellEffect(app.shell, effect, deps, BACKGAMMON);
-    return;
-  }
-  writeCurtainMode(deps.store, effect.mode);
-};

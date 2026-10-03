@@ -30,18 +30,7 @@ import { slotHandView } from './src/ui/hand/SlotHandView.ts';
 import { fillNameInputs, fillP2NameInput, renderSandbox } from './src/ui/home.ts';
 import { bindAll, fmtTime, paint } from './src/ui/render.ts';
 import { rulesItemsHtml } from './src/ui/rules.ts';
-import {
-  GIN,
-  guestContextOf,
-  hostContextOf,
-  initialApp,
-  readHome,
-  reduce,
-  runEffect,
-  type App,
-  type EffectDeps,
-  type Gin,
-} from './src/ui/state.ts';
+import { GIN, reducer, type App, type EffectDeps, type Gin } from './src/ui/state.ts';
 
 /** Gin's effect adapters beside the shell's: the Score Counter and the clipboard. */
 type GinDeps = Pick<EffectDeps, 'scorer' | 'copy'>;
@@ -146,7 +135,7 @@ const boot = (): void => {
     // PeerJS log level 0 as on the legacy page (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__gin', title: 'Gin Rummy', debug: 0 },
     sound: { fontKey: STORAGE_KEYS.soundFont },
-    reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
+    reducer,
     paint: {
       // The hand is drawn by the slot view with the ghost draw slot (docs/ARCHITECTURE.md "Seams
       // reserved": the view is another module and this choice; docs/design/gin-draw-ghost-slot.md).

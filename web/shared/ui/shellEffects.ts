@@ -8,13 +8,16 @@
 // game's `runEffect` handles its own effects first (`isShellEffect` is the partition) and hands
 // the rest here with its shell, whose `soundFont` every cue plays in.
 import {
+  isShellEffect,
   readHome,
   saveFor,
   type Cue,
+  type Effect,
   type GuestFrameOf,
   type HostFrameOf,
   type Intent,
   type SeatOf,
+  type ShellApp,
   type ShellConfig,
   type ShellEffect,
   type ShellState,
@@ -202,3 +205,37 @@ export const runShellEffect = <G extends ShellTypes>(
       return;
   }
 };
+
+/**
+ * A game's own effects against the adapters (shellReducer.ts `TableReducer.effect`): `app` is the
+ * state after the step that produced them, `effect` one of the game's half of the union
+ * (`isShellEffect` has partitioned it), `deps` the shell's adapters plus the game's (`Ex`).
+ */
+export type TableEffectRunner<G extends ShellTypes, Ex extends object = object> = (
+  app: ShellApp<G>,
+  effect: G['Effect'],
+  deps: ShellEffectDeps<G> & Ex,
+) => void;
+
+/** The boot's `runEffect` (web/shared/edge/boot.ts `BootConfig.reducer`), over whatever App the boot drives. */
+export type EffectRunner<G extends ShellTypes, App, Ex extends object> = (
+  app: App,
+  effect: Effect<G>,
+  deps: ShellEffectDeps<G> & Ex,
+) => void;
+
+/**
+ * The game's `runEffect` derived (shellReducer.ts `shellReducer`): a shell effect to
+ * `runShellEffect` with the App's shell, the rest to the game's own runner; a game whose `Effect`
+ * is `never` passes none. Here rather than in shellReducer.ts because it returns nothing, which
+ * the pure profile refuses.
+ */
+export const shellEffectRunner =
+  <G extends ShellTypes, Ex extends object>(
+    cfg: ShellConfig<G>,
+    own?: TableEffectRunner<G, Ex>,
+  ): EffectRunner<G, ShellApp<G>, Ex> =>
+  (app, effect, deps) => {
+    if (isShellEffect(effect)) runShellEffect(app.shell, effect, deps, cfg);
+    else own?.(app, effect, deps);
+  };

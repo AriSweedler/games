@@ -29,16 +29,8 @@ import {
   cuesFor,
   errorToast,
   fx,
-  guestContextOf as shellGuestContextOf,
-  hostContextOf as shellHostContextOf,
-  initialShell as shellInitial,
-  isShellEffect,
-  isShellIntent,
   localBroadcast,
   pure,
-  readHome as shellReadHome,
-  reduceShell,
-  resumeFor as shellResumeFor,
   startsOver,
   step,
   toast,
@@ -47,9 +39,7 @@ import {
   type Ctx,
   type CueMachine,
   type Effect as SharedEffect,
-  type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
-  type HostContextOf,
   type Intent as SharedIntent,
   type Resume as SharedResume,
   type ShellApp,
@@ -59,7 +49,8 @@ import {
   type TableReset,
   type CueMemory,
 } from '../../../../shared/ui/shell.ts';
-import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
+import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import {
   explainMove,
   heightAt,
@@ -99,7 +90,6 @@ import {
   type Motion,
   type Opts,
   type PlayMode,
-  type Save,
   type Store,
 } from '../storage.ts';
 import { type Cue } from './sound.ts';
@@ -376,9 +366,6 @@ export const HIVE: ShellConfig<Hive> = {
   },
 };
 
-export const initialShell: Shell = shellInitial(HIVE);
-export const initialApp: App = { shell: initialShell, table: initialTable };
-
 /** Pass-and-play: the seat whose turn it is acts (either seat may play again); a new game shows White's view. */
 const localAct = (app: App, action: Action, ctx: Ctx): Step => {
   const game = app.shell.game;
@@ -633,30 +620,18 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
   }
 };
 
-export const reduce = (app: App, intent: Intent, ctx: Ctx): Step => {
-  if (!isShellIntent(intent)) return tableIntent(app, intent, ctx);
-  return reduceShell(app, intent, ctx, HIVE);
-};
-
-/** The resume box `initHome` shows, or null (a finished game is not offered). */
-export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(save, HIVE);
-
-export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, HIVE);
-
-export type HostContext = HostContextOf<Hive>;
-export type GuestContext = GuestContextOf;
-
-export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
-export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
-
-export type EffectDeps = ShellEffectDeps<Hive>;
-
-/** One effect against the adapters: the shell's runner, or the table's two writes (the tiles' motion, the hints). */
-export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
-  if (isShellEffect(effect)) runShellEffect(app.shell, effect, deps, HIVE);
-  else if (effect.type === 'motion/write') writeMotion(deps.store, effect.motion);
+/** The table's two writes (the tiles' motion, the hints); the shell's effects are its runner's. */
+const tableEffect: TableEffectRunner<Hive> = (_app, effect, deps) => {
+  if (effect.type === 'motion/write') writeMotion(deps.store, effect.motion);
   else writeHints(deps.store, effect.hints);
 };
+
+/** The boot's reducer block (web/shared/ui/shellReducer.ts): the shell's flows over `HIVE`, the table's intents and its two writes. */
+export const reducer = shellReducer(HIVE, { intent: tableIntent, effect: tableEffect });
+export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
+  reducer;
+
+export type EffectDeps = ShellEffectDeps<Hive>;
 
 /** The view the table paints: my seat's, or null at home. */
 export const viewOf = (app: App): View | null => app.shell.view;

@@ -465,13 +465,32 @@ divergence of §3 (gin `withP1Name`, backgammon `hostLeft`, briscola `forIntent`
 fidice `scheduled`) and nothing else. Risk: `boot.test.ts` drives the whole boot over the page fake
 and the coin example (`web/shared/example/coin`), which gain the new shape first.
 
-## 5. What UNO's reducer file would carry after §4 and shell-hoist.md
+## 5. What UNO's reducer file carries after §4 and shell-hoist.md
 
-`web/games/uno/src/ui/state.ts`: the `Uno` type bag, `Table` (`curtain`, after row F), the eight
-table intents' reducer (`act` by role, the two sheets gone to F), `viewer` and `revealer`, `reset`
-(the default, row P), `rendered` reduced to `cueKey` + `cuesBetween` through P's `cueStep`, and
-`export const reducer = shellReducer(UNO, { intent: tableIntent })`: about 120 of today's 418
-lines. `web/games/uno/src/shellConfig.ts`: the id, the names, the seat range, `parseOpts`, the
-engine adapters and the result record, the `copy` spread (row B), the frames: about 70 of 157.
-`web/games/uno/main.ts`: one `bootShell({ page, game, config: UNO, reducer, paint, net, legal, hooks: { hook } })`
-with `playable` as its one hook member: about 30 of 67.
+Landed with §4 (8) (`web/shared/ui/shellReducer.ts`), the last of the eight; the counts are the
+files as they stand. `web/games/uno/src/ui/state.ts` (204 lines, from 418 when this document was
+written): the `Uno` type bag, `Table` (`curtain`), the one table intent's reducer (`act` by role),
+`viewer` and `revealer`, the cue machine `rendered` plays through P's `cueStep`, the config `UNO`
+over `UNO_SHELL`, and the block
+
+```ts
+export const reducer = shellReducer(UNO, { intent: tableIntent });
+export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
+  reducer;
+export const initialShell: Shell = initialApp.shell;
+export type EffectDeps = ShellEffectDeps<Uno>;
+```
+
+so `state.test.ts` and `home.test.ts` import what they imported before, and `main.ts` (35 lines,
+from 67) passes `reducer` where it spelled `{ initialApp, reduce, runEffect, readHome,
+hostContextOf, guestContextOf }`. `web/games/uno/src/shellConfig.ts`: 100 lines of 157. What a
+game's `TableReducer` carries beyond `intent` is the divergence §3 names and nothing else: hive,
+gin, backgammon, briscola and fidice an `effect` for their own writes; backgammon a `before`
+(`hostLeft` at match over, the pass-and-play deal with `manualTurnEnd`); fidice a `before` (its
+two deals) and an `after` (the game loop's timers over every result); gin an `after` (the sandbox
+unlock on the typed name); briscola a `before` (`hostLeft`, the paused refusal) and, since its live
+intent mirror's prelude changes the App the step starts from, its own `reduce` around the derived
+one (`forIntent`, the step, `withIntent`). The boot's `reducer` member is typed by the module
+(`ReducerBlock<G, App, Ex>`), over any App: boot.test.ts's fake game keeps spelling its own. The
+module is lint-pure; the `runEffect` it composes returns nothing, so it comes from shellEffects.ts
+(`shellEffectRunner`), which the pure profile carves out.

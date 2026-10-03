@@ -16,23 +16,13 @@ import { STORAGE_KEYS } from './src/storage.ts';
 import { BUG_SPRITE_SVG } from './src/ui/bugs.ts';
 import { bindAll, paint } from './src/ui/render.ts';
 import { ABOUT_PARAGRAPHS, GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
-import {
-  HIVE,
-  guestContextOf,
-  hostContextOf,
-  initialApp,
-  readHome,
-  reduce,
-  runEffect,
-  type App,
-  type Hive,
-} from './src/ui/state.ts';
+import { HIVE, reducer, type App, type Hive } from './src/ui/state.ts';
 
 bootShell<Hive, App>({
   page: browserPage(),
   game: { hook: '__hive', title: 'Hive', debug: 0 },
   sound: { fontKey: STORAGE_KEYS.soundFont },
-  reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
+  reducer,
   paint: { paint, bindAll },
   config: HIVE,
   copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
