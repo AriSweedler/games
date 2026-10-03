@@ -8,6 +8,7 @@ import {
   cuesBetween,
   handoffLabel,
   initialApp,
+  intentOf,
   moveHop,
   placeableNow,
   reachable,
@@ -506,4 +507,199 @@ describe('the peek at a stack', () => {
 
   /** `app` with the origin's peek open, whatever else it holds. */
   const withPeek = (app: App): App => ({ ...app, table: { ...app.table, peek: ORIGIN } });
+});
+
+describe("the hints hidden (the owner: 'option to not show moves... click on the grid where you wanna put them and then confirm')", () => {
+  const h = (q: number, r: number): Hex => ({ q, r });
+  /** Both Queens down, White's Ant a leaf at (-1,0), White to move, the hints hidden. */
+  const placed = (): App =>
+    run(
+      started(),
+      { type: 'act', action: { type: 'place', bug: 'queen', to: ORIGIN } },
+      { type: 'act', action: { type: 'place', bug: 'queen', to: h(1, 0) } },
+      { type: 'act', action: { type: 'place', bug: 'ant', to: h(-1, 0) } },
+      { type: 'act', action: { type: 'place', bug: 'spider', to: h(2, 0) } },
+      { type: 'hints/toggle' },
+    ).app;
+
+  test('the hints setting: shown by default, read at boot, toggled with a write (the pick dropped), kept through a start and a leave', () => {
+    expect(initialApp.table.hints).toBe('show');
+    const store = createStore(fakeStorage());
+    expect(readHome(store).hints).toBe('show');
+    const home = readHome(store);
+    const booted = run(initialApp, { type: 'home/init', home: { ...home, hints: 'hide' } }).app;
+    expect(booted.table.hints).toBe('hide');
+    expect(run(booted, localClick).app.table.hints).toBe('hide');
+    const app = run(started(), { type: 'pick/hand', bug: 'ant' }).app;
+    const toggled = run(app, { type: 'hints/toggle' });
+    expect(toggled.app.table.hints).toBe('hide');
+    expect(toggled.app.table.picked).toBeNull();
+    expect(toggled.effects).toEqual([{ type: 'hints/write', hints: 'hide' }]);
+    const left = run(toggled.app, { type: 'leave/confirmed' }, { type: 'leave/finish' }).app;
+    expect(left.table.hints).toBe('hide');
+    runEffect(initialApp, { type: 'hints/write', hints: 'hide' }, {
+      store,
+    } as unknown as EffectDeps);
+    expect(store.readText('hive_hints')).toEqual({ ok: true, value: 'hide' });
+    expect(readHome(store).hints).toBe('hide');
+  });
+
+  test('a tap anywhere proposes the pick there; a tap on the tile itself clears it; Cancel puts it back and drops the pick', () => {
+    const app = placed();
+    const picked = run(app, { type: 'tap/hex', hex: h(-1, 0) }).app;
+    expect(picked.table.picked).toEqual({ kind: 'hex', hex: h(-1, 0) });
+    expect(picked.table.proposal).toBeNull();
+    // Onto a hex the Ant could never reach: proposed all the same, nothing played.
+    const proposed = run(picked, { type: 'tap/hex', hex: h(1, 0) });
+    expect(proposed.app.table.proposal).toEqual(h(1, 0));
+    expect(proposed.app.table.picked).toEqual({ kind: 'hex', hex: h(-1, 0) });
+    expect(proposed.effects).toEqual([]);
+    expect(proposed.app.shell.game?.game.board['-1,0']).toEqual([{ side: 'white', bug: 'ant' }]);
+    // Another hex: the proposal moves.
+    const moved = run(proposed.app, { type: 'tap/hex', hex: h(-2, 1) }).app;
+    expect(moved.table.proposal).toEqual(h(-2, 1));
+    // Cancel: the tile hops back from the proposed hex to its own, the pick is gone.
+    const cancelled = run(moved, { type: 'proposal/cancel' });
+    expect(cancelled.app.table.proposal).toBeNull();
+    expect(cancelled.app.table.picked).toBeNull();
+    expect(cancelled.app.table.hop).toMatchObject({ bug: 'ant', from: h(-2, 1), path: [h(-1, 0)] });
+    expect(cancelled.effects).toEqual([]);
+    // Escape cancels a proposal the same way; the tile's own hex clears the pick.
+    expect(run(moved, { type: 'escape' }).app.table.proposal).toBeNull();
+    expect(run(picked, { type: 'tap/hex', hex: h(-1, 0) }).app.table.picked).toBeNull();
+    // A hand tile proposed anywhere: no hop back (the tray is drawn back at once).
+    const hand = run(app, { type: 'pick/hand', bug: 'beetle' }, { type: 'tap/hex', hex: h(3, 3) });
+    expect(hand.app.table.proposal).toEqual(h(3, 3));
+    const handBack = run(hand.app, { type: 'proposal/cancel' }).app;
+    expect(handBack.table.proposal).toBeNull();
+    expect(handBack.table.hop).toBe(app.table.hop);
+  });
+
+  test('Confirm on a legal proposal plays it; on a bad one the red toast names the rule, the tile goes back and the pick stays', () => {
+    const app = placed();
+    const view = viewOf(app);
+    if (view === null) throw new Error('no view');
+    const to = reachable(view, { kind: 'hex', hex: h(-1, 0) })[0];
+    if (to === undefined) throw new Error('the Ant cannot move');
+    const legal = run(
+      app,
+      { type: 'tap/hex', hex: h(-1, 0) },
+      { type: 'tap/hex', hex: to },
+      { type: 'proposal/confirm' },
+    );
+    expect(legal.app.shell.game?.game.board[keyOf(to)]).toEqual([{ side: 'white', bug: 'ant' }]);
+    expect(legal.app.shell.game?.game.board['-1,0']).toBeUndefined();
+    expect(legal.app.table.proposal).toBeNull();
+    expect(legal.app.table.picked).toBeNull();
+    expect(viewOf(legal.app)?.seat).toBe(1);
+    expect(legal.effects.map((e) => e.type)).toContain('fx');
+    // The Ant onto the Queen: a climb only the Beetle makes.
+    const bad = run(
+      app,
+      { type: 'tap/hex', hex: h(-1, 0) },
+      { type: 'tap/hex', hex: ORIGIN },
+      { type: 'proposal/confirm' },
+    );
+    expect(bad.effects).toEqual([
+      {
+        type: 'toast',
+        message: 'Only the Beetle may climb onto another tile.',
+        ms: 4000,
+        kind: 'error',
+      },
+    ]);
+    expect(bad.app.shell.game?.game.board['-1,0']).toEqual([{ side: 'white', bug: 'ant' }]);
+    expect(bad.app.shell.game?.game.turn).toBe('white');
+    expect(bad.app.table.proposal).toBeNull();
+    expect(bad.app.table.picked).toEqual({ kind: 'hex', hex: h(-1, 0) });
+    expect(bad.app.table.hop).toMatchObject({
+      bug: 'ant',
+      from: ORIGIN,
+      path: [h(-1, 0)],
+      reduced: false,
+    });
+    // A second try from the kept pick: proposed and confirmed where it may go.
+    const again = run(bad.app, { type: 'tap/hex', hex: to }, { type: 'proposal/confirm' }).app;
+    expect(again.shell.game?.game.board[keyOf(to)]).toEqual([{ side: 'white', bug: 'ant' }]);
+    // A hand tile on a taken hex: the reason, the pick kept, no hop (the tray tile is simply back).
+    const taken = run(
+      app,
+      { type: 'pick/hand', bug: 'beetle' },
+      { type: 'tap/hex', hex: h(1, 0) },
+      { type: 'proposal/confirm' },
+    );
+    expect(taken.effects.map((e) => (e.type === 'toast' ? e.message : e.type))).toEqual([
+      'That hex is taken.',
+    ]);
+    expect(taken.app.table.picked).toEqual({ kind: 'hand', bug: 'beetle' });
+    expect(taken.app.table.hop).toBe(app.table.hop);
+    // Under snap the hop back says so.
+    const snapped = run(
+      run(app, { type: 'motion/toggle' }).app,
+      { type: 'tap/hex', hex: h(-1, 0) },
+      { type: 'tap/hex', hex: ORIGIN },
+      { type: 'proposal/confirm' },
+    ).app;
+    expect(snapped.table.hop?.reduced).toBe(true);
+    // Confirm with nothing proposed is nothing.
+    expect(run(app, { type: 'proposal/confirm' })).toEqual({ app, effects: [] });
+    expect(intentOf({ kind: 'hand', bug: 'ant' }, ORIGIN)).toEqual({
+      type: 'place',
+      bug: 'ant',
+      to: ORIGIN,
+    });
+  });
+
+  test('a drag with the hints hidden: any hex is over, a release on one proposes, off every one drops the pick', () => {
+    const app = placed();
+    const far = h(3, -2);
+    const over = run(
+      app,
+      { type: 'drag/start', picked: { kind: 'hex', hex: h(-1, 0) } },
+      { type: 'drag/over', hex: far },
+    ).app;
+    expect(over.table.drag).toEqual({ over: far });
+    const dropped = run(over, { type: 'drag/end' }).app;
+    expect(dropped.table.drag).toBeNull();
+    expect(dropped.table.proposal).toEqual(far);
+    expect(dropped.table.picked).toEqual({ kind: 'hex', hex: h(-1, 0) });
+    const off = run(
+      app,
+      { type: 'drag/start', picked: { kind: 'hex', hex: h(-1, 0) } },
+      { type: 'drag/over', hex: null },
+      { type: 'drag/end' },
+    ).app;
+    expect(off.table.picked).toBeNull();
+    expect(off.table.proposal).toBeNull();
+    // Nothing lights: `reachable` is the engine's, the paint reads the hints (render.ts boardHtml).
+    expect(over.table.hints).toBe('hide');
+  });
+
+  test('a fresh position drops a proposal; the other seat is told it is not its turn', () => {
+    const app = placed();
+    const proposed = run(
+      app,
+      { type: 'tap/hex', hex: h(-1, 0) },
+      { type: 'tap/hex', hex: ORIGIN },
+    ).app;
+    const fresh = run(proposed, {
+      type: 'act',
+      action: { type: 'move', from: h(-1, 0), to: h(-2, 1) },
+    }).app;
+    expect(fresh.table.proposal).toBeNull();
+    expect(fresh.table.picked).toBeNull();
+    // A guest (seat 1) with a view on White's turn: its confirm is refused as out of turn.
+    const view = viewOf(app);
+    if (view === null) throw new Error('no view');
+    const guest: App = {
+      ...app,
+      shell: { ...app.shell, role: 'guest', view: { ...view, seat: 1 } },
+      table: { ...app.table, picked: { kind: 'hand', bug: 'beetle' }, proposal: h(3, 3) },
+    };
+    const refused = run(guest, { type: 'proposal/confirm' });
+    expect(refused.effects).toEqual([
+      { type: 'toast', message: 'Not your turn.', ms: 4000, kind: 'error' },
+    ]);
+    expect(refused.app.table.proposal).toBeNull();
+  });
 });

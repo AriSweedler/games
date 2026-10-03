@@ -20,6 +20,7 @@ import {
   type ShellState,
   type ShellTypes,
   type TimerId,
+  type ToastKind,
 } from './shell.ts';
 import type { RulesSlot } from './glossary.ts';
 import type { SoundFontName } from '../lib/sound/fonts.ts';
@@ -35,7 +36,8 @@ export type HostRoom = Readonly<{
 /** The adapters a shell effect reaches; a game's `EffectDeps` is this plus its own. */
 export type ShellEffectDeps<G extends ShellTypes> = Readonly<{
   store: G['Store'];
-  toast: (message: string, ms: number | null) => void;
+  /** The toast; `kind` only for a red one (shell.ts `errorToast`). */
+  toast: (message: string, ms: number | null, kind?: ToastKind) => void;
   /**
    * A cue of the game's table, or phrases already chosen (`eventEffects`), in the App's font: the
    * reducer's state is the source of truth for both. One dep for both so a game's deps never
@@ -117,7 +119,9 @@ export const runShellEffect = <G extends ShellTypes>(
       cfg.prefs.recentGames.append(deps.store, effect.game);
       return;
     case 'toast':
-      deps.toast(effect.message, effect.ms);
+      // The kind is passed only when the effect names one, so a game's adapter is called as it was.
+      if (effect.kind === undefined) deps.toast(effect.message, effect.ms);
+      else deps.toast(effect.message, effect.ms, effect.kind);
       return;
     case 'send':
       // The seat is passed only when the effect names one, so a two-seat game's adapter is called as it was.

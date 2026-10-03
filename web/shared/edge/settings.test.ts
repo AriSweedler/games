@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import {
+  HIVE_HINTS,
   HIVE_MOTION,
   SETTINGS,
   nextSetting,
@@ -25,11 +26,17 @@ const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => 
 };
 
 describe('the settings table', () => {
-  test("a row's key is spelled from its game and name; Hive's motion is the first row", () => {
+  test("a row's key is spelled from its game and name; Hive's motion is the first row, its hints the second", () => {
     expect(HIVE_MOTION.key).toBe('hive_motion');
     expect(HIVE_MOTION.values).toEqual(['crawl', 'snap']);
     expect(HIVE_MOTION.initial).toBe('crawl');
     expect(SETTINGS[0]).toBe(HIVE_MOTION);
+    expect(HIVE_HINTS.key).toBe('hive_hints');
+    expect(HIVE_HINTS.values).toEqual(['show', 'hide']);
+    expect(HIVE_HINTS.initial).toBe('show');
+    expect(HIVE_HINTS.labels).toEqual({ show: 'Show moves', hide: 'Hide moves' });
+    expect(SETTINGS[1]).toBe(HIVE_HINTS);
+    expect(new Set(SETTINGS.map((row) => row.key)).size).toBe(SETTINGS.length);
     const row = setting({
       game: 'gin',
       name: 'sort',

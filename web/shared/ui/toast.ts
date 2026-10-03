@@ -10,6 +10,7 @@
 import type { Clock, Timer } from '../lib/clock.ts';
 import type { DocumentLike } from '../edge/dom.ts';
 
+import type { ToastKind } from './shell.ts';
 import { hideToast, showToast, type ToastMarks } from './shellPaint.ts';
 
 /** The legacy `toast(msg, ms)` default, gin's and backgammon's alike (its design Q12). */
@@ -42,11 +43,11 @@ export const createTimers = <Id extends string>(clock: Clock): Timers<Id> => {
   return { start, cancel };
 };
 
-/** `toast(msg, ms)`: `ms` null or absent means the default. */
-export type Toast = (message: string, ms?: number | null) => void;
+/** `toast(msg, ms, kind)`: `ms` null or absent means the default; `kind` `error` is the red toast, absent the plain one. */
+export type Toast = (message: string, ms?: number | null, kind?: ToastKind) => void;
 
 /** A toast still within its time; its own timer, armed once when it was called, ends it. */
-type Live = Readonly<{ message: string }>;
+type Live = Readonly<{ message: string; kind: ToastKind | undefined }>;
 
 /**
  * Show `message` and hide it after `ms ?? defaultMs`; a toast while one is up replaces the text.
@@ -58,7 +59,8 @@ type Live = Readonly<{ message: string }>;
  * ever set its timer, and the gin DOM-parity oracle (tools/parity/gin-dom-parity.ts) steps its
  * `Date.now` on every read, so a read here would show as a clock the legacy page does not have.
  * `marks` names the classes a game puts on the toast for a message (backgammon's `hit`), off for
- * every other message, the one brought back included.
+ * every other message, the one brought back included; a toast's `kind` (the red `error`) is its
+ * own and comes back with it.
  */
 export const createToaster = (
   doc: DocumentLike,
@@ -70,7 +72,7 @@ export const createToaster = (
   /** The toasts interrupted while still within their time, the one interrupted last at the end. */
   let held: ReadonlyArray<Live> = [];
   const paint = (live: Live): void => {
-    showToast(doc, live.message, marks?.(live.message));
+    showToast(doc, live.message, marks?.(live.message), live.kind);
   };
   const due = (live: Live): void => {
     if (live !== up) {
@@ -83,8 +85,8 @@ export const createToaster = (
     if (up === null) hideToast(doc);
     else paint(up);
   };
-  return (message, ms = null) => {
-    const live: Live = { message };
+  return (message, ms = null, kind) => {
+    const live: Live = { message, kind };
     clock.setTimeout(() => {
       due(live);
     }, ms ?? defaultMs);

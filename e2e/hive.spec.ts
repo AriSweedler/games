@@ -16,7 +16,12 @@
 // case"). A stack's count badge peeks at the column (the owner: "selecting or hovering the badge
 // showing how many bugs are underneath should show the stack of bugs"): hovered, focused or
 // tapped, a panel beside the hex lists every tile top to bottom, the top one marked; a tap
-// elsewhere or Escape closes it, and a tap on the badge is no tap on the hex. Nothing is random, so no seed. The hook `window.__hive`
+// elsewhere or Escape closes it, and a tap on the badge is no tap on the hex. With the hints hidden
+// (💡, or the home's switch) nothing lights: a tile tapped onto any hex is proposed there with
+// Confirm and Cancel under the board; Confirm on a move against the rules shows the red toast with
+// the reason and the tile is back, on a legal one it plays (the owner: "option to not show
+// moves... if you confirm an illegal move it will yell at you with a red toast and tell you why
+// it's no good and then undo your move"). Nothing is random, so no seed. The hook `window.__hive`
 // (`view()`, `legal()`, `act`) reads the game back. On `pages` alone: this is about the page, not
 // the origin. The shell's own flows (the home, the room, the handoff, resume) are the shell specs'
 // `@hive` describes.
@@ -546,3 +551,108 @@ const peekAt = (viewport: Viewport): void => {
 
 peekAt(PHONE);
 peekAt(DESKTOP);
+
+/**
+ * The hints hidden (the owner: "option to not show moves. That is, you get to click on the grid
+ * where you wanna put them and then confirm. But if you confirm an illegal move it will yell at you
+ * with a red toast and tell you why it's no good and then undo your move and you can try again"):
+ * the 💡 off, a picked Ant lights nothing and the ring is drawn; tapped onto the Queen it sits there
+ * as a proposal with Confirm under the board; Confirm: the red toast names the rule, the Ant is back
+ * on its hex and still picked; onto an empty hex beside the hive and confirmed, it moves. With
+ * HIVE_HINTS_SHOTS set to a folder, the proposal and the toast are saved there.
+ */
+test('hints hidden: a tile goes anywhere, Confirm refuses a bad move in red and plays a good one', async ({
+  phone,
+  project,
+}) => {
+  test.skip(project !== 'pages', 'about the page, not the origin');
+  const { page } = phone;
+  await hiveStartLocal(page, pagePath(project, 'hive'), DESKTOP, [...NAMES]);
+  const hints = page.locator('#hintsBtn');
+  await expect(hints).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#hintsToggle')).toBeChecked();
+  await expect(page.locator('#proposalBar')).toBeHidden();
+  // Both Queens down and White's Ant a leaf at (-1,0); White to move.
+  const placements = [
+    ['queen', { q: 0, r: 0 }, 1],
+    ['queen', { q: 1, r: 0 }, 0],
+    ['ant', { q: -1, r: 0 }, 1],
+    ['spider', { q: 2, r: 0 }, 0],
+  ] as const;
+  await placements.reduce(async (prev, [bug, to, seat]) => {
+    await prev;
+    await hiveAct(page, { type: 'place', bug, to });
+    await expect(page.locator('#myName')).toHaveText(seated(seat));
+  }, Promise.resolve());
+
+  // The hints off: the Ant picked lights nothing, and the ring around the hive is drawn to tap.
+  await hints.click();
+  await expect(hints).toHaveAttribute('aria-pressed', 'false');
+  await expect(hints).toHaveAttribute('title', 'Hide moves');
+  await expect(page.locator('#hintsToggle')).not.toBeChecked();
+  const ant = page.locator('#board .hex[data-hex="-1,0"]');
+  await ant.click();
+  await expect(ant).toHaveClass(/picked/);
+  await expect(page.locator('#board .hex.lit')).toHaveCount(0);
+  await expect(page.locator('#board')).toHaveClass(/free/);
+  await expect(page.locator('#board .hex')).toHaveCount(16);
+
+  // Onto White's Queen: the Ant is drawn there as a stack, proposed, and the bar shows.
+  await page.locator('#board .hex[data-hex="0,0"]').click();
+  const onQueen = page.locator('#board .hex[data-hex="0,0"]');
+  await expect(onQueen).toHaveClass(/proposed/);
+  await expect(onQueen).toHaveClass(/stack/);
+  await expect(onQueen).toHaveAttribute('aria-label', /Ant, on a stack of 2, proposed/);
+  await expect(page.locator('#proposalBar')).toBeVisible();
+  await expect(page.locator('#confirmBtn')).toHaveClass(/btn-go/);
+  const shots = process.env['HIVE_HINTS_SHOTS'];
+  if (shots !== undefined) await page.screenshot({ path: `${shots}/proposal.png` });
+  // Confirm: the red toast says why, the Ant is back on its hex and still picked for another try.
+  await page.locator('#confirmBtn').click();
+  const toast = page.locator('#toast');
+  await expect(toast).toHaveClass(/show/);
+  await expect(toast).toHaveClass(/error/);
+  await expect(toast).toHaveAttribute('role', 'alert');
+  await expect(toast).toHaveText('Only the Beetle may climb onto another tile.');
+  if (shots !== undefined) {
+    // The toast fades in over 0.2 s: let it finish before the frame is saved.
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${shots}/red-toast.png` });
+  }
+  await expect(page.locator('#proposalBar')).toBeHidden();
+  await expect(ant).toHaveClass(/picked/);
+  await expect(ant).toHaveAttribute('aria-label', /Ant/);
+  await expect(onQueen).not.toHaveClass(/stack|proposed/);
+  const kept = await requireView(page);
+  expect(kept.game.board['-1,0']).toEqual([{ side: 'white', bug: 'ant' }]);
+  expect(kept.game.turn).toBe('white');
+  // The toast is red for four seconds, then gone.
+  await expect(toast).not.toHaveClass(/show/, { timeout: 6000 });
+
+  // Cancel puts a proposal back and drops the pick.
+  await page.locator('#board .hex[data-hex="-2,1"]').click();
+  await expect(page.locator('#board .hex[data-hex="-2,1"]')).toHaveClass(/proposed/);
+  await page.locator('#cancelBtn').click();
+  await expect(page.locator('#proposalBar')).toBeHidden();
+  await expect(page.locator('#board .hex.picked')).toHaveCount(0);
+  await expect(page.locator('#board')).not.toHaveClass(/free/);
+
+  // A legal one: the Ant slid a step round the Queen to (-1,1) and confirmed moves; Black's view is up.
+  await ant.click();
+  await page.locator('#board .hex[data-hex="-1,1"]').click();
+  await expect(page.locator('#board .hex[data-hex="-1,1"]')).toHaveClass(/proposed/);
+  await page.locator('#confirmBtn').click();
+  await expect(page.locator('#myName')).toHaveText(seated(1));
+  await expect(page.locator('#board .hex[data-hex="-1,1"]')).toHaveClass(/\bw\b/);
+  const moved = await requireView(page);
+  expect(moved.game.board['-1,1']).toEqual([{ side: 'white', bug: 'ant' }]);
+  expect(moved.game.board['-1,0']).toBeUndefined();
+
+  // The choice survives a reload, on the home's switch too.
+  await page.reload();
+  await expect(page.locator('#homeScreen')).toBeVisible();
+  await expect(page.locator('#hintsToggle')).not.toBeChecked();
+  await expect(hints).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#hintsToggle').click();
+  await expect(hints).toHaveAttribute('aria-pressed', 'true');
+});

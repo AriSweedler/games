@@ -7,7 +7,8 @@
 // shell menu lists every game's options from `SETTINGS` rather than hunting each game's keys. A
 // stored value the row does not list reads as the default, and nothing is logged: a stale value
 // is not an error the player can act on. Hive's `motion` (every tile crawls hex by hex, or snaps
-// to where it lands) is the first row.
+// to where it lands) is the first row; its `hints` (the lit hexes shown, or hidden for a confirm)
+// the second.
 import { literal } from '../lib/json.ts';
 import { readTextWith } from './prefs.ts';
 import type { Store } from './storage.ts';
@@ -41,8 +42,22 @@ export const HIVE_MOTION = setting({
   labels: { crawl: 'Tiles crawl', snap: 'Tiles snap' },
 });
 
-/** Every game's options, for a Config tab to list: Hive's motion first. */
-export const SETTINGS: ReadonlyArray<Setting> = [HIVE_MOTION];
+/**
+ * Hive's hints: `show` (a picked tile lights every hex it may go to, the default) or `hide` (the
+ * owner: "option to not show moves... you get to click on the grid where you wanna put them and
+ * then confirm. But if you confirm an illegal move it will yell at you with a red toast").
+ */
+export const HIVE_HINTS = setting({
+  game: 'hive',
+  name: 'hints',
+  values: ['show', 'hide'],
+  initial: 'show',
+  title: 'Moves',
+  labels: { show: 'Show moves', hide: 'Hide moves' },
+});
+
+/** Every game's options, for a Config tab to list: Hive's motion first, then its hints. */
+export const SETTINGS: ReadonlyArray<Setting> = [HIVE_MOTION, HIVE_HINTS];
 
 /** The stored value, or the row's default when the key is missing, unreadable or not one of the values. */
 export const readSetting = <V extends string>(store: Store, row: Setting<V>): V => {

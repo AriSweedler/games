@@ -41,6 +41,24 @@ describe('createTimers', () => {
 });
 
 describe('createToaster', () => {
+  test('an error toast paints as one and lasts its own time; a plain one over it comes and goes, and the error comes back red', () => {
+    const clock = fakeClock();
+    const p = page();
+    const toast = createToaster(p.doc, clock);
+    toast('That hex is taken.', 4000, 'error');
+    expect(p.get('toast').hasClass('error')).toBe(true);
+    expect(p.get('toast').attr('role')).toBe('alert');
+    clock.advance(100);
+    toast('Connected directly', 1000);
+    expect(p.get('toast').hasClass('error')).toBe(false);
+    expect(p.get('toast').attr('role')).toBe('status');
+    clock.advance(1000);
+    expect(p.get('toast').text()).toBe('That hex is taken.');
+    expect(p.get('toast').hasClass('error')).toBe(true);
+    clock.advance(2900);
+    expect(p.get('toast').hasClass('show')).toBe(false);
+  });
+
   test('shows the message and hides it after the default; null or absent ms mean the default', () => {
     const clock = fakeClock();
     const p = page();

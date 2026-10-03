@@ -123,6 +123,13 @@ const blocks: ShellBlocks = {
           <label class="toggle-row" id="motionRow">
             <input type="checkbox" id="motionToggle" checked />
             <span>Tiles crawl along their path<br /><small class="muted">Off: they snap to where they land.</small></span>
+          </label>
+          <!-- The hints (the owner: "option to not show moves. That is, you get to click on the grid where
+               you wanna put them and then confirm"): settings.ts HIVE_HINTS, the same choice as the table's
+               #hintsBtn, here for the phone. -->
+          <label class="toggle-row" id="hintsRow">
+            <input type="checkbox" id="hintsToggle" checked />
+            <span>Show where a picked tile may go<br /><small class="muted">Off: put it anywhere and Confirm; a move against the rules is refused and told why.</small></span>
           </label>`,
   extraPanels: '',
   extraScreens: '',
@@ -140,7 +147,7 @@ const blocks: ShellBlocks = {
            its connection), Black's hand above the board and White's below, the SVG hive between
            them (render.ts boardHtml: a g.hex per cell), Pass and Resign, the status line; in the
            topbar, the tiles' motion (🐌 crawl / ⚡ snap: render.ts paintMotion, the device's remembered
-           setting) beside the sound. -->
+           setting) and the hints (💡: render.ts paintHints) beside the sound. -->
       <div id="tableScreen" class="hidden">
         <div class="topbar">
           <div class="row tight">
@@ -158,10 +165,17 @@ const blocks: ShellBlocks = {
             <button class="icon-btn" id="historyBtn" title="History" aria-label="History">📜</button>
             <button class="icon-btn" id="soundBtn" title="Sound &amp; vibration" aria-label="Sound" aria-pressed="true">🔊</button>
             <button class="icon-btn" id="motionBtn" title="Tiles crawl" aria-label="Tiles crawl" aria-pressed="true">🐌</button>
+            <button class="icon-btn" id="hintsBtn" title="Show moves" aria-label="Show moves" aria-pressed="true">💡</button>
           </div>
         </div>
         <div class="hand" id="blackHand" aria-label="Black’s tiles in hand"></div>
         <div class="board" id="board" aria-label="The board"></div>
+        <!-- The proposal (the hints hidden; the owner: "click on the grid where you wanna put them and then
+             confirm"): Confirm plays the tile where it was put, or the red toast says why not; Cancel puts it back. -->
+        <div class="proposal-bar hidden" id="proposalBar">
+          <button class="btn btn-go grow" id="confirmBtn">Confirm</button>
+          <button class="btn btn-ghost grow" id="cancelBtn">Cancel</button>
+        </div>
         <div class="hand" id="whiteHand" aria-label="White’s tiles in hand"></div>
         <p class="status-line" id="statusText" aria-live="polite"></p>
         <div class="controls">

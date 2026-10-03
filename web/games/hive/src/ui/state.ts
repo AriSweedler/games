@@ -8,7 +8,14 @@
 // crawls too), the Spider's with her 1-2-3 (the owner: "the spider's moves must show the '1-2-3'
 // when it moves, as a special case"). The tiles' `motion` (crawl or snap) is the device's
 // remembered setting (settings.ts `HIVE_MOTION`): read at boot into the table through the home
-// snapshot, toggled by `motion/toggle`, written back as an effect. Every role plays through `act`: pass-and-play and the host apply the action to the
+// snapshot, toggled by `motion/toggle`, written back as an effect; the `hints` (show or hide) the
+// same way (the owner: "option to not show moves... you get to click on the grid where you wanna
+// put them and then confirm. But if you confirm an illegal move it will yell at you with a red
+// toast and tell you why it's no good and then undo your move"): with them hidden no hex lights,
+// a tap or a drop on any hex of the ring is a `proposal` the board shows the tile on, and
+// `proposal/confirm` plays it when engine.ts `explainMove` allows, else the red toast names the
+// rule and the tile goes back (a `hop` from the proposed hex) with the pick kept; `proposal/cancel`
+// drops both. Every role plays through `act`: pass-and-play and the host apply the action to the
 // engine and broadcast each seat its view, a guest sends one `action` frame and waits for its
 // view. Pass-and-play raises no curtain (the owner, 2026-10-02: "hive is like backgammon, where
 // you don't need to pass the phone for turns. It's just a game."): nothing is hidden, so both
@@ -19,6 +26,7 @@ import {
   NOT_CONNECTED_MSG,
   andThen as then,
   broadcast,
+  errorToast,
   guestContextOf as shellGuestContextOf,
   hostContextOf as shellHostContextOf,
   initialShell as shellInitial,
@@ -50,10 +58,20 @@ import {
   type TableReset,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
-import { heightAt, occupied, pathOf, topAt, type Board } from '../engine/engine.ts';
+import {
+  explainMove,
+  heightAt,
+  occupied,
+  pathOf,
+  topAt,
+  type Board,
+  type Move,
+  type Place,
+} from '../engine/engine.ts';
 import { dedupe, keyOf, sameHex, type Hex } from '../engine/hex.ts';
 import type { Bug, Side } from '../engine/pieces.ts';
 import {
+  NOT_YOUR_TURN_MSG,
   applyAction,
   createState,
   turnSeat,
@@ -68,10 +86,14 @@ import type { Hop } from './board.ts';
 import { HIVE_SHELL } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
+  HIVE_HINTS,
   HIVE_MOTION,
   HOME_TABS,
+  nextHints,
   nextMotion,
+  writeHints,
   writeMotion,
+  type Hints,
   type HomeTab,
   type Motion,
   type Opts,
@@ -83,10 +105,12 @@ import { INITIAL_CUES, type Cue, type CueState } from './sound.ts';
 
 export {
   DEFAULT_PLAY_MODE,
+  HIVE_HINTS,
   HIVE_MOTION,
   HOME_TABS,
   INITIAL_CUES,
   type CueState,
+  type Hints,
   type HomeTab,
   type Motion,
   type PlayMode,
@@ -104,8 +128,8 @@ export type ScreenId = (typeof SCREENS)[number];
 /** `host/click` and `local/click` carry nothing beyond the names: a game for two has no option (the field is never set). */
 export type Raw = Readonly<{ seats?: never }>;
 
-/** What `initHome` reads beyond the shell's keys: the tiles' motion (shellConfig.ts `home.read`). */
-export type Home = Readonly<{ motion: Motion }>;
+/** What `initHome` reads beyond the shell's keys: the tiles' motion and the hints (shellConfig.ts `home.read`). */
+export type Home = Readonly<{ motion: Motion; hints: Hints }>;
 
 /** What the player has picked up: a bug from the hand, or a tile on the board. */
 export type Picked = Readonly<{ kind: 'hand'; bug: Bug }> | Readonly<{ kind: 'hex'; hex: Hex }>;
@@ -136,6 +160,10 @@ export type Table = Readonly<{
    * hovers another badge; a tap on it reopens.
    */
   peekShut: Hex | null;
+  /** The hints, the device's other remembered setting: `show` lights the picked tile's hexes, `hide` takes a proposal anywhere. */
+  hints: Hints;
+  /** With the hints hidden: the hex the picked tile is proposed on, shown there until Confirm or Cancel; null for none. */
+  proposal: Hex | null;
   /** The result sheet's Continue was tapped: the final board stays on show. */
   resultSeen: boolean;
   /** `#historyOverlay` open. */
@@ -160,10 +188,15 @@ export type TableIntent =
   | Readonly<{ type: 'history/open' }>
   | Readonly<{ type: 'history/close' }>
   | Readonly<{ type: 'motion/toggle' }>
+  | Readonly<{ type: 'hints/toggle' }>
+  | Readonly<{ type: 'proposal/confirm' }>
+  | Readonly<{ type: 'proposal/cancel' }>
   | Readonly<{ type: 'escape' }>;
 
-/** The tiles' motion into the device's storage (settings.ts `writeSetting`). */
-export type TableEffect = Readonly<{ type: 'motion/write'; motion: Motion }>;
+/** The tiles' motion, or the hints, into the device's storage (settings.ts `writeSetting`). */
+export type TableEffect =
+  | Readonly<{ type: 'motion/write'; motion: Motion }>
+  | Readonly<{ type: 'hints/write'; hints: Hints }>;
 
 /** Hive's types for the shared shell: two seats, no option, the whole game as every seat's view. */
 export type Hive = Readonly<{
@@ -204,6 +237,8 @@ export const initialTable: Table = {
   motion: HIVE_MOTION.initial,
   peek: null,
   peekShut: null,
+  hints: HIVE_HINTS.initial,
+  proposal: null,
   resultSeen: false,
   historyOpen: false,
 };
@@ -211,11 +246,11 @@ export const initialTable: Table = {
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
 /**
- * The table with `picked` in hand (or nothing); a new pick aims at nothing yet, and dismisses any
- * peek (the pointer may still rest on its badge: `peekShut`).
+ * The table with `picked` in hand (or nothing); a new pick aims at nothing yet, proposes nothing,
+ * and dismisses any peek (the pointer may still rest on its badge: `peekShut`).
  */
 const pick = (app: App, picked: Picked | null): App =>
-  withTable(app, { picked, aim: null, peek: null, peekShut: app.table.peek });
+  withTable(app, { picked, aim: null, proposal: null, peek: null, peekShut: app.table.peek });
 
 const refuse = (app: App, message: string): Step =>
   step(withTable(pick(app, null), { drag: null }), toast(message));
@@ -300,6 +335,7 @@ const rendered = (app: App, prev: View | null, ctx: Ctx): Step => {
     aim: fresh || newGame ? null : app.table.aim,
     peek: fresh || newGame ? null : app.table.peek,
     peekShut: fresh || newGame ? null : app.table.peekShut,
+    proposal: fresh || newGame ? null : app.table.proposal,
     // A tile that landed hops once, on this position; any other fresh position hops nothing.
     hop:
       moved !== null ? { key, ...moved, reduced: snap } : fresh || newGame ? null : app.table.hop,
@@ -317,12 +353,20 @@ const reset = (table: Table, at: TableReset): Table => {
     case 'handoff':
     case 'leave':
     case 'lost':
-      return { ...initialTable, motion: table.motion };
+      return { ...initialTable, motion: table.motion, hints: table.hints };
     case 'deal':
     case 'view':
     case 'applied':
     case 'frame':
-      return { ...table, picked: null, drag: null, aim: null, peek: null, peekShut: null };
+      return {
+        ...table,
+        picked: null,
+        drag: null,
+        aim: null,
+        proposal: null,
+        peek: null,
+        peekShut: null,
+      };
   }
 };
 
@@ -350,7 +394,7 @@ export const HIVE: ShellConfig<Hive> = {
   local: { viewer, revealer },
   home: {
     ...HIVE_SHELL.home,
-    apply: (app, home) => withTable(app, { motion: home.motion }),
+    apply: (app, home) => withTable(app, { motion: home.motion, hints: home.hints }),
     resume: (home) => resumeFor(home.save),
     resumeExtra: pure,
   },
@@ -407,19 +451,84 @@ export const reachable = (view: View, picked: Picked | null): ReadonlyArray<Hex>
 export const placeableNow = (view: View): ReadonlySet<Bug> =>
   new Set(view.placements.map((p) => p.bug));
 
-/** The pick played to `hex` (a tap on a lit hex, a drop on one): the tap cue, then the action through `act`. */
-const play = (app: App, picked: Picked, hex: Hex, ctx: Ctx): Step => {
-  const action: Action =
-    picked.kind === 'hand'
-      ? { type: 'place', bug: picked.bug, to: hex }
-      : { type: 'move', from: picked.hex, to: hex };
-  return then(step(app, fx('tap')), (a) =>
+/** The intent a pick played to `hex` is: a hand bug's placement, a board tile's move. */
+export const intentOf = (picked: Picked, hex: Hex): Place | Move =>
+  picked.kind === 'hand'
+    ? { type: 'place', bug: picked.bug, to: hex }
+    : { type: 'move', from: picked.hex, to: hex };
+
+/** The pick played to `hex` (a tap on a lit hex, a drop on one, a proposal confirmed): the tap cue, then the action through `act`. */
+const play = (app: App, picked: Picked, hex: Hex, ctx: Ctx): Step =>
+  then(step(app, fx('tap')), (a) =>
     act(
-      withTable(a, { picked: null, drag: null, aim: null, peek: null, peekShut: null }),
-      action,
+      withTable(a, {
+        picked: null,
+        drag: null,
+        aim: null,
+        proposal: null,
+        peek: null,
+        peekShut: null,
+      }),
+      intentOf(picked, hex),
       ctx,
     ),
   );
+
+/** Whether the hints are hidden: a pick proposes anywhere instead of playing on a lit hex. */
+const hidden = (app: App): boolean => app.table.hints === 'hide';
+
+/** With the hints hidden: the pick proposed on `hex`, shown there until Confirm or Cancel; a drag ends. */
+const propose = (app: App, hex: Hex): Step =>
+  pure(withTable(app, { proposal: hex, drag: null, aim: null }));
+
+/**
+ * The proposed tile back where it was: the proposal dropped, and for a board tile a `hop` from
+ * the proposed hex to its own (the paint glides it back; a hand tile's tray is drawn back at once).
+ */
+const putBack = (app: App, view: View, ctx: Ctx): Table => {
+  const picked = app.table.picked;
+  const to = app.table.proposal;
+  const tile = picked?.kind === 'hex' ? topAt(view.game.board, picked.hex) : undefined;
+  if (picked?.kind !== 'hex' || to === null || tile === undefined)
+    return { ...app.table, proposal: null };
+  const snap = (ctx.reducedMotion ?? false) || app.table.motion === 'snap';
+  return {
+    ...app.table,
+    proposal: null,
+    hop: {
+      key: `${cueKey(view)}:back:${keyOf(to)}`,
+      bug: tile.bug,
+      side: tile.side,
+      from: to,
+      path: [picked.hex],
+      reduced: snap,
+    },
+  };
+};
+
+/**
+ * `proposal/confirm`: the proposed move plays when the engine allows it (engine.ts `explainMove`
+ * null; a seat out of turn is told so first), else the red toast names the rule it breaks, the tile
+ * goes back and the pick stays for another try. Nothing proposed is nothing.
+ */
+const confirm = (app: App, ctx: Ctx): Step => {
+  const view = app.shell.view;
+  const picked = app.table.picked;
+  const to = app.table.proposal;
+  if (view === null || picked === null || to === null) return pure(app);
+  const reason =
+    turnSeat(view.game) !== view.seat
+      ? NOT_YOUR_TURN_MSG
+      : explainMove(view.game, intentOf(picked, to));
+  if (reason === null) return play(app, picked, to, ctx);
+  return step({ ...app, table: putBack(app, view, ctx) }, errorToast(reason));
+};
+
+/** `proposal/cancel`: the tile back where it was and the pick dropped. */
+const cancel = (app: App, ctx: Ctx): Step => {
+  const view = app.shell.view;
+  const table = view === null ? app.table : putBack(app, view, ctx);
+  return pure({ ...app, table: { ...table, picked: null, drag: null, aim: null, proposal: null } });
 };
 
 /** Whether the pick may go to `hex` now. */
@@ -428,12 +537,17 @@ const canReach = (view: View, picked: Picked | null, hex: Hex): boolean =>
 
 /**
  * A tap on a hex: a lit hex plays the pick; one of my movable tiles becomes the pick; anything else
- * clears it. The click a drag's release fires reaches the board too: while the drag stands it is nothing.
+ * clears it. With the hints hidden a pick is proposed on any hex but its own (which clears it).
+ * The click a drag's release fires reaches the board too: while the drag stands it is nothing.
  */
 const tapHex = (app: App, hex: Hex, ctx: Ctx): Step => {
   const view = app.shell.view;
   if (view === null || app.table.drag !== null) return pure(app);
   const picked = app.table.picked;
+  if (picked !== null && hidden(app)) {
+    const own = picked.kind === 'hex' && sameHex(picked.hex, hex);
+    return own ? pure(pick(app, null)) : propose(app, hex);
+  }
   if (picked !== null && canReach(view, picked, hex)) return play(app, picked, hex, ctx);
   const movable = view.movable.some((m) => sameHex(m.from, hex));
   const same = picked?.kind === 'hex' && sameHex(picked.hex, hex);
@@ -453,25 +567,26 @@ const dragStart = (app: App, picked: Picked): Step => {
   return pure(withTable(app, { picked, drag: { over: null }, peek: null }));
 };
 
-/** `drag/over`: the lit hex the ghost is over, or none; a hex the pick cannot reach counts as none. */
+/** `drag/over`: the lit hex the ghost is over, or none; a hex the pick cannot reach counts as none (any hex counts with the hints hidden). */
 const dragOver = (app: App, hex: Hex | null): Step => {
   const view = app.shell.view;
   const d = app.table.drag;
   if (view === null || d === null) return pure(app);
-  const over = hex !== null && canReach(view, app.table.picked, hex) ? hex : null;
+  const over = hex !== null && (hidden(app) || canReach(view, app.table.picked, hex)) ? hex : null;
   const same = over === d.over || (over !== null && d.over !== null && sameHex(over, d.over));
   return same ? pure(app) : pure(withTable(app, { drag: { over } }));
 };
 
-/** `drag/end`: over a lit hex the pick is played there; anywhere else the pick is dropped. */
+/** `drag/end`: over a lit hex the pick is played there (proposed there with the hints hidden); anywhere else the pick is dropped. */
 const dragEnd = (app: App, ctx: Ctx): Step => {
   const view = app.shell.view;
   const d = app.table.drag;
   const picked = app.table.picked;
   if (view === null || d === null) return pure(withTable(app, { drag: null }));
+  if (picked !== null && d.over !== null && hidden(app)) return propose(app, d.over);
   if (picked !== null && d.over !== null && canReach(view, picked, d.over))
     return play(app, picked, d.over, ctx);
-  return pure(withTable(app, { picked: null, drag: null, aim: null }));
+  return pure(withTable(app, { picked: null, drag: null, aim: null, proposal: null }));
 };
 
 /** The peek at `hex` open: a stacked hex only; the same hex again is no change, so no repaint. */
@@ -537,11 +652,24 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       const motion = nextMotion(app.table.motion);
       return step(withTable(app, { motion }), { type: 'motion/write', motion });
     }
+    case 'hints/toggle': {
+      // The other way of playing: whatever was picked or proposed under the old one is dropped.
+      const hints = nextHints(app.table.hints);
+      return step(withTable(pick(app, null), { hints, drag: null }), {
+        type: 'hints/write',
+        hints,
+      });
+    }
+    case 'proposal/confirm':
+      return confirm(app, ctx);
+    case 'proposal/cancel':
+      return cancel(app, ctx);
     case 'escape':
       if (app.table.historyOpen) return pure(withTable(app, { historyOpen: false }));
       if (app.table.peek !== null)
         return pure(withTable(app, { peek: null, peekShut: app.table.peek }));
       if (app.shell.rulesOpen) return pure(withShell(app, { rulesOpen: false }));
+      if (app.table.proposal !== null) return cancel(app, ctx);
       return pure(pick(app, null));
   }
 };
@@ -572,10 +700,11 @@ export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(ap
 
 export type EffectDeps = ShellEffectDeps<Hive>;
 
-/** One effect against the adapters: the shell's runner, or the table's one write (the tiles' motion). */
+/** One effect against the adapters: the shell's runner, or the table's two writes (the tiles' motion, the hints). */
 export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
   if (isShellEffect(effect)) runShellEffect(app.shell, effect, deps, HIVE);
-  else writeMotion(deps.store, effect.motion);
+  else if (effect.type === 'motion/write') writeMotion(deps.store, effect.motion);
+  else writeHints(deps.store, effect.hints);
 };
 
 /** The view the table paints: my seat's, or null at home. */

@@ -489,9 +489,30 @@ label {
   accent-color: var(--accent);
 }
 @media (max-width: 429px) {
-  #motionBtn {
+  #motionBtn,
+  #hintsBtn {
     display: none;
   }
+}
+/* The hints hidden (render.ts: `#board.free` while a tile is picked, `proposed` on the cell it was
+   put on, `#proposalBar` under the board): the ring's plain cells read as places to put the tile,
+   and the proposed tile wears a dashed accent ring until Confirm or Cancel. */
+.board.free .hex.empty .face {
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-dasharray: 1.6 1.2;
+}
+.hex.proposed .face {
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-dasharray: 2.2 1.4;
+}
+.hex.proposed .sheen {
+  stroke: none;
+}
+.proposal-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
 }
 /* The arc over one hop (ui/motion.ts `carry`: the translate transition carries the hop, this
    animation the lift and the swell at mid-hop, both off the cell's custom properties so the

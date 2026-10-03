@@ -24,6 +24,10 @@
 // with the column top to bottom as mini tiles, the top one marked; the reducer holds which hex
 // (`table.peek`) and closes it on a tap elsewhere, Escape, the pointer leaving, a pick, a drag or a
 // new position. A tap on the badge is not a tap on its hex; a press carried away still lifts the tile.
+// With the hints hidden (`#hintsBtn` 💡, `paintHints`; the owner: "option to not show moves") nothing
+// lights: a pick draws the whole ring as plain cells (`#board.free`, so a drop lands anywhere), the
+// proposed tile is drawn where the player put it (`proposed`, engine.ts `withIntent`) and
+// `#proposalBar` (`.proposal-bar`: its own rule, not `.controls`, so the goldens' pinned row stays Pass and Resign's) shows under the board until the move plays or the tile goes back.
 import {
   addClass,
   closestFrom,
@@ -64,7 +68,7 @@ import {
   paintWaiting as paintShellWaiting,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
-import { columnAt, spiderPaths, stackAt, type Game } from '../engine/engine.ts';
+import { columnAt, spiderPaths, stackAt, withIntent, type Game } from '../engine/engine.ts';
 import { hexOf, keyOf, type Hex } from '../engine/hex.ts';
 import { BUG, BUGS, type Bug, type Side, type Tile } from '../engine/pieces.ts';
 import { sideOf, turnSeat, winnerSeat, type Seat, type View } from '../engine/view.ts';
@@ -86,12 +90,15 @@ import { bindHome, paintHome } from './home.ts';
 import { hopAlong } from './motion.ts';
 import { aboutHtml, rulesItemsHtml } from './rules.ts';
 import {
+  HIVE_HINTS,
   HIVE_MOTION,
   SCREENS,
   handoffLabel,
+  intentOf,
   placeableNow,
   reachable,
   type App,
+  type Hints,
   type Hop,
   type Intent,
   type Motion,
@@ -156,6 +163,7 @@ export const cellHtml = (
   step: number | null = null,
   trail = false,
   peeked = false,
+  proposed = false,
 ): string => {
   const stack = stackAt(game.board, hex);
   const top = stack.at(-1);
@@ -167,10 +175,16 @@ export const cellHtml = (
     picked ? 'picked' : '',
     stack.length > 1 ? 'stack' : '',
     trail ? 'trail' : '',
+    proposed ? 'proposed' : '',
   ]
     .filter((s) => s !== '')
     .join(' ');
-  const stepNote = step === null ? '' : `, step ${String(step)} of the Spider’s path`;
+  const stepNote =
+    step === null
+      ? proposed
+        ? ', proposed: Confirm to play it'
+        : ''
+      : `, step ${String(step)} of the Spider’s path`;
   const label =
     top === undefined
       ? lit
@@ -252,6 +266,11 @@ export const peekHtml = (game: Game, hex: Hex, box: ViewBox): string => {
   return `${open.markup}${bg.markup}${items.join('')}</g>`;
 };
 
+/** The game as the board shows it under a proposal: the picked tile where the player put it (engine.ts `withIntent`), rules aside. */
+export const proposedGame = (v: View, picked: Picked | null, proposal: Hex | null): Game =>
+  picked === null || proposal === null
+    ? v.game
+    : { ...v.game, board: withIntent(v.game.board, sideOf(v.seat), intentOf(picked, proposal)) };
 /**
  * The whole board as one SVG: the cells drawn (the hive and the lit hexes), the viewBox fitted to
  * the hive and its ring (board.ts `fitCells`), the same box with the pick lit or cleared; while a
@@ -260,6 +279,9 @@ export const peekHtml = (game: Game, hex: Hex, box: ViewBox): string => {
  * the hexes of it the board would not draw otherwise (the way: empty, not a destination) are
  * drawn first as `trail` cells, under the hive, so a hopping tile passes over them. The `peek`'s
  * panel (`peekHtml`) is drawn last, over everything, its cell's badge marked open.
+ * With the `hints` hidden and a tile picked nothing lights and the whole ring is drawn as plain
+ * cells for the tile to be put on; a `proposal` draws the tile there (`proposed`) over the board as
+ * it would be.
  */
 export const boardHtml = (
   v: View,
@@ -268,10 +290,17 @@ export const boardHtml = (
   aim: Hex | null = null,
   hop: Hop | null = null,
   peek: Hex | null = null,
+  hints: Hints = 'show',
+  proposal: Hex | null = null,
 ): string => {
-  const lit = new Set(reachable(v, picked).map(keyOf));
-  const cells = cellsOf(v.game.board, [...lit].map(hexOf));
+  const free = hints === 'hide' && picked !== null;
+  const lit = new Set(free ? [] : reachable(v, picked).map(keyOf));
+  const game = free ? proposedGame(v, picked, proposal) : v.game;
+  const cells = free
+    ? cellsOf(game.board, fitCells(v.game.board))
+    : cellsOf(v.game.board, [...lit].map(hexOf));
   const pickedKey = picked?.kind === 'hex' ? keyOf(picked.hex) : null;
+  const proposedKey = free && proposal !== null ? keyOf(proposal) : null;
   // The Spider's way alone is drawn: another bug's crawl shows its own way, and a trail under an Ant's slide would clutter the hive.
   const path = hop === null ? aimedPath(v, picked, aim) : hop.bug === 'spider' ? hop.path : [];
   const steps = numbered(path);
@@ -279,16 +308,17 @@ export const boardHtml = (
   const trail = path.filter((hex) => !drawn.has(keyOf(hex)));
   const peekKey = peek === null ? null : keyOf(peek);
   const inner = [
-    ...trail.map((hex) => cellHtml(v.game, hex, false, false, steps.get(keyOf(hex)) ?? null, true)),
+    ...trail.map((hex) => cellHtml(game, hex, false, false, steps.get(keyOf(hex)) ?? null, true)),
     ...cells.map((hex) =>
       cellHtml(
-        v.game,
+        game,
         hex,
         lit.has(keyOf(hex)),
         keyOf(hex) === pickedKey,
         steps.get(keyOf(hex)) ?? null,
         false,
         keyOf(hex) === peekKey,
+        keyOf(hex) === proposedKey,
       ),
     ),
   ].join('');
@@ -419,16 +449,23 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const board = requireId(doc, 'board');
   const hop = app.table.hop;
   const fresh = hop !== null && dataOf(board, 'hop') !== hop.key ? hop : null;
+  const proposal = app.table.proposal;
   // The board is rebuilt: a focused badge (a keyboard's peek, open or just dismissed) is found
   // again and refocused, so the Tab order does not fall back to the top of the page.
   const held = queryIn(board, '.stack-badge:focus');
   const heldCell = held === null ? null : closestIn(held, '[data-hex]');
   const focused = heldCell === null ? null : dataOf(heldCell, 'hex');
-  setHtml(board, trustedHtml(boardHtml(v, picked, lift, aim, fresh, app.table.peek)));
+  setHtml(
+    board,
+    trustedHtml(boardHtml(v, picked, lift, aim, fresh, app.table.peek, app.table.hints, proposal)),
+  );
   if (focused !== null) {
     const badge = queryIn(board, `[data-hex="${focused}"] .stack-badge`);
     if (badge !== null) focusElement(badge);
   }
+  // With the hints hidden a pick frees the board: the drag drops on any cell (ui/dragger.ts).
+  toggleClass(board, 'free', app.table.hints === 'hide' && picked !== null);
+  toggleClass(requireId(doc, 'proposalBar'), 'hidden', proposal === null);
   setHtml(requireId(doc, 'whiteHand'), trustedHtml(handHtml(v, 'white', picked)));
   setHtml(requireId(doc, 'blackHand'), trustedHtml(handHtml(v, 'black', picked)));
   if (fresh !== null) {
@@ -499,6 +536,20 @@ export const paintMotion = (doc: DocumentLike, motion: Motion): void => {
   setChecked(requireId(doc, 'motionToggle'), crawl);
 };
 
+/**
+ * The hints on both their controls: `#hintsBtn`'s tooltip and pressed state (💡 pressed while a
+ * picked tile's hexes light, not while the player places anywhere and confirms) and the home's
+ * `#hintsToggle`, checked while they show.
+ */
+export const paintHints = (doc: DocumentLike, hints: Hints): void => {
+  const btn = requireId(doc, 'hintsBtn');
+  const show = hints === 'show';
+  setAttr(btn, 'title', HIVE_HINTS.labels[hints]);
+  setAttr(btn, 'aria-label', HIVE_HINTS.labels[hints]);
+  setAttr(btn, 'aria-pressed', show ? 'true' : 'false');
+  setChecked(requireId(doc, 'hintsToggle'), show);
+};
+
 export const paint = (doc: PageLike, app: App): void => {
   paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
   paintShellWaiting(doc, app.shell);
@@ -509,6 +560,7 @@ export const paint = (doc: PageLike, app: App): void => {
   const v = app.shell.view;
   if (v !== null) paintTable(doc, app, v);
   paintMotion(doc, app.table.motion);
+  paintHints(doc, app.table.hints);
   paintOverlays(doc, app);
 };
 
@@ -595,6 +647,9 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
   listenId(doc, 'motionToggle', 'change', () => {
     dispatch({ type: 'motion/toggle' });
   });
+  listenId(doc, 'hintsToggle', 'change', () => {
+    dispatch({ type: 'hints/toggle' });
+  });
   bindButtons(
     doc,
     dispatch,
@@ -608,6 +663,9 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['leaveBtn', { type: 'leave/request' }],
       ['soundBtn', { type: 'sound/toggle' }],
       ['motionBtn', { type: 'motion/toggle' }],
+      ['hintsBtn', { type: 'hints/toggle' }],
+      ['confirmBtn', { type: 'proposal/confirm' }],
+      ['cancelBtn', { type: 'proposal/cancel' }],
       ['handoffBtn', { type: 'handoff/click' }],
       ['rulesBtnGame', { type: 'rules/open' }],
       ['historyBtn', { type: 'history/open' }],

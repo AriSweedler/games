@@ -68,6 +68,8 @@ import {
   startLocal,
   step,
   toast,
+  ERROR_TOAST_MS,
+  errorToast,
   userSeatOf,
   withShell,
   wrongWay,
@@ -3016,6 +3018,20 @@ describe('storage and what the sessions read back', () => {
   });
 });
 
+describe('toast and errorToast', () => {
+  test('the plain toast carries no kind; the red one its kind and ERROR_TOAST_MS', () => {
+    expect(toast('hi')).toStrictEqual({ type: 'toast', message: 'hi', ms: null });
+    expect(toast('hi', 10)).toStrictEqual({ type: 'toast', message: 'hi', ms: 10 });
+    expect(errorToast('no')).toStrictEqual({
+      type: 'toast',
+      message: 'no',
+      ms: ERROR_TOAST_MS,
+      kind: 'error',
+    });
+    expect(ERROR_TOAST_MS).toBe(4000);
+  });
+});
+
 describe('runShellEffect', () => {
   const recorded = (): Readonly<{
     deps: ShellEffectDeps<Fake>;
@@ -3102,6 +3118,8 @@ describe('runShellEffect', () => {
     const { deps, log, answer, store } = recorded();
     const effects: ReadonlyArray<FakeEffect> = [
       { type: 'toast', message: 'hi', ms: 4000 },
+      // The red one: its kind reaches the adapter as the third argument (the plain one is called as it was).
+      errorToast('no'),
       { type: 'send', frame: { t: 'full' } },
       // A seat on the effect reaches the adapter as its second argument (an N-seat game's send).
       { type: 'send', frame: { t: 'full' }, seat: 1 },
@@ -3144,6 +3162,7 @@ describe('runShellEffect', () => {
     });
     expect(log).toEqual([
       ['toast', 'hi', 4000],
+      ['toast', 'no', ERROR_TOAST_MS, 'error'],
       ['send', { t: 'full' }],
       ['send', { t: 'full' }, 1],
       ['fx', 'ding', 'felt'],
