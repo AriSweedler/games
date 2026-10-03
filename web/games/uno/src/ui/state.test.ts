@@ -159,8 +159,10 @@ describe('pass and play', () => {
     ]);
     // Leaving the table keeps the names typed at home.
     expect(six.app.table.extraNames[2]).toBe('Eve');
+    // A cleared seat stays '' (the paint leaves it empty); only an unknown seat is null.
     const cleared = run(typed.app, { type: 'pname/typed', seat: 4, value: '' });
-    expect(cleared.app.table.extraNames[2]).toBeNull();
+    expect(cleared.app.table.extraNames[2]).toBe('');
+    expect(cleared.effects).toContainEqual({ type: 'rememberPName', seat: 4, name: '' });
   });
 
   test('the reveal shows the seat its own hand; a play hands the phone to the next seat', () => {

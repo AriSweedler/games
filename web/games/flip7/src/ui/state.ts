@@ -79,6 +79,7 @@ export type Raw = Readonly<{
   names?: ReadonlyArray<string>;
 }>;
 
+/** Null where nothing was remembered; a cleared seat is '' so the repaint after the tap leaves it empty. */
 export type ExtraNames = Readonly<Record<ExtraSeat, string | null>>;
 export const NO_EXTRA_NAMES: ExtraNames = {
   2: null,
@@ -385,7 +386,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
         withTable(app, {
           extraNames: {
             ...app.table.extraNames,
-            [intent.seat]: intent.value === '' ? null : intent.value,
+            [intent.seat]: intent.value,
           },
         }),
         { type: 'rememberPName', seat: intent.seat, name: intent.value },

@@ -21,12 +21,19 @@ import { localNameFor } from './shell.ts';
 /** The page's seat cap and the game's pass-and-play defaults (shell.ts `localNamesOf`). */
 export type SeatNamesSpec = Readonly<{ max: number; names: ReadonlyArray<string> }>;
 
-/** The names of seats 3 to `max` as remembered: index 0 is seat 3; null where nothing was typed. */
+/**
+ * The names of seats 3 to `max` as remembered: index 0 is seat 3; null where nothing was typed.
+ * '' is a seat the player cleared (the binder reports the clear as ''): the paint keeps it empty
+ * and unmarked, where null would refill the default under the caret and the next keystroke
+ * would append to it ("SandroQ" stored for a typed "Q" on the live UNO home, 2026-10-02). A
+ * game's reducer keeps the '' as typed; the pref drops the key, so a reload shows the default.
+ */
 export type ExtraNames = ReadonlyArray<string | null>;
 
 /**
- * Seats 3+ shown up to `n`, each filled with its remembered name, or the game's default marked
- * `data-default` (Flip 7's `paintOptions` before this module).
+ * Seats 3+ shown up to `n`, each filled with its remembered name ('' kept empty), or the game's
+ * default marked `data-default` where nothing is remembered (Flip 7's `paintOptions` before this
+ * module).
  */
 export const paintSeatNames = (
   doc: DocumentLike,

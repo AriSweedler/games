@@ -30,6 +30,10 @@ describe('paintSeatNames', () => {
     expect(p.get('p4NameInput').attr(DEFAULT_MARK)).toBeNull();
     // Past the game's list the default is numbered; a short memory counts as nothing typed.
     expect(p.get('p5NameInput').value()).toBe('Player 5');
+    // A cleared seat ('') stays empty and unmarked: the repaint after the tap must not refill it.
+    paintSeatNames(p.doc, SPEC, 4, ['', 'Dan', null]);
+    expect(p.get('p3NameInput').value()).toBe('');
+    expect(p.get('p3NameInput').attr(DEFAULT_MARK)).toBeNull();
     paintSeatNames(p.doc, SPEC, 2, []);
     expect(p.get('p3NameInput').hasClass('hidden')).toBe(true);
     // The shell's two seats are never touched here.
@@ -51,12 +55,23 @@ describe('bindSeatNames', () => {
     expect(p3.attr(DEFAULT_MARK)).toBeNull();
     p3.fire('pointerdown');
     expect(seen).toEqual([[2, '']]);
+    // The repaint with the reported '' leaves the cleared seat alone, so the keystroke is the whole name.
+    paintSeatNames(p.doc, SPEC, 5, ['', 'Dan', null]);
+    expect(p3.value()).toBe('');
+    expect(p3.attr(DEFAULT_MARK)).toBeNull();
+    (p3.el as HTMLInputElement).value = 'Q';
+    p3.fire('input');
+    expect(seen).toEqual([
+      [2, ''],
+      [2, 'Q'],
+    ]);
     p.get('p4NameInput').fire('focus');
     expect(p.get('p4NameInput').value()).toBe('Dan');
     (p.get('p5NameInput').el as HTMLInputElement).value = 'Eve';
     p.get('p5NameInput').fire('input');
     expect(seen).toEqual([
       [2, ''],
+      [2, 'Q'],
       [4, 'Eve'],
     ]);
     expect(p.get('p1NameInput').listenerTypes()).toEqual([]);

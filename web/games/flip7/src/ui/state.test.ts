@@ -148,9 +148,10 @@ describe('the table`s own controls', () => {
     expect(set.effects).toEqual([{ type: 'writeOpts', opts: { seatCount: 5 } }]);
     const named = run(initialApp, { type: 'pname/typed', seat: 3, value: 'Grant' });
     expect(named.app.table.extraNames[3]).toBe('Grant');
+    // A cleared seat stays '' (the paint leaves it empty); only an unknown seat is null.
     expect(
       run(named.app, { type: 'pname/typed', seat: 3, value: '' }).app.table.extraNames[3],
-    ).toBeNull();
+    ).toBe('');
     const rules = run(initialApp, { type: 'rules/open' });
     expect(rules.app.shell.rulesOpen).toBe(true);
     expect(run(rules.app, { type: 'escape' }).app.shell.rulesOpen).toBe(false);
