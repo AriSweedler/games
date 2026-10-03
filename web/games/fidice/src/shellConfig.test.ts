@@ -18,7 +18,7 @@ import {
   localNamesOf,
 } from '../../../shared/ui/shell.ts';
 import { HOST, apply } from './domain/game.ts';
-import { lobby } from './protocol.ts';
+import { PROTOCOL } from './protocol.ts';
 import {
   DEFAULT_NAME,
   DEFAULT_OPTS,
@@ -163,8 +163,8 @@ describe('the options', () => {
     if (capacity === undefined) throw new Error('no capacity reader');
     expect(capacity(DEFAULT_OPTS)).toBe(6);
     expect(capacity({ ...DEFAULT_OPTS, seatCount: 3 })).toBe(3);
-    expect(FIDICE_SHELL.frames.lobby).toBe(lobby);
-    expect('welcome' in FIDICE_SHELL.frames).toBe(false);
+    // The frames are the seated protocol whole (row 15); the welcome is the session codec's to send (net/shell/sessions.ts).
+    expect(FIDICE_SHELL.frames).toBe(PROTOCOL);
   });
 });
 
@@ -326,19 +326,18 @@ describe('the engine adapters', () => {
   });
 });
 
-describe('home.read', () => {
-  test('the terms (defaults when unreadable) and the third to sixth names (null when none)', () => {
+describe('prefs', () => {
+  test('the terms (defaults when unreadable) and the third to sixth names as the shell`s seatNames prefs (index 0 the third seat); nothing else to read at home', () => {
     const s = fakeStorage();
     const store = createStore(s);
     expect(FIDICE_SHELL.prefs.opts?.read(store)).toEqual(DEFAULT_OPTS);
-    expect(FIDICE_SHELL.home.read(store)).toEqual({
-      extraNames: { 2: null, 3: null, 4: null, 5: null },
-    });
+    const names = FIDICE_SHELL.prefs.seatNames ?? [];
+    expect(names).toHaveLength(4);
+    expect(names.map((pref) => pref.read(store).ok)).toEqual([false, false, false, false]);
     s.map.set(STORAGE_KEYS.lives, '2');
     s.map.set(STORAGE_KEYS.p4Name, 'Grant');
     expect(FIDICE_SHELL.prefs.opts?.read(store)).toEqual({ ...DEFAULT_OPTS, lives: 2 });
-    expect(FIDICE_SHELL.home.read(store)).toEqual({
-      extraNames: { 2: null, 3: 'Grant', 4: null, 5: null },
-    });
+    expect(names[1]?.read(store)).toEqual({ ok: true, value: 'Grant' });
+    expect(FIDICE_SHELL.home).toBeUndefined();
   });
 });

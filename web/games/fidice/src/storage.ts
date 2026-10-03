@@ -11,10 +11,11 @@
 // `seatCount`, `bots`, `botChoice`, `watch`, the same five the welcome frame carries after
 // `hostName`), between `myName` and `game` in the literal (prefs.ts `saveLiteral`: `role, code,
 // myName, <Opts>, game, oppName, seatNames?, handoff?, at?`). This page's own keys beside the
-// shell's: the third to sixth pass-the-phone names (the shell remembers two; a table seats six),
-// the host card's last terms one bare string each (`lives`, `seats`, `bots`, `botChoice`; `watch`
-// is a mode, not remembered), and `shell`, the flag M4's boot reads to pick the shell path
-// (`?shell=1` writes it, `?shell=0` removes it); M6 removes the flag with the old boot.
+// shell's: the third to sixth pass-the-phone names (the shell remembers two and keeps these four
+// as its `seatNames`; a table seats six), the host card's last terms one bare string each
+// (`lives`, `seats`, `bots`, `botChoice`; `watch` is a mode, not remembered), and `shell`, the flag
+// M4's boot reads to pick the shell path (`?shell=1` writes it, `?shell=0` removes it); M6 removes
+// the flag with the old boot.
 //
 // The legacy keys (`fidice-name`, `fidice-token-<code>`) are NOT read here: M4's `hooks.home`
 // copies `fidice-name` into `fidice_name` when the new key is empty (the old key kept while both
@@ -31,14 +32,13 @@ import {
   decodeSoundFont,
   decodeSoundState,
   digitsPref,
-  extraNamePref,
+  extraNamePrefs,
   seatCountPref,
   shellKeys,
   shellStore,
   textPref,
   type PlayMode,
   type Save as ShellSave,
-  type TextPref,
   type SoundState,
   DEFAULT_PLAY_MODE,
 } from '../../../shared/edge/prefs.ts';
@@ -54,7 +54,7 @@ import {
 } from '../../../shared/lib/json.ts';
 import type { Result } from '../../../shared/lib/result.ts';
 import { decodeState } from './codec.ts';
-import type { State } from './domain/types.ts';
+import { MAX_SEATS, type State } from './domain/types.ts';
 import { MAX_BOTS, SEAT_COUNTS, type Room, type SeatCount } from './protocol.ts';
 
 // ui/state.ts names the Store through this module: the reducer may import everything below it
@@ -182,20 +182,11 @@ export const {
 export type ExtraSeat = 2 | 3 | 4 | 5;
 export const EXTRA_SEATS: ReadonlyArray<ExtraSeat> = [2, 3, 4, 5];
 /**
- * The third to sixth pass-the-phone names, by seat (2..5), under `rememberName`'s rule
- * (prefs.ts `extraNamePref`): this page's own record until its `pname/typed` is the shell's
- * `seatName/typed` (dry-review-2026-10.md §7 row 15), when the shell's `seatNames` list keeps them.
+ * The third to sixth pass-the-phone names (the shell's `prefs.seatNames`, index 0 the third seat),
+ * under `rememberName`'s rule: the shell's `seatName/typed` keeps them in `ShellState.seatNames`
+ * and `rememberSeatName` writes them (dry-review-2026-10.md §7 row 15).
  */
-export const EXTRA_NAME_PREFS: Readonly<Record<ExtraSeat, TextPref<string>>> = {
-  2: extraNamePref(PREFIX, 2),
-  3: extraNamePref(PREFIX, 3),
-  4: extraNamePref(PREFIX, 4),
-  5: extraNamePref(PREFIX, 5),
-};
-export const { read: readP3Name, write: writeP3Name } = EXTRA_NAME_PREFS[2];
-export const { read: readP4Name, write: writeP4Name } = EXTRA_NAME_PREFS[3];
-export const { read: readP5Name, write: writeP5Name } = EXTRA_NAME_PREFS[4];
-export const { read: readP6Name, write: writeP6Name } = EXTRA_NAME_PREFS[5];
+export const EXTRA_NAME_PREFS = extraNamePrefs(PREFIX, MAX_SEATS);
 
 /** Any non-negative integer stored as its digits. */
 const digits: Decoder<number> = map(

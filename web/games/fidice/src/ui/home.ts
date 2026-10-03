@@ -7,8 +7,9 @@
 // selects and its strategy button (page.ts `hostFields`; their terms apply in every mode, D7, so
 // both start buttons carry them), the four modes where the shell paints two (Solo and Watch show
 // the pass-the-phone panel cut down to one name or none, D9), and the third to sixth name inputs
-// with their add and remove buttons (`extraNames`: a seat is shown while the table remembers a
-// name for it, the empty string included; add remembers an empty one, remove forgets it). A
+// with their add and remove buttons (the shell's `seatNames`: a seat is shown while the shell
+// remembers a name for it, the empty string included; add remembers an empty one through the
+// shell's `seatName/typed`, remove forgets it through `seatName/drop`). A
 // change on a select remembers it at once (`opts/set`). The three input writes that are not a
 // paint (the saved names at `initHome`, the sanitised room code as it is typed) are effects the
 // reducer raises and main.ts runs through `fillNameInputs` / `fillP2NameInput` / `setCodeInput`.
@@ -138,7 +139,7 @@ const paintOptions = (doc: DocumentLike, app: App): void => {
 
 /**
  * The pass-the-phone panel for the mode shown (D9): Pass the phone seats two names and the extra
- * seats the table remembers, with add and remove while a seat can be; Solo the first name alone;
+ * seats the shell remembers, with add and remove while a seat can be; Solo the first name alone;
  * Watch none (the host stands and the card's computers play). Painted only while the Play tab
  * shows, as the shell paints its mode panels (shared home.ts, the header's legacy trait).
  */
@@ -149,10 +150,11 @@ const paintLocalPanel = (doc: DocumentLike, app: App): void => {
   const shown = names ?? 0;
   toggleClass(requireId(doc, 'p1NameInput'), 'hidden', shown < 1);
   toggleClass(requireId(doc, 'p2NameInput'), 'hidden', shown < 2);
-  const remembered = EXTRA_SEATS.filter((seat) => app.table.extraNames[seat] !== null);
+  const nameOf = (seat: ExtraSeat): string | null => app.shell.seatNames[seat - 2] ?? null;
+  const remembered = EXTRA_SEATS.filter((seat) => nameOf(seat) !== null);
   EXTRA_SEATS.forEach((seat) => {
     const input = requireId(doc, EXTRA_NAME_INPUTS[seat]);
-    const name = app.table.extraNames[seat];
+    const name = nameOf(seat);
     const seated = shown === 2 && name !== null;
     toggleClass(input, 'hidden', !seated);
     if (name !== null) setValue(input, name);
@@ -195,16 +197,16 @@ const bindOptions = (doc: PageLike, dispatch: (intent: Intent) => void): void =>
   EXTRA_SEATS.forEach((seat) => {
     const input = requireId(doc, EXTRA_NAME_INPUTS[seat]);
     listenId(doc, EXTRA_NAME_INPUTS[seat], 'input', () => {
-      dispatch({ type: 'pname/typed', seat, value: readValue(input) });
+      dispatch({ type: 'seatName/typed', seat, value: readValue(input) });
     });
   });
   listenId(doc, 'addLocalBtn', 'click', () => {
     const seat = hiddenSeat(doc, true);
-    if (seat !== undefined) dispatch({ type: 'pname/typed', seat, value: '' });
+    if (seat !== undefined) dispatch({ type: 'seatName/typed', seat, value: '' });
   });
   listenId(doc, 'removeLocalBtn', 'click', () => {
     const seat = hiddenSeat(doc, false);
-    if (seat !== undefined) dispatch({ type: 'pname/drop', seat });
+    if (seat !== undefined) dispatch({ type: 'seatName/drop', seat });
   });
   listenId(doc, 'btnConfigSolo', 'click', () => {
     dispatch({ type: 'config/open', target: { kind: 'solo' } });

@@ -27,7 +27,6 @@ import {
   SCREENS,
   SHELL_EFFECT_TYPES,
   SHELL_INTENT_TYPES,
-  TABLE_EFFECT_TYPES,
   TABLE_FULL_TOAST,
   TABLE_INTENT_TYPES,
   TABLE_INTENTS_LISTED,
@@ -79,7 +78,7 @@ const home: HomeSnapshot = {
   save: null,
   recentGames: [],
   opts: DEFAULT_OPTS,
-  extraNames: { 2: null, 3: null, 4: null, 5: null },
+  seatNames: [null, null, null, null],
 };
 
 /** A hosted waiting room with the seats given (the shell's `host/click` then the joins, spelled directly). */
@@ -102,13 +101,11 @@ const hosting = (
 });
 
 describe('the type bag', () => {
-  test('the table`s intent and effect names reuse none of the shell`s 50 and 30; every table intent is listed; the screens', () => {
+  test('the table`s intent names reuse none of the shell`s; it raises no effect of its own; every table intent is listed; the screens', () => {
     expect(SHELL_INTENT_TYPES).toHaveLength(63);
     expect(SHELL_EFFECT_TYPES).toHaveLength(33);
     const shellIntents = new Set<string>(SHELL_INTENT_TYPES);
-    const shellEffects = new Set<string>(SHELL_EFFECT_TYPES);
     expect(TABLE_INTENT_TYPES.filter((t) => shellIntents.has(t))).toEqual([]);
-    expect(TABLE_EFFECT_TYPES.filter((t) => shellEffects.has(t))).toEqual([]);
     expect(new Set(TABLE_INTENT_TYPES).size).toBe(TABLE_INTENT_TYPES.length);
     expect(TABLE_INTENTS_LISTED).toBe(true);
     expect(SCREENS).toEqual([
@@ -132,25 +129,25 @@ describe('the type bag', () => {
 });
 
 describe('home', () => {
-  test('home/init puts the terms into the shell and the extra names onto the table', () => {
+  test('home/init puts the terms and the third to sixth names into the shell', () => {
     const { app, effects } = run(initialApp, {
       type: 'home/init',
       home: {
         ...home,
         opts: { ...DEFAULT_OPTS, lives: 2, bots: 1 },
-        extraNames: { 2: 'Cara', 3: null, 4: null, 5: null },
+        seatNames: ['Cara', null, null, null],
       },
     });
     expect(app.shell.opts).toEqual({ ...DEFAULT_OPTS, lives: 2, bots: 1 });
-    expect(app.table.extraNames).toEqual({ 2: 'Cara', 3: null, 4: null, 5: null });
+    expect(app.shell.seatNames).toEqual(['Cara', null, null, null]);
     expect(kinds(effects)).toEqual(['scrollTop', 'fillName', 'fillP2Name']);
   });
 
-  test('opts/set parses the card and remembers; pname/typed remembers a seat`s name; mode/set shows solo and watch without storing', () => {
+  test('opts/set parses the card and remembers; the shell`s seatName/typed keeps a seat`s name as typed and remembers it trimmed; mode/set shows solo and watch without storing', () => {
     const { app, effects } = run(
       initialApp,
       { type: 'opts/set', raw: { lives: '4', seats: '3', bots: '1', difficulty: 'hard' } },
-      { type: 'pname/typed', seat: 4, value: ' Eve ' },
+      { type: 'seatName/typed', seat: 4, value: ' Eve ' },
       { type: 'mode/set', mode: 'watch' },
     );
     expect(app.shell.opts).toEqual({
@@ -160,14 +157,14 @@ describe('home', () => {
       botChoice: 'gambler',
       watch: false,
     });
-    expect(app.table.extraNames[4]).toBe(' Eve ');
+    expect(app.shell.seatNames).toEqual([null, null, ' Eve ', null]);
     expect(app.shell.playMode).toBe('watch');
     expect(effects).toEqual([
       {
         type: 'writeOpts',
         opts: { lives: 4, seatCount: 3, bots: 1, botChoice: 'gambler', watch: false },
       },
-      { type: 'rememberPName', seat: 4, name: 'Eve' },
+      { type: 'rememberSeatName', seat: 4, name: 'Eve' },
     ]);
   });
 });
@@ -602,11 +599,11 @@ describe('storage, the contexts and the effects', () => {
     expect(readHome(store)).toEqual({
       ...home,
       opts: { ...DEFAULT_OPTS, bots: 2 },
-      extraNames: { 2: 'Cara', 3: null, 4: null, 5: null },
+      seatNames: ['Cara', null, null, null],
     });
   });
 
-  test('runEffect: the two own effects write their keys; a shell effect reaches the shared runner', () => {
+  test('runEffect: every effect is the shell`s; writeOpts and rememberSeatName write this page`s keys', () => {
     const s = fakeStorage();
     const store = createStore(s);
     const toastsSeen: string[] = [];
@@ -615,7 +612,7 @@ describe('storage, the contexts and the effects', () => {
       toast: (m: string) => toastsSeen.push(m),
     } as unknown as EffectDeps;
     runEffect(initialApp, { type: 'writeOpts', opts: { ...DEFAULT_OPTS, lives: 5 } }, deps);
-    runEffect(initialApp, { type: 'rememberPName', seat: 5, name: 'Fay' }, deps);
+    runEffect(initialApp, { type: 'rememberSeatName', seat: 5, name: 'Fay' }, deps);
     runEffect(initialApp, { type: 'toast', message: 'hi', ms: null }, deps);
     expect(s.map.get(STORAGE_KEYS.lives)).toBe('5');
     expect(s.map.get(STORAGE_KEYS.p6Name)).toBe('Fay');
@@ -770,16 +767,18 @@ describe('the sheets, the extra seats and the viewed chair (M4)', () => {
     expect(closed.app.shell.historyOpen).toBe(false);
   });
 
-  test('pname/drop forgets an extra seat: its name goes null and its key is removed by forgetPName', () => {
-    const typed = run(initialApp, { type: 'pname/typed', seat: 2, value: 'Cara' });
-    expect(typed.app.table.extraNames[2]).toBe('Cara');
-    const { app, effects } = run(typed.app, { type: 'pname/drop', seat: 2 });
-    expect(app.table.extraNames[2]).toBeNull();
-    expect(effects).toEqual([{ type: 'forgetPName', seat: 2 }]);
+  test('seatName/drop forgets an extra seat: its shell name goes null and its key is removed by the shell`s rememberSeatName of the empty string', () => {
+    const typed = run(initialApp, { type: 'seatName/typed', seat: 2, value: 'Cara' });
+    expect(typed.app.shell.seatNames[0]).toBe('Cara');
+    const { app, effects } = run(typed.app, { type: 'seatName/drop', seat: 2 });
+    expect(app.shell.seatNames).toEqual([null, null, null, null]);
+    expect(effects).toEqual([{ type: 'rememberSeatName', seat: 2, name: '' }]);
     const s = fakeStorage();
     s.map.set(STORAGE_KEYS.p3Name, 'Cara');
     const deps = fakeDeps(createStore(s)) as EffectDeps;
-    runEffect(app, { type: 'forgetPName', seat: 2 }, deps);
+    effects.forEach((e) => {
+      runEffect(app, e, deps);
+    });
     expect(s.map.has(STORAGE_KEYS.p3Name)).toBe(false);
   });
 

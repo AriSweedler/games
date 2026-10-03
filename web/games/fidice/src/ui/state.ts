@@ -2,17 +2,17 @@
 // §3 "ShellConfig", §4 M3; docs/ARCHITECTURE.md "Module boundaries": imported only by main.ts, the
 // painters and tests; dark until M4 boots it). `App = { shell, table }`: `shell` is the home
 // screen, the waiting rooms, the session (role, code, names, the engine `State` for the host and
-// pass the phone, my `PublicState` for every role) and the resume offer, the record the shared
-// shell reducer owns (web/shared/ui/shell.ts `reduceShell`, docs/design/shared-shell.md §4.2) over
-// the config `FIDICE` below (shellConfig.ts's half completed here with the table hooks: `reset`
-// per site, `rendered`, `refuse`, pass the phone's `viewer`/`revealer`, the home snapshot's own
-// part); `table` is the table's interaction memory (the bid picker, the dice picked to roll, the
-// ladder rows opened, the bot config screen's target, the curtain, the third to sixth names) and
-// the game loop's (`pending`, `memories`, `botNames`). `Intent` is every handler and every network
-// event, and `reduce` returns the next App with a list of `Effect`s: what to persist, toast, send,
-// play or arm, as data. main.ts runs the effects through the real adapters (`runEffect`: fidice's
-// two, then the shared runner) and paints the App (ui/render.ts, M4); the tests run the reducer
-// alone.
+// pass the phone, my `PublicState` for every role, the third to sixth pass-the-phone names as
+// its `seatNames`) and the resume offer, the record the shared shell reducer owns
+// (web/shared/ui/shell.ts `reduceShell`, docs/design/shared-shell.md §4.2) over the config
+// `FIDICE` below (shellConfig.ts's half completed here with the table hooks: `reset` per site,
+// `rendered`, `refuse`, pass the phone's `viewer`/`revealer`); `table` is the table's interaction
+// memory (the bid picker, the dice picked to roll, the ladder rows opened, the bot config screen's
+// target, the curtain) and the game loop's (`pending`, `memories`, `botNames`). `Intent` is every
+// handler and every network event, and `reduce` returns the next App with a list of `Effect`s:
+// what to persist, toast, send, play or arm, as data. main.ts runs the effects through the real
+// adapters (`runEffect`, the shared runner: fidice raises no effect of its own) and paints the App
+// (ui/render.ts, M4); the tests run the reducer alone.
 //
 // Fidice's residue on the shell. (1) The deal: pass the phone seats two to six humans (and the
 // card's computers; Solo one human and computers; Watch computers alone, the host standing:
@@ -71,7 +71,6 @@ import {
   type TableReset,
   type TimerId as SharedTimerId,
 } from '../../../../shared/ui/shell.ts';
-import type { TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import { decide, emptyMemories, type Memories } from '../bots/brain.ts';
 import { HOST, apply, bySeat, scheduleAutoNext, stampLog } from '../domain/game.ts';
@@ -102,7 +101,6 @@ import {
 } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
-  EXTRA_NAME_PREFS,
   HOME_TABS,
   type ExtraSeat,
   type HomeTab,
@@ -182,11 +180,6 @@ export type Raw = Readonly<{
 export type ExtraMode = 'solo' | 'watch';
 export type Mode = PlayMode | ExtraMode;
 
-/** What `initHome` reads beyond the shell's keys: the third to sixth names (the host card's last terms are the shell's `prefs.opts`). */
-export type Home = Readonly<{
-  extraNames: Readonly<Record<ExtraSeat, string | null>>;
-}>;
-
 /** The game loop's two timers (the legacy `botTimer` and `nextTimer`, src/net/host.ts). */
 export type GameTimer = 'bot/step' | 'autoNext';
 
@@ -196,7 +189,9 @@ export type GameTimer = 'bot/step' | 'autoNext';
  * are `Raw`, the seats are the shell's two plus the third to sixth (six chairs, domain/types.ts
  * `MAX_SEATS`), the modes are the two stored plus Solo and Watch, one screen beyond the shell's
  * five, no resume offer beyond the three roles, the two game-loop timers, the shell's four cues,
- * and the table's own intents and effects are the unions below. No ephemeral frame.
+ * and the table's own intents are the union below. No ephemeral frame, no effect and nothing to
+ * read at `initHome` beyond the shell's keys (the host card's last terms are its `prefs.opts`, the
+ * third to sixth names its `prefs.seatNames`).
  */
 export type Fidice = GameTypes<{
   Opts: Opts;
@@ -210,9 +205,7 @@ export type Fidice = GameTypes<{
   Screen: 'configScreen';
   Timer: GameTimer;
   Cue: Cue;
-  Home: Home;
   Intent: TableIntent;
-  Effect: TableEffect;
   Store: Store;
   Seat: ExtraSeat;
 }>;
@@ -275,11 +268,6 @@ export type Table = Readonly<{
   ladderOpen: boolean;
   /** `#configScreen`'s target while it shows; null when it does not. */
   configTarget: ConfigTarget | null;
-  /**
-   * The third to sixth pass-the-phone names as last read from their keys or typed into their
-   * inputs; null when neither (the input shows the seat's default, marked for the first-tap clear).
-   */
-  extraNames: Readonly<Record<ExtraSeat, string | null>>;
 }>;
 
 export type App = ShellApp<Fidice>;
@@ -297,7 +285,6 @@ export const initialTable: Table = {
   ladders: { main: EMPTY_LADDER, spec: EMPTY_LADDER },
   ladderOpen: false,
   configTarget: null,
-  extraNames: { 2: null, 3: null, 4: null, 5: null },
 };
 
 // ---- the strings and beats the app (not the sessions) writes ---------------------------------
@@ -354,10 +341,12 @@ export type TableIntent =
   | Readonly<{ type: 'bots/rename'; index: number; name: string }>
   | Readonly<{ type: 'bots/config'; choice: string }>
   | Readonly<{ type: 'watch/toggle'; on: boolean }>
-  /** `#p3NameInput`..`#p6NameInput` typed: remembered under its key. */
-  | Readonly<{ type: 'pname/typed'; seat: ExtraSeat; value: string }>
-  /** `#removeLocalBtn`: the seat's input goes and its key is forgotten (`#addLocalBtn` is a `pname/typed` of the empty string). */
-  | Readonly<{ type: 'pname/drop'; seat: ExtraSeat }>
+  /**
+   * `#removeLocalBtn`: the seat's input goes (its `seatNames` entry null) and its key is forgotten
+   * (the shell's `rememberSeatName` of ''). Typing in `#p3NameInput`..`#p6NameInput` is the
+   * shell's `seatName/typed`, and `#addLocalBtn` that intent with the empty string.
+   */
+  | Readonly<{ type: 'seatName/drop'; seat: ExtraSeat }>
   // ---- the game loop's timers (the legacy host session's) ----
   | Readonly<{ type: 'bot/step' }>
   | Readonly<{ type: 'autoNext' }>;
@@ -393,8 +382,7 @@ export const TABLE_INTENT_TYPES = [
   'bots/rename',
   'bots/config',
   'watch/toggle',
-  'pname/typed',
-  'pname/drop',
+  'seatName/drop',
   'bot/step',
   'autoNext',
 ] as const satisfies ReadonlyArray<TableIntent['type']>;
@@ -413,14 +401,7 @@ export type ShellIntent = SharedShellIntent<Fidice>;
 
 export type TimerId = SharedTimerId<Fidice>;
 
-/** Fidice's own effects, handled by `runEffect` before the shared runner: the seat names this page alone keeps (the room's terms are the shell's `writeOpts`). */
-export type TableEffect =
-  | Readonly<{ type: 'rememberPName'; seat: ExtraSeat; name: string }>
-  | Readonly<{ type: 'forgetPName'; seat: ExtraSeat }>;
-export const TABLE_EFFECT_TYPES = ['rememberPName', 'forgetPName'] as const satisfies ReadonlyArray<
-  TableEffect['type']
->;
-
+/** Every effect is the shell's: the room's terms are its `writeOpts`, the seat names its `rememberSeatName`. */
 export type Effect = SharedEffect<Fidice>;
 export type Step = SharedStep<Fidice>;
 export type Context = Ctx;
@@ -536,15 +517,12 @@ const revealer: ShellConfig<Fidice>['local']['revealer'] = (game) => ({
 
 // ---- the shell's hooks into the table, and the config (docs/design/shared-shell.md §4.3) ---------
 
-/** What a game leaves behind when it is left, lost or handed off: the table's memory; the names stay. */
-const tableCleared = (table: Table): Table => ({ ...initialTable, extraNames: table.extraNames });
-
 /**
  * What the table drops where a shared flow resets it: a pass-the-phone start, the handoff, a leave
- * and the host lost clear the table's memory; the deal starts the loop afresh (no pending move,
- * no memories, the computers' names spent); an applied action and a guest's `state` frame drop
- * the picker's choice and the dice picked (the legacy `play` did after a bid or a roll); a new
- * view touches nothing.
+ * and the host lost clear the table's memory (the third to sixth names are the shell's and stay);
+ * the deal starts the loop afresh (no pending move, no memories, the computers' names spent); an
+ * applied action and a guest's `state` frame drop the picker's choice and the dice picked (the
+ * legacy `play` did after a bid or a roll); a new view touches nothing.
  */
 const reset = (table: Table, at: TableReset): Table => {
   switch (at) {
@@ -552,7 +530,7 @@ const reset = (table: Table, at: TableReset): Table => {
     case 'handoff':
     case 'leave':
     case 'lost':
-      return tableCleared(table);
+      return initialTable;
     case 'deal':
       return { ...table, pending: null, memories: emptyMemories, botNames: [] };
     case 'applied':
@@ -569,18 +547,11 @@ const reset = (table: Table, at: TableReset): Table => {
   }
 };
 
-/** Fidice's shell config: shellConfig.ts's half completed with the table hooks and the home snapshot's own part. */
+/** Fidice's shell config: shellConfig.ts's half completed with the table hooks. */
 export const FIDICE: ShellConfig<Fidice> = {
   ...FIDICE_SHELL,
   table: { initial: initialTable, reset, rendered, refuse },
   local: { viewer, revealer },
-  home: {
-    ...FIDICE_SHELL.home,
-    apply: (app, home) => ({
-      shell: app.shell,
-      table: { ...app.table, extraNames: home.extraNames },
-    }),
-  },
 };
 
 // ---- the deal (plan §4 M3, §7 D6, D9, D10) -----------------------------------------------------
@@ -615,18 +586,21 @@ export const optsForMode = (opts: Opts, mode: Mode): Opts => {
 
 /**
  * The humans of a start from the home card: pass the phone seats the first two names and every
- * further one the click carried or the table remembers (through the shared `localSeats` rule with
- * this game's defaults, ` N` on a clash), Solo the first name alone, Watch the standing host.
+ * further one the click carried or the shell remembers (`seatNames`, index 0 the third seat;
+ * through the shared `localSeats` rule with this game's defaults, ` N` on a clash), Solo the
+ * first name alone, Watch the standing host.
  */
 export const localHumans = (
   intent: Readonly<{ p1: string; p2: string }> & Raw,
-  extraNames: Table['extraNames'],
+  seatNames: ReadonlyArray<string | null>,
   mode: Mode,
 ): ReadonlyArray<Player> => {
   if (mode === 'watch') return [{ id: seatId(0), name: WATCH_HOST_NAME }];
   if (mode === 'solo') return [{ id: seatId(0), name: nameOr(intent.p1, DEFAULT_NAME) }];
-  const carried = (raw: string | undefined, seat: ExtraSeat): ReadonlyArray<string> =>
-    raw !== undefined ? [raw] : extraNames[seat] !== null ? [extraNames[seat]] : [];
+  const carried = (raw: string | undefined, seat: ExtraSeat): ReadonlyArray<string> => {
+    const remembered = seatNames[seat - 2] ?? null;
+    return raw !== undefined ? [raw] : remembered !== null ? [remembered] : [];
+  };
   const raws = [
     intent.p1,
     intent.p2,
@@ -654,7 +628,7 @@ const localStart = (
 ): Step => {
   const mode = app.shell.playMode;
   const opts = optsForMode(parseOpts(intent, app.shell.opts), mode);
-  const table = seatTable('', localHumans(intent, app.table.extraNames, mode), opts, ctx.rng);
+  const table = seatTable('', localHumans(intent, app.shell.seatNames, mode), opts, ctx.rng);
   const game = started(table, ctx);
   if (!game.ok) return step(app, toast(game.error));
   return then(startLocal(withShell(app, { opts }), game.value, ctx, FIDICE), (a) =>
@@ -1000,32 +974,17 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
         : pure(app);
     case 'watch/toggle':
       return atWaitingRoom(app) ? roomTerms(app, { ...s.opts, watch: intent.on }) : pure(app);
-    case 'pname/typed':
+    case 'seatName/drop':
       return step(
-        withTable(app, { extraNames: { ...t.extraNames, [intent.seat]: intent.value } }),
-        { type: 'rememberPName', seat: intent.seat, name: intent.value.trim() },
+        withShell(app, {
+          seatNames: s.seatNames.map((name, i) => (i === intent.seat - 2 ? null : name)),
+        }),
+        { type: 'rememberSeatName', seat: intent.seat, name: '' },
       );
-    case 'pname/drop':
-      return step(withTable(app, { extraNames: { ...t.extraNames, [intent.seat]: null } }), {
-        type: 'forgetPName',
-        seat: intent.seat,
-      });
     case 'bot/step':
       return botStep(app, ctx);
     case 'autoNext':
       return autoNext(app, ctx);
-  }
-};
-
-/** Fidice's two effects, the seat names this page alone keeps (the room's terms are the shell's `writeOpts`); the shell's are its runner's. */
-const tableEffect: TableEffectRunner<Fidice> = (_app, effect, deps) => {
-  switch (effect.type) {
-    case 'rememberPName':
-      EXTRA_NAME_PREFS[effect.seat].write(deps.store, effect.name);
-      return;
-    case 'forgetPName':
-      EXTRA_NAME_PREFS[effect.seat].write(deps.store, '');
-      return;
   }
 };
 
@@ -1036,7 +995,6 @@ const tableEffect: TableEffectRunner<Fidice> = (_app, effect, deps) => {
  */
 export const reducer = shellReducer(FIDICE, {
   intent: tableIntent,
-  effect: tableEffect,
   before: (app, intent, ctx) => {
     if (intent.type === 'local/click') return localStart(app, intent, ctx);
     return intent.type === 'host/deal' ? hostDeal(app, ctx) : null;
@@ -1049,8 +1007,6 @@ export const initialShell: Shell = initialApp.shell;
 
 /** `persist()`: the save for the current role, or null when there is nothing to save. */
 export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
-
-/** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); fidice adds none. main.ts constructs the real ones, tests record. */
 
 /** The seeded rng a driver hands the reducer (the hook's `__rng`), named here so the tests spell one type. */
 export type { Rng };

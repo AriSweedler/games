@@ -53,7 +53,6 @@ const home: HomeSnapshot = {
   save: null,
   recentGames: [],
   opts: DEFAULT_OPTS,
-  extraNames: { 2: null, 3: null, 4: null, 5: null },
 };
 /** Ann and Bob at one phone, dealt (the curtain up for the holder). */
 const local = (bots = '0'): App =>

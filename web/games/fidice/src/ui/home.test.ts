@@ -26,6 +26,7 @@ import {
   initialApp,
   namesOf,
   type App,
+  type ExtraSeat,
   type Intent,
   type Mode,
   type Resume,
@@ -49,13 +50,19 @@ const defaults = (p: FidicePage): void => {
   type(p, HOST_SELECTS.bots, '0');
   type(p, HOST_SELECTS.difficulty, 'medium');
 };
+/** The App in `mode`, the shell remembering `seatNames` for the third to sixth seats given (by seat; the rest null). */
 const withMode = (
   mode: Mode,
-  extraNames: Partial<App['table']['extraNames']> = {},
+  seatNames: Partial<Record<ExtraSeat, string>> = {},
   opts: Partial<App['shell']['opts']> = {},
 ): App => ({
-  shell: { ...initialApp.shell, playMode: mode, opts: { ...DEFAULT_OPTS, ...opts } },
-  table: { ...initialApp.table, extraNames: { ...initialApp.table.extraNames, ...extraNames } },
+  shell: {
+    ...initialApp.shell,
+    playMode: mode,
+    opts: { ...DEFAULT_OPTS, ...opts },
+    seatNames: initialApp.shell.seatNames.map((name, i) => seatNames[(i + 2) as ExtraSeat] ?? name),
+  },
+  table: initialApp.table,
 });
 const recorder = (): Readonly<{ intents: Intent[]; dispatch: (i: Intent) => void }> => {
   const intents: Intent[] = [];
@@ -256,9 +263,9 @@ describe('bindHome', () => {
     p.get('removeLocalBtn').fire('click');
     p.get('btnConfigSolo').fire('click');
     expect(intents).toEqual([
-      { type: 'pname/typed', seat: 2, value: 'Car' },
-      { type: 'pname/typed', seat: 3, value: '' },
-      { type: 'pname/drop', seat: 2 },
+      { type: 'seatName/typed', seat: 2, value: 'Car' },
+      { type: 'seatName/typed', seat: 3, value: '' },
+      { type: 'seatName/drop', seat: 2 },
       { type: 'config/open', target: { kind: 'solo' } },
     ]);
     // Every seat shown: add finds none; none shown: remove finds none.

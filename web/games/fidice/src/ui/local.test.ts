@@ -39,7 +39,6 @@ const home: HomeSnapshot = {
   save: null,
   recentGames: [],
   opts: DEFAULT_OPTS,
-  extraNames: { 2: null, 3: null, 4: null, 5: null },
 };
 
 /** Ann, Bob and a computer at a table of three, in the lobby (no log) and started. */

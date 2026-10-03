@@ -27,8 +27,6 @@ import {
   readName,
   readOpts,
   readP2Name,
-  readP3Name,
-  readP6Name,
   readPlayMode,
   readRecentGames,
   readSave,
@@ -39,13 +37,13 @@ import {
   writeName,
   writeOpts,
   writeP2Name,
-  writeP3Name,
   writePlayMode,
   writeSave,
   writeShellFlag,
   writeSoundFont,
   writeSoundState,
   SHELL_STORE,
+  EXTRA_NAME_PREFS,
 } from './storage.ts';
 
 const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => {
@@ -219,10 +217,15 @@ describe('the bare-string preferences', () => {
     s.map.set('fidice-name', 'Legacy');
     expect(readName(store).ok).toBe(false);
     writeP2Name(store, 'Lavi');
-    writeP3Name(store, 'Sandro');
+    // The third to sixth names are the shell's `seatNames` prefs, index 0 the third seat, under this page's keys.
+    expect(EXTRA_NAME_PREFS).toHaveLength(4);
+    EXTRA_NAME_PREFS[0]?.write(store, 'Sandro');
     expect(readP2Name(store)).toEqual({ ok: true, value: 'Lavi' });
-    expect(readP3Name(store)).toEqual({ ok: true, value: 'Sandro' });
-    expect(readP6Name(store).ok).toBe(false);
+    expect(s.map.get(STORAGE_KEYS.p3Name)).toBe('Sandro');
+    expect(EXTRA_NAME_PREFS[0]?.read(store)).toEqual({ ok: true, value: 'Sandro' });
+    expect(EXTRA_NAME_PREFS[3]?.read(store).ok).toBe(false);
+    EXTRA_NAME_PREFS[0]?.write(store, '');
+    expect(s.map.has(STORAGE_KEYS.p3Name)).toBe(false);
   });
 
   test('the tab, the mode, the sound, the font and the finished games', () => {
