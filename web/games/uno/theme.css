@@ -90,9 +90,6 @@ label {
 .row + .btn {
   margin-top: 10px;
 }
-.row.tight {
-  gap: 6px;
-}
 .row.between {
   justify-content: space-between;
 }
@@ -176,15 +173,10 @@ label {
   justify-content: space-between;
   gap: 8px;
 }
+/* The strip's layout is shell.css's (.names-strip); UNO's weight, size and ellipsis. */
 .names-strip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
   font-weight: 600;
   font-size: 0.9rem;
-  white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
 }
 .direction {

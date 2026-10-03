@@ -1314,6 +1314,7 @@ import {
   resultMarkup,
   type ShellPage,
 } from '../../shared/markup/shell.ts';
+import { topbarHtml } from '../../shared/markup/topbar.ts';
 
 // The shell's words (web/shared/markup/shell.ts SHELL_COPY) but for a table of two, and the four
 // only this game knows.
@@ -1367,23 +1368,7 @@ const blocks: ShellBlocks = {
            the board slot (TODO: the game's own markup, painted by render.ts), the status line and
            the controls. -->
       <div id="tableScreen" class="hidden">
-        <div class="topbar">
-          <div class="row tight">
-            <button class="icon-btn" id="leaveBtn" title="Leave the table" aria-label="Leave the table">✕</button>
-            <button class="icon-btn hidden" id="handoffBtn" title="Continue online" aria-label="Continue online">🌐</button>
-          </div>
-          <div class="names-strip">
-            <span id="myName">You</span>
-            <span class="vs">vs</span>
-            <span id="oppName">Opponent</span>
-            <span class="conn-dot" id="oppDot"></span>
-          </div>
-          <div class="row tight">
-            <button class="icon-btn" id="rulesBtnGame" title="Rules" aria-label="Rules">📖</button>
-            <button class="icon-btn" id="historyBtn" title="History" aria-label="History">📜</button>
-            <button class="icon-btn" id="soundBtn" title="Sound &amp; vibration" aria-label="Sound" aria-pressed="true">🔊</button>
-          </div>
-        </div>
+\${topbarHtml({ dot: 'last', between: '<span class="vs">vs</span>', indent: '        ' })}
         <div class="board" id="board" aria-label="The table"></div>
         <p class="status-line" id="statusText" aria-live="polite"></p>
         <div class="controls">

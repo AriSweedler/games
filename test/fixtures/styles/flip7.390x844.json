@@ -493,7 +493,7 @@
         "#myName": "b507d99a93af",
         "#oppName": "1ef944750a70",
         "#tableScreen": "a52db2b42579",
-        "#tableScreen .names": "1850dc08dffd",
+        "#tableScreen .names-strip": "1850dc08dffd",
         "#tableScreen .topbar": "cfbb9aea27e4",
         "#toast": "772a90eea22e",
         ".badge": null,

@@ -162,9 +162,6 @@ label {
 .row + .btn {
   margin-top: 10px;
 }
-.row.tight {
-  gap: 6px;
-}
 .row.between {
   justify-content: space-between;
 }
@@ -254,14 +251,6 @@ label {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-}
-#tableScreen .names {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
 }
 #myName {
   font-weight: 700;
