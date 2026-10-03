@@ -17,9 +17,17 @@ import type { Phrase } from '../lib/sound/phrase.ts';
 import type { Result } from '../lib/result.ts';
 import type { Rng } from '../lib/rng.ts';
 import { badSoundFontMsg, isSoundFont, type SoundFontName } from '../lib/sound/fonts.ts';
+import { isGuestFrame } from '../lib/protocol.ts';
 import type { GuestEvents } from '../net/guest.ts';
 import type { HostEvents } from '../net/host.ts';
-import { ruleFromHash } from '../ui/glossary.ts';
+import {
+  aboutHtml,
+  ruleFromHash,
+  rulesListHtml,
+  type Glossary,
+  type RuleGroup,
+  type RuleItem,
+} from '../ui/glossary.ts';
 import { fillNameInputs, fillP2NameInput, setCodeInput } from '../ui/home.ts';
 import {
   flipped,
@@ -268,6 +276,8 @@ export type BootApp<G extends BootTypes> = Readonly<{
   shell: Readonly<{
     soundFont: SoundFontName;
     view: G['View'] | null;
+    /** The engine state on this device (the host's or the phone's; null at a guest): the hook's `game()`. */
+    game: G['State'] | null;
     recentGames: ReadonlyArray<RecentGame>;
   }> &
     GateState<G> &
@@ -442,6 +452,19 @@ export type BootCtx<G extends BootTypes, App extends BootApp<G>> = Readonly<{
   matchMedia?: (query: string) => MediaQueryListLike;
 }>;
 
+/** A game's copy tables: the rules (flat, or grouped as hive's), the About paragraphs and the glossary that links the jargon in both. */
+export type BootCopy = Readonly<{
+  rules: ReadonlyArray<RuleItem> | ReadonlyArray<RuleGroup>;
+  about?: ReadonlyArray<string>;
+  glossary: Glossary;
+}>;
+
+/** The copy's markup as shellPaint.ts `renderCopy` takes it: the rules list and, when the game has it, the About copy. */
+export const copyHtml = (copy: BootCopy): Readonly<{ rules: string; about?: string }> => ({
+  rules: rulesListHtml(copy.rules, copy.glossary),
+  ...(copy.about === undefined ? {} : { about: aboutHtml(copy.about, copy.glossary) }),
+});
+
 /**
  * Everything the two main.ts files disagreed on, spelled by each (§4.5): `G` the game's type bag,
  * `App` its App (the boot reads `shell.soundFont` and `shell.view` of it), `Ex` the effect adapters
@@ -458,15 +481,14 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
     /** The PeerJS log level the page's legacy set (REGISTRY `debug`; e2e `expectPeerOptions` pins each). */
     debug: number;
   }>;
-  sound: Readonly<{
-    /**
-     * Whether sound starts on: by default prefs.ts `soundPref.enabled` over `config.prefs.sound`
-     * (a stored `on`/`off` wins; `fallback` is what no stored preference counts as, `false` on a
-     * coarse-pointer device, sound-fonts.md §12); a game may pass its own reader (the boot test logs the fallback).
-     */
+  /**
+   * Left out by every game: sound starts on by prefs.ts `soundPref.enabled` over
+   * `config.prefs.sound` (a stored `on`/`off` wins; `fallback` is what no stored preference counts
+   * as, `false` on a coarse-pointer device, sound-fonts.md §12). The boot test passes its own
+   * reader to log the fallback. The sound-font key is the store's (`config.prefs.keys.soundFont`).
+   */
+  sound?: Readonly<{
     enabled?: (store: G['Store'], fallback: boolean) => boolean;
-    /** The game's own sound-font key (`STORAGE_KEYS.soundFont`): checked before every home read, named in the console hook's refusal. */
-    fontKey: string;
   }>;
   /**
    * The game's reducer over its App: `initialApp`, `reduce`, `runEffect`, `readHome` and the two
@@ -492,11 +514,13 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
     setCode?: (doc: DocumentLike, value: string) => void;
   }>;
   /**
-   * The rules' items (ui/rules.ts `rulesItemsHtml()`) and the About copy (glossary.ts
-   * `aboutHtml`), rendered into the page's slots before the game's `hooks.render`
-   * (shellPaint.ts `renderCopy`); absent for a page that renders its own (backgammon's rules sheet).
+   * The game's copy as the tables it keeps (ui/rules.ts `RULES_ITEMS` or `RULE_GROUPS`,
+   * `ABOUT_PARAGRAPHS`, `GLOSSARY`): the boot renders the rules (glossary.ts `rulesListHtml`) into
+   * both rules slots and the About copy (`aboutHtml`) into its slot before the game's
+   * `hooks.render` (shellPaint.ts `renderCopy`); absent for a page that renders its own
+   * (backgammon keys both slots on its ruleset).
    */
-  copy?: Readonly<{ rules: string; about?: string }>;
+  copy?: BootCopy;
   /**
    * What the boot reads of the game's shell config (its `ShellConfig` constant, ui/state.ts): the
    * cue table and the `sound` preference the default `fx` plays and persists through.
@@ -504,6 +528,8 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
   config: Readonly<{
     cues: Readonly<{ table: Readonly<Record<Cue<G>, Phrase>> }>;
     prefs: Readonly<{
+      /** The store's sound-font key (prefs.ts `shellStore` `keys`): a stored value that names no font is logged under it and dropped. */
+      keys: Readonly<{ soundFont: string }>;
       sound: Readonly<{
         read: (store: G['Store']) => Result<'on' | 'off', unknown>;
         write: (store: G['Store'], state: 'on' | 'off') => unknown;
@@ -523,8 +549,8 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
       deps: GuestDepsOf<G>,
       opts: GuestOptionsOf,
     ) => SessionLike<'guest', GuestFrameOf<G>>;
-    /** The game's protocol.ts `isGuestFrame`: which side of the wire a `send` effect's frame belongs to. */
-    isGuestFrame: (frame: HostFrameOf<G> | GuestFrameOf<G>) => frame is GuestFrameOf<G>;
+    /** Which side of the wire a `send` effect's frame belongs to: by default the shared predicate (web/shared/lib/protocol.ts `isGuestFrame`: `join` and `action` are a guest's); the boot test passes its own. */
+    isGuestFrame?: (frame: HostFrameOf<G> | GuestFrameOf<G>) => frame is GuestFrameOf<G>;
     /**
      * The game's protocol.ts `isEphemeral`, for a game with an ephemeral lane (`ShellTypes.Ephemeral`):
      * a `send` of that frame goes out on whichever session is open, host or guest. Absent, no frame is one.
@@ -597,19 +623,25 @@ export const bootShell = <
   const { doc, win, nav, store, clock } = cfg.page;
   // The sound font (docs/design/sound-fonts.md §6): a value the console left in storage that names
   // no preset is logged and dropped before every home read, so the default stands and a reload
-  // logs it once; the game's own guard (gin's card back, `hooks.home`) runs first, as it did.
+  // logs it once; the game's own guard (gin's card back, `hooks.home`) runs first, as it did. The
+  // key is the store's own (prefs.ts `shellStore` built it from the game's prefix).
+  const fontKey = cfg.config.prefs.keys.soundFont;
   const homeSnapshot = (): HomeSnapshot<G> => {
     cfg.hooks?.home?.(store);
-    const storedFont = store.readText(cfg.sound.fontKey);
+    const storedFont = store.readText(fontKey);
     if (storedFont.ok && !isSoundFont(storedFont.value)) {
-      console.error(badSoundFontMsg(cfg.sound.fontKey, storedFont.value));
-      store.remove(cfg.sound.fontKey);
+      console.error(badSoundFontMsg(fontKey, storedFont.value));
+      store.remove(fontKey);
     }
     return cfg.reducer.readHome(store);
   };
   // The seeded rng a harness installs before boot, read before anything draws so a seeded opening
   // roll is the seeded one (backgammon-board.md R27), else the real one.
   const rng: Rng = win.__rng ?? Math.random;
+  // A `send` effect's frame goes out on the side it belongs to: `join` and `action` are a guest's
+  // (the shared predicate), the rest a host's; a game's own predicate when it passes one.
+  const isGuest: (frame: HostFrameOf<G> | GuestFrameOf<G>) => frame is GuestFrameOf<G> =
+    cfg.net.isGuestFrame ?? isGuestFrame;
   const now = (): number => clock.now();
   // The DOM lib types `vibrate` over a mutable array and `AudioNode.connect` over full nodes; the
   // edge reads readonly patterns and calls the structural subset, so the real objects are widened.
@@ -635,7 +667,7 @@ export const bootShell = <
   const coarsePointer = win.matchMedia?.('(pointer: coarse)').matches === true;
   const audio = createAudioCues({
     makeContext: AudioCtor === undefined ? undefined : () => new AudioCtor() as AudioContextLike,
-    enabled: (cfg.sound.enabled ?? soundEnabledOf(cfg.config.prefs.sound))(store, !coarsePointer),
+    enabled: (cfg.sound?.enabled ?? soundEnabledOf(cfg.config.prefs.sound))(store, !coarsePointer),
   });
   // The silent-switch unlock (unlock.ts): run inside the tap that turns sound on, and on the first
   // gesture over a page whose sound is already on.
@@ -768,8 +800,8 @@ export const bootShell = <
           return;
         }
         if (session.kind === 'host') {
-          if (!cfg.net.isGuestFrame(frame)) session.send(frame, seat);
-        } else if (cfg.net.isGuestFrame(frame)) session.send(frame);
+          if (!isGuest(frame)) session.send(frame, seat);
+        } else if (isGuest(frame)) session.send(frame);
       },
       close: () => {
         session?.close();
@@ -855,7 +887,7 @@ export const bootShell = <
     applyLayout(doc, win);
   });
   if (probeAsked(win.location.search)) renderProbe(doc, win);
-  if (cfg.copy !== undefined) renderCopy(doc, cfg.copy);
+  if (cfg.copy !== undefined) renderCopy(doc, copyHtml(cfg.copy));
   cfg.hooks?.render?.(ctx);
   cfg.paint.bindAll(doc, dispatch);
   // A tap on jargon in the About copy or in a rule (docs/design/glossary-links.md) shows that rule.
@@ -944,6 +976,8 @@ export const bootShell = <
     },
     /** My seat's view, null before a game. */
     view: (): G['View'] | null => app.shell.view,
+    /** The engine state on this device (the host's or the phone's), null at a guest or before a game: what a driver reads past the view. */
+    game: (): G['State'] | null => app.shell.game,
     /** A position for e2e and stories: the pass-and-play game's state replaced (shell.ts `position/load`, decoded by the engine). */
     setup: (state: unknown): void => {
       dispatch({ type: 'position/load', state });
@@ -954,7 +988,7 @@ export const bootShell = <
     /** The sound font, from the console for now (docs/design/sound-fonts.md §6): a font plays from now on and is remembered; anything else is logged and refused. */
     soundFont: (name: string): void => {
       if (!isSoundFont(name)) {
-        console.error(badSoundFontMsg(cfg.sound.fontKey, name));
+        console.error(badSoundFontMsg(fontKey, name));
         return;
       }
       dispatch({ type: 'soundFont/set', font: name });

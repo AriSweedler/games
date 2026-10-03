@@ -1,15 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import { aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { aboutHtml, rulesListHtml } from '../../../../shared/ui/glossary.ts';
 
 import { BUGS } from '../engine/pieces.ts';
-import {
-  ABOUT_PARAGRAPHS,
-  GLOSSARY,
-  RULES_ITEMS,
-  RULE_GROUPS,
-  bugArt,
-  rulesItemsHtml,
-} from './rules.ts';
+import { ABOUT_PARAGRAPHS, GLOSSARY, RULES_ITEMS, RULE_GROUPS, bugArt } from './rules.ts';
 
 describe('the rules', () => {
   test('two groups, the bugs first: nine one-line rules, under 150 words in all', () => {
@@ -38,7 +31,7 @@ describe('the rules', () => {
   });
 
   test('the slot markup: a rules-group per group, the cards inside the first', () => {
-    const html = rulesItemsHtml();
+    const html = rulesListHtml(RULE_GROUPS, GLOSSARY);
     expect(html).toContain('<li class="rules-group" data-group="bugs"><h3>The bugs</h3>');
     expect(html).toContain('<li class="rules-group" data-group="game"><h3>The game</h3>');
     expect(html.indexOf('data-group="bugs"')).toBeLessThan(html.indexOf('data-group="game"'));
@@ -47,7 +40,7 @@ describe('the rules', () => {
   });
 
   test('the jargon links: the goal to the Queen, the Beetle to the hive, the About to the hive', () => {
-    const html = rulesItemsHtml();
+    const html = rulesListHtml(RULE_GROUPS, GLOSSARY);
     expect(html).toContain('<li id="rule-goal">');
     expect(html).toMatch(/id="rule-goal">.*data-rule="queen"/);
     expect(html).toMatch(/id="rule-beetle" class="rule-card">.*data-rule="hive"/);

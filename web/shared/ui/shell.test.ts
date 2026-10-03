@@ -342,6 +342,7 @@ const FAKE: ShellConfig<Fake> = {
     resumeExtra: (app, offer) => step(app, toast(`extra:${offer.note}`)),
   },
   prefs: {
+    keys: { soundFont: KEYS.soundFont },
     name: pref(KEYS.name, null),
     p2Name: pref(KEYS.p2Name, null),
     homeTab: pref(KEYS.homeTab, TABS),

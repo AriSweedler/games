@@ -7,7 +7,7 @@
 // opening roll is the seeded one, R27), Web Audio, vibration and the wake lock, handed to the
 // reducer (src/ui/state.ts) through `runEffect`, to the sessions (src/net) through their deps, and
 // to the paint (src/ui/render.ts). This file passes what is this game's: its reducer, painters,
-// sessions, shell config, sound-font key, and its shell config again as `shell`: its
+// sessions, shell config, and its shell config again as `shell`: its
 // `orientation: 'landscape'` has the boot watch the phone's orientation and paint the turn gate
 // (docs/design/shared-shell.md "Playing sideways", docs/design/backgammon-landscape.md §5D).
 // `window.__backgammon` (the documented test hook, design Q5) is the boot's: `act`, `view`,
@@ -15,9 +15,7 @@
 // (src/safeArea.ts): the rail's side sideways.
 import { bootShell, browserPage } from '../../shared/edge/boot.ts';
 import { legalActions } from './src/engine/index.ts';
-import { GuestSession, HostSession } from './src/net/sessions.ts';
-import { isGuestFrame } from './src/protocol.ts';
-import { STORAGE_KEYS } from './src/storage.ts';
+import { SESSIONS } from './src/net/sessions.ts';
 import { bindAll, paint, toastMarks } from './src/ui/render.ts';
 import { watchSafeArea } from './src/safeArea.ts';
 import { BACKGAMMON, reducer, type App, type Backgammon } from './src/ui/state.ts';
@@ -26,12 +24,11 @@ bootShell<Backgammon, App>({
   page: browserPage(),
   // PeerJS log level 0 as gin's page (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
   game: { hook: '__backgammon', title: 'Sheshbesh', debug: 0 },
-  sound: { fontKey: STORAGE_KEYS.soundFont },
   reducer,
   // The Kapará toast wears `hit` (`toastMarks`).
   paint: { paint, bindAll, toastMarks },
   config: BACKGAMMON,
-  net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
+  net: SESSIONS,
   legal: legalActions,
   shell: BACKGAMMON,
 });

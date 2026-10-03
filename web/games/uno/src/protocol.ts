@@ -18,7 +18,6 @@ import type {
 import { seatedProtocol, type SeatedRoom } from '../../../shared/lib/seatedProtocol.ts';
 import { SEAT_COUNTS, decodeAction, decodeView, type Action, type View } from './engine/view.ts';
 
-export { isGuestFrame } from '../../../shared/lib/protocol.ts';
 export type { TableSeat } from '../../../shared/lib/seatedProtocol.ts';
 
 /** The room after `hostName`: how many sit down. */
@@ -34,6 +33,13 @@ export type StateFrame = SharedStateFrame<View>;
 export type HostFrame = SharedHostFrame<View, RoomWire>;
 export type Frame = SharedFrame<Action, View, RoomWire>;
 
+/** The protocol whole: what the sessions take (web/shared/net/sessions.ts `seatedSessions`). */
+export const PROTOCOL = seatedProtocol({
+  decodeAction,
+  decodeView,
+  options,
+  seatCounts: SEAT_COUNTS,
+});
 export const {
   decodeFrame,
   decodeGuestFrame,
@@ -46,4 +52,4 @@ export const {
   toast,
   state,
   joinName,
-} = seatedProtocol({ decodeAction, decodeView, options, seatCounts: SEAT_COUNTS });
+} = PROTOCOL;

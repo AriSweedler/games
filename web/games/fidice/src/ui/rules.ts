@@ -6,7 +6,7 @@
 // registry. Each item carries an id: the anchor a glossary link lands on
 // (docs/design/glossary-links.md; `GLOSSARY` names the words that mean each rule). The old file is
 // imported by nothing here and edited by nobody: M6 retires it with the vdom rules tab.
-import { rulesListHtml, type Glossary, type RuleItem } from '../../../../shared/ui/glossary.ts';
+import type { Glossary, RuleItem } from '../../../../shared/ui/glossary.ts';
 import { SHIPPED } from '../bots/registry.ts';
 
 /** The two slots this list is rendered into, named once for every game beside the anchor. */
@@ -55,6 +55,3 @@ export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
     body: `<ul><li>Pulling a die out is a promise you can't take back — and it tells the table something. Rolling it afterwards tells them something else.</li><li>Rolling the cup dice throws away the hand you know for one you don't. Sometimes that's exactly the point.</li><li><b>Computer players</b> can fill any seat: add them on the host card or in the waiting room, or pick <i>Solo</i> / <i>Watch</i> on the home screen. Each plays one of three strategies (pick one, or let it draw at random) — ${strategiesHtml()}. They see exactly what a person in their chair would see, and they read the table the way a person does: how far each raise leapt, whether the cup has been shaken since the bidder looked, who has been caught before.</li><li>The game runs in the host's browser. If the host closes their tab, the table closes with it.</li></ul>`,
   },
 ];
-
-/** The items, one keyed `<li>` per rule with the jargon inside each body linked to the rule it names (render.ts writes them into both slots). */
-export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);

@@ -8,7 +8,7 @@ import { describe, expect, test } from 'vitest';
 import { fakeEl, fakeTarget } from '../../../../shared/edge/page.fake.ts';
 import type { RecentGame } from '../../../../shared/lib/recentGames.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
-import { aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { aboutHtml, rulesListHtml } from '../../../../shared/ui/glossary.ts';
 import { recentGamesHtml } from '../../../../shared/ui/recentGames.ts';
 import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import { renderCopy } from '../../../../shared/ui/shellPaint.ts';
@@ -42,7 +42,6 @@ import {
   paint,
   paintSound,
   roundResultText,
-  rulesItemsHtml,
   showToast,
   standingsHtml,
   type PageLike,
@@ -156,7 +155,10 @@ const shown = (p: GinPage): ReadonlyArray<string> => SCREENS.filter((id) => !p.g
 describe('renderCopy: the About copy', () => {
   test('fills #aboutCopy with the two paragraphs, their jargon linked to the rules', () => {
     const p = page();
-    renderCopy(p.doc, { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) });
+    renderCopy(p.doc, {
+      rules: rulesListHtml(RULES_ITEMS, GLOSSARY),
+      about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY),
+    });
     expect(p.get('aboutCopy').text()).toBe(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY));
     expect(p.get('aboutCopy').text().match(/<p>/g)).toHaveLength(2);
     expect(p.get('aboutCopy').text()).toContain('data-rule="knock">knocks</a>');
@@ -166,12 +168,14 @@ describe('renderCopy: the About copy', () => {
 describe('renderCopy: the rules', () => {
   test('fills both slots with the eleven items, one per line, as ui/rules.ts has them', () => {
     const p = page();
-    renderCopy(p.doc, { rules: rulesItemsHtml() });
+    renderCopy(p.doc, { rules: rulesListHtml(RULES_ITEMS, GLOSSARY) });
     RULES_SLOT_IDS.forEach((id) => {
-      expect(p.get(id).text()).toBe(rulesItemsHtml());
+      expect(p.get(id).text()).toBe(rulesListHtml(RULES_ITEMS, GLOSSARY));
     });
-    expect(rulesItemsHtml().split('\n')).toHaveLength(RULES_ITEMS.length);
-    expect(`<ul class="rules-list">\n${rulesItemsHtml()}\n</ul>`).toBe(RULES_LIST_HTML);
+    expect(rulesListHtml(RULES_ITEMS, GLOSSARY).split('\n')).toHaveLength(RULES_ITEMS.length);
+    expect(`<ul class="rules-list">\n${rulesListHtml(RULES_ITEMS, GLOSSARY)}\n</ul>`).toBe(
+      RULES_LIST_HTML,
+    );
   });
 });
 

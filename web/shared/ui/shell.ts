@@ -822,6 +822,8 @@ export type RecentGamesPref<St> = Readonly<{
 
 /** The shell's readers and writers the game builds over its keys (prefs.ts `shellStore`). */
 export type ShellPrefs<G extends ShellTypes> = Readonly<{
+  /** The store's keys the boot reads by name: the sound font's, named in the console hook's refusal (prefs.ts `ShellKeys`). */
+  keys: Readonly<{ soundFont: string }>;
   name: Pref<G['Store'], string>;
   p2Name: Pref<G['Store'], string>;
   homeTab: Pref<G['Store'], Tab<G>>;

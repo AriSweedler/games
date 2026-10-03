@@ -36,11 +36,8 @@ const roomOf = (ctx: HostRoom): Room => ({
   watch: ctx.watch,
 });
 
-export const { Host: HostSession, Guest: GuestSession } = sessionsFor<
-  GuestFrame,
-  HostFrame,
-  HostRoom
->('fidice', {
+/** The pair the boot takes whole (`net: SESSIONS`); the two names are what the tests construct. */
+export const SESSIONS = sessionsFor<GuestFrame, HostFrame, HostRoom>('fidice', {
   decodeGuestFrame,
   decodeHostFrame,
   welcome: (ctx, seat) => welcome(ctx.myName, roomOf(ctx), ctx.seats, seat),
@@ -48,3 +45,4 @@ export const { Host: HostSession, Guest: GuestSession } = sessionsFor<
   join,
   joinName,
 });
+export const { Host: HostSession, Guest: GuestSession } = SESSIONS;

@@ -29,6 +29,7 @@ import { isHeartbeat } from '../../../../shared/net/liveness.ts';
 import { peerIdFor } from '../../../../shared/lib/roomCode.ts';
 import { guests, world, type Guest, type Party } from '../../../../shared/net/sessions.harness.ts';
 import {
+  PROTOCOL,
   action as actionFrame,
   decodeHostFrame,
   full as fullFrame,
@@ -44,8 +45,11 @@ import {
   type IntentFrame,
 } from '../protocol.ts';
 import type { HostEvents } from '../../../../shared/net/host.ts';
-import { HostSession } from '../net/sessions.ts';
-import { LOCAL_NAMES } from '../shellConfig.ts';
+import { seatedSessions } from '../../../../shared/net/sessions.ts';
+import { LOCAL_NAMES, pickOpts } from '../shellConfig.ts';
+
+/** The host session as main.ts builds it (web/shared/net/sessions.ts `seatedSessions` over the protocol). */
+const { Host: HostSession } = seatedSessions('briscola', PROTOCOL, pickOpts);
 import { DEFAULT_CARD_PACK, STORAGE_KEYS } from '../storage.ts';
 import { BEAT_MS, DURATIONS, drawSpan } from './beat.ts';
 import { TEMPO_SCALE } from './variant.ts';

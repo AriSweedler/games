@@ -2,8 +2,7 @@
 // phone screen (390x844, no scroll), the one source both slots render from (`#rulesList` on the
 // home tab, `#rulesOverlayList` over the table). The goal, the turn, the bust and the special
 // cards, one line each; each item's id is the anchor a glossary link lands on.
-import { rulesListHtml, type RuleItem } from '../../../../shared/ui/glossary.ts';
-import { GLOSSARY } from './glossary.ts';
+import type { RuleItem } from '../../../../shared/ui/glossary.ts';
 
 export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
   { id: 'goal', heading: 'Goal', body: 'First to 200 points wins.' },
@@ -27,5 +26,3 @@ export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
   { id: 'second', heading: 'Second Chance', body: 'Keep it: it cancels one bust.' },
   { id: 'bonus', heading: '+2 to +10, x2', body: 'Add to your line; x2 doubles its numbers.' },
 ];
-
-export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);

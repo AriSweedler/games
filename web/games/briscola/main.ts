@@ -4,27 +4,27 @@
 // (`browserPage`), the real Transport, the ICE loader, `Math.random` (or the harness's
 // `window.__rng`), Web Audio, vibration and the wake lock, handed to the reducer (src/ui/state.ts)
 // through `runEffect`, to the sessions (src/net) through their deps, and to the paint
-// (src/ui/render.ts). This file passes what is briscola's: its reducer, painters, sessions, shell
-// config, sound-font key, the Italian suit sprite the glyph faces `<use>` (inlined once here, so it
-// cannot drift from suits.ts), the card-pack and language-pack guards, the rules and About copy,
+// (src/ui/render.ts). This file passes what is briscola's: its reducer, painters, shell config,
+// the sessions over its protocol (web/shared/net/sessions.ts `seatedSessions`), the Italian suit
+// sprite the glyph faces `<use>` (inlined once here, so it cannot drift from suits.ts), the
+// card-pack and language-pack guards, its copy tables,
 // the stories page's early return, and the members of `window.__briscola` (the documented test
 // hook, D19) beyond the boot's (`act`, `view`, `setup`, `legal` among them): `events`, `cardPack`,
 // `cardPackName`, `lang`, `langName`.
 import { bootShell, browserPage } from '../../shared/edge/boot.ts';
 import type { Store } from '../../shared/edge/storage.ts';
-import { aboutHtml } from '../../shared/ui/glossary.ts';
 import { badCardPackMsg, isCardPackFor } from '../../shared/lib/cards/packs.ts';
 import { badLanguageMsg, isLanguagePack } from '../../shared/lib/lang/packs.ts';
+import { seatedSessions } from '../../shared/net/sessions.ts';
 import { SUIT_SPRITE_SVG } from '../../shared/ui/cardFace.ts';
 import IMPACT_SPRITE_SVG from './impact/impact-sprite.svg?raw';
 import { legalActions, type GameEvent } from './src/engine/index.ts';
-import { GuestSession, HostSession } from './src/net/sessions.ts';
-import { isEphemeral, isGuestFrame } from './src/protocol.ts';
+import { PROTOCOL, isEphemeral } from './src/protocol.ts';
 import { DECK_KIND, STORAGE_KEYS } from './src/storage.ts';
 import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
 import { GLOSSARY } from './src/ui/glossary.ts';
 import { bindAll, paint } from './src/ui/render.ts';
-import { rulesItemsHtml } from './src/ui/rules.ts';
+import { RULES_ITEMS } from './src/ui/rules.ts';
 import { BRISCOLA, reducer, type App, type Briscola } from './src/ui/state.ts';
 
 /**
@@ -66,14 +66,13 @@ const boot = (): void => {
     page: browserPage(),
     // PeerJS log level 0 as the other shell pages (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__briscola', title: 'Briscola', debug: 0 },
-    sound: { fontKey: STORAGE_KEYS.soundFont },
     reducer,
     paint: { paint, bindAll },
     config: BRISCOLA,
     // The rules into both slots and the About copy (ui/rules.ts, ui/about.ts).
-    copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
+    copy: { rules: RULES_ITEMS, about: ABOUT_PARAGRAPHS, glossary: GLOSSARY },
     // `isEphemeral` names the live intent's lane, sent by both sides (briscola-battle.md §4.5).
-    net: { Host: HostSession, Guest: GuestSession, isGuestFrame, isEphemeral },
+    net: { ...seatedSessions('briscola', PROTOCOL, BRISCOLA.opts.pick), isEphemeral },
     legal: legalActions,
     hooks: {
       home: (store) => {

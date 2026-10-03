@@ -509,11 +509,6 @@ const ROWS_BEFORE: ReadonlyArray<readonly [string, Suite, Thresholds]> = [
     { lines: 94, functions: 95, statements: 93, branches: 88 },
   ],
   [
-    'web/games/briscola/src/net/**',
-    'briscola',
-    { lines: 95, functions: 95, statements: 95, branches: 97 },
-  ],
-  [
     'web/games/backgammon/src/protocol.ts',
     'backgammon',
     { lines: 95, functions: 95, statements: 95, branches: 97 },
@@ -632,7 +627,6 @@ const INCLUDE_BEFORE: ReadonlyArray<string> = [
   'web/games/briscola/src/storage.ts',
   'web/games/briscola/src/shellConfig.ts',
   'web/games/briscola/src/ui/**/*.ts',
-  'web/games/briscola/src/net/**/*.ts',
   'web/games/backgammon/src/protocol.ts',
   'web/games/backgammon/src/storage.ts',
   'web/games/backgammon/src/shellConfig.ts',

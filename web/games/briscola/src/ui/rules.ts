@@ -8,8 +8,7 @@
 // glossary linker leaves alone. The list is one for every seat count: a rule that differs by seats
 // says how. What is not here: the match (one game per sitting), the house rules (the engine keeps
 // the flags at their defaults), the online how-to (the home screen says it).
-import { rulesListHtml, type RuleItem } from '../../../../shared/ui/glossary.ts';
-import { GLOSSARY } from './glossary.ts';
+import type { RuleItem } from '../../../../shared/ui/glossary.ts';
 
 /** The two slots this list is rendered into, named once for every game beside the anchor. */
 export { RULES_SLOT_IDS, type RulesSlot } from '../../../../shared/ui/glossary.ts';
@@ -62,9 +61,6 @@ export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
     body: 'After each trick everyone draws one card from the stock, the winner first, so every hand stays at three; the turned-up briscola is the last card drawn. Once the stock is out nobody draws: the last three tricks are played from the hand alone.',
   },
 ];
-
-/** The items, one keyed `<li>` per rule with the jargon inside each body linked to the rule it names (render.ts writes them into both slots). */
-export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);
 
 /** The heading over the in-game overlay's copy. */
 export const RULES_TITLE = 'Briscola — Rules';

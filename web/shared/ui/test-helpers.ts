@@ -180,6 +180,7 @@ export const FAKE: ShellConfig<Fake> = {
     }),
   },
   prefs: {
+    keys: { soundFont: FAKE_KEYS.soundFont },
     name: pref(FAKE_KEYS.name),
     p2Name: pref(FAKE_KEYS.p2Name),
     homeTab: pref<Fake['Tab']>(FAKE_KEYS.homeTab),

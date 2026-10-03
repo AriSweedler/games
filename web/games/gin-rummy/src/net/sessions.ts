@@ -14,13 +14,12 @@ import {
   type Room,
 } from '../protocol.ts';
 
-export const { Host: HostSession, Guest: GuestSession } = sessionsFor<GuestFrame, HostFrame, Room>(
-  'gin-rummy',
-  {
-    decodeGuestFrame,
-    decodeHostFrame,
-    welcome: (ctx) => welcome(ctx.myName, { target: ctx.target }),
-    full,
-    join,
-  },
-);
+/** The pair the boot takes whole (`net: SESSIONS`); the two names are what the tests construct. */
+export const SESSIONS = sessionsFor<GuestFrame, HostFrame, Room>('gin-rummy', {
+  decodeGuestFrame,
+  decodeHostFrame,
+  welcome: (ctx) => welcome(ctx.myName, { target: ctx.target }),
+  full,
+  join,
+});
+export const { Host: HostSession, Guest: GuestSession } = SESSIONS;

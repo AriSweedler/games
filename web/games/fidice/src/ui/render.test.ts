@@ -9,7 +9,7 @@ import { describe, expect, test } from 'vitest';
 import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
 import { byId, fakeDocument, fire, serialize } from '../../../../shared/edge/dom.fake.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
-import { aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { aboutHtml, rulesListHtml } from '../../../../shared/ui/glossary.ts';
 import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import { renderCopy } from '../../../../shared/ui/shellPaint.ts';
 import { asRank } from '../domain/hands.ts';
@@ -27,7 +27,7 @@ import {
   uiOf,
   type PageLike,
 } from './render.ts';
-import { GLOSSARY, rulesItemsHtml } from './rules.ts';
+import { GLOSSARY, RULES_ITEMS } from './rules.ts';
 import {
   DEFAULT_OPTS,
   FIDICE,
@@ -155,7 +155,10 @@ const recorder = (): Readonly<{ intents: Intent[]; dispatch: (i: Intent) => void
 describe('the static markup rendered at boot', () => {
   test('renderCopy fills both slots with the same list and the About copy', () => {
     const p = fidicePage(MARKUP);
-    renderCopy(p.doc, { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) });
+    renderCopy(p.doc, {
+      rules: rulesListHtml(RULES_ITEMS, GLOSSARY),
+      about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY),
+    });
     expect(p.get('rulesList').text()).toContain('<li id="rule-goal">');
     expect(p.get('rulesOverlayList').text()).toBe(p.get('rulesList').text());
     expect(p.get('aboutCopy').text()).toContain('Kezar Lake');

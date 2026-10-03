@@ -2,9 +2,9 @@
 // shipped computers named, and the jargon linked to the rule it means, never to its own.
 import { describe, expect, test } from 'vitest';
 
-import { ruleAnchor } from '../../../../shared/ui/glossary.ts';
+import { ruleAnchor, rulesListHtml } from '../../../../shared/ui/glossary.ts';
 import { SHIPPED } from '../bots/registry.ts';
-import { GLOSSARY, RULES_ITEMS, RULES_SLOT_IDS, rulesItemsHtml, strategiesHtml } from './rules.ts';
+import { GLOSSARY, RULES_ITEMS, RULES_SLOT_IDS, strategiesHtml } from './rules.ts';
 
 describe('the rules list', () => {
   test('six items, ids unique, every glossary rule one of them, the two slots named', () => {
@@ -26,7 +26,7 @@ describe('the rules list', () => {
   });
 
   test('the markup: one anchored <li> per item with its heading, the legacy prose inside, the computers named', () => {
-    const html = rulesItemsHtml();
+    const html = rulesListHtml(RULES_ITEMS, GLOSSARY);
     RULES_ITEMS.forEach((r) => {
       expect(html).toContain(`<li id="${ruleAnchor(r.id)}"><strong>${r.heading}:</strong>`);
     });
@@ -40,7 +40,7 @@ describe('the rules list', () => {
   });
 
   test('jargon links: "the ladder" in the goal links to the ladder rule; the ladder rule never links to itself', () => {
-    const html = rulesItemsHtml();
+    const html = rulesListHtml(RULES_ITEMS, GLOSSARY);
     const goal = html.slice(html.indexOf('id="rule-goal"'), html.indexOf('id="rule-setup"'));
     expect(goal).toMatch(/<a [^>]*#rule-ladder[^>]*>the ladder<\/a>/);
     const ladder = html.slice(html.indexOf('id="rule-ladder"'), html.indexOf('id="rule-know"'));

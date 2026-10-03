@@ -14,14 +14,12 @@ import {
   type Room,
 } from '../protocol.ts';
 
-export const { Host: HostSession, Guest: GuestSession } = sessionsFor<GuestFrame, HostFrame, Room>(
-  'hive',
-  {
-    decodeGuestFrame,
-    decodeHostFrame,
-    welcome: (ctx) => welcome(ctx.myName, { seatCount: 2 }),
-    full,
-    join,
-    joinName,
-  },
-);
+/** The pair the boot takes whole (`net: SESSIONS`). */
+export const SESSIONS = sessionsFor<GuestFrame, HostFrame, Room>('hive', {
+  decodeGuestFrame,
+  decodeHostFrame,
+  welcome: (ctx) => welcome(ctx.myName, { seatCount: 2 }),
+  full,
+  join,
+  joinName,
+});

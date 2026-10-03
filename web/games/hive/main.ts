@@ -4,29 +4,25 @@
 // real Transport, `Math.random` (or the harness's `window.__rng`; Hive rolls nothing), Web Audio,
 // vibration and the wake lock, handed to the reducer (src/ui/state.ts), the sessions (src/net) and
 // the paint (src/ui/render.ts). This file passes what is Hive's: its reducer, painters, sessions,
-// shell config, sound-font key, the rules and About copy, and the bug sprite the tiles `<use>`
+// shell config, its copy tables (the rules grouped), and the bug sprite the tiles `<use>`
 // (ui/bugs.ts, inlined once here before any paint, as briscola inlines its suits). `window.__hive`
 // (the documented test hook) is the boot's: `act`, `view`, `setup`, `legal` and the shared rest.
 import { bootShell, browserPage } from '../../shared/edge/boot.ts';
-import { aboutHtml } from '../../shared/ui/glossary.ts';
 import { legalActions } from './src/engine/view.ts';
-import { GuestSession, HostSession } from './src/net/sessions.ts';
-import { isGuestFrame } from './src/protocol.ts';
-import { STORAGE_KEYS } from './src/storage.ts';
+import { SESSIONS } from './src/net/sessions.ts';
 import { BUG_SPRITE_SVG } from './src/ui/bugs.ts';
 import { bindAll, paint } from './src/ui/render.ts';
-import { ABOUT_PARAGRAPHS, GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
+import { ABOUT_PARAGRAPHS, GLOSSARY, RULE_GROUPS } from './src/ui/rules.ts';
 import { HIVE, reducer, type App, type Hive } from './src/ui/state.ts';
 
 bootShell<Hive, App>({
   page: browserPage(),
   game: { hook: '__hive', title: 'Hive', debug: 0 },
-  sound: { fontKey: STORAGE_KEYS.soundFont },
   reducer,
   paint: { paint, bindAll },
   config: HIVE,
-  copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
-  net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
+  copy: { rules: RULE_GROUPS, about: ABOUT_PARAGRAPHS, glossary: GLOSSARY },
+  net: SESSIONS,
   legal: legalActions,
   hooks: {
     render: () => {

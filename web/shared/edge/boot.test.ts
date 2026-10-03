@@ -19,6 +19,7 @@ import {
   sessionEvents,
   shareInvite,
   type BootConfig,
+  type BootCopy,
   type BootCtx,
   type BootDocumentLike,
   type BootWindowLike,
@@ -412,6 +413,7 @@ type App = Readonly<{
   shell: Readonly<{
     soundFont: SoundFontName;
     view: View | null;
+    game: Fake['State'] | null;
     recentGames: ReadonlyArray<RecentGame>;
     screen:
       | 'homeScreen'
@@ -533,8 +535,8 @@ type Options = Readonly<{
   hooks?: (log: Log) => NonNullable<BootConfig<Fake, App, Extra>['hooks']>;
   /** The config spells no `sound.enabled`, no `paint.paintSound` and no fills: the boot's defaults over the page (which then carries the inputs they fill). */
   defaults?: boolean;
-  /** The config's `copy`: the rules and About markup the boot renders into the page's slots (which the page then carries). */
-  copy?: Readonly<{ rules: string; about?: string }>;
+  /** The config's `copy`: the rules, About and glossary tables the boot renders into the page's slots (which the page then carries). */
+  copy?: BootCopy;
   /** The config's `seats` (an N-seat game): the sessions are seated without `net.seats` spelled. */
   seats?: boolean;
   /** The config carries a shell config: with `orientation: 'landscape'` (backgammon), or without it (a game that stays upright). */
@@ -797,6 +799,7 @@ const bootPage = (options: Options = {}) => {
     shell: {
       soundFont: 'default',
       view: null,
+      game: null,
       recentGames: [],
       screen: 'homeScreen',
       portraitPhone: false,
@@ -918,19 +921,19 @@ const bootPage = (options: Options = {}) => {
   const cfg: Parameters<typeof bootShell<Fake, App, Extra>>[0] = {
     page: { doc, win, nav, store, clock },
     game: { hook: '__fake', title: 'Fake', debug: 0 },
-    // prefs.ts `soundPref.enabled`: a stored 'on'/'off' wins; otherwise the boot's fallback.
-    sound: {
-      ...(options.defaults === true
-        ? {}
-        : {
+    // prefs.ts `soundPref.enabled`: a stored 'on'/'off' wins; otherwise the boot's fallback. The
+    // defaults case spells no `sound` at all, as every game's main.ts leaves it out.
+    ...(options.defaults === true
+      ? {}
+      : {
+          sound: {
             enabled: (s, fallback) => {
               log.fallbacks.push(fallback);
               const stored = s.readText(SOUND_KEY);
               return stored.ok ? stored.value === 'on' : fallback;
             },
-          }),
-      fontKey: FONT_KEY,
-    },
+          },
+        }),
     reducer: {
       initialApp,
       reduce,
@@ -993,7 +996,8 @@ const bootPage = (options: Options = {}) => {
           ding: { cue: 'good.trick', buzz: 9 },
         },
       },
-      prefs: { sound: soundPref(SOUND_KEY) },
+      // The store's keys the boot reads by name: the sound font's (the games' prefs carry prefs.ts `shellStore`'s `keys`).
+      prefs: { keys: { soundFont: FONT_KEY }, sound: soundPref(SOUND_KEY) },
       ...(options.seats === true ? { seats: { min: 2, max: 4 } } : {}),
     },
     net: {
@@ -1009,7 +1013,8 @@ const bootPage = (options: Options = {}) => {
           log.guests.push(this);
         }
       },
-      isGuestFrame,
+      // The defaults case leaves the predicate to the boot (web/shared/lib/protocol.ts `isGuestFrame`), as every game does.
+      ...(options.defaults === true ? {} : { isGuestFrame }),
       ...(options.lane === true ? { isEphemeral } : {}),
     },
     legal: (view) => [{ move: view.seat }],
@@ -1355,6 +1360,7 @@ describe('bootShell', () => {
       'fx',
       'act',
       'view',
+      'game',
       'setup',
       'legal',
       'soundFont',
@@ -1370,6 +1376,8 @@ describe('bootShell', () => {
     expect(b.log.intents.at(-1)).toEqual({ type: 'act', action: { move: 1 } });
     expect((hook['app'] as App).steps).toBe(1);
     expect(hook['app']).toBe(b.boot.app());
+    // `game` is the engine state on this device as the shell holds it (null before a game; the fake never deals one).
+    expect((hook['game'] as () => unknown)()).toBeNull();
     // `setup` is the shell's `position/load` over the state handed in.
     (hook['setup'] as (s: unknown) => void)({ n: 4 });
     expect(b.log.intents.at(-1)).toEqual({ type: 'position/load', state: { n: 4 } });
@@ -1406,7 +1414,11 @@ describe('bootShell', () => {
   test("the boot's defaults: the shell's speaker paint, name and code fills and sound reader, the copy into the page's slots before the game renders, and seated sessions off the config's seat range", () => {
     const b = bootPage({
       defaults: true,
-      copy: { rules: '<li>r</li>', about: '<p>a</p>' },
+      copy: {
+        rules: [{ id: 'r', heading: 'R', body: 'a rule about the turn' }],
+        about: ['About the turn.'],
+        glossary: [{ rule: 'r', terms: ['turn'] }],
+      },
       seats: true,
       hooks: (log) => ({
         render: () => {
@@ -1418,10 +1430,14 @@ describe('bootShell', () => {
     expect(b.p.get('soundBtn').text()).toBe('🔊');
     expect(b.p.get('soundBtn').attr('aria-pressed')).toBe('true');
     expect(b.log.order).toEqual(['render', 'bindAll', 'intent:home/init', 'intent:resume/auto']);
-    // The copy in both rules slots and the About slot (`renderCopy`).
-    expect(b.p.get('rulesList').text()).toBe('<li>r</li>');
-    expect(b.p.get('rulesOverlayList').text()).toBe('<li>r</li>');
-    expect(b.p.get('aboutCopy').text()).toBe('<p>a</p>');
+    // The copy in both rules slots and the About slot (`renderCopy` over `copyHtml`): the rules
+    // keyed, the About's jargon linked to its rule, a rule never linked to itself.
+    const rule = '<li id="rule-r"><strong>R:</strong> a rule about the turn</li>';
+    expect(b.p.get('rulesList').text()).toBe(rule);
+    expect(b.p.get('rulesOverlayList').text()).toBe(rule);
+    expect(b.p.get('aboutCopy').text()).toMatch(
+      /^<p>About the <a [^>]*data-rule="r">turn<\/a>\.<\/p>$/,
+    );
     // The fills: web/shared/ui/home.ts over the page's inputs, the default mark as `data-default`.
     b.run([
       { type: 'fillName', name: 'Ari', default: true },
