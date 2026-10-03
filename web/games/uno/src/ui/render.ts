@@ -34,9 +34,10 @@ import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindSheets,
-  paintSheet,
+  paintResult,
   paintShellChrome,
   paintShellSheets,
+  type ResultWords,
   type Sheet,
   shellButtons,
 } from '../../../../shared/ui/shellPaint.ts';
@@ -104,7 +105,7 @@ export const resultRowsHtml = (v: View): string =>
     .toSorted((a: ResultRow, b: ResultRow) => a.left - b.left)
     .map(
       (row: ResultRow) =>
-        safeHtml`<li class="score-row${row.seat === v.winner ? ' winner' : ''}"><span>${row.name}</span><strong>${row.seat === v.winner ? 'Out!' : cardsText(row.left)}</strong></li>`
+        safeHtml`<div class="score-row${row.seat === v.winner ? ' winner' : ''}"><span>${row.name}</span><strong>${row.seat === v.winner ? 'Out!' : cardsText(row.left)}</strong></div>`
           .markup,
     )
     .join('');
@@ -122,6 +123,12 @@ export const statusText = (v: View): string => {
 /** The result sheet's title: the winner, or "You win!" on the winner's own phone. */
 export const resultTitle = (v: View): string =>
   v.winner === v.seat ? 'You win!' : `${v.winner === null ? '' : nameAt(v, v.winner)} wins!`;
+
+/** The sheet's words at the game's end (shellPaint.ts `paintResult`): the title and the rows, keyed on themselves (fixed once over). */
+export const resultWords = (v: View): ResultWords => {
+  const rows = resultRowsHtml(v);
+  return { title: resultTitle(v), score: { key: rows, html: () => rows } };
+};
 
 const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const mine = v.turn === v.seat;
@@ -150,11 +157,7 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   toggleClass(requireId(doc, 'colorPicker'), 'hidden', !(mine && v.phase === 'color'));
   setText(requireId(doc, 'statusText'), statusText(v));
   const over = v.phase === 'gameOver';
-  paintSheet(doc, 'resultOverlay', over && app.table.curtain === null);
-  if (over) {
-    setText(requireId(doc, 'rsTitle'), resultTitle(v));
-    setHtml(requireId(doc, 'rsScore'), trustedHtml(resultRowsHtml(v)));
-  }
+  paintResult(doc, over && app.table.curtain === null, over ? resultWords(v) : null);
 };
 
 /** `#curtainOverlay`: the seat taking the phone, everyone else told to look away, what just happened. */

@@ -360,46 +360,7 @@ label {
   padding-left: 0.3em;
   margin: 6px 0 10px;
 }
-/* The waiting rooms' seat list (web/shared/ui/shellPaint.ts `paintWaiting`; docs/design/
-   n-seat-sessions.md §7): one class-free row per seat, the host first, each carrying data-seat,
-   data-connected and, on this device's own, data-you. Quiet by design: a dot in the connection
-   colours before the label, an empty seat dimmed, my own row in the cream weight. */
-.seat-list {
-  list-style: none;
-  margin: 8px auto 2px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-width: 260px;
-  text-align: left;
-  font-size: 0.92rem;
-}
-.seat-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--cream);
-  padding: 2px 0;
-}
-.seat-list li::before {
-  content: '';
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #5f7133;
-  flex-shrink: 0;
-}
-.seat-list li[data-connected='false'] {
-  color: var(--cream-dim);
-}
-.seat-list li[data-connected='false']::before {
-  background: #b3a693;
-}
-.seat-list li[data-you] {
-  font-weight: 600;
-}
+/* The waiting rooms' seat list is shell.css's (`.seat-list`, on the tokens). */
 /* The guest's name card under the seat list (web/shared/ui/shellPaint.ts `paintGuestName`; the
    owner, 2026-09-28: the client defines its own name): "Playing as" as the panel's other labels
    (dimmed cream, small caps), the box and its Change in one row (the box is the home screen's
@@ -608,25 +569,10 @@ label {
 }
 .sheet .rules-list + .btn,
 .sheet .row + .btn-block,
-.sheet .empty-note + .btn-block,
-.sheet .score-list + .btn-block {
+.sheet .empty-note + .btn-block {
   margin-top: 14px;
 }
-.score-list {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.score-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: var(--card-2);
-  font-size: 0.92rem;
-}
+/* The result sheet's rows are shell.css's (`.score-list .score-row`); the side's name is muted. */
 .score-row .who {
   color: var(--muted);
   flex-shrink: 0;

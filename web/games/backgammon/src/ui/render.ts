@@ -105,9 +105,11 @@ import {
   bindSheets as bindShellSheets,
   connDotClass as shellConnDotClass,
   connDotView,
+  paintResult,
   paintSheet,
   paintShellChrome,
   paintShellSheets,
+  type ResultWords,
   type Sheet,
   shellButtons,
   showToast as showShellToast,
@@ -546,21 +548,15 @@ export const nextWaits = (app: App, v: View): boolean => app.shell.role === 'gue
 export const nextLabel = (app: App, v: View): string =>
   nextWaits(app, v) ? `Waiting for ${v.opp.name}…` : v.matchOver ? 'Rematch' : 'Next game';
 
-const paintResult = (doc: DocumentLike, app: App, v: View): void => {
-  paintSheet(
-    doc,
-    'resultOverlay',
-    v.phase === 'over' && !v.matchOver && !app.shell.resultDismissed,
-  );
-  if (v.phase !== 'over') return;
-  const text = resultText(v);
-  setText(requireId(doc, 'rsTitle'), text.title);
-  setText(requireId(doc, 'rsSub'), text.sub);
-  setText(requireId(doc, 'rsScore'), text.score);
-  const next = requireId(doc, 'rsNextBtn');
-  setText(next, nextLabel(app, v));
-  setDisabled(next, nextWaits(app, v));
-};
+/** The sheet's words at `phase 'over'` (shellPaint.ts `paintResult`): the title, how it ended, the match score, Next game's live label and gate. */
+export const resultWords = (app: App, v: View): ResultWords => ({
+  ...resultText(v),
+  primary: { id: 'rsNextBtn', label: nextLabel(app, v), disabled: nextWaits(app, v) },
+});
+
+/** `#resultOverlay` (design §4.11): over the board between games, until Look at the table; the match's end is the endgame screen's. */
+const resultOpen = (app: App, v: View): boolean =>
+  v.phase === 'over' && !v.matchOver && !app.shell.resultDismissed;
 
 /** `#resultTitle`: `Ari takes the match 5–2`. */
 export const matchTitle = (v: View): string => {
@@ -712,7 +708,7 @@ const paintTable = (doc: DocumentLike, app: App, v: View, hits: ReadonlySet<Poin
   paintRoll(doc, app, v);
   paintControls(doc, app, v);
   toggleClass(requireId(doc, 'board'), 'inert', !isLive(app, v));
-  paintResult(doc, app, v);
+  paintResult(doc, resultOpen(app, v), v.phase === 'over' ? resultWords(app, v) : null);
   paintCube(doc, app, v);
 };
 

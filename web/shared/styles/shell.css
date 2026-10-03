@@ -470,6 +470,84 @@ body:not([data-frame]) {
 .rule-flash {
   animation: rule-flash 1.2s ease-out;
 }
+/* ---------- the result sheet's score rows (web/shared/markup/shell.ts resultMarkup; docs/design/shell-hoist.md row G) ---------- */
+/* `#rsScore` in its three shapes (web/shared/markup/shell.ts ResultSheet.score): a `score-list`,
+   one `.score-row` per seat or side, its name and its number apart, on the sheet's second surface
+   (uno's cards left, briscola's points, backgammon's match games on its endgame); a `score-line`,
+   one bold line in the accent (backgammon's match score); a `result-note`, one muted paragraph
+   (hive's how it ended). The rows are scoped to the list: fidice's ladder has `.score-row`s of its
+   own look. Uno and briscola spelled the rows alike (uno's at 0.95rem, now the shared 0.92); a theme
+   adds its marks (`.score-row.winner`, `.score-row .who`). */
+.score-line {
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0 0 14px;
+}
+.result-note {
+  margin: 6px 0 14px;
+  color: var(--muted);
+}
+.score-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.score-list .score-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--card-2);
+  font-size: 0.92rem;
+}
+.sheet .score-list + .btn-block {
+  margin-top: 14px;
+}
+
+/* ---------- the waiting rooms' seat list (web/shared/ui/shellPaint.ts paintWaiting; docs/design/n-seat-sessions.md §7; shell-hoist.md row I) ---------- */
+/* One class-free row per seat under the room's status, the host first, each carrying data-seat,
+   data-connected and, on this device's own, data-you. Quiet by design: a dot in the accent before
+   the label, an empty seat and its dot muted, my own row in the heavier weight. Uno's spelling, on
+   the tokens; briscola had literal olive and sand dots and cream text. */
+.seat-list {
+  list-style: none;
+  margin: 8px auto 2px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 260px;
+  text-align: left;
+  font-size: 0.92rem;
+}
+.seat-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.seat-list li::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent-dark);
+  flex-shrink: 0;
+}
+.seat-list li[data-connected='false'] {
+  color: var(--muted);
+}
+.seat-list li[data-connected='false']::before {
+  background: var(--muted);
+}
+.seat-list li[data-you] {
+  font-weight: 600;
+}
+
 /* ---------- the history panel (web/shared/ui/history.ts) ---------- */
 /* One <details> per event, newest last (docs/design/briscola-sound-history.md §6): the summary
    line is the row, a small marker its only chrome, and a click unfolds the detail as a two-column

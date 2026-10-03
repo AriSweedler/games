@@ -207,7 +207,7 @@ const playAt = (viewport: Viewport): void => {
     await page.locator('#resignBtn').click();
     await expect(page.locator('#resultOverlay')).toBeVisible();
     await expect(page.locator('#rsTitle')).toHaveText(`${NAMES[1]} wins!`);
-    await expect(page.locator('#rsNote')).toContainText(`${NAMES[0]} resigned`);
+    await expect(page.locator('#rsScore')).toContainText(`${NAMES[0]} resigned`);
     await page.locator('#rsContinueBtn').click();
     await expect(page.locator('#resultOverlay')).toBeHidden();
     await expect(page.locator('#board .hex.w, #board .hex.b')).toHaveCount(6);

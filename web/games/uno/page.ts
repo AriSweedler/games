@@ -13,6 +13,7 @@ import {
   type ShellCopy,
   type ShellNotes,
   type ShellPage,
+  resultMarkup,
 } from '../../shared/markup/shell.ts';
 import { seatNamesHtml } from '../../shared/markup/seatNames.ts';
 import { stepperHtml } from '../../shared/markup/stepper.ts';
@@ -126,17 +127,13 @@ ${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
       </div>`,
   curtainIcon: '',
   curtainExtra: '',
-  sheetsBefore: `
-    <!-- RESULT: one round is the game (the owner, 2026-10-02): the winner over the table, the cards
-         every other seat still held; Play again deals the same seats anew. -->
-    <div id="resultOverlay" class="overlay hidden">
-      <div class="sheet centered">
-        <div class="sheet-title" id="rsTitle">Game over</div>
-        <ul class="score-list" id="rsScore"></ul>
-        <button class="btn btn-go btn-block" id="rsAgainBtn">Play again</button>
-        <button class="btn btn-ghost btn-block btn-sm" id="rsLeaveBtn">Leave the table</button>
-      </div>
-    </div>`,
+  result: resultMarkup({
+    note: 'one round is the game (the owner, 2026-10-02): the winner over the table, the cards every other seat still held; Play again deals the same seats anew.',
+    score: 'list',
+    primary: { id: 'rsAgainBtn', label: 'Play again' },
+    secondary: { id: 'rsLeaveBtn', label: 'Leave the table' },
+  }),
+  sheetsBefore: '',
   sheetsAfter: '',
   rulesIcon: '',
 };

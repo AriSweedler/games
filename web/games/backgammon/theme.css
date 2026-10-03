@@ -587,19 +587,7 @@ label {
 .sheet .row + .btn-block {
   margin-top: 14px;
 }
-.score-line {
-  text-align: center;
-  font-weight: 700;
-  color: var(--accent);
-  margin: 0 0 14px;
-}
-.score-list {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.score-row,
+/* The endgame's score rows are shell.css's (`.score-list .score-row`); the history rows share their shape. */
 .history-row {
   display: flex;
   justify-content: space-between;
