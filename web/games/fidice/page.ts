@@ -19,23 +19,12 @@ import {
 } from '../../shared/markup/shell.ts';
 
 const copy: ShellCopy = {
-  modeOnline: 'Online',
-  modeLocal: 'Pass the phone',
   hostLabel: 'Host a table',
   joinLabel: 'Join a table',
-  joinBtnLabel: 'Sit down',
-  localBtnLabel: 'Start',
   localNote:
     'One phone, no internet needed. When the cup reaches someone new, the screen covers itself until they confirm it is them.',
-  hostWaitTitle: 'Your table',
-  hostWaitSubtitle: 'Have the others open this same page and enter the code',
-  openingMsg: 'Opening the table…',
-  keepOpenNote:
-    'Keep this screen open while the others sit down. If you switch apps, come straight back and the table reconnects on its own.',
   startLabel: 'Start',
-  curtainSub: '',
   revealLabel: 'Lift the cup',
-  rulesTitle: 'Rules',
   historyTitle: 'History',
 };
 
@@ -157,7 +146,6 @@ const blocks: ShellBlocks = {
             <button type="button" class="btn btn-ghost btn-sm hidden" id="removeLocalBtn">− Remove a player</button>
           </div>
         </div>`,
-  playExtra: '',
   extraPanels: `    <!-- LADDER TAB (plan §7 D12): the bid ladder, painted from M4. -->
     <div id="ladderPanel" class="tab-panel hidden">
       <div class="card-box ladder" id="ladderList"></div>
@@ -172,8 +160,6 @@ const blocks: ShellBlocks = {
         <label class="toggle" id="watchWrap"><input type="checkbox" id="watchCb"> I'll just watch</label>
       </div>`,
   guestWaitList: `      <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>`,
-  // The seat list's ` · you` row names my seat; no "Playing as …" line until the restyle decides.
-  guestSeatName: '',
   table: `  <!-- TABLE (plan §4 M2): the shell's five controls, the ladder button and the connection dot in
        the topbar; the names strip every shell table carries (#myName the chair this page plays,
        #oppName the others: what the shell specs read, M5); the cup, the bid card, the seats and
@@ -209,9 +195,6 @@ const blocks: ShellBlocks = {
     </div>
     <button class="btn btn-go btn-block" id="playAgainBtn">Play again</button>
   </div>`,
-  curtainIcon: '',
-  curtainExtra: '',
-  sheetsBefore: '',
   // The ladder in game (plan §7 D12): the same ladder as a sheet over the table, the bid marked.
   sheetsAfter: `
 <!-- LADDER (plan §7 D12): the bid ladder as a sheet over the table, the current bid marked. -->
@@ -224,7 +207,6 @@ const blocks: ShellBlocks = {
     <div class="ladder" id="ladderSheet"></div>
   </div>
 </div>`,
-  rulesIcon: '',
 };
 
 export const FIDICE_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };

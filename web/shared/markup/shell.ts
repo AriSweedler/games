@@ -14,6 +14,7 @@
 // partial and every placeholder filled: a hole no page fills or a value no partial reads is an error
 // here, never a silent page.
 import { err, ok, type Result } from '../lib/result.ts';
+import { GUEST_SEAT_NAME, seatListHtml } from './page.ts';
 
 /** The partials, web/shared/markup/shell/<name>.html: the page's skeleton and the five it lays out. */
 export const PARTIALS = ['page', 'home', 'waiting', 'curtain', 'sheets', 'toast'] as const;
@@ -22,8 +23,12 @@ export type PartialName = (typeof PARTIALS)[number];
 const INNER = ['home', 'waiting', 'curtain', 'sheets', 'toast'] as const;
 export type ShellTemplates = Readonly<Record<PartialName, string>>;
 
-/** The copy the shell pages spell differently: gin's room is backgammon's table. */
-export type ShellCopy = Readonly<{
+/**
+ * The words the partials read inline (`{{modeOnline}}` …). A page spells the four only its game
+ * knows and whatever it says differently from SHELL_COPY (`ShellCopy`): gin's room is
+ * backgammon's table.
+ */
+type Copy = Readonly<{
   /** The online mode's label in `#playSubmenu` and `#playModeSwitch` ('🌐 Online', 'Online'). */
   modeOnline: string;
   /** The pass-and-play mode's label ('📱 Pass &amp; Play', 'Pass the phone'). */
@@ -57,6 +62,34 @@ export type ShellCopy = Readonly<{
   /** The history sheet's title ('Hand history', 'This game'). */
   historyTitle: string;
 }>;
+
+/** The four words only the game knows: how its pass-and-play goes, what starting and revealing are called, what its history lists. */
+type OwnWords = 'localNote' | 'startLabel' | 'revealLabel' | 'historyTitle';
+
+/**
+ * The copy every table page spells alike, read where the page says nothing (uno, flip7 and
+ * briscola say every line of it; fidice names its host and join cards its own way; hive and
+ * backgammon say "your opponent" where a table of many says "the others"; gin's room spells each
+ * line as the legacy page did). The curtain's line under its title is empty but for backgammon's.
+ */
+export const SHELL_COPY: Readonly<Omit<Copy, OwnWords>> = {
+  modeOnline: 'Online',
+  modeLocal: 'Pass the phone',
+  hostLabel: 'Open a table',
+  joinLabel: 'Sit down at a table',
+  joinBtnLabel: 'Sit down',
+  localBtnLabel: 'Start',
+  hostWaitTitle: 'Your table',
+  hostWaitSubtitle: 'Have the others open this same page and enter the code',
+  openingMsg: 'Opening the table…',
+  keepOpenNote:
+    'Keep this screen open while the others sit down. If you switch apps, come straight back and the table reconnects on its own.',
+  curtainSub: '',
+  rulesTitle: 'Rules',
+};
+
+/** What a page spells of its copy: the four words only it knows, and any line of SHELL_COPY it says differently. */
+export type ShellCopy = Readonly<Pick<Copy, OwnWords> & Partial<Omit<Copy, OwnWords>>>;
 
 /** What a page's HTML comments say beyond the shared section names: each '' or the page's own words. */
 export type ShellNotes = Readonly<{
@@ -122,8 +155,12 @@ export type ShellLook = Readonly<{
 /**
  * The game's own markup, verbatim from its page: the residue the design row lists per game (gin:
  * table, endgame, six sheets, the scorer's screens, the sandbox and score panels, head, its target
- * inputs; backgammon: table, endgame, its sheets, head, its selects). Each is '' or lines carrying
- * their own indentation; a block that follows a blank line in the page begins with that blank line.
+ * inputs; backgammon: table, endgame, its sheets, head, its selects). Each is lines carrying their
+ * own indentation; a block that follows a blank line in the page begins with that blank line. The
+ * five without a `?` every page spells. The rest are extension slots: absent, one is '' and ''
+ * drops its line, so a page without it composes byte for byte as if it had spelled ''; `endgame`
+ * absent is `endgamePlaceholder`'s screen, and a page that says `seated: true` (ShellPage) gets
+ * the two seat lists and the guest's name card without spelling them.
  */
 export type ShellBlocks = Readonly<{
   /** `<!DOCTYPE html>` through `</head>`: the metadata, the title and the stylesheet links. */
@@ -131,67 +168,64 @@ export type ShellBlocks = Readonly<{
   /** The heading inside `#homeScreen`. */
   masthead: string;
   /** `#playSubmenu`'s buttons after Online and Pass & Play (gin's hidden Sandbox). */
-  submenuExtra: string;
+  submenuExtra?: string;
   /** `#topTabbar`'s buttons between Rules and About (gin's Score). */
-  extraTabs: string;
+  extraTabs?: string;
   /** `#playModeSwitch`'s buttons after the two (gin's hidden Sandbox). */
-  switchExtra: string;
+  switchExtra?: string;
   /** The host card between its label and its note, `#hostBtn` included (BLOCK_IDS). */
   hostFields: string;
   /** `#localModeContent` before `#localBtn`, `#p1NameInput` and `#p2NameInput` included (BLOCK_IDS). */
   localFields: string;
   /** `#playPanel` after `#localModeContent` (gin's sandbox panel). */
-  playExtra: string;
+  playExtra?: string;
   /**
    * `#playPanel`'s last child, after the mode panels: gin's fourth card `#homeRecent` (the recent
    * games, or "How it goes" for a fresh player), which fills the band a three-card form leaves under
-   * itself on a tall phone (docs/design/space-audit.md §5 "Closed by gin-home-column-bottom"). The
-   * first block a page may leave out (`result` below is the other): absent it is '', and '' drops
-   * the line, so a page without one composes byte for byte as before.
+   * itself on a tall phone (docs/design/space-audit.md §5 "Closed by gin-home-column-bottom").
    */
   homeExtra?: string;
   /**
    * The seat list under `#hostWaitStatus` (`#seatList`, shellPaint.ts SEAT_LIST_IDS: an N-seat
-   * page's, docs/design/n-seat-sessions.md §7; '' for a two-seat page, whose room has one seat to list).
+   * page's, docs/design/n-seat-sessions.md §7): a seated page's is the shell's (page.ts `seatListHtml`),
+   * fidice's carries the host's lobby controls under it, backgammon's is its phone cue, and a
+   * two-seat page's room has one seat to list.
    */
-  hostWaitList: string;
-  /** The same under `#guestWaitStatus` (`#guestSeatList`), or ''. */
-  guestWaitList: string;
+  hostWaitList?: string;
+  /** The same under `#guestWaitStatus` (`#guestSeatList`). */
+  guestWaitList?: string;
   /**
-   * The guest's own seat as the host named it, under that list (`#guestSeatName`, shellPaint.ts
-   * `paintWaiting` through `byId`: "Playing as …" off the shell's `seatedName`): the id-only element
-   * `<div id="guestSeatName" class="hidden"></div>` for backgammon and briscola, each theme styling
-   * it by id (no class, so the class contract has no new row); '' for gin, whose composed DOM the
-   * parity oracle (tools/parity/gin-dom-parity.ts) holds to the legacy page checkpoint for
-   * checkpoint, and for fidice, whose seat list's ` · you` row already names my seat (no
-   * "Playing as …" line until the restyle decides; web/games/fidice/page.ts).
+   * The guest's own seat as the host named it, under that list (page.ts GUEST_SEAT_NAME; shellPaint.ts
+   * `paintGuestName`): a seated page's and the two-seat pages' (hive, backgammon); none for gin,
+   * whose composed DOM the parity oracle (tools/parity/gin-dom-parity.ts) holds to the legacy page
+   * checkpoint for checkpoint, and for fidice, whose seat list's ` · you` row already names my seat
+   * (no "Playing as …" line until the restyle decides; web/games/fidice/page.ts).
    */
-  guestSeatName: string;
+  guestSeatName?: string;
   /** `#homeScreen`'s panels between Rules and About (gin's score panel). */
-  extraPanels: string;
+  extraPanels?: string;
   /** `#app`'s screens between the home and the waiting rooms (gin's scorer). */
-  extraScreens: string;
+  extraScreens?: string;
   /** `#tableScreen`. */
   table: string;
-  /** `#endgameScreen`. */
-  endgame: string;
+  /** `#endgameScreen`: the game's, or `endgamePlaceholder`'s where the game ends over its table. */
+  endgame?: string;
   /** The curtain sheet's first line (gin's phone emoji). */
-  curtainIcon: string;
+  curtainIcon?: string;
   /** The curtain sheet after `#curtainBtn` (backgammon's `#curtainHandoffBtn`). */
-  curtainExtra: string;
+  curtainExtra?: string;
   /**
    * The result sheet (docs/design/shell-hoist.md row G; `resultMarkup` below): where a game ends
-   * over its table, placed by sheets.html before the rules sheet. Optional as `homeExtra` is: a
-   * page whose game ends elsewhere (gin's round sheet and endgame, fidice's ladder, Flip 7's panel
-   * in the table) leaves it out, and '' drops the line.
+   * over its table, placed by sheets.html before the rules sheet. A page whose game ends elsewhere
+   * (gin's round sheet and endgame, fidice's ladder, Flip 7's panel in the table) leaves it out.
    */
   result?: string;
   /** The game's overlays between the curtain and the result sheet. */
-  sheetsBefore: string;
+  sheetsBefore?: string;
   /** The game's overlays between the history sheet and the toast. */
-  sheetsAfter: string;
+  sheetsAfter?: string;
   /** The rules sheet's first line (gin's book emoji). */
-  rulesIcon: string;
+  rulesIcon?: string;
 }>;
 
 /** One shell page: what web/games/<g>/page.ts declares and tools/shell-markup.ts composes. */
@@ -200,6 +234,12 @@ export type ShellPage = Readonly<{
   notes: ShellNotes;
   look: ShellLook;
   blocks: ShellBlocks;
+  /**
+   * The page seats a table of many (docs/design/n-seat-sessions.md §7; uno, flip7, briscola): the
+   * shell spells its two seat lists and the guest's name card (`SEATED_BLOCKS`), so the page
+   * declares none of the three, and declaring one is an error here.
+   */
+  seated?: true;
   /**
    * The game plays with the phone sideways (its `ShellConfig.orientation`,
    * docs/design/shared-shell.md "Playing sideways"): the composed page's `<body>` carries
@@ -337,6 +377,70 @@ export const resultMarkup = (sheet: ResultSheet): string =>
     '',
   ].join('\n');
 
+/** Every block as renderShell reads them: the page's over the defaults. */
+type Blocks = Readonly<Required<ShellBlocks>>;
+
+/** The three blocks a page with `seated: true` gets from the shell: the host's and the guest's seat lists, the guest's name card. */
+const SEATED_BLOCKS: Readonly<Pick<Blocks, 'hostWaitList' | 'guestWaitList' | 'guestSeatName'>> = {
+  hostWaitList: seatListHtml('seatList'),
+  guestWaitList: seatListHtml('guestSeatList'),
+  guestSeatName: GUEST_SEAT_NAME,
+};
+
+/** `text` as the pages wrap a block's comment: greedy at `width` columns, the first line behind `first`, the rest behind `rest`. */
+const wrapped = (text: string, first: string, rest: string, width = 100): string =>
+  text
+    .split(' ')
+    .reduce<ReadonlyArray<string>>((lines, word) => {
+      const last = lines.at(-1);
+      return last !== undefined && `${last} ${word}`.length <= width
+        ? [...lines.slice(0, -1), `${last} ${word}`]
+        : [...lines, `${lines.length === 0 ? first : rest}${word}`];
+    }, [])
+    .join('\n');
+
+/**
+ * The endgame screen of a page whose game ends somewhere else (uno's and hive's result sheet,
+ * Flip 7's panel over the table): the shell's fifth screen, which the page never shows, hidden
+ * with its heading, the comment above it saying where the game ends instead (`ends`, a sentence).
+ * Indented as page.html's blocks are (six spaces), the comment wrapped at 100 columns as the pages
+ * wrote it. The default `endgame` block says the result sheet over the table.
+ */
+export const endgamePlaceholder = (ends: string): string =>
+  [
+    wrapped(
+      `<!-- ENDGAME: the shell's fifth screen, which this page never shows: ${ends} -->`,
+      '      ',
+      '           ',
+    ),
+    '      <div id="endgameScreen" class="hidden">',
+    '        <h1>Game over</h1>',
+    '      </div>',
+  ].join('\n');
+
+/** What an extension slot is when the page leaves it out: nothing, but for the endgame screen. */
+const BLOCK_DEFAULTS: Readonly<
+  Omit<Blocks, 'head' | 'masthead' | 'hostFields' | 'localFields' | 'table'>
+> = {
+  submenuExtra: '',
+  extraTabs: '',
+  switchExtra: '',
+  playExtra: '',
+  homeExtra: '',
+  hostWaitList: '',
+  guestWaitList: '',
+  guestSeatName: '',
+  extraPanels: '',
+  extraScreens: '',
+  endgame: endgamePlaceholder('the game ends on the result sheet over the table.'),
+  curtainIcon: '',
+  curtainExtra: '',
+  result: '',
+  sheetsBefore: '',
+  sheetsAfter: '',
+  rulesIcon: '',
+};
+
 /**
  * The shell ids (web/shared/ui/ids.ts SHELL_IDS) the partials cannot spell, each in the block that
  * places it. The two pages lay the options out differently: `#hostBtn` sits inside gin's target row
@@ -420,7 +524,7 @@ const notOnce = (ids: ReadonlyArray<string>, markup: string): ReadonlyArray<stri
   ids.filter((id) => idsIn(markup).filter((seen) => seen === id).length !== 1);
 
 /** The ids a block must place (BLOCK_IDS, SCREEN_IDS) that it lacks or repeats. */
-const blockIdErrors = (blocks: ShellBlocks): ReadonlyArray<string> => [
+const blockIdErrors = (blocks: Blocks): ReadonlyArray<string> => [
   ...(Object.keys(BLOCK_IDS) as ReadonlyArray<keyof typeof BLOCK_IDS>).flatMap((block) =>
     notOnce(BLOCK_IDS[block], blocks[block]).map(
       (id) => `the ${block} block must carry id="${id}" exactly once`,
@@ -431,16 +535,30 @@ const blockIdErrors = (blocks: ShellBlocks): ReadonlyArray<string> => [
   ),
 ];
 
+/** The seated blocks a seated page spells itself: the shell spells them, so each is an error. */
+const seatedErrors = (page: ShellPage): ReadonlyArray<string> =>
+  page.seated === true
+    ? Object.keys(SEATED_BLOCKS)
+        .filter((name) => name in page.blocks)
+        .map((name) => `the page is seated: the shell spells its "${name}" block`)
+    : [];
+
 /**
  * The page, byte for byte as the partials and the page's values spell it: the five inner partials
- * filled and placed into page.html (each without its file's final newline, page.html with it). An
- * Err lists every unfilled placeholder, every unused value and every block id missing or repeated.
+ * filled and placed into page.html (each without its file's final newline, page.html with it),
+ * the page's copy over SHELL_COPY and its blocks over the slots' defaults (and, for a seated page,
+ * SEATED_BLOCKS). An Err lists every unfilled placeholder, every unused value and every block id
+ * missing or repeated.
  */
 export const renderShell = (templates: ShellTemplates, page: ShellPage): Result<string, string> => {
   const declared: Values = { ...page.copy, ...page.notes, ...page.look };
   // The composer's own slot beside the page's: page.html's `<body{{bodyAttrs}}>`.
-  const slots: Values = { ...declared, bodyAttrs: bodyAttrsOf(page) };
-  const own: Values = { homeExtra: '', result: '', ...page.blocks };
+  const slots: Values = { ...SHELL_COPY, ...declared, bodyAttrs: bodyAttrsOf(page) };
+  const own: Blocks = {
+    ...BLOCK_DEFAULTS,
+    ...(page.seated === true ? SEATED_BLOCKS : {}),
+    ...page.blocks,
+  };
   const inner: ReadonlyArray<Inner> = INNER.map((name) => ({
     name,
     filled: fillTemplate(name, templates[name], slots, own),
@@ -451,7 +569,7 @@ export const renderShell = (templates: ShellTemplates, page: ShellPage): Result<
   const whole = fillTemplate('page', templates.page, slots, { ...own, ...placed });
   const all = [...inner.map((one) => one.filled), whole];
   const used = new Set(all.flatMap((f) => f.used));
-  // The two optional blocks default to '' here, so only what the page itself declares is checked.
+  // The defaults are the shell's, so only what the page itself declares is checked.
   const unused = [...Object.keys(declared), ...Object.keys(page.blocks)]
     .filter((name) => !used.has(name))
     .map((name) => `"${name}" is declared by the page but no partial reads it`);
@@ -464,7 +582,8 @@ export const renderShell = (templates: ShellTemplates, page: ShellPage): Result<
     ...all.flatMap((f) => f.errors),
     ...unused,
     ...unplayed,
-    ...blockIdErrors(page.blocks),
+    ...seatedErrors(page),
+    ...blockIdErrors(own),
   ];
   return errors.length === 0 ? ok(whole.lines.join('\n')) : err(errors.join('\n'));
 };

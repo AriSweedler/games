@@ -5,13 +5,16 @@
 // files by test/dist/shell-markup.test.ts.
 import { describe, expect, test } from 'vitest';
 
+import { GUEST_SEAT_NAME, seatListHtml } from './page.ts';
 import {
   BLOCK_IDS,
   GATE_IDS,
   RESULT_IDS,
   PARTIALS,
   SCREEN_IDS,
+  SHELL_COPY,
   bodyAttrsOf,
+  endgamePlaceholder,
   gateMarkup,
   idsIn,
   resultMarkup,
@@ -91,6 +94,7 @@ const blocks: ShellBlocks = {
   endgame: '  <div id="endgameScreen"></div>',
   curtainIcon: '',
   curtainExtra: '',
+  result: '',
   sheetsBefore: '\n<div id="own"></div>',
   sheetsAfter: '',
   rulesIcon: '',
@@ -158,10 +162,52 @@ describe('renderShell', () => {
     expect(rendered.value).toContain('<i></i>');
   });
 
-  test('homeExtra is the one block a page may leave out: absent it composes as empty; set, it follows playExtra', () => {
-    const { homeExtra, ...bare } = blocks;
-    expect(homeExtra).toBe('');
-    expect(renderShell(templates, { ...page, blocks: bare })).toEqual(rendered);
+  test('an extension slot a page leaves out composes as if it had spelled it empty; set, homeExtra follows playExtra', () => {
+    const {
+      submenuExtra,
+      extraTabs,
+      switchExtra,
+      playExtra,
+      homeExtra,
+      hostWaitList,
+      guestWaitList,
+      guestSeatName,
+      extraPanels,
+      extraScreens,
+      curtainIcon,
+      curtainExtra,
+      result,
+      sheetsAfter,
+      rulesIcon,
+      ...spelled
+    } = blocks;
+    expect([
+      submenuExtra,
+      extraTabs,
+      switchExtra,
+      playExtra,
+      homeExtra,
+      hostWaitList,
+      guestWaitList,
+      guestSeatName,
+      extraPanels,
+      extraScreens,
+      curtainIcon,
+      curtainExtra,
+      result,
+      sheetsAfter,
+      rulesIcon,
+    ]).toEqual(Array.from({ length: 15 }, () => ''));
+    expect(Object.keys(spelled).sort()).toEqual([
+      'endgame',
+      'head',
+      'hostFields',
+      'localFields',
+      'masthead',
+      'sheetsBefore',
+      'table',
+    ]);
+    expect(renderShell(templates, { ...page, blocks: spelled })).toEqual(rendered);
     const extra = renderShell(templates, {
       ...page,
       blocks: { ...blocks, playExtra: '  <p></p>', homeExtra: '  <div id="homeRecent"></div>' },
@@ -169,6 +215,110 @@ describe('renderShell', () => {
     expect(extra.ok).toBe(true);
     if (!extra.ok) return;
     expect(extra.value).toContain('  <p></p>\n  <div id="homeRecent"></div>\n');
+  });
+
+  test('the endgame left out is the placeholder screen, saying the game ends on the result sheet over the table', () => {
+    const { endgame, ...noEndgame } = blocks;
+    expect(endgame).toBe('  <div id="endgameScreen"></div>');
+    const placeholder = renderShell(templates, { ...page, blocks: noEndgame });
+    expect(placeholder.ok).toBe(true);
+    if (!placeholder.ok) return;
+    expect(placeholder.value).toContain(
+      endgamePlaceholder('the game ends on the result sheet over the table.'),
+    );
+    expect(placeholder.value).not.toContain(endgame);
+    // The placeholder is a block like any other: the leave button it lacks must be the table's.
+    const withoutLeave = renderShell(templates, {
+      ...page,
+      blocks: { ...noEndgame, table: blocks.table.replace('<button id="leaveBtn"></button>', '') },
+    });
+    expect(withoutLeave).toEqual({
+      ok: false,
+      error: 'the table and endgame blocks must carry id="leaveBtn" exactly once between them',
+    });
+  });
+
+  test('the copy a page does not spell is SHELL_COPY; what it spells wins', () => {
+    const { localNote, startLabel, revealLabel, historyTitle } = copy;
+    const own = renderShell(templates, {
+      ...page,
+      copy: { localNote, startLabel, revealLabel, historyTitle, modeLocal: 'Pass the phone' },
+    });
+    expect(own.ok).toBe(true);
+    if (!own.ok) return;
+    expect(own.value).toContain('<i>Pass the phone</i>');
+    expect(own.value).toContain(`<i>${SHELL_COPY.joinLabel}</i>`);
+    expect(own.value).toContain(`<i>${SHELL_COPY.keepOpenNote}</i>`);
+    expect(own.value).toContain('<i>note</i>');
+    expect(own.value).not.toContain('<i>Local</i>');
+    expect(own.value).not.toContain('<i>sub</i>');
+    expect(SHELL_COPY).toEqual({
+      modeOnline: 'Online',
+      modeLocal: 'Pass the phone',
+      hostLabel: 'Open a table',
+      joinLabel: 'Sit down at a table',
+      joinBtnLabel: 'Sit down',
+      localBtnLabel: 'Start',
+      hostWaitTitle: 'Your table',
+      hostWaitSubtitle: 'Have the others open this same page and enter the code',
+      openingMsg: 'Opening the table…',
+      keepOpenNote:
+        'Keep this screen open while the others sit down. If you switch apps, come straight back and the table reconnects on its own.',
+      curtainSub: '',
+      rulesTitle: 'Rules',
+    });
+  });
+
+  test('a seated page gets the two seat lists and the guest name card from the shell; one it spells itself is an Err', () => {
+    const { hostWaitList, guestWaitList, guestSeatName, ...bare } = blocks;
+    expect([hostWaitList, guestWaitList, guestSeatName]).toEqual(['', '', '']);
+    const seated = renderShell(templates, { ...page, blocks: bare, seated: true });
+    expect(seated.ok).toBe(true);
+    if (!seated.ok) return;
+    expect(seated.value).toContain(
+      `${seatListHtml('seatList')}\n${seatListHtml('guestSeatList')}\n${GUEST_SEAT_NAME}\n`,
+    );
+    expect(seated.value.split('\n').filter((line) => line.includes('class="seat-list"'))).toEqual([
+      '      <ul class="seat-list" id="seatList" aria-label="Seats"></ul>',
+      '      <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>',
+    ]);
+    expect(renderShell(templates, { ...page, blocks, seated: true })).toEqual({
+      ok: false,
+      error: [
+        'the page is seated: the shell spells its "hostWaitList" block',
+        'the page is seated: the shell spells its "guestWaitList" block',
+        'the page is seated: the shell spells its "guestSeatName" block',
+      ].join('\n'),
+    });
+  });
+
+  test('endgamePlaceholder: the hidden fifth screen under a comment wrapped at 100 columns as the pages wrote it', () => {
+    // Flip 7's, uno's and hive's words, as their pages had them line for line.
+    expect(
+      endgamePlaceholder('the game ends on the result panel over the table, with Play again.'),
+    ).toBe(
+      [
+        "      <!-- ENDGAME: the shell's fifth screen, which this page never shows: the game ends on the",
+        '           result panel over the table, with Play again. -->',
+        '      <div id="endgameScreen" class="hidden">',
+        '        <h1>Game over</h1>',
+        '      </div>',
+      ].join('\n'),
+    );
+    expect(
+      endgamePlaceholder('a round and the game end on the result sheet over the table.')
+        .split('\n')
+        .slice(0, 2),
+    ).toEqual([
+      "      <!-- ENDGAME: the shell's fifth screen, which this page never shows: a round and the game end",
+      '           on the result sheet over the table. -->',
+    ]);
+    const short = endgamePlaceholder('elsewhere.');
+    expect(short.split('\n')[0]).toBe(
+      "      <!-- ENDGAME: the shell's fifth screen, which this page never shows: elsewhere. -->",
+    );
+    expect(short.split('\n').every((line) => line.length <= 100)).toBe(true);
+    expect(idsIn(short)).toEqual(['endgameScreen']);
   });
 
   test("the inner partials lose their file's final newline; page.html keeps its own", () => {

@@ -7,35 +7,23 @@
 // UNO's accent alone (theme.css). The residue here (`blocks`) is the head, the table (the seats with
 // their card counts, the names strip, the pile, the colour in play, the hand, the controls) and the
 // result sheet (the winner, Play again); the Open Graph card is assets/splash.svg rendered to web/public/games/uno/splash.png.
-import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
+import { THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
 import {
   type ShellBlocks,
   type ShellCopy,
   type ShellNotes,
   type ShellPage,
+  endgamePlaceholder,
   resultMarkup,
 } from '../../shared/markup/shell.ts';
 import { seatNamesHtml } from '../../shared/markup/seatNames.ts';
-import { stepperHtml } from '../../shared/markup/stepper.ts';
+import { seatedHostFields, stepperHtml } from '../../shared/markup/stepper.ts';
 
 const copy: ShellCopy = {
-  modeOnline: 'Online',
-  modeLocal: 'Pass the phone',
-  hostLabel: 'Open a table',
-  joinLabel: 'Sit down at a table',
-  joinBtnLabel: 'Sit down',
-  localBtnLabel: 'Start',
   localNote:
     'One phone, no internet needed. A curtain names whose turn it is; everyone else looks away.',
-  hostWaitTitle: 'Your table',
-  hostWaitSubtitle: 'Have the others open this same page and enter the code',
-  openingMsg: 'Opening the table…',
-  keepOpenNote:
-    'Keep this screen open while the others sit down. If you switch apps, come straight back and the table reconnects on its own.',
   startLabel: 'Deal',
-  curtainSub: '',
   revealLabel: 'Show my hand',
-  rulesTitle: 'Rules',
   historyTitle: 'History',
 };
 
@@ -62,21 +50,11 @@ const blocks: ShellBlocks = {
           <h1>UNO</h1>
           <div class="subtitle">Match the colour or the number, for two to twelve</div>
         </div>`,
-  submenuExtra: '',
-  extraTabs: '',
-  switchExtra: '',
-  hostFields: `${stepperHtml({ id: 'playersCount', ...PLAYERS }, '              ')}
-              <button class="btn btn-go btn-block" id="hostBtn">Open a table</button>`,
+  hostFields: seatedHostFields(PLAYERS),
   localFields: `            <div class="card-box">
 ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
 ${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
             </div>`,
-  playExtra: '',
-  extraPanels: '',
-  extraScreens: '',
-  hostWaitList: `      <ul class="seat-list" id="seatList" aria-label="Seats"></ul>`,
-  guestWaitList: `      <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>`,
-  guestSeatName: GUEST_SEAT_NAME,
   table: `      <!-- TABLE (docs/design/uno.md §9): every seat with its card count (the turn lit), the names
            strip (me, the seat after me and its connection), the pile with the colour in play, my
            hand, Draw and Pass, UNO and Call out UNO (§7, shown to the seats they apply to), the
@@ -120,22 +98,13 @@ ${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
           <button class="btn btn-secondary grow hidden" id="callOutBtn">Call out UNO</button>
         </div>
       </div>`,
-  endgame: `      <!-- ENDGAME: the shell's fifth screen, which this page never shows: a round and the game end
-           on the result sheet over the table. -->
-      <div id="endgameScreen" class="hidden">
-        <h1>Game over</h1>
-      </div>`,
-  curtainIcon: '',
-  curtainExtra: '',
+  endgame: endgamePlaceholder('a round and the game end on the result sheet over the table.'),
   result: resultMarkup({
     note: 'one round is the game (the owner, 2026-10-02): the winner over the table, the cards every other seat still held; Play again deals the same seats anew.',
     score: 'list',
     primary: { id: 'rsAgainBtn', label: 'Play again' },
     secondary: { id: 'rsLeaveBtn', label: 'Leave the table' },
   }),
-  sheetsBefore: '',
-  sheetsAfter: '',
-  rulesIcon: '',
 };
 
-export const UNO_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };
+export const UNO_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks, seated: true };

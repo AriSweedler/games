@@ -11,27 +11,18 @@ import {
   type ShellCopy,
   type ShellNotes,
   type ShellPage,
+  endgamePlaceholder,
   resultMarkup,
 } from '../../shared/markup/shell.ts';
 
 const copy: ShellCopy = {
-  modeOnline: 'Online',
-  modeLocal: 'Pass the phone',
-  hostLabel: 'Open a table',
-  joinLabel: 'Sit down at a table',
-  joinBtnLabel: 'Sit down',
-  localBtnLabel: 'Start',
   localNote:
     'One phone, no internet needed. Nothing is hidden: a short pause names whose turn it is as the phone changes hands.',
-  hostWaitTitle: 'Your table',
   hostWaitSubtitle: 'Have your opponent open this same page and enter the code',
-  openingMsg: 'Opening the table…',
   keepOpenNote:
     'Keep this screen open while your opponent sits down. If you switch apps, come straight back and the table reconnects on its own.',
   startLabel: 'Start',
-  curtainSub: '',
   revealLabel: 'Show the board',
-  rulesTitle: 'Rules',
   historyTitle: 'History',
 };
 
@@ -58,9 +49,6 @@ const blocks: ShellBlocks = {
           <h1>Hive</h1>
           <div class="subtitle">Place and move the bugs; surround the Queen</div>
         </div>`,
-  submenuExtra: '',
-  extraTabs: '',
-  switchExtra: '',
   hostFields: `              <button class="btn btn-go btn-block" id="hostBtn">Open a table</button>`,
   localFields: `            <div class="card-box">
               <div class="row">
@@ -83,10 +71,6 @@ const blocks: ShellBlocks = {
             <input type="checkbox" id="hintsToggle" checked />
             <span>Show where a picked tile may go<br /><small class="muted">Off: put it anywhere and Confirm; a move against the rules is refused and told why.</small></span>
           </label>`,
-  extraPanels: '',
-  extraScreens: '',
-  hostWaitList: '',
-  guestWaitList: '',
   guestSeatName: GUEST_SEAT_NAME,
   table: `      <!-- TABLE (docs/design/hive.md §7): the names strip (a hex swatch for each seat's side, its
            name, the other seat's connection; it fits 390px between six icon buttons), Black's hand above the board and White's below, the SVG hive between
@@ -131,13 +115,7 @@ const blocks: ShellBlocks = {
           <button class="btn btn-go grow hidden" id="againBtn">Play again</button>
         </div>
       </div>`,
-  endgame: `      <!-- ENDGAME: the shell's fifth screen, which this page never shows: the game ends on the
-           result sheet over the board. -->
-      <div id="endgameScreen" class="hidden">
-        <h1>Game over</h1>
-      </div>`,
-  curtainIcon: '',
-  curtainExtra: '',
+  endgame: endgamePlaceholder('the game ends on the result sheet over the board.'),
   result: resultMarkup({
     note: 'the end over the final board (the owner: "understand what happened before proceeding"); Continue leaves the board on show, Play again starts anew.',
     score: 'note',
@@ -145,9 +123,6 @@ const blocks: ShellBlocks = {
     primary: { id: 'rsAgainBtn', label: 'Play again' },
     secondary: { id: 'rsLeaveBtn', label: 'Leave the table' },
   }),
-  sheetsBefore: '',
-  sheetsAfter: '',
-  rulesIcon: '',
 };
 
 export const HIVE_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };

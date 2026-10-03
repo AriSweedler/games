@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest';
 
-import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from './page.ts';
+import { GUEST_SEAT_NAME, THEME_LOOK, headHtml, seatListHtml } from './page.ts';
 import { idsIn } from './shell.ts';
 
-// The blocks every page shares (docs/design/shell-hoist.md row J): the theme look, the head and the
-// guest's name field. Each game's page.ts spells only its own values; test/dist/shell-markup.test.ts
-// pins what they compose to.
+// The blocks every page shares (docs/design/shell-hoist.md row J): the theme look, the head, the
+// guest's name field and the seat list. Each game's page.ts spells only its own values;
+// test/dist/shell-markup.test.ts pins what they compose to.
 describe('the shared page blocks', () => {
   test('THEME_LOOK is the shell.css look: a class per hook, no inline style', () => {
     expect(THEME_LOOK.resumeClass).toBe(' resume');
@@ -111,5 +111,12 @@ describe('the shared page blocks', () => {
     // A block: indented as page.html's waiting partial places it, no trailing newline.
     expect(GUEST_SEAT_NAME.startsWith('      <div')).toBe(true);
     expect(GUEST_SEAT_NAME.endsWith('      </div>')).toBe(true);
+  });
+
+  test('seatListHtml is the one-line seat list under a waiting room status, by the id paintWaiting fills', () => {
+    expect(seatListHtml('seatList')).toBe(
+      '      <ul class="seat-list" id="seatList" aria-label="Seats"></ul>',
+    );
+    expect(idsIn(seatListHtml('guestSeatList'))).toEqual(['guestSeatList']);
   });
 });

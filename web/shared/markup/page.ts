@@ -1,10 +1,12 @@
 // The blocks every shell page.ts shares (docs/design/shell-hoist.md row J): the theme look, the
-// head block and the guest's name card, each spelled once here and composed into the committed
-// web/games/<g>/index.html by tools/shell-markup.ts. A game's page.ts spells only its own values
-// (its titles, its description, its extra head tags); gin's legacy page keeps its own look and
-// head. These strings are the page's markup, not TypeScript that toggles a class, so
-// test/dist/classes.ts reads them as markup through the composed page, as it reads every page.ts
-// (the file is named page.ts for that filter). Pure: no file, no DOM.
+// head block, the guest's name card and the waiting rooms' seat list, each spelled once here and
+// composed into the committed web/games/<g>/index.html by tools/shell-markup.ts (shell.ts
+// `renderShell` places the last two itself for a page that says `seated: true`). A game's page.ts
+// spells only its own values (its titles, its description, its extra head tags); gin's legacy page
+// keeps its own look and head. These strings are the page's markup, not TypeScript that toggles a
+// class, so test/dist/classes.ts reads them as markup through the composed page, as it reads every
+// page.ts (the file is named page.ts for that filter). Pure: no file, no DOM; the one import is a
+// type, so shell.ts reading this file is no cycle.
 import type { ShellLook } from './shell.ts';
 
 /**
@@ -107,7 +109,8 @@ export const headHtml = (head: ShellHead): string => {
  * shell.ts `name/rename`), and a note naming who sees it. Styled by id in each theme.css
  * (`#guestSeatName`, `#guestNameNote`; no new class); hidden until the host's welcome names the
  * seat. The four ids are each page's (tools/games.ts `pageShape.ids`), not SHELL_IDS: gin's page
- * leaves the block out for its DOM parity oracle, and fidice's has no guest name yet.
+ * leaves the block out for its DOM parity oracle, and fidice's has no guest name yet. A seated
+ * page's `guestSeatName` block; hive's and backgammon's pages place it themselves.
  */
 export const GUEST_SEAT_NAME = `      <div id="guestSeatName" class="hidden">
         <label for="guestNameInput">Playing as</label>
@@ -117,3 +120,12 @@ export const GUEST_SEAT_NAME = `      <div id="guestSeatName" class="hidden">
         </div>
         <div class="muted" id="guestNameNote"></div>
       </div>`;
+
+/**
+ * A waiting room's seat list (web/shared/ui/shellPaint.ts `paintWaiting`, SEAT_LIST_IDS;
+ * docs/design/n-seat-sessions.md §7): one row per seat as the table fills, the host first, each
+ * carrying data-seat, data-connected and, on this device's own, data-you (shell.css `.seat-list`).
+ * Indented as waiting.html places the block.
+ */
+export const seatListHtml = (id: string): string =>
+  `      <ul class="seat-list" id="${id}" aria-label="Seats"></ul>`;

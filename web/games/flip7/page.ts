@@ -3,35 +3,23 @@
 // pins byte for byte. The residue here is the head, the two Players steppers (two to twelve), the
 // twelve pass-and-play name inputs, the table (the topbar, the names strip, the round, every seat's
 // line, Hit and Stay, the taker picker, the round's scores) and the endgame screen the shell requires.
-import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
+import { THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
 import {
   type ShellBlocks,
   type ShellCopy,
   type ShellNotes,
   type ShellPage,
+  endgamePlaceholder,
 } from '../../shared/markup/shell.ts';
-import { stepperHtml } from '../../shared/markup/stepper.ts';
+import { seatedHostFields, stepperHtml } from '../../shared/markup/stepper.ts';
 
 /** Both steppers' bounds and first value: two to twelve players (the owner, 2026-10-02). */
 const PLAYERS = { label: 'Players', min: 2, max: 12, value: 2, noun: 'players' } as const;
 
 const copy: ShellCopy = {
-  modeOnline: 'Online',
-  modeLocal: 'Pass the phone',
-  hostLabel: 'Open a table',
-  joinLabel: 'Sit down at a table',
-  joinBtnLabel: 'Sit down',
-  localBtnLabel: 'Start',
   localNote: 'One phone, no internet needed. Every card is face up: pass it round the table.',
-  hostWaitTitle: 'Your table',
-  hostWaitSubtitle: 'Have the others open this same page and enter the code',
-  openingMsg: 'Opening the table…',
-  keepOpenNote:
-    'Keep this screen open while the others sit down. If you switch apps, come straight back and the table reconnects on its own.',
   startLabel: 'Deal',
-  curtainSub: '',
   revealLabel: 'Start',
-  rulesTitle: 'Rules',
   historyTitle: 'Recent games',
 };
 
@@ -56,13 +44,9 @@ const blocks: ShellBlocks = {
           <h1>Flip 7</h1>
           <div class="subtitle">Press your luck, two to twelve players</div>
         </div>`,
-  submenuExtra: '',
-  extraTabs: '',
-  switchExtra: '',
   // The seat count is the shared stepper (web/shared/markup/stepper.ts; the owner, 2026-10-02: "not
   // a dropdown but a number with - and + buttons on the side"), two to twelve, on both cards.
-  hostFields: `${stepperHtml({ id: 'playersCount', ...PLAYERS }, '              ')}
-              <button class="btn btn-go btn-block" id="hostBtn">Open a table</button>`,
+  hostFields: seatedHostFields(PLAYERS),
   localFields: `            <div class="card-box">
 ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
               <div class="row">
@@ -166,12 +150,6 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
                 />
               </div>
             </div>`,
-  playExtra: '',
-  extraPanels: '',
-  extraScreens: '',
-  hostWaitList: `      <ul class="seat-list" id="seatList" aria-label="Seats"></ul>`,
-  guestWaitList: `      <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>`,
-  guestSeatName: GUEST_SEAT_NAME,
   table: `      <!-- TABLE (docs/design/flip7.md §8): every seat's line, face up, in seat order; mine is
            marked data-you. Hit and Stay show for the seat whose turn it is, the taker picker for the
            seat that flipped an action card, the scores when a round ends. -->
@@ -238,12 +216,7 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
           <button class="btn btn-go btn-block hidden" id="replayBtn">Play again</button>
         </div>
       </div>`,
-  endgame: `      <!-- ENDGAME: the shell's fifth screen, which this page never shows: the game ends on the
-           result panel over the table, with Play again. -->
-      <div id="endgameScreen" class="hidden">
-        <h1>Game over</h1>
-      </div>`,
-  curtainIcon: '',
+  endgame: endgamePlaceholder('the game ends on the result panel over the table, with Play again.'),
   curtainExtra: `        <button class="btn btn-ghost btn-block btn-sm" id="curtainHandoffBtn">
           Continue online
         </button>`,
@@ -258,8 +231,6 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
         <button class="btn btn-go btn-block" id="continueBtn">Continue</button>
       </div>
     </div>`,
-  sheetsAfter: '',
-  rulesIcon: '',
 };
 
-export const FLIP7_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };
+export const FLIP7_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks, seated: true };
