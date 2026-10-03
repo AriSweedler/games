@@ -50,6 +50,8 @@
     // The number stepper's binder and painter (web/shared/ui/stepper.ts): DOM, as home.ts is.
     "web/shared/ui/stepper*.ts",
     // The seat-name inputs' binder and painter (web/shared/ui/seatNames.ts): DOM, over home.ts.
-    "web/shared/ui/seatNames*.ts"
+    "web/shared/ui/seatNames*.ts",
+    // The seated games' home (web/shared/ui/seatedHome.ts): DOM, composing home.ts, stepper.ts and seatNames.ts.
+    "web/shared/ui/seatedHome*.ts"
   ]
 }
