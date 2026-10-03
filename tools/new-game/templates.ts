@@ -429,7 +429,8 @@ import {
   type Room,
 } from '../protocol.ts';
 
-export const { Host: HostSession, Guest: GuestSession } = sessionsFor<GuestFrame, HostFrame, Room>(
+/** The pair the boot takes whole (\`net: SESSIONS\`). */
+export const SESSIONS = sessionsFor<GuestFrame, HostFrame, Room>(
   '${slug}',
   {
     decodeGuestFrame,
@@ -701,9 +702,9 @@ const rulesTs = (
 ): string => `// The Rules tab and the in-game rules sheet (docs/design/${slug}.md §4; the owner, 2026-10-02: "the
 // ruleset to teach players should be as short as possible, ideally fitting on 1 screen"): the goal,
 // the turn, then the special cases one line each; the long form is docs/design/${slug}.md. The About
-// copy names the page. Both are static, filled once at boot (web/shared/ui/shellPaint.ts \`renderCopy\`). TODO: the
+// copy names the page. Both are tables the boot renders once (web/shared/edge/boot.ts \`copy\`). TODO: the
 // real rules, as few lines as fit 390x844.
-import { rulesListHtml, type Glossary, type RuleItem } from '../../../../shared/ui/glossary.ts';
+import type { Glossary, RuleItem } from '../../../../shared/ui/glossary.ts';
 
 /** The words linked to their rule (docs/design/glossary-links.md): "pass" in the goal opens the Turn rule. */
 export const GLOSSARY: Glossary = [{ rule: 'turn', terms: ['pass', 'passes'] }];
@@ -718,8 +719,6 @@ export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
   { id: 'end', heading: 'The end', body: 'After the tenth pass the draw names the winner.' },
 ];
 
-export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);
-
 export const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
   '${title.replace(/'/g, '’')}, for two. This is the scaffold’s placeholder: each pass hands the turn over, and the tenth decides the game on a draw.',
   'Pass one phone back and forth, or open a table online and send the link.',
@@ -728,8 +727,8 @@ export const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
 
 const rulesTestTs = (): string => `import { describe, expect, test } from 'vitest';
 
-import { aboutHtml } from '../../../../shared/ui/glossary.ts';
-import { ABOUT_PARAGRAPHS, GLOSSARY, RULES_ITEMS, rulesItemsHtml } from './rules.ts';
+import { aboutHtml, rulesListHtml } from '../../../../shared/ui/glossary.ts';
+import { ABOUT_PARAGRAPHS, GLOSSARY, RULES_ITEMS } from './rules.ts';
 
 describe('the rules', () => {
   test('short enough for one phone screen: the goal, the turn and the end, under 150 words in all', () => {
@@ -739,7 +738,7 @@ describe('the rules', () => {
   });
 
   test('the jargon links: the goal to the turn, the About to the turn', () => {
-    const html = rulesItemsHtml();
+    const html = rulesListHtml(RULES_ITEMS, GLOSSARY);
     expect(html).toContain('<li id="rule-goal">');
     expect(html).toMatch(/id="rule-goal">.*data-rule="turn"/);
     expect(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY)).toContain('data-rule="turn">pass</a>');
@@ -1314,15 +1313,12 @@ const mainTs = (
 // (\`browserPage\`), the real Transport, \`Math.random\` (or the harness's \`window.__rng\`), Web Audio,
 // vibration and the wake lock, handed to the reducer (src/ui/state.ts), the sessions (src/net) and
 // the paint (src/ui/render.ts). \`window.${hook}\` (the documented test hook) is the boot's: \`act\`,
-// \`view\`, \`setup\`, \`legal\` and the shared rest; a game's own members go under \`hooks.hook\`.
+// \`view\`, \`game\`, \`setup\`, \`legal\` and the shared rest; a game's own members go under \`hooks.hook\`.
 import { bootShell, browserPage } from '../../shared/edge/boot.ts';
-import { aboutHtml } from '../../shared/ui/glossary.ts';
 import { legalActions } from './src/engine/view.ts';
-import { GuestSession, HostSession } from './src/net/sessions.ts';
-import { isGuestFrame } from './src/protocol.ts';
-import { STORAGE_KEYS } from './src/storage.ts';
+import { SESSIONS } from './src/net/sessions.ts';
 import { bindAll, paint } from './src/ui/render.ts';
-import { ABOUT_PARAGRAPHS, GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
+import { ABOUT_PARAGRAPHS, GLOSSARY, RULES_ITEMS } from './src/ui/rules.ts';
 import {
   reducer,
   ${upper},
@@ -1333,12 +1329,11 @@ import {
 bootShell<${pascal}, App>({
   page: browserPage(),
   game: { hook: '${hook}', title: '${title.replace(/'/g, "\\'")}', debug: 0 },
-  sound: { fontKey: STORAGE_KEYS.soundFont },
   reducer,
   paint: { paint, bindAll },
   config: ${upper},
-  copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
-  net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
+  copy: { rules: RULES_ITEMS, about: ABOUT_PARAGRAPHS, glossary: GLOSSARY },
+  net: SESSIONS,
   legal: legalActions,
 });
 `;

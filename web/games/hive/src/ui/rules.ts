@@ -9,12 +9,7 @@
 // the game's own name in lower case, as briscola's About does: `linkJargon` links a term's first
 // occurrence in any case, so a leading "Hive" would take the link and leave the word plain). Both
 // are static, filled once at boot (web/shared/ui/shellPaint.ts `renderCopy`).
-import {
-  rulesListHtml,
-  type Glossary,
-  type RuleGroup,
-  type RuleItem,
-} from '../../../../shared/ui/glossary.ts';
+import type { Glossary, RuleGroup, RuleItem } from '../../../../shared/ui/glossary.ts';
 import type { Bug } from '../engine/pieces.ts';
 import { HEX_H, HEX_W, cornersOf, type Point } from './board.ts';
 import { bugHtml } from './bugs.ts';
@@ -104,8 +99,6 @@ export const RULE_GROUPS: ReadonlyArray<RuleGroup> = [
 
 /** Every rule, in reading order, for the tests and anyone counting words. */
 export const RULES_ITEMS: ReadonlyArray<RuleItem> = RULE_GROUPS.flatMap((g) => g.rules);
-
-export const rulesItemsHtml = (): string => rulesListHtml(RULE_GROUPS, GLOSSARY);
 
 export const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
   'Eleven bugs a side on a board that grows as you play: place them around the hive and move them along it, and the first Queen surrounded on all six sides loses. That is Hive, for two.',

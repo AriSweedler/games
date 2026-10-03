@@ -119,6 +119,11 @@ export type Frame = SharedFrame<Action, View, RoomWire, IntentFrame>;
 /** The lane's frame, which the boot sends on whichever session is open (`BootConfig.net.isEphemeral`). */
 export const isEphemeral = (frame: Frame): frame is IntentFrame => sharedIsEphemeral(frame);
 
+/** The protocol whole: what the sessions take (web/shared/net/sessions.ts `seatedSessions`). */
+export const PROTOCOL = seatedProtocol(
+  { decodeAction, decodeView, options, seatCounts: SEAT_COUNTS },
+  { ephemeral: intentFrame },
+);
 export const {
   decodeFrame,
   decodeGuestFrame,
@@ -132,7 +137,4 @@ export const {
   state,
   seatingOf,
   joinName,
-} = seatedProtocol(
-  { decodeAction, decodeView, options, seatCounts: SEAT_COUNTS },
-  { ephemeral: intentFrame },
-);
+} = PROTOCOL;

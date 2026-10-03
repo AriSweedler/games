@@ -15,11 +15,9 @@ import { bootShell, browserPage, type BootCtx } from '../../shared/edge/boot.ts'
 import { realClock } from '../../shared/edge/clock.ts';
 import type { ShareNavigatorLike } from '../../shared/edge/share.ts';
 import type { Store } from '../../shared/edge/storage.ts';
-import { aboutHtml } from '../../shared/ui/glossary.ts';
 import { bestLayoffActions, legalActions } from './src/engine/index.ts';
 import type { Action } from './src/engine/types.ts';
-import { GuestSession, HostSession } from './src/net/sessions.ts';
-import { isGuestFrame } from './src/protocol.ts';
+import { SESSIONS } from './src/net/sessions.ts';
 import { createScorer, type Scorer, type SpeechRecognizerLike } from './src/scorer/main.ts';
 import { STORAGE_KEYS, migrateCardBack } from './src/storage.ts';
 import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
@@ -29,7 +27,7 @@ import { formatMap, mapOf } from './src/sandbox.ts';
 import { slotHandView } from './src/ui/hand/SlotHandView.ts';
 import { fillNameInputs, fillP2NameInput, renderSandbox } from './src/ui/home.ts';
 import { bindAll, fmtTime, paint } from './src/ui/render.ts';
-import { rulesItemsHtml } from './src/ui/rules.ts';
+import { RULES_ITEMS } from './src/ui/rules.ts';
 import { GIN, reducer, type App, type EffectDeps, type Gin } from './src/ui/state.ts';
 
 /** Gin's effect adapters beside the shell's: the Score Counter and the clipboard. */
@@ -134,7 +132,6 @@ const boot = (): void => {
     page: browser,
     // PeerJS log level 0 as on the legacy page (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__gin', title: 'Gin Rummy', debug: 0 },
-    sound: { fontKey: STORAGE_KEYS.soundFont },
     reducer,
     paint: {
       // The hand is drawn by the slot view with the ghost draw slot (docs/ARCHITECTURE.md "Seams
@@ -149,8 +146,8 @@ const boot = (): void => {
       fillP2Name: fillP2NameInput,
     },
     config: GIN,
-    copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
-    net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
+    copy: { rules: RULES_ITEMS, about: ABOUT_PARAGRAPHS, glossary: GLOSSARY },
+    net: SESSIONS,
     legal: legalActions,
     deps: {
       scorer: {

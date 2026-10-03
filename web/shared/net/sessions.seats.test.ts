@@ -24,8 +24,10 @@ import type {
   Transport,
   TransportError,
 } from '../edge/transport.ts';
+import { integer, literal, object } from '../lib/json.ts';
 import { err, ok, type Result } from '../lib/result.ts';
 import { peerIdFor } from '../lib/roomCode.ts';
+import { seatedProtocol, type TableSeat } from '../lib/seatedProtocol.ts';
 import {
   FULL_CLOSE_MS,
   HB_GRACE_MS,
@@ -39,13 +41,16 @@ import {
   type Seat,
 } from './host.ts';
 import { HEARTBEAT, isHeartbeat } from './liveness.ts';
+import { seatedSessions, type SeatedRoomOf } from './sessions.ts';
 import {
   CODE,
   STUN_ONLY,
   cell,
   connectFrom,
+  guestCtx,
   guests,
   hostCtxFor,
+  hostParty,
   party,
   pass,
   settle,
@@ -883,5 +888,88 @@ describe('HostSession at capacity 2 with an N-seat codec', () => {
     startHost(plain, cell(hostCtx()), {});
     plain.broker.flush();
     expect(plain.log).toEqual([['holdWakeLock'], ['status', WAITING_MSG], ['persist']]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// `seatedSessions`: the three N-seat games' sessions.ts as one function over a seated protocol.
+// ---------------------------------------------------------------------------------------------
+
+describe('seatedSessions over a seated protocol (UNO, Flip 7 and briscola`s pair)', () => {
+  type Terms = Readonly<{ seatCount: 2 | 3 | 4; colour: 'red' | 'blue' }>;
+  const PROTO = seatedProtocol<Readonly<{ move: number }>, Readonly<{ hand: number }>, Terms>({
+    decodeAction: object({ move: integer(0, 9) }),
+    decodeView: object({ hand: integer(0, 99) }),
+    options: { seatCount: literal(2, 3, 4), colour: literal('red', 'blue') },
+    seatCounts: [2, 3, 4],
+  });
+  /** The host context the shell fills: the terms, the guest seats, and a field of the shell's the welcome must not carry. */
+  type Ctx = SeatedRoomOf<Terms> & Readonly<{ level: number }>;
+  const pick = (from: Terms): Terms => ({ seatCount: from.seatCount, colour: from.colour });
+  const { Host, Guest } = seatedSessions('uno', PROTO, pick);
+  const EMPTY: TableSeat = { name: null, connected: false };
+  const ROOM_UNO = peerIdFor('uno', CODE);
+  const host = (w: World, ctx: Ctx, capacity: number): InstanceType<typeof Host> =>
+    new Host(
+      { ...w.deps, read: cell(hostCtxFor<Ctx>(ctx)()).read, events: w.hostEvents },
+      { code: CODE, attempt: 1, resume: false, capacity },
+    );
+
+  test('the peer id is the game`s; past two seats each welcome carries the terms picked off the context, the table and the channel`s seat, and the join`s name is read for the reseat', () => {
+    const w = world();
+    const seats: ReadonlyArray<TableSeat> = [EMPTY, EMPTY];
+    host(w, { seatCount: 3, colour: 'red', level: 7, seats }, 3);
+    w.broker.flush();
+    const table = guests(w, ROOM_UNO, 2);
+    table.forEach((g, i) => {
+      g.conn.send(PROTO.join(['Bo', 'Cal'][i] ?? ''));
+    });
+    w.broker.flush();
+    expect(table.map((g) => heard(g.party))).toEqual([
+      [PROTO.welcome('Ann', { seatCount: 3, colour: 'red' }, seats, 1)],
+      [PROTO.welcome('Ann', { seatCount: 3, colour: 'red' }, seats, 2)],
+    ]);
+    expect(heard(table[0]?.party ?? party(w, undefined))[0]).toEqual({
+      t: 'welcome',
+      hostName: 'Ann',
+      seatCount: 3,
+      colour: 'red',
+      seats,
+      you: 1,
+    });
+    // The joins reach the reducer through the protocol's guest decoder (`joinName` wired beside it: a same-named rejoin lands back in its seat).
+    expect(frames(w)).toEqual([
+      ['frame', PROTO.join('Bo')],
+      ['frame', PROTO.join('Cal')],
+    ]);
+  });
+
+  test('at two seats the welcome is the terms alone, as the two-seat games` welcome is', () => {
+    const w = world();
+    host(w, { seatCount: 2, colour: 'blue', level: 1, seats: [EMPTY] }, 2);
+    w.broker.flush();
+    const [g] = guests(w, ROOM_UNO, 1);
+    w.broker.flush();
+    expect(heard(g?.party ?? party(w, undefined))).toEqual([
+      { t: 'welcome', hostName: 'Ann', seatCount: 2, colour: 'blue' },
+    ]);
+  });
+
+  test('the guest joins the game`s room with the protocol`s join frame and decodes the host`s frames with the protocol`s decoder', () => {
+    const w = world();
+    const hostSide = hostParty(w, ROOM_UNO, {
+      welcome: PROTO.welcome('Ann', { seatCount: 2, colour: 'red' }, [EMPTY], 1),
+      lobby: PROTO.lobby('Ann', { seatCount: 2, colour: 'red' }, [EMPTY], 1),
+    });
+    new Guest(
+      { ...w.deps, read: () => guestCtx(), events: w.guestEvents },
+      { code: CODE, attempt: 1 },
+    );
+    w.broker.flush();
+    expect(heard(hostSide)).toEqual([PROTO.join('Jeff')]);
+    expect(frames(w)).toEqual([
+      ['frame', PROTO.welcome('Ann', { seatCount: 2, colour: 'red' }, [EMPTY], 1)],
+      ['frame', PROTO.lobby('Ann', { seatCount: 2, colour: 'red' }, [EMPTY], 1)],
+    ]);
   });
 });

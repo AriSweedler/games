@@ -72,13 +72,12 @@ export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
   },
 ];
 
-/** The eleven `<li>`s, one per line as the legacy page had them between its tags, keyed and linked. */
-export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);
-
-/** The list as the page has it, one line per tag, without the page's indentation. */
-export const RULES_LIST_HTML: string = ['<ul class="rules-list">', rulesItemsHtml(), '</ul>'].join(
-  '\n',
-);
+/** The list as the page has it, one line per tag, without the page's indentation: the eleven `<li>`s keyed and linked (glossary.ts `rulesListHtml`). */
+export const RULES_LIST_HTML: string = [
+  '<ul class="rules-list">',
+  rulesListHtml(RULES_ITEMS, GLOSSARY),
+  '</ul>',
+].join('\n');
 
 /** The heading over the in-game overlay's copy. */
 export const RULES_TITLE = 'Gin Rummy — Quick Rules';

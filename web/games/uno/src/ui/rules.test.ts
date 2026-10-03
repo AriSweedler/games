@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
-import { aboutHtml } from '../../../../shared/ui/glossary.ts';
-import { ABOUT_PARAGRAPHS, GLOSSARY, RULES_ITEMS, rulesItemsHtml } from './rules.ts';
+import { aboutHtml, rulesListHtml } from '../../../../shared/ui/glossary.ts';
+import { ABOUT_PARAGRAPHS, GLOSSARY, RULES_ITEMS } from './rules.ts';
 
 describe('the rules', () => {
   test('short enough for one phone screen: eight one-line rules, no points, under 120 words in all', () => {
@@ -22,7 +22,7 @@ describe('the rules', () => {
   });
 
   test('the jargon links: the turn to the wild, Draw Two to the turn, the About to the wild', () => {
-    const html = rulesItemsHtml();
+    const html = rulesListHtml(RULES_ITEMS, GLOSSARY);
     expect(html).toContain('<li id="rule-goal">');
     expect(html).toMatch(/id="rule-turn">.*data-rule="wild"/);
     expect(html).toMatch(/id="rule-draw2">.*data-rule="turn"/);

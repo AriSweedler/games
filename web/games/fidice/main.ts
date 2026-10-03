@@ -14,7 +14,6 @@ import { bootShell, browserPage } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import { browserNetDeps } from '../../shared/edge/netDeps.ts';
 import { browserStore } from '../../shared/edge/storage.ts';
-import { aboutHtml } from '../../shared/ui/glossary.ts';
 import type { Rng } from '../../shared/lib/rng.ts';
 import { Controller } from './src/app/controller.ts';
 import { browserEffects } from './src/app/effects.ts';
@@ -24,14 +23,10 @@ import { legalActions } from './src/legal.ts';
 import { ClientSession } from './src/net/client.ts';
 import { HostSession } from './src/net/host.ts';
 import { clientTransport, hostTransport, type PeerDeps } from './src/net/peerjs.ts';
-import {
-  GuestSession as ShellGuestSession,
-  HostSession as ShellHostSession,
-} from './src/net/shell/sessions.ts';
-import { isGuestFrame } from './src/protocol.ts';
-import { STORAGE_KEYS } from './src/storage.ts';
+import { SESSIONS } from './src/net/shell/sessions.ts';
+
 import { bindHelpFold } from './src/ui/helpFold.ts';
-import { GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
+import { GLOSSARY, RULES_ITEMS } from './src/ui/rules.ts';
 import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
 import { bindAll, paint } from './src/ui/render.ts';
 import { FIDICE, reducer, type App, type Fidice } from './src/ui/state.ts';
@@ -134,14 +129,12 @@ const bootShellPath = (): void => {
     page: browserPage(),
     // PeerJS log level 1 as the legacy page set it (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__fidice', title: 'Fidice', debug: 1 },
-    // The shell's four cues alone until M9 (plan §7 D11); muted by default on a coarse pointer (the boot's fallback).
-    sound: { fontKey: STORAGE_KEYS.soundFont },
     reducer,
     paint: { paint, bindAll },
     config: FIDICE,
     // The rules into both slots and the About copy (ui/rules.ts, ui/about.ts), before the render hook.
-    copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
-    net: { Host: ShellHostSession, Guest: ShellGuestSession, isGuestFrame },
+    copy: { rules: RULES_ITEMS, about: ABOUT_PARAGRAPHS, glossary: GLOSSARY },
+    net: SESSIONS,
     legal: legalActions,
     hooks: {
       // Before every home read: the legacy page's saved name follows the player onto this path

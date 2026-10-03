@@ -84,7 +84,7 @@ import {
 export type { PageLike };
 export type Dispatch = (intent: Intent) => void;
 
-export { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
+export { RULES_SLOT_IDS } from './rules.ts';
 // The shell painters both games share (docs/design/shared-shell.md §4.4, moved in B1) under the
 // names main.ts, stories/boot.ts and the tests always imported them by.
 export { hideToast, paintSound, showToast } from '../../../../shared/ui/shellPaint.ts';

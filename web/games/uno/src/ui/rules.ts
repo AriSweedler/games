@@ -3,7 +3,7 @@
 // goal, the turn, the special cards and the UNO call (§7), one line each; one round is the game, so
 // no points (the owner: "UNO should only be single round games"); the long form is docs/design/uno.md. The About
 // copy names the page. Both are static, filled once at boot (web/shared/ui/shellPaint.ts `renderCopy`).
-import { rulesListHtml, type Glossary, type RuleItem } from '../../../../shared/ui/glossary.ts';
+import type { Glossary, RuleItem } from '../../../../shared/ui/glossary.ts';
 
 /**
  * The words linked to their rule (docs/design/glossary-links.md): "wild" in the About copy and the
@@ -40,8 +40,6 @@ export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
     body: 'Tap UNO as you play down to one card. Caught without it before the next player moves: draw two.',
   },
 ];
-
-export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);
 
 export const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
   'UNO for two to twelve: lay a card that matches the colour or the number, or a wild that names the colour, and be the first with an empty hand.',

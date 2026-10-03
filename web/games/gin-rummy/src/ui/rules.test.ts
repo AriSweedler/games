@@ -3,11 +3,11 @@
 // a rule body lands on a rule, and a rule never links to itself. The words themselves are pinned
 // against the legacy page by test/parity/gin.ui.test.ts.
 import { describe, expect, test } from 'vitest';
-import { aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { aboutHtml, rulesListHtml } from '../../../../shared/ui/glossary.ts';
 
 import { ABOUT_PARAGRAPHS } from './about.ts';
 import { GLOSSARY } from './glossary.ts';
-import { RULES_ITEMS, RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
+import { RULES_ITEMS, RULES_SLOT_IDS } from './rules.ts';
 
 /** The `data-rule` targets of every link in `html`. */
 const targets = (html: string): ReadonlyArray<string> =>
@@ -30,7 +30,7 @@ describe('the rules items', () => {
       'void-hand',
       'match',
     ]);
-    const html = rulesItemsHtml();
+    const html = rulesListHtml(RULES_ITEMS, GLOSSARY);
     expect(html.split('\n')).toHaveLength(11);
     RULES_ITEMS.forEach((item) => {
       expect(html).toContain(`<li id="rule-${item.id}"><strong>${item.heading}:</strong> `);
@@ -42,7 +42,7 @@ describe('the rules items', () => {
     GLOSSARY.forEach((entry) => {
       expect(IDS, entry.rule).toContain(entry.rule);
     });
-    rulesItemsHtml()
+    rulesListHtml(RULES_ITEMS, GLOSSARY)
       .split('\n')
       .forEach((line, i) => {
         const own = IDS[i] ?? '';
@@ -57,7 +57,7 @@ describe('the rules items', () => {
   });
 
   test('a rule that names another rule links it (Knock -> drawing, deadwood; Gin -> knock, lay-offs; Lay off -> knock, melds, deadwood)', () => {
-    const lines = rulesItemsHtml().split('\n');
+    const lines = rulesListHtml(RULES_ITEMS, GLOSSARY).split('\n');
     expect(lines[5]).toContain('data-rule="draw">drawing</a>');
     expect(lines[5]).toContain('data-rule="deadwood">deadwood</a>');
     expect(lines[6]).toContain('data-rule="knock">Knock</a>');

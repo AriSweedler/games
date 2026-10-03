@@ -5,16 +5,10 @@
 // goal is the deep link), the ranks' table of points left unlinked, and no rule linking to itself.
 import { describe, expect, test } from 'vitest';
 
-import { ruleAnchor, aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { aboutHtml, ruleAnchor, rulesListHtml } from '../../../../shared/ui/glossary.ts';
 import { ABOUT_PARAGRAPHS } from './about.ts';
 import { GLOSSARY } from './glossary.ts';
-import {
-  RANK_POINTS,
-  RULES_ITEMS,
-  RULES_SLOT_IDS,
-  rankTableHtml,
-  rulesItemsHtml,
-} from './rules.ts';
+import { RANK_POINTS, RULES_ITEMS, RULES_SLOT_IDS, rankTableHtml } from './rules.ts';
 
 /** The `<li>` of rule `id` in the rendered list. */
 const itemOf = (html: string, id: string): string => {
@@ -69,14 +63,14 @@ describe('the rules list', () => {
     expect(table).toContain('<tr><td>asso</td><td>11</td></tr>');
     expect(table).toContain('<tr><td>2, 4, 5, 6, 7</td><td>0</td></tr>');
     // Rendered in the list, the table's cells carry no link ("Points" is the goal's term outside it).
-    const item = itemOf(rulesItemsHtml(), 'ranks');
+    const item = itemOf(rulesListHtml(RULES_ITEMS, GLOSSARY), 'ranks');
     const rendered = /<table.*<\/table>/s.exec(item)?.[0] ?? '';
     expect(rendered).toBe(table);
     expect(linkedRules(item)).toEqual([]);
   });
 
   test('the rendered items carry their anchors; the trick and the draw link each other, the goal names the trick, no rule links to itself', () => {
-    const html = rulesItemsHtml();
+    const html = rulesListHtml(RULES_ITEMS, GLOSSARY);
     RULES_ITEMS.forEach((r) => {
       expect(html).toContain(`<li id="${ruleAnchor(r.id)}"><strong>${r.heading}:</strong>`);
       expect(linkedRules(itemOf(html, r.id))).not.toContain(r.id);

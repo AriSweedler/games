@@ -9,6 +9,7 @@
 // pairs that each spelled these two subclasses by hand were this module's copies.
 import type { Game } from '../lib/roomCode.ts';
 import type { FrameDecoder } from '../lib/protocol.ts';
+import type { SeatedOptions, TableSeat } from '../lib/seatedProtocol.ts';
 import { GuestSession, type GuestCodec, type GuestDeps, type GuestOptions } from './guest.ts';
 import {
   HostSession,
@@ -80,3 +81,42 @@ export const sessionsFor = <G, H, X>(game: Game, codec: ShellCodec<G, H, X>): Se
     },
   };
 };
+
+/**
+ * What `seatedSessions` reads of a game's seated protocol (web/shared/lib/seatedProtocol.ts
+ * `seatedProtocol(...)`'s result, whole): `G` its guest frame, `H` its host frame, `R` the room's
+ * terms the welcome carries after `hostName`.
+ */
+export type SeatedCodec<G, H, R extends SeatedOptions> = Readonly<{
+  decodeGuestFrame: FrameDecoder<G>;
+  decodeHostFrame: FrameDecoder<H>;
+  welcome: (hostName: string, opts: R, seats: ReadonlyArray<TableSeat>, you: number) => H;
+  full: () => H;
+  join: (name: string) => G;
+  joinName: (frame: G) => string | null;
+}>;
+
+/** The host context of an N-seat game as the shell fills it (shell.ts `hostContextOf`): the room's terms beside the guest seats. */
+export type SeatedRoomOf<R> = R & Readonly<{ seats: ReadonlyArray<TableSeat> }>;
+
+/**
+ * The sessions of an N-seat game over its seated protocol (docs/design/n-seat-sessions.md): the
+ * welcome carries the room's terms picked off the host context (`pick`: the game's
+ * `ShellConfig.opts.pick`, the same reader the shell uses for a save or an offer), the table as
+ * the host knows it and the seat the channel took; `joinName` reseats a guest back from a dead
+ * tab where its name last sat. The three `net/sessions.ts` that each spelled this adapter were
+ * this function's copies.
+ */
+export const seatedSessions = <G, H, R extends SeatedOptions>(
+  game: Game,
+  protocol: SeatedCodec<G, H, R>,
+  pick: (from: SeatedRoomOf<R>) => R,
+): Sessions<G, H, SeatedRoomOf<R>> =>
+  sessionsFor<G, H, SeatedRoomOf<R>>(game, {
+    decodeGuestFrame: protocol.decodeGuestFrame,
+    decodeHostFrame: protocol.decodeHostFrame,
+    welcome: (ctx, seat) => protocol.welcome(ctx.myName, pick(ctx), ctx.seats, seat),
+    full: protocol.full,
+    join: protocol.join,
+    joinName: protocol.joinName,
+  });

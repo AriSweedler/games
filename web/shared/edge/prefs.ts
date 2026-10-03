@@ -413,6 +413,8 @@ export const shellKeys = <P extends string, S extends string>(
 
 /** The shell's readers and writers over one game's keys: what `web/shared/ui/shell.ts` reads `initHome` from and `shellEffects.ts` writes the effects through. */
 export type ShellStore<S, X extends object, Tab extends string> = Readonly<{
+  /** The keys the store was built from: what the boot names in a refusal (`badSoundFontMsg`) without the game spelling the key twice. */
+  keys: ShellKeys;
   name: TextPref<string>;
   /** The pass-and-play second name, under `rememberName`'s rule; the legacy never stored it. */
   p2Name: TextPref<string>;
@@ -442,6 +444,7 @@ export const shellStore = <S, X extends object, Tab extends string>(
     decodeHomeTab: Decoder<Tab>;
   }>,
 ): ShellStore<S, X, Tab> => ({
+  keys,
   name: namePref(keys.name),
   p2Name: namePref(keys.p2Name),
   homeTab: textPref(keys.homeTab, cfg.decodeHomeTab),

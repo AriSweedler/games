@@ -36,6 +36,7 @@ import {
 } from '../../../../shared/net/sessions.harness.ts';
 import { createGame, viewFor, type Players, type Seat } from '../engine/index.ts';
 import {
+  PROTOCOL,
   decodeHostFrame,
   intent as intentWire,
   join,
@@ -48,6 +49,7 @@ import {
   type Room,
   type TableSeat,
 } from '../protocol.ts';
+import { pickOpts } from '../shellConfig.ts';
 import { CONNECTED_MSG } from '../../../../shared/net/guest.ts';
 import {
   FULL_CLOSE_MS,
@@ -55,7 +57,12 @@ import {
   WAITING_MSG,
   type HostContext as SharedHostContext,
 } from '../../../../shared/net/host.ts';
-import { GuestSession, HostSession, type HostRoom } from './sessions.ts';
+import { seatedSessions, type SeatedRoomOf } from '../../../../shared/net/sessions.ts';
+
+/** The pair as main.ts builds it: the shared seated sessions over this protocol, the welcome's room picked by the shell's own `pickOpts`. */
+const { Host: HostSession, Guest: GuestSession } = seatedSessions('briscola', PROTOCOL, pickOpts);
+/** What the welcome reads off the host context beyond the shell's fields: the six options and the guest seats. */
+type HostRoom = SeatedRoomOf<Room>;
 
 /** The host context as this game's codec reads it: the shell's fields, the six options and the guest seats. */
 type HostContext = SharedHostContext<HostRoom>;
