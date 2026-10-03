@@ -12,6 +12,14 @@
 // press, left to the click and the timer. One drag at a time: a cell holding the session, replaced
 // whole by every pointer event and frame. Only the DOM edge is reached (dom.ts).
 //
+// A press that picks something cancels the pointerdown's default, which is the browser's own
+// gesture on the same button: the mouse would select the text it passes (the cards are
+// `user-select: none`, the status lines between the hand and the table are not), and a press that
+// lands inside a standing selection starts a native drag of that text, with a `pointercancel` to
+// this kernel and no more moves (gin's layoff spec: the take-back's drag left a selection spanning
+// the hand, and the 5S pressed next went nowhere on the Linux runners). Cancelled, the click still
+// fires (it is no compatibility mouse event), so the tap and the long press are untouched.
+//
 // Where this differs from the design's sketch, the two draggers' real bodies demanded it:
 // - `bindDrag(doc, dispatch, cfg)` takes the dispatch beside the config (both games' `bindDrag(doc,
 //   dispatch)` wrappers pass theirs through), and the three builders return arrays: gin's start is
@@ -46,6 +54,7 @@ import {
   listen,
   nextFrame,
   pointerOf,
+  preventDefault,
   rectOf,
   releasePointer,
   removeClass,
@@ -243,6 +252,7 @@ export const bindDrag = <Src, Over, Intent>(
       if (held.s !== null) return;
       const picked = cfg.pick(e, surface);
       if (picked === null) return;
+      preventDefault(e);
       const p = pointerOf(e);
       held.s = {
         key: picked.key,

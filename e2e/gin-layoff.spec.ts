@@ -18,8 +18,20 @@ const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },
 } as const;
 
+/**
+ * The running transitions have ended (the hand's glides, hand/flip.ts: a card leaving the hand
+ * slides the loose cards after it one cell over for FLIP_MS; the laid card's lift): a card is
+ * pressed where it rests, as a finger would, not where it was mid-slide when it was measured. A
+ * press that lands beside the card is the browser's, which selects the text it is dragged over.
+ */
+const SETTLED = `Promise.race([
+  Promise.all(document.getAnimations().filter((a) => a instanceof CSSTransition).map((a) => a.finished.catch(() => null))),
+  new Promise((done) => setTimeout(done, 1500)),
+]).then(() => undefined)`;
+
 /** Drag the card `id` (in the hand or on the table) to the centre of `target`, holding at the end. */
 const dragTo = async (page: Page, id: string, target: string): Promise<void> => {
+  await page.evaluate(SETTLED);
   const from = await page.locator(`.card[data-card="${id}"]`).first().boundingBox();
   const to = await page.locator(target).boundingBox();
   if (from === null || to === null) throw new Error(`no box for ${id} or ${target}`);
@@ -74,6 +86,12 @@ Object.entries(VIEWPORTS).forEach(([name, vp]) => {
       await expect.poll(() => page.evaluate<Ids>(LAID)).toEqual(['4S']);
       await expect(page.locator('#hand .card')).toHaveCount(9);
       await expect(page.locator('#lastAction')).toHaveText('Bob took the 5♠ back.');
+      // The drags left no text selection behind (the kernel cancels the press it picks up): a
+      // standing selection over the hand turned the next press into a native drag of that text,
+      // and the 5S went nowhere.
+      expect(await page.evaluate<string>('document.getSelection()?.type ?? "None"')).not.toBe(
+        'Range',
+      );
 
       // Laid again and finished: the sheet shows the two cards laid off onto Ann's spades.
       await dragTo(page, '5S', `#tableMelds .meld-group:has(.card[data-card="AS"])`);
