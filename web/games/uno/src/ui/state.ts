@@ -76,7 +76,11 @@ export type Raw = Readonly<{
   names?: ReadonlyArray<string>;
 }>;
 
-/** The names of the seats past the shell's two as last typed, index 0 the third seat; null where nothing was. */
+/**
+ * The names of the seats past the shell's two as last typed, index 0 the third seat; null where
+ * nothing was. A cleared seat is '' (not null), so the repaint after the tap leaves the input
+ * empty instead of refilling the default under the caret (web/shared/ui/seatNames.ts).
+ */
 export type ExtraNames = ReadonlyArray<string | null>;
 export const NO_EXTRA_NAMES: ExtraNames = EXTRA_SEATS.map(() => null);
 
@@ -274,7 +278,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       return step(
         withTable(app, {
           extraNames: app.table.extraNames.map((name, i) =>
-            i === intent.seat - 2 ? (intent.value === '' ? null : intent.value) : name,
+            i === intent.seat - 2 ? intent.value : name,
           ),
         }),
         { type: 'rememberPName', seat: intent.seat, name: intent.value },
