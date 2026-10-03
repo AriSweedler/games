@@ -11,7 +11,7 @@
 // table ships the 2-player shape (#seatR2 shown, R1 and R3 hidden) so the page fake and the goldens
 // see a whole table before any paint; the Italian suit sprite (web/shared/ui/cardFace.ts
 // SUIT_SPRITE_SVG) is inlined at boot, not here, so it cannot drift from suits.ts.
-import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
+import { THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
 import {
   type ShellBlocks,
   type ShellCopy,
@@ -25,23 +25,10 @@ import { stepperHtml } from '../../shared/markup/stepper.ts';
 const PLAYERS = { label: 'Players', min: 2, max: 4, value: 2, noun: 'players' } as const;
 
 const copy: ShellCopy = {
-  modeOnline: 'Online',
-  modeLocal: 'Pass the phone',
-  hostLabel: 'Open a table',
-  joinLabel: 'Sit down at a table',
-  joinBtnLabel: 'Sit down',
-  localBtnLabel: 'Start',
   localNote:
     'One phone, no internet needed. A curtain names whose turn it is; everyone else looks away.',
-  hostWaitTitle: 'Your table',
-  hostWaitSubtitle: 'Have the others open this same page and enter the code',
-  openingMsg: 'Opening the table…',
-  keepOpenNote:
-    'Keep this screen open while the others sit down. If you switch apps, come straight back and the table reconnects on its own.',
   startLabel: 'Start',
-  curtainSub: '',
   revealLabel: 'Show my cards',
-  rulesTitle: 'Rules',
   historyTitle: 'History',
 };
 
@@ -73,9 +60,6 @@ const blocks: ShellBlocks = {
           <h1>Briscola</h1>
           <div class="subtitle">Italian cards for two, three or four</div>
         </div>`,
-  submenuExtra: '',
-  extraTabs: '',
-  switchExtra: '',
   hostFields: `${stepperHtml({ id: 'playersCount', ...PLAYERS }, '              ')}
               <div class="field">
                 <span class="field-label">Battle animations</span>
@@ -135,15 +119,6 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
                 />
               </div>
             </div>`,
-  playExtra: '',
-  extraPanels: '',
-  extraScreens: '',
-  // The table as it fills (web/shared/ui/shellPaint.ts `paintWaiting`; docs/design/n-seat-sessions.md
-  // §7): one row per seat, the host first, each carrying data-seat, data-connected and, on this
-  // device's own, data-you (theme.css `.seat-list`).
-  hostWaitList: `      <ul class="seat-list" id="seatList" aria-label="Seats"></ul>`,
-  guestWaitList: `      <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>`,
-  guestSeatName: GUEST_SEAT_NAME,
   table: `      <!-- TABLE (design §5.2): one DOM for 2, 3 and 4 seats. I sit at the bottom; the other
            seats are relative cells (#seatR1 right, #seatR2 across, #seatR3 left) that seatCells
            (src/ui/layout.ts) maps to absolute seats; the static markup ships the 2-player shape.
@@ -251,7 +226,6 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
         <h1>Game over</h1>
         <button class="btn btn-secondary btn-block" id="leaveBtn">Leave the table</button>
       </div>`,
-  curtainIcon: '',
   curtainExtra: `        <button class="btn btn-ghost btn-block btn-sm" id="curtainHandoffBtn">
           Continue online
         </button>`,
@@ -302,7 +276,6 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
 
     <!-- CARD TIP (docs/design/language-packs.md §5): a hand card's name on hover or a long press, placed over the card by the painter. -->
     <div id="cardTip" class="card-tip hidden" role="tooltip"></div>`,
-  rulesIcon: '',
 };
 
-export const BRISCOLA_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };
+export const BRISCOLA_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks, seated: true };

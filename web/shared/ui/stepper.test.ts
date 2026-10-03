@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { fakeEl, fakePage, type FakePage } from '../edge/page.fake.ts';
-import { stepperHtml, stepperIds } from '../markup/stepper.ts';
+import { seatedHostFields, stepperHtml, stepperIds } from '../markup/stepper.ts';
 import { bindStepper, paintStepper, stepped, type StepperSpec } from './stepper.ts';
 
 const SPEC: StepperSpec = { id: 'players', min: 2, max: 4 };
@@ -82,5 +82,16 @@ describe('stepperHtml', () => {
     const top = stepperHtml({ id: 'n', label: 'N', min: 1, max: 3, value: 3, noun: 'seats' });
     expect(top).toContain('id="nDec" aria-label="Fewer seats">−</button>');
     expect(top).toContain('id="nInc" aria-label="More seats" disabled>+</button>');
+  });
+
+  test("seatedHostFields: the players stepper over the host button, the shell's label unless the page says", () => {
+    const players = { label: 'Players', min: 2, max: 12, value: 2, noun: 'players' } as const;
+    const fields = seatedHostFields(players);
+    expect(fields).toBe(
+      `${stepperHtml({ id: 'playersCount', ...players }, '              ')}
+              <button class="btn btn-go btn-block" id="hostBtn">Open a table</button>`,
+    );
+    expect(fields.split('\n').every((line) => line.startsWith('              '))).toBe(true);
+    expect(seatedHostFields(players, 'Host')).toContain('id="hostBtn">Host</button>');
   });
 });

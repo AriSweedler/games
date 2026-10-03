@@ -1356,27 +1356,19 @@ import {
   type ShellPage,
 } from '../../shared/markup/shell.ts';
 
+// The shell's words (web/shared/markup/shell.ts SHELL_COPY) but for a table of two, and the four
+// only this game knows.
 const copy: ShellCopy = {
-  modeOnline: 'Online',
-  modeLocal: 'Pass the phone',
-  hostLabel: 'Open a table',
-  joinLabel: 'Sit down at a table',
-  joinBtnLabel: 'Sit down',
-  localBtnLabel: 'Start',
   localNote: ${
     hidden
       ? "'One phone, no internet needed. A curtain hides the table as the phone changes hands.'"
       : "'One phone, no internet needed. Nothing is hidden: the view changes hands with the turn.'"
   },
-  hostWaitTitle: 'Your table',
   hostWaitSubtitle: 'Have your opponent open this same page and enter the code',
-  openingMsg: 'Opening the table…',
   keepOpenNote:
     'Keep this screen open while your opponent sits down. If you switch apps, come straight back and the table reconnects on its own.',
   startLabel: 'Start',
-  curtainSub: '',
   revealLabel: 'Show the table',
-  rulesTitle: 'Rules',
   historyTitle: 'History',
 };
 
@@ -1404,9 +1396,6 @@ const blocks: ShellBlocks = {
           <h1>${quoted}</h1>
           <div class="subtitle">TODO: one line on what the game is</div>
         </div>\`,
-  submenuExtra: '',
-  extraTabs: '',
-  switchExtra: '',
   hostFields: \`              <button class="btn btn-go btn-block" id="hostBtn">Open a table</button>\`,
   localFields: \`            <div class="card-box">
               <div class="row">
@@ -1414,11 +1403,6 @@ const blocks: ShellBlocks = {
                 <input type="text" id="p2NameInput" class="grow" placeholder="Player 2" maxlength="20" autocomplete="off" />
               </div>
             </div>\`,
-  playExtra: '',
-  extraPanels: '',
-  extraScreens: '',
-  hostWaitList: '',
-  guestWaitList: '',
   guestSeatName: GUEST_SEAT_NAME,
   table: \`      <!-- TABLE (docs/design/${slug}.md §3): the names strip (me, the other seat and its connection),
            the board slot (TODO: the game's own markup, painted by render.ts), the status line and
@@ -1449,22 +1433,13 @@ const blocks: ShellBlocks = {
           <button class="btn btn-go grow hidden" id="againBtn">Play again</button>
         </div>
       </div>\`,
-  endgame: \`      <!-- ENDGAME: the shell's fifth screen, which this page never shows: the game ends on the
-           result sheet over the table. -->
-      <div id="endgameScreen" class="hidden">
-        <h1>Game over</h1>
-      </div>\`,
-  curtainIcon: '',
-  curtainExtra: '',
+  // No endgame block: the shell's placeholder says the game ends on the result sheet over the table.
   result: resultMarkup({
     note: 'the end over the final table (the owner: "understand what happened before proceeding"); Continue clears the pause, Play again starts anew.',
     score: 'note',
     continueBtn: true,
     secondary: { id: 'rsLeaveBtn', label: 'Leave the table' },
   }),
-  sheetsBefore: '',
-  sheetsAfter: '',
-  rulesIcon: '',
 };
 
 export const ${upper}_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };

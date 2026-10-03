@@ -30,7 +30,6 @@ const copy: ShellCopy = {
   keepOpenNote:
     'Keep this screen open while your opponent joins — if you switch apps, come straight back and the room reconnects on its own.',
   startLabel: 'Deal the first hand',
-  curtainSub: '',
   revealLabel: 'Show my cards',
   rulesTitle: 'Gin Rummy — Quick Rules',
   historyTitle: 'Hand history',
@@ -198,11 +197,8 @@ const blocks: ShellBlocks = {
       <button class="btn btn-go grow" id="scEndNewBtn">New game</button>
     </div>
   </div>`,
-  hostWaitList: '',
-  guestWaitList: '',
-  // No "Playing as …" line: the parity oracle (tools/parity/gin-dom-parity.ts) holds this page to
-  // the legacy one; the guest still learns its seated name in `shell.seatedName`, unpainted.
-  guestSeatName: '',
+  // No `guestSeatName` block ("Playing as …"): the parity oracle (tools/parity/gin-dom-parity.ts)
+  // holds this page to the legacy one; the guest still learns its seated name in `shell.seatedName`, unpainted.
   table: `  <!-- TABLE -->
   <div id="tableScreen" class="hidden">
     <div class="topbar">
@@ -263,7 +259,6 @@ const blocks: ShellBlocks = {
     </div>
   </div>`,
   curtainIcon: `    <div style="font-size:3rem;">📱</div>`,
-  curtainExtra: '',
   sheetsBefore: `
 <!-- SCORER RESULT -->
 <div id="scResOverlay" class="overlay hidden">
@@ -348,7 +343,6 @@ target: 100</pre>
     <button class="btn btn-ghost btn-block btn-sm" id="rrHideBtn" style="margin-top:8px;">Look at the table</button>
   </div>
 </div>`,
-  sheetsAfter: '',
   rulesIcon: `    <div style="text-align:center; font-size:2rem;">📖</div>`,
 };
 

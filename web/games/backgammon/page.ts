@@ -21,22 +21,13 @@ import {
 } from '../../shared/markup/shell.ts';
 
 const copy: ShellCopy = {
-  modeOnline: 'Online',
-  modeLocal: 'Pass the phone',
-  hostLabel: 'Open a table',
-  joinLabel: 'Sit down at a table',
-  joinBtnLabel: 'Sit down',
-  localBtnLabel: 'Start',
   localNote: 'One phone, held sideways; a curtain says whose turn it is.',
-  hostWaitTitle: 'Your table',
   hostWaitSubtitle: 'Have your opponent open this same page and enter the code',
-  openingMsg: 'Opening the table…',
   keepOpenNote:
     'Keep this screen open while your opponent joins. If you switch apps, come straight back and the table reconnects on its own.',
   startLabel: 'Start the match',
   curtainSub: 'Your turn.',
   revealLabel: 'Roll',
-  rulesTitle: 'Rules',
   historyTitle: 'This game',
 };
 
@@ -72,9 +63,6 @@ const blocks: ShellBlocks = {
           <h1>Sheshbesh</h1>
           <div class="subtitle">Backgammon</div>
         </div>`,
-  submenuExtra: '',
-  extraTabs: '',
-  switchExtra: '',
   hostFields: `              <div class="row">
                 <div class="field grow">
                   <span class="field-label">Match to</span>
@@ -136,9 +124,6 @@ const blocks: ShellBlocks = {
                 </div>
               </div>
             </div>`,
-  playExtra: '',
-  extraPanels: '',
-  extraScreens: '',
   hostWaitList: `      <div class="phone-cue">Hold the phone sideways once the match starts.</div>`,
   guestWaitList: `      <div class="phone-cue">Hold the phone sideways once the match starts.</div>`,
   guestSeatName: GUEST_SEAT_NAME,
@@ -458,7 +443,6 @@ const blocks: ShellBlocks = {
           <button class="btn btn-go grow" id="nextGameBtn">Rematch</button>
         </div>
       </div>`,
-  curtainIcon: '',
   curtainExtra: `        <button class="btn btn-ghost btn-block btn-sm" id="curtainHandoffBtn">
           Continue online
         </button>`,
@@ -542,7 +526,6 @@ const blocks: ShellBlocks = {
         </div>
       </div>
     </div>`,
-  rulesIcon: '',
 };
 
 export const BACKGAMMON_PAGE: ShellPage = {

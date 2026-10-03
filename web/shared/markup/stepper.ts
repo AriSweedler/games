@@ -4,6 +4,7 @@
 // The hidden input `#<id>` is the form value the page's start options read (`readValue`), the
 // `output` shows it, and the two buttons step it between `min` and `max` (web/shared/ui/stepper.ts
 // binds and paints them). Each button is a 44px target (shell.css `.stepper-btn`). Pure: a string.
+import { SHELL_COPY } from './shell.ts';
 
 /** One stepper: the hidden field's id (its parts are `<id>Dec`, `<id>Num`, `<id>Inc`), its label, its bounds and its first value. */
 export type StepperMarkup = Readonly<{
@@ -41,3 +42,16 @@ export const stepperHtml = (s: StepperMarkup, indent = ''): string => {
     .map((line) => `${indent}${line}`)
     .join('\n');
 };
+
+/** A count the page asks for, minus the field's id: the seat range a page spells once for both its steppers (`PLAYERS`). */
+export type SeatRange = Readonly<Omit<StepperMarkup, 'id'>>;
+
+/**
+ * The host card of a page with a seat range (home.html's `{{hostFields}}`; uno's and Flip 7's):
+ * the players stepper, `#playersCount`, over `#hostBtn` (shell.ts BLOCK_IDS), each indented as
+ * the card's children are. The button says `label`, the shell's "Open a table" unless the page
+ * says otherwise. A page whose host card carries more (briscola's speed select) spells its own.
+ */
+export const seatedHostFields = (players: SeatRange, label = SHELL_COPY.hostLabel): string =>
+  `${stepperHtml({ id: 'playersCount', ...players }, '              ')}
+              <button class="btn btn-go btn-block" id="hostBtn">${label}</button>`;
