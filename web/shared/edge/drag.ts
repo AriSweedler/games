@@ -18,7 +18,11 @@
 // lands inside a standing selection starts a native drag of that text, with a `pointercancel` to
 // this kernel and no more moves (gin's layoff spec: the take-back's drag left a selection spanning
 // the hand, and the 5S pressed next went nowhere on the Linux runners). Cancelled, the click still
-// fires (it is no compatibility mouse event), so the tap and the long press are untouched.
+// fires (it is no compatibility mouse event), so the tap and the long press are untouched. The
+// other half is the surfaces themselves: `bindDrag` marks each one `drag-surface`, and shell.css
+// makes it `user-select: none`, so a long press on a surface never selects the text under it (the
+// surface's children read `none` through `auto`) and the finger that holds a card still is not
+// shown a selection handle.
 //
 // Where this differs from the design's sketch, the two draggers' real bodies demanded it:
 // - `bindDrag(doc, dispatch, cfg)` takes the dispatch beside the config (both games' `bindDrag(doc,
@@ -286,6 +290,7 @@ export const bindDrag = <Src, Over, Intent>(
   };
 
   cfg.surfaces.forEach((surface) => {
+    addClass(surface, 'drag-surface');
     listen(surface, 'pointerdown', press(surface));
     listen(surface, 'pointermove', move);
     ['pointerup', 'pointercancel'].forEach((type) => {

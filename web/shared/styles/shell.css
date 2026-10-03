@@ -39,6 +39,17 @@ textarea,
 summary {
   touch-action: manipulation;
 }
+/* A surface the pointer-drag kernel listens on (web/shared/edge/drag.ts `bindDrag` marks each of
+   its `surfaces`: gin's hand and table melds, backgammon's board, briscola's hand, hive's board and
+   trays). A long press there never selects text, and no selection is left standing for the next
+   press to turn into a native drag (the kernel's `preventDefault` on a picked press is the other
+   half; gin's layoff spec on the Linux runners). The children (the cards, checkers and tiles the
+   kernel picks) read `none` through `auto`; text a player may want to copy (the room code, the
+   rules, the names) sits outside every surface. */
+.drag-surface {
+  -webkit-user-select: none;
+  user-select: none;
+}
 html,
 body {
   padding: 0;

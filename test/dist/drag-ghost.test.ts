@@ -10,10 +10,11 @@
 // game with a drag. Runs on dist/ after the build (npm run test:site).
 import { expect, test } from 'vitest';
 
+import { stylesheets, type Game } from './classes.ts';
 import { describeDist, distFiles, readDist } from './dist.ts';
 
 /** The games whose ui binds `bindDrag` (gin's hand, backgammon's board, briscola's hand, hive's trays and board). */
-const DRAG_GAMES: ReadonlyArray<string> = ['gin-rummy', 'backgammon', 'briscola', 'hive'];
+const DRAG_GAMES: ReadonlyArray<Game> = ['gin-rummy', 'backgammon', 'briscola', 'hive'];
 
 const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
 /** Every `<selector> { <declarations> }` in the sheet, at any nesting. */
@@ -52,6 +53,21 @@ describeDist('drag ghost stillness', (root) => {
       expect(ghost).toContain('will-change: transform');
       const landing = rulesFor(rules, '.drag-ghost.landing').flatMap((r) => r.declarations);
       expect(landing.some((d) => /^transition: transform \d+ms/.test(d))).toBe(true);
+    });
+
+    // The surfaces the kernel listens on wear `drag-surface` (bindDrag adds it) and a sheet the page
+    // links makes them `user-select: none`, so a long press on the hand, the board or a tray selects
+    // no text and leaves no selection for the next press to turn into a native drag (the layoff flake
+    // of PR #72). The rule is shell.css's, in the common chunk every page links; the goldens
+    // (tools/parity/computed-styles.ts PROPERTIES) do not read `user-select`, so this is its pin.
+    test(`${game}: a linked sheet makes .drag-surface user-select none, prefixed too`, () => {
+      const sheets = stylesheets(root, game).map((f) => rulesIn(readDist(root, f)));
+      const surface = sheets.flatMap((rules) =>
+        rulesFor(rules, '.drag-surface').flatMap((r) => r.declarations),
+      );
+      expect(surface, `a .drag-surface rule in a sheet ${game}'s page links`).not.toHaveLength(0);
+      expect(surface).toContain('user-select: none');
+      expect(surface).toContain('-webkit-user-select: none');
     });
   });
 });
