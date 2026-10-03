@@ -51,7 +51,6 @@ import {
   guestContextOf,
   guestGoneMsg,
   guestName,
-  guestNameAmong,
   handoffLabelOf,
   handoffable,
   hostContextOf,
@@ -67,12 +66,10 @@ import {
   localPlayers,
   localSeated,
   localSeats,
-  noSeatNames,
   playsOrientation,
   pure,
   readHome,
   refuse,
-  rotationHintMsg,
   reduceShell,
   resumeFor,
   roomSeatingOf,
@@ -83,8 +80,6 @@ import {
   ERROR_TOAST_MS,
   errorToast,
   startsOver,
-  tableReset,
-  userSeatOf,
   withShell,
   wrongWay,
   withTable,
@@ -756,8 +751,6 @@ describe('a table of four (FAKE4: cfg.seats)', () => {
     expect(
       run4(opened4(), { type: 'host/frame', frame: { t: 'join', name: 'Bo' } }).app.shell.seats[0],
     ).toEqual({ name: 'Bo', connected: true });
-    expect(guestNameAmong('Ann', ['ann', 'Ann 2', 'ANN 3'])).toBe('Ann 4');
-    expect(guestNameAmong('', ['Ann'])).toBe('Guest');
   });
 
   test('host/deal: refused below the table`s min with the count; else every seat dealt in order and each connected seat sent its own view', () => {
@@ -2643,13 +2636,6 @@ describe('the finished game`s record (the owner, 2026-09-25)', () => {
     });
   };
 
-  test('the user`s seat: the first name and the host are seat 0, the guest seat 1, nobody at home', () => {
-    expect(userSeatOf('local')).toBe(0);
-    expect(userSeatOf('host')).toBe(0);
-    expect(userSeatOf('guest')).toBe(1);
-    expect(userSeatOf(null)).toBeNull();
-  });
-
   test('pass and play: the game`s end records it once, first in the shell and as the effect; a repaint, a re-render and the same position again record nothing', () => {
     const start = local();
     expect(start.shell.recentGames).toEqual([]);
@@ -4220,8 +4206,6 @@ describe("playing upright: `orientation: 'portrait'` is the mirror of sideways, 
     expect(wrongWay('portrait', desk)).toBe(false);
     expect(wrongWay('any', lying)).toBe(false);
     expect(wrongWay(undefined, held)).toBe(false);
-    expect(rotationHintMsg('landscape')).toBe(ROTATION_HINT_MSG);
-    expect(rotationHintMsg('portrait')).toBe(ROTATION_HINT_UPRIGHT_MSG);
     expect(ROTATION_HINT_UPRIGHT_MSG).toContain('upright');
   });
 
@@ -4363,14 +4347,6 @@ describe('the config`s defaults (shell-call-graph.md §4.3): what every game but
     expect(kept.map(startsOver)).toEqual([false, false, false, false]);
   });
 
-  test('tableReset: the initial table with the kept fields where the site starts over; the same table elsewhere', () => {
-    const initial: Table = { curtain: null, marks: [] };
-    const table: Table = { curtain: 1, marks: ['a'] };
-    expect(tableReset(initial, ['marks'])(table, 'leave')).toEqual({ curtain: null, marks: ['a'] });
-    expect(tableReset(initial, [])(table, 'handoff')).toEqual(initial);
-    expect(tableReset(initial, ['marks'])(table, 'view')).toBe(table);
-  });
-
   test('reset absent: the shell resets with `keeps` at every site (a start keeps the marks and adds none; the view and the frame leave the table)', () => {
     const BARE: ShellConfig<Fake> = {
       ...PLAIN,
@@ -4500,9 +4476,6 @@ describe('the extra seat names as shell state (shell-call-graph.md §4.7): `seat
     (app.shell.game?.players ?? []).map((p) => p.name);
 
   test('the initial shell holds one null per seat past the second up to the table`s max; a two-seat game holds none', () => {
-    expect(noSeatNames(FAKE)).toEqual([]);
-    expect(noSeatNames({ seats: { min: 2, max: 2 } })).toEqual([]);
-    expect(noSeatNames(FAKE4)).toEqual([null, null]);
     expect(initialShell(FAKE4).seatNames).toEqual([null, null]);
     expect(initialShell(FAKE).seatNames).toEqual([]);
   });

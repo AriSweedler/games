@@ -309,7 +309,7 @@ export const turnFor = (screen: ScreenSize, o: Orientation): ViewportSize =>
 export const screenFor = (d: Device, o: Orientation): ViewportSize => turnFor(d.screen, o);
 
 /** What the browser's bar takes off the height: the toolbar range's max with the bar shown, its min hidden; 0 outside a tab. */
-export const toolbarFor = (d: Device, o: Orientation, mode: DisplayMode, bar: Bar): number =>
+const toolbarFor = (d: Device, o: Orientation, mode: DisplayMode, bar: Bar): number =>
   mode === 'browser' ? d.toolbar[o][bar === 'shown' ? 'max' : 'min'] : 0;
 
 /** The layout viewport in an orientation, a mode and a bar state: the screen less the bar. */

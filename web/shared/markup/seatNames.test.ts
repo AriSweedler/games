@@ -3,13 +3,13 @@
 import { describe, expect, test } from 'vitest';
 
 import { idsIn } from './shell.ts';
-import { SEAT_NAMES_ID, extraSeats, seatNameInputId, seatNamesHtml } from './seatNames.ts';
+import { extraSeats, seatNameInputId, seatNamesHtml } from './seatNames.ts';
 
 describe('seatNamesHtml', () => {
   test('twelve seats: the grid, p1 to p12 in order, the first two shown and the rest hidden', () => {
     const html = seatNamesHtml({ max: 12 });
     expect(idsIn(html)).toEqual([
-      SEAT_NAMES_ID,
+      'seatNames',
       ...Array.from({ length: 12 }, (_, i) => seatNameInputId(i)),
     ]);
     expect(html).toContain('<div class="seat-names" id="seatNames">');

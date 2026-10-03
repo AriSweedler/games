@@ -15,11 +15,7 @@ import {
   readLocalOptions,
   setCodeInput,
 } from './home.ts';
-import {
-  handoffLabel,
-  resumeLabel as sharedResumeLabel,
-  versusOrList,
-} from '../../../../shared/lib/name.ts';
+import { handoffLabel, resumeLabel as sharedResumeLabel } from '../../../../shared/lib/name.ts';
 import { must } from '../../../../../test/shared/engine-helpers.ts';
 import { newGame } from '../domain/game.ts';
 import { makeHuman, seatPlayer } from '../domain/lobby.ts';
@@ -103,9 +99,7 @@ describe('the readers', () => {
 });
 
 describe('the labels', () => {
-  test('versusOrList, handoffLabel and resumeLabel in their forms', () => {
-    expect(versusOrList(['Ann', 'Bob'])).toBe('Ann vs Bob');
-    expect(versusOrList(['Ann', 'Bob', 'Cara'])).toBe('Ann, Bob and Cara');
+  test('handoffLabel and resumeLabel in their forms', () => {
     const game: State = must(
       seatPlayer(
         must(seatPlayer(newGame('ABCDE', 0), makeHuman('host', 'Ann', 0))),

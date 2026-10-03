@@ -101,9 +101,6 @@ export const removeElement = (el: Element): void => {
   el.remove();
 };
 
-/** `el.children.length`. */
-export const childCount = (el: Element): number => el.children.length;
-
 /** Add or remove `className` according to `on` (the third argument of classList.toggle). */
 export const toggleClass = (el: Element, className: string, on: boolean): void => {
   el.classList.toggle(className, on);

@@ -15,20 +15,16 @@ import {
   connDotView,
   hideToast,
   hostSeesMsg,
-  paintConnDot,
   paintFlip,
   GATE_COPY,
   paintGate,
-  paintHandoff,
   paintResult,
-  paintScreen,
   paintSheet,
   paintShellChrome,
   paintShellSheets,
   paintSound,
   paintWaiting,
   renderCopy,
-  seatLabel,
   seatListHtml,
   seatListKey,
   seatRows,
@@ -105,13 +101,31 @@ const wired = (
   return { p, intents };
 };
 
-describe('paintScreen', () => {
+/** A shell at the home with no room and no view; a case overrides what it needs. */
+const chrome = (over: Partial<ShellChromeView<ShellTypes>>): ShellChromeView<ShellTypes> => ({
+  screen: 'homeScreen',
+  view: null,
+  role: null,
+  oppConnected: false,
+  code: null,
+  hostStatus: { text: 'Opening room…', pulse: true },
+  guestStatus: { text: 'Connecting…', pulse: true },
+  startGameVisible: false,
+  ...over,
+});
+
+/** The chrome's screen switch alone (`paintScreen`, a local of `paintShellChrome` since dry-review-2026-10.md §7 row 10): the page's three screens, no 🌐, no dot. */
+const showScreen = (p: FakePage, screen: string): void => {
+  paintShellChrome(p.doc, chrome({ screen }), { screens: SCREENS, handoff: null });
+};
+
+describe('paintShellChrome screens', () => {
   test('shows exactly the current screen and locks the body at the fixed one', () => {
     const p = page();
-    paintScreen(p.doc, SCREENS, 'tableScreen', 'tableScreen');
+    showScreen(p, 'tableScreen');
     expect(shown(p)).toEqual(['tableScreen']);
     expect(p.body.hasClass('fixed-screen')).toBe(true);
-    paintScreen(p.doc, SCREENS, 'hostWaitScreen', 'tableScreen');
+    showScreen(p, 'hostWaitScreen');
     expect(shown(p)).toEqual(['hostWaitScreen']);
     expect(p.body.hasClass('fixed-screen')).toBe(false);
   });
@@ -127,6 +141,7 @@ describe('paintScreen', () => {
     const curtain = fakeEl('curtainOverlay', { classes: ['overlay', 'curtain'] });
     const p = fakePage(
       [
+        ...pageEls().filter((el) => !SCREENS.includes(el.id as (typeof SCREENS)[number])),
         fakeEl('homeScreen', { classes: ['hidden'] }),
         fakeEl('hostWaitScreen', { classes: ['hidden'] }),
         fakeEl('tableScreen'),
@@ -136,14 +151,14 @@ describe('paintScreen', () => {
       ],
       fakeEl('body', { queries: { '.overlay': [curtain, result, rules] } }),
     );
-    paintScreen(p.doc, SCREENS, 'tableScreen', 'tableScreen');
+    showScreen(p, 'tableScreen');
     expect(shown(p)).toEqual(['tableScreen']);
     expect(p.get('resultOverlay').hidden()).toBe(false);
     expect(p.get('curtainOverlay').hidden()).toBe(false);
     expect(p.get('rulesOverlay').hidden()).toBe(true);
-    paintScreen(p.doc, SCREENS, 'hostWaitScreen', 'tableScreen');
+    showScreen(p, 'hostWaitScreen');
     expect(p.get('resultOverlay').hidden()).toBe(false);
-    paintScreen(p.doc, SCREENS, 'homeScreen', 'tableScreen');
+    showScreen(p, 'homeScreen');
     expect(shown(p)).toEqual(['homeScreen']);
     expect(p.body.hasClass('fixed-screen')).toBe(false);
     ['resultOverlay', 'rulesOverlay', 'curtainOverlay'].forEach((id) => {
@@ -320,7 +335,6 @@ describe('paintWaiting', () => {
       { seat: 2, name: null, connected: false, you: false },
       { seat: 3, name: 'Di', connected: false, you: false },
     ]);
-    expect(rows.map(seatLabel)).toEqual(['Ann · host · you', 'Bo', 'Seat 3 · empty', 'Di']);
     expect(seatListHtml(rows)).toBe(
       '<li data-seat="0" data-connected="true" data-you="">Ann · host · you</li>' +
         '<li data-seat="1" data-connected="true">Bo</li>' +
@@ -351,9 +365,10 @@ describe('paintWaiting', () => {
       role: 'guest',
       oppName: 'Ann',
     });
-    expect(guest.map(seatLabel)).toEqual(['Ann · host', 'Bo', '<Cy> · you']);
-    expect(seatListHtml(guest)).toContain(
-      'data-seat="2" data-connected="true" data-you="">&lt;Cy&gt; · you</li>',
+    expect(seatListHtml(guest)).toBe(
+      '<li data-seat="0" data-connected="true">Ann · host</li>' +
+        '<li data-seat="1" data-connected="true">Bo</li>' +
+        '<li data-seat="2" data-connected="true" data-you="">&lt;Cy&gt; · you</li>',
     );
     // No room open: no rows, an empty list; a host whose name is unknown reads as an empty host seat.
     expect(seatRows({ seats: [], mySeat: 0, role: 'host', myName: 'Ann' })).toEqual([]);
@@ -373,8 +388,9 @@ describe('paintWaiting', () => {
     });
     paintWaiting(p.doc, { ...waiting, seats: [] });
     expect(p.get('seatList').text()).toBe('');
-    expect(seatLabel({ seat: 0, name: null, connected: true, you: false })).toBe(
-      'Seat 1 · host · empty',
+    // An unnamed host seat, seen by a guest: the label spells the seat, the role and that it is empty.
+    expect(seatListHtml([{ seat: 0, name: null, connected: true, you: false }])).toBe(
+      '<li data-seat="0" data-connected="true">Seat 1 · host · empty</li>',
     );
   });
 });
@@ -445,15 +461,18 @@ describe('renderCopy', () => {
   });
 });
 
-describe('paintHandoff', () => {
+describe('paintShellChrome handoff', () => {
   test('shows the 🌐 with its tooltip for a label; hides it, tooltip untouched, for none', () => {
     const p = page();
-    paintHandoff(p.doc, 'Continue online: Ari hosts, Jeff joins by invite');
+    paintShellChrome(p.doc, chrome({}), {
+      screens: SCREENS,
+      handoff: 'Continue online: Ari hosts, Jeff joins by invite',
+    });
     expect(p.get('handoffBtn').hidden()).toBe(false);
     expect(p.get('handoffBtn').attr('title')).toBe(
       'Continue online: Ari hosts, Jeff joins by invite',
     );
-    paintHandoff(p.doc, null);
+    paintShellChrome(p.doc, chrome({}), { screens: SCREENS, handoff: null });
     expect(p.get('handoffBtn').hidden()).toBe(true);
     expect(p.get('handoffBtn').attr('title')).toBe(
       'Continue online: Ari hosts, Jeff joins by invite',
@@ -462,19 +481,6 @@ describe('paintHandoff', () => {
 });
 
 describe('paintShellChrome', () => {
-  /** A shell at the home with no room and no view; a case overrides what it needs. */
-  const chrome = (over: Partial<ShellChromeView<ShellTypes>>): ShellChromeView<ShellTypes> => ({
-    screen: 'homeScreen',
-    view: null,
-    role: null,
-    oppConnected: false,
-    code: null,
-    hostStatus: { text: 'Opening room…', pulse: true },
-    guestStatus: { text: 'Connecting…', pulse: true },
-    startGameVisible: false,
-    ...over,
-  });
-
   test('at the home with no view: the home shows, the rooms read the shell, the 🌐 hides, the dot keeps the markup`s class', () => {
     const p = page();
     paintShellChrome(p.doc, chrome({ oppConnected: true }), {
@@ -965,7 +971,7 @@ describe('bindLongPress', () => {
   });
 });
 
-describe('paintConnDot', () => {
+describe('paintShellChrome connection dot', () => {
   test('connDotView reads the two shell fields; connDotClass is the whole attribute both games pinned', () => {
     expect(connDotView({ oppConnected: false, role: null })).toEqual({
       connected: false,
@@ -987,10 +993,11 @@ describe('paintConnDot', () => {
 
   test('writes the class attribute whole (no other class survives) and the tooltip', () => {
     const p = page();
-    paintConnDot(p.doc, 'connDot', { connected: true, hidden: false });
+    const dot = { screens: SCREENS, handoff: null, connDot: 'connDot' } as const;
+    paintShellChrome(p.doc, chrome({ view: {}, role: 'host', oppConnected: true }), dot);
     expect(p.get('connDot').attr('class')).toBe('conn-dot on');
     expect(p.get('connDot').attr('title')).toBe('Connected');
-    paintConnDot(p.doc, 'connDot', { connected: false, hidden: true });
+    paintShellChrome(p.doc, chrome({ view: {}, role: 'local', oppConnected: false }), dot);
     expect(p.get('connDot').attr('class')).toBe('conn-dot off hidden');
     expect(p.get('connDot').attr('title')).toBe('Disconnected');
   });

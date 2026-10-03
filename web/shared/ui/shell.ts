@@ -1221,7 +1221,7 @@ export const startsOver = (at: TableReset): boolean => STARTS_OVER[at];
  * the old one; elsewhere the table as it is. Exported for the game that spells one more site over
  * it (flip7's deal drops its pause).
  */
-export const tableReset =
+const tableReset =
   <T extends object>(initial: T, keeps: ReadonlyArray<keyof T>) =>
   (table: T, at: TableReset): T =>
     startsOver(at) ? { ...initial, ...Object.fromEntries(keeps.map((k) => [k, table[k]])) } : table;
@@ -1370,7 +1370,7 @@ export const ROTATION_HINT_UPRIGHT_MSG =
   "Lock the phone's rotation so the page stays upright: swipe down and make sure Auto-rotate is off.";
 export const ROTATION_HINT_MS = 8000;
 /** The hint's words for the way a game plays. */
-export const rotationHintMsg = (orientation: PlayOrientation): string =>
+const rotationHintMsg = (orientation: PlayOrientation): string =>
   orientation === 'landscape' ? ROTATION_HINT_MSG : ROTATION_HINT_UPRIGHT_MSG;
 
 /**
@@ -1526,7 +1526,7 @@ export const localSeats = (
   }, []);
 
 /** `ShellState.seatNames` with nothing remembered: one null per seat past the shell's two up to `cfg.seats.max`; [] for a two-seat game. */
-export const noSeatNames = <G extends ShellTypes>(
+const noSeatNames = <G extends ShellTypes>(
   cfg: Pick<ShellConfig<G>, 'seats'>,
 ): ReadonlyArray<string | null> =>
   Array.from({ length: cfg.seats === undefined ? 0 : Math.max(0, cfg.seats.max - 2) }, () => null);
@@ -1660,7 +1660,7 @@ const lobbySends = <G extends ShellTypes>(
  * normalisation, then ` 2`, ` 3`, … until it clashes with nobody, case-insensitively. Against the
  * host's name alone it is `guestNameFor(raw, hostName)`, ` 2` appended once.
  */
-export const guestNameAmong = (raw: string, taken: ReadonlyArray<string>): string => {
+const guestNameAmong = (raw: string, taken: ReadonlyArray<string>): string => {
   const named = guestNameFor(raw, '');
   const clashes = (name: string): boolean =>
     taken.some((t) => t.toLowerCase() === name.toLowerCase());
@@ -1753,23 +1753,6 @@ export const cueStep =
 // ---- the finished game's record ---------------------------------------------------------------
 
 /**
- * The seat the device's user sits in (the owner: "p1 on the device should be considered the
- * user"): seat 0 in pass-and-play (the first name) and for the host, seat 1 for the guest; none
- * at home.
- */
-export const userSeatOf = (role: Role | null): Seat | null => {
-  switch (role) {
-    case 'local':
-    case 'host':
-      return 0;
-    case 'guest':
-      return 1;
-    case null:
-      return null;
-  }
-};
-
-/**
  * Once per finished game (the owner, 2026-09-25): when the view first shows the game over, its
  * record (the clock, the mode, the seats' names, the game's score and winner, the outcome from
  * the user's seat) goes first into `recentGames` and out as the `recordGame` effect, and its key
@@ -1784,7 +1767,7 @@ const recordResult = <G extends ShellTypes>(
 ): Step<G> => {
   const s = app.shell;
   const view = s.view;
-  // My seat (`userSeatOf` for a two-seat game; an N-seat game's guest may sit past 1, the frame's `you`).
+  // My seat: 0 in pass-and-play and for the host, the frame's `you` for a guest (past 1 at an N-seat table); none at home.
   const seat = s.role === null ? null : s.mySeat;
   if (view === null || seat === null || !cfg.engine.over(view)) return pure(app);
   const key = cfg.result.keyOf(view);

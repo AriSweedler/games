@@ -1177,6 +1177,7 @@ describe('the helpers', () => {
 const renderTs = (
   slug: string,
   pascal: string,
+  upper: string,
   title: string,
 ): string => `// ${title}'s paint (docs/design/${slug}.md §3): the App onto the composed shell page (page.ts) through the
 // DOM edge, and every control bound to an intent. The shell's half is web/shared/ui's (the screens,
@@ -1198,21 +1199,18 @@ import {
   paintCurtain as paintShellCurtain,
 } from '../../../../shared/ui/curtain.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindShellSheets,
-  connDotView,
-  paintConnDot,
-  paintHandoff as paintShellHandoff,
-  paintScreen as paintShellScreen,
   paintResult,
   paintSheet,
-  paintWaiting as paintShellWaiting,
+  paintShellChrome,
   type Dispatch,
 } from '../../../../shared/ui/shellPaint.ts';
 import { turnSeat, type Seat, type View } from '../engine/view.ts';
 import { bindHome, paintHome } from './home.ts';
-import { SCREENS, handoffLabel, type App, type Intent, type ${pascal} } from './state.ts';
+import { ${upper}, type App, type Intent, type ${pascal} } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 
@@ -1227,9 +1225,6 @@ export const statusText = (v: View): string => {
 };
 
 const paintTable = (doc: DocumentLike, app: App, v: View): void => {
-  setText(requireId(doc, 'myName'), nameAt(v, v.seat));
-  setText(requireId(doc, 'oppName'), nameAt(v, v.seat === 0 ? 1 : 0));
-  paintConnDot(doc, 'oppDot', connDotView(app.shell));
   const turn = turnSeat(v.game);
   const mine = turn === v.seat;
   const over = v.game.result !== null;
@@ -1260,12 +1255,14 @@ const paintOverlays = (doc: DocumentLike, app: App): void => {
   if (app.table.historyOpen) paintRecentGames(doc, app.shell.recentGames);
 };
 
+/** The shell's chrome first (the screens, the rooms, the 🌐, the dot and the names strip off the view), then the page's own. */
 export const paint = (doc: PageLike, app: App): void => {
-  paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
-  paintShellWaiting(doc, app.shell);
+  paintShellChrome(doc, app.shell, {
+    handoff: handoffLabelOf(app.shell, ${upper}),
+    connDot: 'oppDot',
+    names: (v) => ({ me: nameAt(v, v.seat), others: nameAt(v, v.seat === 0 ? 1 : 0) }),
+  });
   paintHome(doc, app);
-  const game = app.shell.role === 'local' ? app.shell.game : null;
-  paintShellHandoff(doc, game === null ? null : handoffLabel(game));
   const v = app.shell.view;
   if (v !== null) paintTable(doc, app, v);
   paintCurtain(doc, app);
@@ -1780,7 +1777,7 @@ export const generatedFiles = (spec: NewGameSpec): ReadonlyArray<GeneratedFile> 
       content: stateTs(n.slug, n.upper, n.pascal, n.title, spec.hidden),
     },
     { path: `${g}/src/ui/state.test.ts`, content: stateTestTs(spec.hidden) },
-    { path: `${g}/src/ui/render.ts`, content: renderTs(n.slug, n.pascal, n.title) },
+    { path: `${g}/src/ui/render.ts`, content: renderTs(n.slug, n.pascal, n.upper, n.title) },
     {
       path: `e2e/fixtures/${n.slug}.ts`,
       content: e2eFixtureTs(n.slug, n.title, n.hook, spec.hidden),

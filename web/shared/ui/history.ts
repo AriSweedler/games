@@ -15,7 +15,6 @@ import {
   queryIn,
   requireId,
   safeHtml,
-  scrollIntoView,
   setAttr,
   setHtml,
   trustedHtml,
@@ -135,13 +134,4 @@ export const paintHistory = <E extends HistoryEvent, C>(
     list,
     safeHtml`${events.filter((e) => e.id > after).map((e) => historyRowHtml(e, copy, ctx))}`,
   );
-};
-
-/**
- * The newest row into view (`block: 'end'`): what a sheet does as it opens, so the player reads
- * the last event first and scrolls up for the past. Nothing for an empty list.
- */
-export const scrollHistoryToEnd = (doc: DocumentLike, listId: string): void => {
-  const last = queryIn(requireId(doc, listId), 'details.history-row:last-of-type');
-  if (last !== null) scrollIntoView(last, { block: 'end' });
 };

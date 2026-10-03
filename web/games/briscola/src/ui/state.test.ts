@@ -117,7 +117,6 @@ import {
   handoffLabel,
   listNames,
   resumeLabel as sharedResumeLabel,
-  versusOrList,
 } from '../../../../shared/lib/name.ts';
 
 /** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
@@ -1162,8 +1161,6 @@ describe('resume, storage and what the sessions read back', () => {
     ).app;
     expect(game(resumed)).toEqual(three);
     expect(resumed.table.curtain).toBe(three.turn);
-    expect(versusOrList(['Ann'])).toBe('Ann');
-    expect(versusOrList(['Ann', 'Bob', 'Cara', 'Dan'])).toBe('Ann, Bob, Cara and Dan');
     expect(seatPlayers(2, [])).toEqual([
       { id: 'p1', name: 'Player 1' },
       { id: 'p2', name: 'Player 2' },

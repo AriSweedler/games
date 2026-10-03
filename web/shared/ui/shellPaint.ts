@@ -57,7 +57,7 @@ import {
 export type Dispatch<I> = (intent: I) => void;
 
 /** The home screen's id, the first of every shell game's `SCREENS` (shell.ts `ScreenId`). */
-export const HOME_SCREEN = 'homeScreen';
+const HOME_SCREEN = 'homeScreen';
 
 /** Every sheet and the curtain: each `.overlay` in the body (page.html places them as body children, so one list finds a game's and the shell's alike; `paintGate` reads the same). */
 const OVERLAYS = '.overlay';
@@ -71,7 +71,7 @@ const OVERLAYS = '.overlay';
  * paints that follow show again only what their flags say, and the leave reset those (shell.ts
  * `leaveFinish`).
  */
-export const paintScreen = (
+const paintScreen = (
   doc: PageLike,
   screens: ReadonlyArray<string>,
   current: string,
@@ -142,7 +142,7 @@ export const seatRows = (
 };
 
 /** A row's text: the name (or `Seat N` while empty), then ` · host`, ` · you`, ` · empty` as they apply. */
-export const seatLabel = (row: SeatRow): string =>
+const seatLabel = (row: SeatRow): string =>
   [
     row.name ?? `Seat ${String(row.seat + 1)}`,
     ...(row.seat === 0 ? ['host'] : []),
@@ -316,7 +316,7 @@ export const renderCopy = (
  * seat joining from its own device; `label` is the tooltip naming who hosts and who joins, null
  * when the button has no business showing (a room is online already, a scorer has no table).
  */
-export const paintHandoff = (doc: DocumentLike, label: string | null): void => {
+const paintHandoff = (doc: DocumentLike, label: string | null): void => {
   const btn = requireId(doc, 'handoffBtn');
   toggleClass(btn, 'hidden', label === null);
   if (label !== null) setAttr(btn, 'title', label);
@@ -339,7 +339,7 @@ export const connDotView = (
 export const connDotClass = (v: ConnDotView): string =>
   `conn-dot ${v.connected ? 'on' : 'off'}${v.hidden ? ' hidden' : ''}`;
 
-export const paintConnDot = (doc: DocumentLike, id: string, v: ConnDotView): void => {
+const paintConnDot = (doc: DocumentLike, id: string, v: ConnDotView): void => {
   const dot = requireId(doc, id);
   setAttr(dot, 'class', connDotClass(v));
   setAttr(dot, 'title', v.connected ? 'Connected' : 'Disconnected');
@@ -452,7 +452,7 @@ export const paintShellSheets = (
 // ---- the turn gate (docs/design/backgammon-landscape.md §5D; docs/design/shared-shell.md "Playing sideways") ----
 
 /** The gate's ids (web/shared/markup/shell.ts `gateMarkup`): the sheet and its two live controls, bound by the boot (web/shared/edge/boot.ts), never by a game's render.ts. Not in SHELL_IDS: a page carries them only when its game plays sideways. */
-export const GATE_ID = 'turnGate';
+const GATE_ID = 'turnGate';
 export const GATE_KEEP_ID = 'turnGateKeepBtn';
 /** "Go sideways": the Android lock from the gate's own tap (`gate/turn`); shown only where the device can lock (`canLock` below), so an iPhone's gate keeps its one control. */
 export const GATE_GO_ID = 'turnGateGoBtn';

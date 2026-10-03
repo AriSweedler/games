@@ -1,13 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import {
-  handoffLabel,
-  listNames,
-  normaliseName,
-  resumeLabel,
-  versusOrList,
-  type NameRule,
-} from './name.ts';
+import { handoffLabel, listNames, normaliseName, resumeLabel, type NameRule } from './name.ts';
 
 // Fidice's rule (domain/types.ts NAME_RULE), the first consumer; the legacy lobby's
 // `cleanName('  abcdefghijklmnopqrstuvwxyz ')` is 'abcdefghijklmnop' (test/parity/fidice.legacy).
@@ -41,16 +34,15 @@ const two: Game = { names: ['Ann', 'Bob'] };
 const three: Game = { names: ['Ann', 'Bob', 'Cara'] };
 const host = { kind: 'host', code: 'KQZM', handoff: false, game: two } as const;
 
-describe('listNames and versusOrList', () => {
+describe('listNames', () => {
   test.each([
-    [[], '', ''],
-    [['Ann'], 'Ann', 'Ann'],
-    [['Ann', 'Bob'], 'Ann and Bob', 'Ann vs Bob'],
-    [['Ann', 'Bob', 'Cara'], 'Ann, Bob and Cara', 'Ann, Bob and Cara'],
-    [['Ann', 'Bob', 'Cara', 'Dan'], 'Ann, Bob, Cara and Dan', 'Ann, Bob, Cara and Dan'],
-  ])('%j', (names, list, versus) => {
+    [[], ''],
+    [['Ann'], 'Ann'],
+    [['Ann', 'Bob'], 'Ann and Bob'],
+    [['Ann', 'Bob', 'Cara'], 'Ann, Bob and Cara'],
+    [['Ann', 'Bob', 'Cara', 'Dan'], 'Ann, Bob, Cara and Dan'],
+  ])('%j', (names, list) => {
     expect(listNames(names)).toBe(list);
-    expect(versusOrList(names)).toBe(versus);
   });
 });
 

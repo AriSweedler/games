@@ -117,7 +117,7 @@ export const readDevice = (doc: RootDocumentLike, win: ScreenWindowLike): Device
 };
 
 /** The page's viewport, `innerWidth x innerHeight`; null where the window has neither (a fake). */
-export const readViewport = (win: ScreenWindowLike): ViewportSize | null =>
+const readViewport = (win: ScreenWindowLike): ViewportSize | null =>
   win.innerWidth === undefined || win.innerHeight === undefined
     ? null
     : { width: win.innerWidth, height: win.innerHeight };
