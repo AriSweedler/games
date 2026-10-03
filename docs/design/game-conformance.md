@@ -24,6 +24,7 @@ One id per rule, as the suite names it in a failure (`<game>: <rule>: <what to f
 | `landing`        | The menu                                               | The landing card, the README "Play" row, `assets/splash.svg` and its PNG; no alias shadows the game                         |
 | `tables`         | A new game, step 7                                     | A row in `REGISTRY`, `SHELL`, `ROOM_CODE` and `ids.ts SHELL_GAMES`; `randomCode` and `sanitiseCode` total                   |
 | `curtain`        | Hidden hands                                           | On a game that hides a hand (`hides`), with the pass-and-play curtain up the overlay's scrim is opaque or the table is hidden under it |
+| `home-felt`      | Every game is a shared-shell game (the shell paints no body) | The home's body is painted (not white or transparent) with the declared `felt` token's paint; the title reads at 4.5:1 or better against every opaque colour under it |
 
 ## 2. The suite
 
@@ -64,12 +65,14 @@ Found broken: ✗. Meets the rule: ✓. A declared gap is a ✗ with its follow-
 | hive       | ✓          | ✓           | ✓ (two seats)           | ✓                          | ✓                | ✗ no pause at the end      | ✓                             | ✓       | ✓      | — (no curtain)               |
 
 Guarded by: `shell-home`, `online-mode`, `landing`, `tables`, `cues`, `pauses`: the source half;
-`shell-home`, `stepper` (markup): the built half; `stepper`, `seat-names`, `rules-fit`, `curtain`:
-the browser half.
+`shell-home`, `stepper` (markup): the built half; `stepper`, `seat-names`, `rules-fit`, `curtain`,
+`home-felt`: the browser half.
 
 What the audit of UNO and Flip 7 found beyond the table, before the shell turn (the lanes fixed
 them; the rules above keep them fixed): a home of their own instead of the shell's, a `<select>`
 for players, no Rules tab, no opponents' counts, no pause after a bust, no sounds, a 10-player cap.
+Found the same evening, after the shell turn: Flip 7's home white (its theme painted no body, so
+the shell's chrome sat on the browser's default; the `home-felt` rule, 2026-10-02).
 
 ## 4. Follow-ups
 
@@ -86,5 +89,9 @@ Each is a `gaps` row in `tools/games.ts`; closing one is the fix plus deleting t
   `pauseFor`, for the events in AGENT.md's table.
 - `cues` on fidice: rows of its own in `src/ui/sound.ts` (M9). Flip 7's table landed in #29 while
   this audit ran; its row declares five of its cues.
+- `home-felt` on UNO (the wordmark's red, 1.85:1 on the felt) and Hive (the amber title, 3.62:1):
+  a lighter ink for the h1 alone, or a plate behind it; the guard measures the title against every
+  opaque stop of the body's paint. Flip 7's white home (no body rule in its theme) was the finding
+  that made the rule; its theme paints the felt since 2026-10-02.
 - UNO is a single-round game (the owner: "more like briscola"): a rule for the suite once the
   engines declare their round shape.

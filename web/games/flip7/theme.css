@@ -1,8 +1,11 @@
 /* Flip 7 (docs/design/flip7.md §8): the shell's home, waiting rooms, curtain and sheets
-   (web/shared/styles/shell.css over tokens.css, the seat count its shared stepper) with nothing
-   of its own but the accent, then the table, which has a palette of its own (the owner,
-   2026-10-02: "flip7 colorscheme is no good. Do better there"): the `--f7-*` tokens below, over
-   the shell's dark chrome. The table is a warm, deep felt with a soft vignette so the cards pop;
+   (web/shared/styles/shell.css over tokens.css, the seat count its shared stepper) on the shared
+   felt with the shell's type scale, as UNO's and Hive's are (the block after the tokens: the body's
+   felt, the title in the accent, the fields, the tabs, the lobby's seat list; the shell paints no
+   body of its own, so a theme without this block leaves its home white, which this one did until
+   2026-10-02 and the `home-felt` conformance rule now forbids), then the table, which has a palette
+   of its own (the owner, 2026-10-02: "flip7 colorscheme is no good. Do better there"): the `--f7-*`
+   tokens below, over the shell's dark chrome. The table is a warm, deep felt with a soft vignette so the cards pop;
    the seats sit on it as translucent slabs. Every card is face up: a number card's face takes its
    value's hue, a thirteen-step rainbow from 0 (grey) through violet, indigo, blue, teal, green,
    lime, yellow, amber, orange, red and crimson to 12 (magenta), each with a cream numeral at 4.5:1
@@ -101,6 +104,169 @@
     --f7-row-gap-ms: 0ms;
     --f7-glow-ms: 1ms;
   }
+}
+
+/* ---- the shell's type scale (UNO's block, web/games/uno/theme.css) ---- */
+/* The shared felt under every screen but the table, gin's own (tokens.css `--felt`); the
+   conformance suite pins the body's paint to it (tools/games.ts CONFORMANCE flip7 `felt`). */
+html,
+body {
+  background: var(--felt);
+}
+.card-box {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.btn-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+/* The title in the game's ink, the gold accent, 7:1 and better on every stop of the felt. */
+h1 {
+  font-size: 2.2rem;
+  line-height: 1.1;
+  margin: 10px 0 0;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.masthead {
+  margin: 4px 0 14px;
+}
+.subtitle {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin: 4px 0 14px;
+}
+.card-box.centered,
+.centered {
+  text-align: center;
+}
+.card-box > label + *,
+.card-box > label + .row {
+  margin-top: 8px;
+}
+.card-box > .row + .row,
+.card-box > .stepper + .row,
+.card-box > .stepper + .btn {
+  margin-top: 12px;
+}
+input[type='text'] {
+  padding: 13px 14px;
+  background: #0d2418;
+  font-size: 1.05rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-height: 48px;
+}
+label {
+  display: block;
+  letter-spacing: 0.06em;
+}
+.row + .btn {
+  margin-top: 10px;
+}
+.row.tight {
+  gap: 6px;
+}
+.row.between {
+  justify-content: space-between;
+}
+.muted {
+  color: var(--muted);
+}
+.icon-btn {
+  cursor: pointer;
+}
+.room-code {
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  margin: 6px 0 10px;
+}
+.tab-btn,
+.mode-btn {
+  min-height: 44px;
+  cursor: pointer;
+}
+.tab-btn.active {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.rules-list li {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+.sheet-title {
+  font-weight: 700;
+}
+.sheet .btn-block + .btn-block {
+  margin-top: 8px;
+}
+.empty-note {
+  font-size: 0.88rem;
+  padding: 8px 0 0;
+  line-height: 1.4;
+}
+.empty-note.left {
+  text-align: left;
+}
+/* The waiting rooms' seat list (shellPaint.ts `paintWaiting`): one row per seat, a dot for its channel. */
+.seat-list {
+  list-style: none;
+  margin: 8px auto 2px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 260px;
+  text-align: left;
+  font-size: 0.92rem;
+}
+.seat-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.seat-list li::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent-dark);
+  flex-shrink: 0;
+}
+.seat-list li[data-connected='false'] {
+  color: var(--muted);
+}
+.seat-list li[data-connected='false']::before {
+  background: var(--muted);
+}
+.seat-list li[data-you] {
+  font-weight: 600;
+}
+#guestSeatName {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: left;
+}
+#guestSeatName .row {
+  margin-top: 8px;
+}
+#guestNameNote {
+  font-size: 0.82rem;
+  padding-top: 6px;
+}
+.conn-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+/* The opponent's dot (shellPaint.ts `connDotClass`, painted through `paintShellChrome`): the gold
+   accent-dark when connected, as the lobby's seat dots are; the shell's green would be gin's. */
+.conn-dot.on {
+  background: var(--accent-dark);
+}
+.conn-dot.off {
+  background: var(--danger);
 }
 
 /* ---- the home: the third to twelfth names under the shared stepper ---- */
