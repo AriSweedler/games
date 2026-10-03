@@ -123,6 +123,19 @@ export type Table = Readonly<{
   hop: Hop | null;
   /** The tiles' motion, the device's remembered setting: kept through every start and leave. */
   motion: Motion;
+  /**
+   * The stacked hex whose column is on show (render.ts `peekHtml`): opened by a hover, a tap, or
+   * Enter/Space on the focused count badge; closed by a tap elsewhere, Escape, the pointer
+   * leaving, focus moving on, any pick or drag, and any new position.
+   */
+  peek: Hex | null;
+  /**
+   * A badge whose peek was dismissed (Escape, a tap elsewhere) while the pointer may still rest on
+   * it: the repaint puts a fresh badge under the pointer and its `pointerover` must not reopen the
+   * peek at once. A hover on this hex is nothing until the pointer leaves it (`peek/close`) or
+   * hovers another badge; a tap on it reopens.
+   */
+  peekShut: Hex | null;
   /** The result sheet's Continue was tapped: the final board stays on show. */
   resultSeen: boolean;
   /** `#historyOverlay` open. */
@@ -138,6 +151,9 @@ export type TableIntent =
   | Readonly<{ type: 'drag/over'; hex: Hex | null }>
   | Readonly<{ type: 'drag/end' }>
   | Readonly<{ type: 'aim/hex'; hex: Hex | null }>
+  | Readonly<{ type: 'peek/hover'; hex: Hex }>
+  | Readonly<{ type: 'peek/open'; hex: Hex }>
+  | Readonly<{ type: 'peek/close' }>
   | Readonly<{ type: 'result/continue' }>
   | Readonly<{ type: 'rules/open' }>
   | Readonly<{ type: 'rules/close' }>
@@ -186,14 +202,20 @@ export const initialTable: Table = {
   aim: null,
   hop: null,
   motion: HIVE_MOTION.initial,
+  peek: null,
+  peekShut: null,
   resultSeen: false,
   historyOpen: false,
 };
 
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
-/** The table with `picked` in hand (or nothing); a new pick aims at nothing yet. */
-const pick = (app: App, picked: Picked | null): App => withTable(app, { picked, aim: null });
+/**
+ * The table with `picked` in hand (or nothing); a new pick aims at nothing yet, and dismisses any
+ * peek (the pointer may still rest on its badge: `peekShut`).
+ */
+const pick = (app: App, picked: Picked | null): App =>
+  withTable(app, { picked, aim: null, peek: null, peekShut: app.table.peek });
 
 const refuse = (app: App, message: string): Step =>
   step(withTable(pick(app, null), { drag: null }), toast(message));
@@ -276,6 +298,8 @@ const rendered = (app: App, prev: View | null, ctx: Ctx): Step => {
     picked: fresh || newGame ? null : app.table.picked,
     drag: newGame ? null : app.table.drag,
     aim: fresh || newGame ? null : app.table.aim,
+    peek: fresh || newGame ? null : app.table.peek,
+    peekShut: fresh || newGame ? null : app.table.peekShut,
     // A tile that landed hops once, on this position; any other fresh position hops nothing.
     hop:
       moved !== null ? { key, ...moved, reduced: snap } : fresh || newGame ? null : app.table.hop,
@@ -298,7 +322,7 @@ const reset = (table: Table, at: TableReset): Table => {
     case 'view':
     case 'applied':
     case 'frame':
-      return { ...table, picked: null, drag: null, aim: null };
+      return { ...table, picked: null, drag: null, aim: null, peek: null, peekShut: null };
   }
 };
 
@@ -390,7 +414,11 @@ const play = (app: App, picked: Picked, hex: Hex, ctx: Ctx): Step => {
       ? { type: 'place', bug: picked.bug, to: hex }
       : { type: 'move', from: picked.hex, to: hex };
   return then(step(app, fx('tap')), (a) =>
-    act(withTable(a, { picked: null, drag: null, aim: null }), action, ctx),
+    act(
+      withTable(a, { picked: null, drag: null, aim: null, peek: null, peekShut: null }),
+      action,
+      ctx,
+    ),
   );
 };
 
@@ -422,7 +450,7 @@ const pickable = (view: View, picked: Picked): boolean =>
 const dragStart = (app: App, picked: Picked): Step => {
   const view = app.shell.view;
   if (view === null || !pickable(view, picked)) return pure(app);
-  return pure(withTable(app, { picked, drag: { over: null } }));
+  return pure(withTable(app, { picked, drag: { over: null }, peek: null }));
 };
 
 /** `drag/over`: the lit hex the ghost is over, or none; a hex the pick cannot reach counts as none. */
@@ -444,6 +472,14 @@ const dragEnd = (app: App, ctx: Ctx): Step => {
   if (picked !== null && d.over !== null && canReach(view, picked, d.over))
     return play(app, picked, d.over, ctx);
   return pure(withTable(app, { picked: null, drag: null, aim: null }));
+};
+
+/** The peek at `hex` open: a stacked hex only; the same hex again is no change, so no repaint. */
+const openPeek = (app: App, hex: Hex): Step => {
+  const view = app.shell.view;
+  if (view === null || heightAt(view.game.board, hex) < 2) return pure(app);
+  const same = app.table.peek !== null && sameHex(app.table.peek, hex);
+  return same ? pure(app) : pure(withTable(app, { peek: hex, peekShut: null }));
 };
 
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
@@ -475,6 +511,18 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
           : app.table.aim !== null && sameHex(app.table.aim, intent.hex);
       return same ? pure(app) : pure(withTable(app, { aim: intent.hex }));
     }
+    case 'peek/hover': {
+      // A hover on the badge just dismissed is nothing (the pointer never left it); another badge's is a fresh peek.
+      const shut = app.table.peekShut !== null && sameHex(app.table.peekShut, intent.hex);
+      return shut ? pure(app) : openPeek(app, intent.hex);
+    }
+    case 'peek/open':
+      return openPeek(app, intent.hex);
+    case 'peek/close':
+      // The pointer left the badge (or the board): the peek goes, and a dismissal is spent.
+      return app.table.peek === null && app.table.peekShut === null
+        ? pure(app)
+        : pure(withTable(app, { peek: null, peekShut: null }));
     case 'result/continue':
       return pure(withTable(app, { resultSeen: true }));
     case 'rules/open':
@@ -491,6 +539,8 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
     }
     case 'escape':
       if (app.table.historyOpen) return pure(withTable(app, { historyOpen: false }));
+      if (app.table.peek !== null)
+        return pure(withTable(app, { peek: null, peekShut: app.table.peek }));
       if (app.shell.rulesOpen) return pure(withShell(app, { rulesOpen: false }));
       return pure(pick(app, null));
   }

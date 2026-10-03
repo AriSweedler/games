@@ -91,6 +91,13 @@ export const heightAt = (board: Board, h: Hex): number => stackAt(board, h).leng
 /** The tile on top of a hex: the one that moves and the one whose colour the stack is. */
 export const topAt = (board: Board, h: Hex): Tile | undefined => stackAt(board, h).at(-1);
 
+/**
+ * The whole column at a hex as a peek reads it, top first (a `Stack` is bottom first: the tile
+ * placed or climbed last is at its end). Empty for an empty hex.
+ */
+export const columnAt = (board: Board, h: Hex): ReadonlyArray<Tile> =>
+  [...stackAt(board, h)].reverse();
+
 export const occupied = (board: Board): ReadonlyArray<Hex> => Object.keys(board).map(hexOf);
 
 /** Every tile of `side` on the board, at any height. */

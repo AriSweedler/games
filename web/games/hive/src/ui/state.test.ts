@@ -413,3 +413,97 @@ describe("every tile crawls (the owner: 'have them move in little jumps'), unles
     expect(readHome(store).motion).toBe('snap');
   });
 });
+
+describe('the peek at a stack', () => {
+  /** A table where Black's Beetle stands on White's Ant at the origin (through `position/load`), White to move. */
+  const climbed = (): App => {
+    const app = started();
+    const game = app.shell.game;
+    if (game === null) throw new Error('no game');
+    const board = {
+      '0,0': [
+        { side: 'white', bug: 'ant' },
+        { side: 'black', bug: 'beetle' },
+      ],
+      '1,0': [{ side: 'white', bug: 'queen' }],
+      '-1,0': [{ side: 'black', bug: 'queen' }],
+    };
+    const hands = {
+      white: { ...game.game.hands.white, ant: 2, queen: 0 },
+      black: { ...game.game.hands.black, beetle: 1, queen: 0 },
+    };
+    return run(app, {
+      type: 'position/load',
+      state: { ...game, game: { ...game.game, board, hands, turns: { white: 2, black: 2 } } },
+    }).app;
+  };
+
+  test('opens on a stacked hex only, the same hex again is no change, and closes', () => {
+    const app = climbed();
+    expect(app.table.peek).toBeNull();
+    expect(run(app, { type: 'peek/open', hex: { q: 1, r: 0 } }).app).toBe(app);
+    expect(run(app, { type: 'peek/open', hex: { q: 5, r: 5 } }).app).toBe(app);
+    const open = run(app, { type: 'peek/open', hex: ORIGIN }).app;
+    expect(open.table.peek).toEqual(ORIGIN);
+    expect(run(open, { type: 'peek/open', hex: ORIGIN }).app).toBe(open);
+    expect(run(open, { type: 'peek/close' }).app.table.peek).toBeNull();
+    expect(run(app, { type: 'peek/close' }).app).toBe(app);
+  });
+
+  test('a dismissal sticks while the pointer rests on the badge: Escape then the same hover does not reopen; leaving, another badge or a tap does', () => {
+    const open = run(climbed(), { type: 'peek/hover', hex: ORIGIN }).app;
+    expect(open.table.peek).toEqual(ORIGIN);
+    const shut = run(open, { type: 'escape' }).app;
+    expect(shut.table.peek).toBeNull();
+    expect(shut.table.peekShut).toEqual(ORIGIN);
+    // The repaint put a fresh badge under the pointer: its pointerover is nothing.
+    expect(run(shut, { type: 'peek/hover', hex: ORIGIN }).app).toBe(shut);
+    // A tap on it reopens.
+    expect(run(shut, { type: 'peek/open', hex: ORIGIN }).app.table).toMatchObject({
+      peek: ORIGIN,
+      peekShut: null,
+    });
+    // The pointer leaving spends the dismissal: the next hover opens.
+    const left = run(shut, { type: 'peek/close' }).app;
+    expect(left.table.peekShut).toBeNull();
+    expect(run(left, { type: 'peek/hover', hex: ORIGIN }).app.table.peek).toEqual(ORIGIN);
+    // A tap elsewhere dismisses the same way.
+    const tapped = run(open, { type: 'tap/hex', hex: { q: 1, r: 0 } }).app;
+    expect(tapped.table).toMatchObject({ peek: null, peekShut: ORIGIN });
+    expect(run(tapped, { type: 'peek/hover', hex: ORIGIN }).app).toBe(tapped);
+    // A new position forgets the dismissal.
+    const placed = run(shut, {
+      type: 'act',
+      action: { type: 'place', bug: 'ant', to: { q: 2, r: 0 } },
+    }).app;
+    expect(placed.table.peekShut).toBeNull();
+  });
+
+  test('a pick, a tap elsewhere, Escape, a drag and a new position all close it', () => {
+    const open = run(climbed(), { type: 'peek/open', hex: ORIGIN }).app;
+    expect(run(open, { type: 'pick/hand', bug: 'ant' }).app.table.peek).toBeNull();
+    expect(run(open, { type: 'tap/hex', hex: { q: 1, r: 0 } }).app.table.peek).toBeNull();
+    expect(run(open, { type: 'pick/clear' }).app.table.peek).toBeNull();
+    const escaped = run(open, { type: 'escape' }).app;
+    expect(escaped.table.peek).toBeNull();
+    expect(escaped.shell.rulesOpen).toBe(false);
+    // Escape takes the peek first: a pick in hand stays.
+    const pickedThenOpen = withPeek(run(open, { type: 'pick/hand', bug: 'ant' }).app);
+    const esc = run(pickedThenOpen, { type: 'escape' }).app;
+    expect(esc.table.peek).toBeNull();
+    expect(esc.table.picked).toEqual({ kind: 'hand', bug: 'ant' });
+    const dragged = run(open, { type: 'drag/start', picked: { kind: 'hand', bug: 'ant' } }).app;
+    expect(dragged.table.drag).not.toBeNull();
+    expect(dragged.table.peek).toBeNull();
+    // A placement is a new position: the peek goes with it.
+    const placed = run(open, {
+      type: 'act',
+      action: { type: 'place', bug: 'ant', to: { q: 2, r: 0 } },
+    }).app;
+    expect(Object.keys(placed.shell.game?.game.board ?? {})).toHaveLength(4);
+    expect(placed.table.peek).toBeNull();
+  });
+
+  /** `app` with the origin's peek open, whatever else it holds. */
+  const withPeek = (app: App): App => ({ ...app, table: { ...app.table, peek: ORIGIN } });
+});
