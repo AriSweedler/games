@@ -40,6 +40,7 @@ import {
 import { NAME_MAX } from '../lib/protocol.ts';
 import { RULES_SLOT_IDS } from './glossary.ts';
 import { ensureKeyed } from './keyed.ts';
+import { paintRecentGames } from './recentGames.ts';
 import {
   SHELL_SCREENS,
   type Intent,
@@ -380,6 +381,21 @@ export const paintSheet = (doc: DocumentLike, overlay: string, open: boolean): v
   toggleClass(requireId(doc, overlay), 'hidden', !open);
 };
 
+/**
+ * The shell's two sheets over the table (shell-hoist.md row F): `#rulesOverlay` and
+ * `#historyOverlay` follow their flags, and the finished games this device remembers
+ * (recentGames.ts) are painted under the history while it is open. The game paints its own
+ * sheets after it, and its own log into `#historyList` before it.
+ */
+export const paintShellSheets = (
+  doc: DocumentLike,
+  shell: Pick<ShellState<ShellTypes>, 'rulesOpen' | 'historyOpen' | 'recentGames'>,
+): void => {
+  paintSheet(doc, 'rulesOverlay', shell.rulesOpen);
+  paintSheet(doc, 'historyOverlay', shell.historyOpen);
+  if (shell.historyOpen) paintRecentGames(doc, shell.recentGames);
+};
+
 // ---- the turn gate (docs/design/backgammon-landscape.md §5D; docs/design/shared-shell.md "Playing sideways") ----
 
 /** The gate's ids (web/shared/markup/shell.ts `gateMarkup`): the sheet and its two live controls, bound by the boot (web/shared/edge/boot.ts), never by a game's render.ts. Not in SHELL_IDS: a page carries them only when its game plays sideways. */
@@ -566,14 +582,12 @@ export const bindButtons = <I>(
  * the game's sheet intents until those are the shell's too (shell-hoist.md row F), so the game
  * names them (backgammon toggles, gin's history says `who`). Spread first into the game's rows.
  */
-export const shellButtons = <G extends ShellTypes>(
-  sheets: Readonly<{ rules: Intent<G>; history: Intent<G> }>,
-): ButtonIntents<Intent<G>> => [
+export const shellButtons = <G extends ShellTypes>(): ButtonIntents<Intent<G>> => [
   ['leaveBtn', { type: 'leave/request' }],
   ['soundBtn', { type: 'sound/toggle' }],
   ['handoffBtn', { type: 'handoff/click' }],
-  ['rulesBtnGame', sheets.rules],
-  ['historyBtn', sheets.history],
+  ['rulesBtnGame', { type: 'rules/open' }],
+  ['historyBtn', { type: 'history/open' }],
 ];
 
 /**

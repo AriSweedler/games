@@ -59,7 +59,7 @@ test('the bear-off that takes the match records a win for the first player; the 
     outcome: 'win',
   });
   // The history sheet (the table's button is the desktop's; the reducer's intent opens it anywhere).
-  await page.evaluate('window.__backgammon.dispatch({ type: "history/toggle" })');
+  await page.evaluate('window.__backgammon.dispatch({ type: "history/open" })');
   await expect(page.locator('#historyOverlay')).toBeVisible();
   await expect(page.locator('#recentGames .recent-game')).toHaveCount(1);
   await expect(page.locator('#recentGames .recent-game')).toHaveAttribute('data-outcome', 'win');
@@ -90,7 +90,7 @@ test('the bear-off that takes the match records a win for the first player; the 
     outcome: 'loss',
   });
   expect(lost[1]).toEqual(won[0]);
-  await page.evaluate('window.__backgammon.dispatch({ type: "history/toggle" })');
+  await page.evaluate('window.__backgammon.dispatch({ type: "history/open" })');
   await expect(page.locator('#recentGames .recent-game')).toHaveCount(2);
   await expect(page.locator('#recentGames .recent-game').first()).toHaveAttribute(
     'data-outcome',

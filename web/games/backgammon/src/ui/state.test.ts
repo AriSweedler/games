@@ -241,9 +241,7 @@ describe('the initial app', () => {
       drag: null,
       rolling: false,
       shake: null,
-      resultOpen: false,
       menuOpen: false,
-      historyOpen: false,
       curtain: null,
       curtainMode: 'always',
       noMoveUntil: null,
@@ -543,7 +541,7 @@ describe('hosting', () => {
     expect(g.options).toMatchObject({ matchLength: 3, rotation: ['portes'] });
     expect(g.phase).toBe('toRoll');
     expect(app.shell).toMatchObject({ view: viewFor(g, 0), screen: 'tableScreen' });
-    expect(app.table).toMatchObject({ curtain: null, resultOpen: false });
+    expect(app.table).toMatchObject({ curtain: null });
     expect(effects).toEqual([
       { type: 'send', frame: stateFrame(viewFor(g, 1)) },
       { type: 'persist' },
@@ -609,7 +607,7 @@ describe('hosting', () => {
     const g = game(done.app);
     expect(g.phase).toBe('over');
     expect(g.board.off.some((n) => n === 15)).toBe(true);
-    expect(done.app.table.resultOpen).toBe(true);
+    expect(done.app.shell.resultDismissed).toBe(false);
     expect(done.app.shell.screen).toBe('tableScreen');
     expect(cues(done.effects)).toContain('roll');
     expect(cues(done.effects)).toContain('bearOff');
@@ -783,7 +781,7 @@ describe('pass and play', () => {
       screen: 'tableScreen',
       view: viewFor(g, g.turn),
     });
-    expect(app.table).toMatchObject({ curtain: g.turn, selected: null, resultOpen: false });
+    expect(app.table).toMatchObject({ curtain: g.turn, selected: null });
     // The home read fills the seats with their defaults (nothing saved) before the start.
     // Initial: no "your turn" chime with the first curtain.
     expect(kinds(effects)).toEqual([
@@ -838,7 +836,7 @@ describe('pass and play', () => {
     // A 1-point match is over with the game: the end screen, the result sheet open, no curtain.
     expect(view(done.app).matchOver).toBe(true);
     expect(done.app.shell.screen).toBe('endgameScreen');
-    expect(done.app.table).toMatchObject({ curtain: null, resultOpen: true, selected: null });
+    expect(done.app.table).toMatchObject({ curtain: null, selected: null });
     expect(cues(done.effects)).toContain('win');
     expect(cues(done.effects).filter((c) => c === 'roll').length).toBeGreaterThan(10);
     // No refusal was ever toasted (the policy only taps what the board offers); hits were.
@@ -859,15 +857,15 @@ describe('pass and play', () => {
     expect(g.phase).toBe('over');
     expect(view(done.app).matchOver).toBe(false);
     expect(done.app.shell.screen).toBe('tableScreen');
-    expect(done.app.table.resultOpen).toBe(true);
-    const peeked = run(done.app, { type: 'result/peek' });
-    expect(peeked.app.table.resultOpen).toBe(false);
-    expect(run(peeked.app, { type: 'result/open' }).app.table.resultOpen).toBe(true);
+    expect(done.app.shell.resultDismissed).toBe(false);
+    const peeked = run(done.app, { type: 'result/dismiss' });
+    expect(peeked.app.shell.resultDismissed).toBe(true);
+    expect(run(peeked.app, { type: 'result/open' }).app.shell.resultDismissed).toBe(false);
     const next = run(peeked.app, { type: 'next/click' });
     const g2 = game(next.app);
     expect(g2.gameNo).toBe(2);
     expect(g2.match.score).toEqual(g.match.score);
-    expect(next.app.table).toMatchObject({ resultOpen: false, curtain: g2.turn });
+    expect(next.app.table).toMatchObject({ curtain: g2.turn });
     expect(kinds(next.effects)).toContain('persist');
   });
 
@@ -1079,7 +1077,7 @@ describe('the dice, the bar, the tray and a drag', () => {
     // The 6 then bears off the 2 by itself: one tap, the game ends 15 off, the sheet opens.
     const last = run(five.app, { type: 'off/tap' });
     expect(game(last.app)).toMatchObject({ phase: 'over', board: { off: [15, 0] } });
-    expect(last.app.table.resultOpen).toBe(true);
+    expect(last.app.shell.resultDismissed).toBe(false);
     expect(cues(last.effects)).toEqual(['bearOff', 'win']);
     // A 3-point checker under 5-4 spends the 4; a picked 5 forces the 5, and the commit releases it.
     const three = 'L: 3:1 2:1 | D: 24:2 1:13 | bar 0/0 | off 13/0';
@@ -1192,8 +1190,8 @@ describe('the dice, the bar, the tray and a drag', () => {
   test('the overlays toggle; the curtain setting persists and drops a raised curtain', () => {
     const app = local();
     expect(run(app, { type: 'menu/toggle' }).app.table.menuOpen).toBe(true);
-    expect(run(app, { type: 'history/toggle' }).app.table.historyOpen).toBe(true);
-    expect(run(app, { type: 'rules/toggle' }).app.shell.rulesOpen).toBe(true);
+    expect(run(app, { type: 'history/open' }).app.shell.historyOpen).toBe(true);
+    expect(run(app, { type: 'rules/open' }).app.shell.rulesOpen).toBe(true);
     expect(app.table.curtain).not.toBeNull();
     const never = run(app, { type: 'curtain/mode', mode: 'never' });
     expect(never.app.table).toMatchObject({ curtainMode: 'never', curtain: null });
@@ -1398,7 +1396,7 @@ describe('the R14 beat and the Western cube', () => {
       phase: 'over',
       result: { reason: 'passed', points: 1, winner: g1.turn },
     });
-    expect(passed.app.table).toMatchObject({ resultOpen: true, curtain: null });
+    expect(passed.app.table).toMatchObject({ curtain: null });
     expect(cues(passed.effects)).toEqual(['win']);
     // Portes has no cube: double/click is dropped.
     const portes = revealed(local());
@@ -1673,7 +1671,7 @@ describe('the finished match`s record (the owner, 2026-09-25)', () => {
     ]);
     expect(done.app.shell.recentGames).toHaveLength(1);
     expect(done.app.shell.screen).toBe('endgameScreen');
-    expect(records(run(done.app, { type: 'render' }, { type: 'history/toggle' }).effects)).toEqual(
+    expect(records(run(done.app, { type: 'render' }, { type: 'history/open' }).effects)).toEqual(
       [],
     );
   });
@@ -2051,9 +2049,9 @@ describe('the turn gate (docs/design/backgammon-landscape.md §5D; the shell`s, 
       portraitPhone: true,
       gateDismissed: false,
     });
-    expect(done.table).toMatchObject({ resultOpen: true });
+    expect(done.shell.resultDismissed).toBe(false);
     expect(gate(done)).toBe(false);
-    expect(gate(run(done, { type: 'result/peek' }).app)).toBe(false);
+    expect(gate(run(done, { type: 'result/dismiss' }).app)).toBe(false);
     // Next game: the first curtain, and the gate with it.
     const next = run(done, { type: 'next/click' }).app;
     expect(next.table.curtain).not.toBeNull();

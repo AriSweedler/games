@@ -242,7 +242,7 @@ export const factsOf = (app: App): StoryFacts => {
     stockCount,
     stockEmpty: stockCount <= 1,
     briscolaGone: !(v.trumpOnTable || settle?.trick.trumpTaken === true),
-    sheet: app.table.historyOpen ? 'historyOverlay' : resultOpen(app) ? 'resultOverlay' : 'none',
+    sheet: app.shell.historyOpen ? 'historyOverlay' : resultOpen(app) ? 'resultOverlay' : 'none',
   };
 };
 

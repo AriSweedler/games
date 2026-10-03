@@ -283,8 +283,6 @@ export type Table = Readonly<{
   ladders: Readonly<Record<LadderId, Ladder>>;
   /** `#ladderOverlay` shown over the table. */
   ladderOpen: boolean;
-  /** `#historyOverlay` shown over the table: the shell's history sheet, the finished games this device remembers (plan §7 D13). */
-  historyOpen: boolean;
   /** `#configScreen`'s target while it shows; null when it does not. */
   configTarget: ConfigTarget | null;
   /**
@@ -308,7 +306,6 @@ export const initialTable: Table = {
   showTruth: false,
   ladders: { main: EMPTY_LADDER, spec: EMPTY_LADDER },
   ladderOpen: false,
-  historyOpen: false,
   configTarget: null,
   extraNames: { 2: null, 3: null, 4: null, 5: null },
 };
@@ -357,12 +354,7 @@ export type TableIntent =
   | Readonly<{ type: 'ladder/close' }>
   | Readonly<{ type: 'ladder/toggle'; id: LadderId; key: string }>
   | Readonly<{ type: 'ladder/all'; id: LadderId; open: boolean }>
-  /** `#rulesBtnGame` and the rules sheet's close: the shell's `rulesOpen` (the in-game sheet; the home screen's Rules is a tab). */
-  | Readonly<{ type: 'rules/open' }>
-  | Readonly<{ type: 'rules/close' }>
   /** `#historyBtn` and the history sheet's close. */
-  | Readonly<{ type: 'history/open' }>
-  | Readonly<{ type: 'history/close' }>
   | Readonly<{ type: 'config/open'; target: ConfigTarget }>
   | Readonly<{ type: 'config/close' }>
   | Readonly<{ type: 'config/pick'; choice: string }>
@@ -403,10 +395,6 @@ export const TABLE_INTENT_TYPES = [
   'ladder/close',
   'ladder/toggle',
   'ladder/all',
-  'rules/open',
-  'rules/close',
-  'history/open',
-  'history/close',
   'config/open',
   'config/close',
   'config/pick',
@@ -995,14 +983,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
       return pure(
         withLadder(app, intent.id, () => ({ open: [], closed: [], allOpen: intent.open })),
       );
-    case 'rules/open':
-      return pure(withShell(app, { rulesOpen: true }));
-    case 'rules/close':
-      return pure(withShell(app, { rulesOpen: false }));
-    case 'history/open':
-      return pure(withTable(app, { historyOpen: true }));
-    case 'history/close':
-      return pure(withTable(app, { historyOpen: false }));
     case 'config/open':
       return step(
         withShell(withTable(app, { configTarget: intent.target }), { screen: 'configScreen' }),

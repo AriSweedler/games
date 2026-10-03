@@ -348,6 +348,16 @@ export type ShellState<G extends ShellTypes> = Readonly<{
   openedAt: number | null;
   /** `#rulesOverlay` open (the in-game rules sheet; the home tab is `homeTab`). */
   rulesOpen: boolean;
+  /** `#historyOverlay` open (the game's log and the finished games this device remembers). */
+  historyOpen: boolean;
+  /**
+   * The result sheet put away with "Look at the table" (shell-hoist.md row F: hive's
+   * `resultSeen`, briscola's and gin's `resultDismissed`, backgammon's `resultOpen` inverted).
+   * Set by `result/dismiss`, cleared by `result/open` and wherever the table is reset for a start,
+   * a deal, the handoff, a leave or the host lost; a game whose result sheet lifts when its view
+   * moves on (hive's rematch, briscola's and backgammon's next game) clears it in `rendered`.
+   */
+  resultDismissed: boolean;
   cues: G['Cues'];
   /** `#playSubmenu` held open by a long press on the Play tab (`force-open`). */
   submenuOpen: boolean;
@@ -453,6 +463,25 @@ export type ShellIntent<G extends ShellTypes> =
   | Readonly<{ type: 'name/rename'; name: string }>
   /** `#soundBtn`. */
   | Readonly<{ type: 'sound/toggle' }>
+  // ---- the sheets over the table (shell-hoist.md row F) ----
+  /** `#rulesBtnGame`, and a game's menu row for the rules (`shellButtons`). */
+  | Readonly<{ type: 'rules/open' }>
+  /** `#closeRulesBtn`, the rules sheet's backdrop. */
+  | Readonly<{ type: 'rules/close' }>
+  /** `#historyBtn`, a game's menu row or endgame button for the history (`shellButtons`). */
+  | Readonly<{ type: 'history/open' }>
+  /** `#closeHistoryBtn`, the history sheet's backdrop. */
+  | Readonly<{ type: 'history/close' }>
+  /** The result sheet's "Look at the table" (`#rsPeekBtn`, hive's `#rsContinueBtn`): the sheet goes, the table shows. */
+  | Readonly<{ type: 'result/dismiss' }>
+  /** The chip that brings a put-away result back (`#resultChipBtn`). */
+  | Readonly<{ type: 'result/open' }>
+  /**
+   * Escape with no listed sheet open (shellPaint.ts `bindSheets`' fallback): the game's own thing
+   * first (`cfg.table.escape`: a lifted card, a drag, a pause, a peek), then the history, then the
+   * rules; nothing when nothing is up.
+   */
+  | Readonly<{ type: 'escape' }>
   /** The hook's `soundFont(name)` (the console, for now): a valid font plays from now on and is remembered. */
   | Readonly<{ type: 'soundFont/set'; font: SoundFontName }>
   /** `#menuFlipToggle` (backgammon's menu sheet): the far seat's flip, `flipForFar`, remembered under the game's `flipTable` key. */
@@ -548,6 +577,13 @@ export const SHELL_INTENT_TYPES = [
   'join/link',
   'name/rename',
   'sound/toggle',
+  'rules/open',
+  'rules/close',
+  'history/open',
+  'history/close',
+  'result/dismiss',
+  'result/open',
+  'escape',
   'soundFont/set',
   'flip/set',
   'share/click',
@@ -968,6 +1004,12 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
      * nothing picked up to drop (uno, flip7) leaves it out.
      */
     refuse?: (app: ShellApp<G>, message: string) => Step<G>;
+    /**
+     * Escape with no sheet open: what of the game's own goes first (briscola's card view, drag,
+     * lift and deck; flip7's pause; hive's peek, proposal and pick), or null when nothing of its
+     * own is up, so the shell closes the history, then the rules. Absent, the shell's two alone.
+     */
+    escape?: (app: ShellApp<G>, ctx: Ctx) => Step<G> | null;
     /**
      * An ephemeral frame arrived (`host/frame` from the guest's channel, `guest/frame` from the
      * host): `seat` is the sender's channel seat as the shell knows it (1 for the host's one guest,
@@ -1612,6 +1654,13 @@ const recordResult = <G extends ShellTypes>(
 };
 
 /** The game's `rendered` hook, then the finished game's record, then the rotation hint where it is due: every view change ends here. */
+/**
+ * The sheets put away wherever a shared flow resets the table (every game's `reset` returned its
+ * initial table at a start, the handoff, a leave and the host lost; the #20 rule: Leave puts every
+ * sheet away) and the result's dismissal with them.
+ */
+const SHEETS_AWAY = { rulesOpen: false, historyOpen: false, resultDismissed: false } as const;
+
 const painted = <G extends ShellTypes>(
   app: ShellApp<G>,
   prev: G['View'] | null,
@@ -1734,6 +1783,7 @@ export const localSeated = <G extends ShellTypes>(
       localSeats: localNames.map((_, i) => i as SeatOf<G>),
       gateDismissed: false,
       rotationHintShown: false,
+      ...SHEETS_AWAY,
     },
     table: cfg.table.reset(app.table, 'startLocal'),
   };
@@ -1780,6 +1830,7 @@ const loadPosition = <G extends ShellTypes>(
         revealed: cfg.local.revealer(game).seat,
         gateDismissed: false,
         rotationHintShown: false,
+        ...SHEETS_AWAY,
       },
       table: cfg.table.reset(app.table, 'startLocal'),
     },
@@ -2239,6 +2290,7 @@ const handoff = <G extends ShellTypes>(
           localSeats: [],
           gateDismissed: false,
           rotationHintShown: false,
+          ...SHEETS_AWAY,
         },
         table: cfg.table.reset(app.table, 'handoff'),
       },
@@ -2276,10 +2328,10 @@ const leaveFinish = <G extends ShellTypes>(app: ShellApp<G>, cfg: ShellConfig<G>
         rotationHintShown: false,
         // `leave/confirmed` dropped the lock: the page is upright-free again until the next tap.
         orientationLocked: false,
-        // The shell's own sheet, open at the leave, goes with the table: the home has no sheet
+        // The shell's own sheets, open at the leave, go with the table: the home has no sheet
         // (shellPaint.ts `paintScreen` puts every overlay away there; this keeps the next paint
         // from bringing the rules back over it).
-        rulesOpen: false,
+        ...SHEETS_AWAY,
       },
       table: cfg.table.reset(app.table, 'leave'),
     },
@@ -2530,6 +2582,25 @@ export const reduceShell = <G extends ShellTypes>(
         type: 'writeSoundFont',
         font: intent.font,
       });
+    // ---- the sheets over the table ----
+    case 'rules/open':
+      return pure(withShell(app, { rulesOpen: true }));
+    case 'rules/close':
+      return pure(withShell(app, { rulesOpen: false }));
+    case 'history/open':
+      return pure(withShell(app, { historyOpen: true }));
+    case 'history/close':
+      return pure(withShell(app, { historyOpen: false }));
+    case 'result/dismiss':
+      return pure(withShell(app, { resultDismissed: true }));
+    case 'result/open':
+      return pure(withShell(app, { resultDismissed: false }));
+    case 'escape': {
+      const own = cfg.table.escape?.(app, ctx) ?? null;
+      if (own !== null) return own;
+      if (s.historyOpen) return pure(withShell(app, { historyOpen: false }));
+      return pure(s.rulesOpen ? withShell(app, { rulesOpen: false }) : app);
+    }
     case 'flip/set':
       return step(withShell(app, { flipForFar: intent.on }), { type: 'writeFlip', on: intent.on });
     case 'share/click':
@@ -2579,7 +2650,7 @@ export const reduceShell = <G extends ShellTypes>(
       // The deal is a tap: the Android lock rides it (`lockSideways`), before the table paints.
       return andThen(lockSideways(app, ctx, cfg), (a) =>
         broadcast(
-          { shell: { ...a.shell, game }, table: cfg.table.reset(a.table, 'deal') },
+          { shell: { ...a.shell, game, ...SHEETS_AWAY }, table: cfg.table.reset(a.table, 'deal') },
           ctx,
           cfg,
         ),
@@ -2596,7 +2667,7 @@ export const reduceShell = <G extends ShellTypes>(
       return guestFrame(app, intent.frame, ctx, cfg);
     case 'guest/lost': {
       const lost: ShellApp<G> = {
-        shell: { ...s, oppConnected: false },
+        shell: { ...s, oppConnected: false, ...SHEETS_AWAY },
         table: cfg.table.reset(app.table, 'lost'),
       };
       const v = lost.shell.view;
@@ -2714,6 +2785,8 @@ export const initialShell = <G extends ShellTypes>(cfg: ShellConfig<G>): ShellSt
   resume: null,
   openedAt: null,
   rulesOpen: false,
+  historyOpen: false,
+  resultDismissed: false,
   cues: cfg.cues.initial,
   submenuOpen: false,
   longPressed: false,

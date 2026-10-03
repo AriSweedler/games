@@ -109,7 +109,7 @@ const bootScorer = (ctx: BootCtx<Gin, App>): Scorer => {
         dispatch({ type: 'rules/open' });
       },
       openHistory: () => {
-        dispatch({ type: 'history/open', who: 'scorer' });
+        dispatch({ type: 'history/open' });
       },
     },
     download: downloadText,

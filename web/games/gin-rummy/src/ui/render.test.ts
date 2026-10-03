@@ -684,7 +684,7 @@ describe('the table', () => {
 
   test('the rules and history overlays follow the App; the game history lists every hand', () => {
     const p = page();
-    paintAll(p.doc, local(knocked, 0, { shell: { rulesOpen: true }, table: { history: 'game' } }));
+    paintAll(p.doc, local(knocked, 0, { shell: { rulesOpen: true, historyOpen: true } }));
     expect(p.get('rulesOverlay').hidden()).toBe(false);
     expect(p.get('historyOverlay').hidden()).toBe(false);
     const v = viewFor(knocked, 0);
@@ -733,7 +733,7 @@ describe('the table', () => {
     expect(undercut).toContain('<div class="history-scores">Ann: 0 · Bob: +28</div>');
     expect(undercut).toContain('<strong>H2</strong> — Bob went Gin</div>');
     // The Score Counter writes its own list: the paint leaves it alone.
-    paintAll(p.doc, local(knocked, 0, { table: { history: 'scorer' } }));
+    paintAll(p.doc, local(knocked, 0, { shell: { historyOpen: true, screen: 'homeScreen' } }));
     expect(p.get('historyOverlay').hidden()).toBe(false);
     expect(p.get('historyList').text()).toBe(historyHtml(v).markup);
     // The finished games under the hands (web/shared/ui/recentGames.ts): none yet, so the slot is
@@ -747,15 +747,14 @@ describe('the table', () => {
       winner: 0,
       outcome: 'win',
     };
-    paintAll(
-      p.doc,
-      local(knocked, 0, { shell: { recentGames: [record] }, table: { history: 'game' } }),
-    );
+    paintAll(p.doc, local(knocked, 0, { shell: { recentGames: [record], historyOpen: true } }));
     expect(p.get('recentGames').text()).toBe(recentGamesHtml([record]).markup);
     expect(p.get('recentGames').text()).toContain('<span class="recent-game-score">104–87</span>');
     paintAll(
       p.doc,
-      local(knocked, 0, { shell: { recentGames: [record] }, table: { history: 'scorer' } }),
+      local(knocked, 0, {
+        shell: { recentGames: [record], historyOpen: true, screen: 'homeScreen' },
+      }),
     );
     expect(p.get('recentGames').text()).toBe('');
     paintAll(p.doc, local(knocked, 0));
@@ -843,8 +842,8 @@ describe('bindAll', () => {
       { type: 'handoff/click' },
       { type: 'rules/open' },
       { type: 'rules/close' },
-      { type: 'history/open', who: 'game' },
-      { type: 'history/open', who: 'game' },
+      { type: 'history/open' },
+      { type: 'history/open' },
       { type: 'history/close' },
       { type: 'rules/close' },
       { type: 'history/close' },

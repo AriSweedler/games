@@ -902,7 +902,7 @@ describe('the game over and the result sheet', () => {
       sub: '60–60 · nobody scores this game',
     });
     // Put away: the chip in the actions row brings it back.
-    const peeked = run(over, { type: 'result/peek' }).app;
+    const peeked = run(over, { type: 'result/dismiss' }).app;
     paint(p.doc, peeked);
     expect(p.get('resultOverlay').hidden()).toBe(true);
     expect(p.get('resultChipBtn').hidden()).toBe(false);
@@ -989,8 +989,8 @@ describe('bindAll', () => {
     p.get('closeHistoryBtn').fire('click');
     p.get('closeRulesBtn').fire('click');
     expect(r.intents.slice(15)).toEqual([
-      { type: 'result/peek' },
-      { type: 'result/peek' },
+      { type: 'result/dismiss' },
+      { type: 'result/dismiss' },
       { type: 'history/close' },
       { type: 'rules/close' },
     ]);

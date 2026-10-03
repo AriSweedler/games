@@ -99,7 +99,7 @@ const hosting = (
 
 describe('the type bag', () => {
   test('the table`s intent and effect names reuse none of the shell`s 50 and 30; every table intent is listed; the screens', () => {
-    expect(SHELL_INTENT_TYPES).toHaveLength(53);
+    expect(SHELL_INTENT_TYPES).toHaveLength(60);
     expect(SHELL_EFFECT_TYPES).toHaveLength(32);
     const shellIntents = new Set<string>(SHELL_INTENT_TYPES);
     const shellEffects = new Set<string>(SHELL_EFFECT_TYPES);
@@ -756,14 +756,14 @@ describe('the table`s small intents (the picker, the dice, the ladders, the trut
 });
 
 describe('the sheets, the extra seats and the viewed chair (M4)', () => {
-  test('rules/open and rules/close set the shell`s rulesOpen; history/open and history/close the table`s historyOpen', () => {
+  test('rules/open and rules/close set the shell`s rulesOpen; history/open and history/close its historyOpen', () => {
     const opened = run(initialApp, { type: 'rules/open' }, { type: 'history/open' });
     expect(opened.app.shell.rulesOpen).toBe(true);
-    expect(opened.app.table.historyOpen).toBe(true);
+    expect(opened.app.shell.historyOpen).toBe(true);
     expect(opened.effects).toEqual([]);
     const closed = run(opened.app, { type: 'rules/close' }, { type: 'history/close' });
     expect(closed.app.shell.rulesOpen).toBe(false);
-    expect(closed.app.table.historyOpen).toBe(false);
+    expect(closed.app.shell.historyOpen).toBe(false);
   });
 
   test('pname/drop forgets an extra seat: its name goes null and its key is removed by forgetPName', () => {

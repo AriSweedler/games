@@ -471,7 +471,7 @@ describe('the table', () => {
     expect(p.get('board').hasClass('inert')).toBe(true);
     expect(p.get('rollOverlay').hidden()).toBe(true);
     expect(p.get('waitNote').hidden()).toBe(true);
-    const peeked = run(over, { type: 'result/peek' }).app;
+    const peeked = run(over, { type: 'result/dismiss' }).app;
     paint(p.doc, peeked);
     expect(p.get('resultOverlay').hidden()).toBe(true);
     expect(p.get('resultChipBtn').hidden()).toBe(false);
@@ -543,7 +543,7 @@ describe('the table', () => {
   test('the sheets: history rows, the menu with the curtain toggle, the rules keyed to the game', () => {
     const p = page();
     const rolled = revealed(run(revealed(local()), { type: 'roll/click' }).app);
-    paint(p.doc, run(rolled, { type: 'history/toggle' }, { type: 'menu/toggle' }).app);
+    paint(p.doc, run(rolled, { type: 'history/open' }, { type: 'menu/toggle' }).app);
     expect(p.get('historyOverlay').hidden()).toBe(false);
     expect(p.get('historyList').text()).toMatch(/^<div class="history-row" data-kind="opening">/);
     expect(p.get('historyList').text()).toMatch(
@@ -560,7 +560,7 @@ describe('the table', () => {
       winner: 1,
       outcome: 'loss',
     };
-    const remembered = run(rolled, { type: 'history/toggle' }, { type: 'menu/toggle' }).app;
+    const remembered = run(rolled, { type: 'history/open' }, { type: 'menu/toggle' }).app;
     paint(p.doc, { ...remembered, shell: { ...remembered.shell, recentGames: [record] } });
     expect(p.get('recentGames').text()).toBe(recentGamesHtml([record]).markup);
     expect(p.get('recentGames').text()).toContain('data-outcome="loss"');
@@ -576,7 +576,7 @@ describe('the table', () => {
       rolled,
       { type: 'curtain/mode', mode: 'never' },
       { type: 'flip/set', on: true },
-      { type: 'rules/toggle' },
+      { type: 'rules/open' },
     ).app;
     paint(p.doc, never);
     expect(p.get('menuCurtainToggle').checked()).toBe(false);
@@ -868,7 +868,7 @@ describe('bindAll', () => {
       'done/click',
       'result/open',
       'next/click',
-      'result/peek',
+      'result/dismiss',
       'next/click',
       'take/click',
       'pass/click',
@@ -876,8 +876,8 @@ describe('bindAll', () => {
       'menu/toggle',
       'sound/toggle',
       'handoff/click',
-      'rules/toggle',
-      'history/toggle',
+      'rules/open',
+      'history/open',
       'chip/cancel',
     ]);
     // The gate's "Play upright" is the boot's binding (web/shared/edge/boot.ts), not this game's.
@@ -895,9 +895,9 @@ describe('bindAll', () => {
     p.get('menuLeaveBtn').fire('click');
     expect(intents.slice(1)).toEqual([
       { type: 'menu/toggle' },
-      { type: 'rules/toggle' },
+      { type: 'rules/open' },
       { type: 'menu/toggle' },
-      { type: 'history/toggle' },
+      { type: 'history/open' },
       { type: 'menu/toggle' },
       { type: 'leave/request' },
     ]);
@@ -918,11 +918,11 @@ describe('bindAll', () => {
     p.get('resultOverlay').fire('click', { target: fakeTarget({ id: 'resultOverlay' }) });
     // Past the two toggles' four intents: the close buttons and the backdrops.
     expect(intents.slice(10)).toEqual([
-      { type: 'rules/toggle' },
-      { type: 'history/toggle' },
+      { type: 'rules/close' },
+      { type: 'history/close' },
       { type: 'menu/toggle' },
-      { type: 'rules/toggle' },
-      { type: 'result/peek' },
+      { type: 'rules/close' },
+      { type: 'result/dismiss' },
     ]);
   });
 });

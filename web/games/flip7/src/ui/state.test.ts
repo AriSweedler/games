@@ -157,9 +157,9 @@ describe('the table`s own controls', () => {
     expect(run(rules.app, { type: 'escape' }).app.shell.rulesOpen).toBe(false);
     expect(run(rules.app, { type: 'rules/close' }).app.shell.rulesOpen).toBe(false);
     const history = run(initialApp, { type: 'history/open' });
-    expect(history.app.table.historyOpen).toBe(true);
-    expect(run(history.app, { type: 'escape' }).app.table.historyOpen).toBe(false);
-    expect(run(history.app, { type: 'history/close' }).app.table.historyOpen).toBe(false);
+    expect(history.app.shell.historyOpen).toBe(true);
+    expect(run(history.app, { type: 'escape' }).app.shell.historyOpen).toBe(false);
+    expect(run(history.app, { type: 'history/close' }).app.shell.historyOpen).toBe(false);
   });
 
   test('the resume labels and the name list', () => {

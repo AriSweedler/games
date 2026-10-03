@@ -21,6 +21,7 @@ import {
   paintScreen,
   paintSheet,
   paintShellChrome,
+  paintShellSheets,
   paintSound,
   paintWaiting,
   renderCopy,
@@ -548,17 +549,14 @@ describe('paintShellChrome', () => {
 });
 
 describe('shellButtons', () => {
-  test('the five rows every table binds: the shell`s three intents and the game`s two sheet intents (backgammon`s toggles here), in the ids` order', () => {
-    const rows = shellButtons<ShellTypes>({
-      rules: { type: 'rules/toggle' },
-      history: { type: 'history/toggle' },
-    });
+  test('the five rows every table binds: the shell`s intents, the two sheets` opens among them, in the ids` order', () => {
+    const rows = shellButtons<ShellTypes>();
     expect(rows).toEqual([
       ['leaveBtn', { type: 'leave/request' }],
       ['soundBtn', { type: 'sound/toggle' }],
       ['handoffBtn', { type: 'handoff/click' }],
-      ['rulesBtnGame', { type: 'rules/toggle' }],
-      ['historyBtn', { type: 'history/toggle' }],
+      ['rulesBtnGame', { type: 'rules/open' }],
+      ['historyBtn', { type: 'history/open' }],
     ]);
     const p = fakePage([
       ...pageEls(),
@@ -576,7 +574,32 @@ describe('shellButtons', () => {
     );
     p.get('historyBtn').fire('click');
     p.get('leaveBtn').fire('click');
-    expect(intents).toEqual([{ type: 'history/toggle' }, { type: 'leave/request' }]);
+    expect(intents).toEqual([{ type: 'history/open' }, { type: 'leave/request' }]);
+  });
+});
+
+describe('paintShellSheets', () => {
+  const sheets = (): FakePage =>
+    fakePage([
+      ...pageEls(),
+      fakeEl('historyOverlay', { classes: ['overlay', 'hidden'] }),
+      fakeEl('historyList'),
+      fakeEl('recentGames'),
+    ]);
+  const games = [
+    { at: 0, mode: 'online', players: ['Ann', 'Bo'], score: '2 moves', winner: 0, outcome: 'win' },
+  ] as const;
+
+  test('both sheets follow their flags; the finished games paint under an open history alone', () => {
+    const p = sheets();
+    paintShellSheets(p.doc, { rulesOpen: true, historyOpen: false, recentGames: games });
+    expect(p.get('rulesOverlay').hidden()).toBe(false);
+    expect(p.get('historyOverlay').hidden()).toBe(true);
+    expect(p.get('recentGames').text()).toBe('');
+    paintShellSheets(p.doc, { rulesOpen: false, historyOpen: true, recentGames: games });
+    expect(p.get('rulesOverlay').hidden()).toBe(true);
+    expect(p.get('historyOverlay').hidden()).toBe(false);
+    expect(p.get('recentGames').text()).toContain('Ann');
   });
 });
 

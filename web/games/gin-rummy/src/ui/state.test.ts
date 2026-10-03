@@ -50,6 +50,7 @@ import {
   type Effect,
   type EffectDeps,
   type HomeSnapshot,
+  historyWho,
 } from './state.ts';
 import { handoffLabel } from '../../../../shared/lib/name.ts';
 
@@ -167,7 +168,7 @@ describe('the initial app', () => {
     expect(SHELL_INTENT_TYPES).toContain('home/init');
     expect(SHELL_INTENT_TYPES).toContain('guest/lost');
     expect(SHELL_INTENT_TYPES).not.toContain('card/tap');
-    expect(SHELL_INTENT_TYPES).toHaveLength(53);
+    expect(SHELL_INTENT_TYPES).toHaveLength(60);
     expect(new Set(SHELL_INTENT_TYPES).size).toBe(SHELL_INTENT_TYPES.length);
   });
 });
@@ -378,15 +379,17 @@ describe('home', () => {
       run({ ...initialApp, shell: { ...initialApp.shell, code: 'ABCD' } }, { type: 'share/click' })
         .effects,
     ).toEqual([{ type: 'share', code: 'ABCD' }]);
-    const opened = run(initialApp, { type: 'rules/open' }, { type: 'history/open', who: 'game' });
-    expect(opened.app).toMatchObject({ shell: { rulesOpen: true }, table: { history: 'game' } });
+    const opened = run(initialApp, { type: 'rules/open' }, { type: 'history/open' });
+    expect(opened.app.shell).toMatchObject({ rulesOpen: true, historyOpen: true });
     expect(opened.effects).toEqual([]);
-    const scorer = run(opened.app, { type: 'history/open', who: 'scorer' });
-    expect(scorer.app.table.history).toBe('scorer');
-    expect(run(opened.app, { type: 'rules/close' }, { type: 'history/close' }).app).toMatchObject({
-      shell: { rulesOpen: false },
-      table: { history: null },
-    });
+    // Whose list the sheet shows follows the screen: the Score Counter's from the home, the game's anywhere else.
+    expect(historyWho(opened.app)).toBe('scorer');
+    expect(
+      historyWho({ ...opened.app, shell: { ...opened.app.shell, screen: 'tableScreen' } }),
+    ).toBe('game');
+    expect(
+      run(opened.app, { type: 'rules/close' }, { type: 'history/close' }).app.shell,
+    ).toMatchObject({ rulesOpen: false, historyOpen: false });
   });
 });
 

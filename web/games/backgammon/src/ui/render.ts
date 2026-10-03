@@ -106,14 +106,14 @@ import {
   connDotView,
   paintSheet,
   paintShellChrome,
+  paintShellSheets,
+  type Sheet,
   shellButtons,
   showToast as showShellToast,
-  type Sheet,
   type ToastMarks,
 } from '../../../../shared/ui/shellPaint.ts';
 import { aboutHtml } from '../../../../shared/ui/glossary.ts';
 import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
-import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
 import { ABOUT_PARAGRAPHS } from './about.ts';
@@ -170,10 +170,10 @@ export const showToast = (doc: DocumentLike, message: string): void => {
 // A sheet is an overlay a flag shows; the same flag's intent answers its close button, a tap on
 // its backdrop (the overlay element itself, never its children) and Escape. The list is this game's.
 const SHEETS: ReadonlyArray<Sheet<Intent>> = [
-  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/toggle' } },
-  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/toggle' } },
+  { overlay: 'rulesOverlay', close: 'closeRulesBtn', intent: { type: 'rules/close' } },
+  { overlay: 'historyOverlay', close: 'closeHistoryBtn', intent: { type: 'history/close' } },
   { overlay: 'menuOverlay', close: 'closeMenuBtn', intent: { type: 'menu/toggle' } },
-  { overlay: 'resultOverlay', close: 'rsPeekBtn', intent: { type: 'result/peek' } },
+  { overlay: 'resultOverlay', close: 'rsPeekBtn', intent: { type: 'result/dismiss' } },
 ];
 
 // ---- the table: frame, strips, status (design §2.1) --------------------------------------------
@@ -524,7 +524,7 @@ const paintControls = (doc: DocumentLike, app: App, v: View): void => {
     over || v.isMyTurn || app.table.curtain !== null || rollModalOpen(app),
   );
   setText(wait, waitNoteText(v));
-  toggleClass(requireId(doc, 'resultChipBtn'), 'hidden', !(over && !app.table.resultOpen));
+  toggleClass(requireId(doc, 'resultChipBtn'), 'hidden', !(over && app.shell.resultDismissed));
   // The die-chip tray takes the row while a choice is pending (design §4.3).
   const pending = app.table.pending;
   const chips = pending === null ? [] : chipsFor(v, pending.chains);
@@ -547,7 +547,11 @@ export const nextLabel = (app: App, v: View): string =>
   nextWaits(app, v) ? `Waiting for ${v.opp.name}…` : v.matchOver ? 'Rematch' : 'Next game';
 
 const paintResult = (doc: DocumentLike, app: App, v: View): void => {
-  paintSheet(doc, 'resultOverlay', v.phase === 'over' && !v.matchOver && app.table.resultOpen);
+  paintSheet(
+    doc,
+    'resultOverlay',
+    v.phase === 'over' && !v.matchOver && !app.shell.resultDismissed,
+  );
   if (v.phase !== 'over') return;
   const text = resultText(v);
   setText(requireId(doc, 'rsTitle'), text.title);
@@ -628,16 +632,15 @@ export const historyHtml = (v: View | null): SafeHtml => {
 };
 
 const paintOverlays = (doc: DocumentLike, app: App): void => {
-  paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
-  paintSheet(doc, 'historyOverlay', app.table.historyOpen);
-  if (app.table.historyOpen) {
+  // The log into the shell's history sheet first; the shell paints the sheets and the finished
+  // matches under the log after it (web/shared/ui/recentGames.ts).
+  if (app.shell.historyOpen) {
     const list = requireId(doc, 'historyList');
     const v = app.shell.view;
     const key = v === null ? '-' : `${String(v.gameNo)}:${String(v.log.length)}`;
     ensureKeyed(list, key, () => historyHtml(v).markup);
-    // The finished matches under this game's log (web/shared/ui/recentGames.ts).
-    paintRecentGames(doc, app.shell.recentGames);
   }
+  paintShellSheets(doc, app.shell);
   paintSheet(doc, 'menuOverlay', app.table.menuOpen);
   // The binder has no App: the mode a change switches to is painted onto the checkbox.
   const toggle = requireId(doc, 'menuCurtainToggle');
@@ -841,21 +844,18 @@ export const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['takeBtn', { type: 'take/click' }],
       ['passBtn', { type: 'pass/click' }],
       ['menuBtn', { type: 'menu/toggle' }],
-      ...shellButtons<Backgammon>({
-        rules: { type: 'rules/toggle' },
-        history: { type: 'history/toggle' },
-      }),
+      ...shellButtons<Backgammon>(),
     ],
     { skipDisabled: true },
   );
   // The menu's rows close the menu and open what they name.
   listenId(doc, 'menuRulesBtn', 'click', () => {
     dispatch({ type: 'menu/toggle' });
-    dispatch({ type: 'rules/toggle' });
+    dispatch({ type: 'rules/open' });
   });
   listenId(doc, 'menuHistoryBtn', 'click', () => {
     dispatch({ type: 'menu/toggle' });
-    dispatch({ type: 'history/toggle' });
+    dispatch({ type: 'history/open' });
   });
   listenId(doc, 'menuLeaveBtn', 'click', () => {
     dispatch({ type: 'menu/toggle' });
