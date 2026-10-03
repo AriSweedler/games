@@ -237,11 +237,12 @@ export type Table = Readonly<{
 export type App = ShellApp<Gin>;
 
 /**
- * Whose list the shell's history sheet shows: the Score Counter's (scorer/main.ts writes the list
- * itself) from the home screen's Score tab, the game's (painted from the view) anywhere else.
+ * Whose list the shell's history sheet shows: the game's (painted from the view) from the table
+ * and the endgame screen, the Score Counter's (scorer/main.ts writes the list itself) from its
+ * screens and the home screen's Score tab.
  */
 export const historyWho = (app: App): 'game' | 'scorer' =>
-  app.shell.screen === 'homeScreen' ? 'scorer' : 'game';
+  app.shell.screen === 'tableScreen' || app.shell.screen === 'endgameScreen' ? 'game' : 'scorer';
 
 // What a table leaves behind when a hand is dealt, left or lost: the ghost cell's stage, the kept
 // picture and the melds made by hand all belong to the hand that just ended.

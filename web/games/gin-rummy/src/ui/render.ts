@@ -619,7 +619,7 @@ const paintOverlays = (doc: DocumentLike, app: App): void => {
     setHtml(requireId(doc, 'historyList'), historyHtml(app.shell.view));
   // The finished games under the game's hands (web/shared/ui/recentGames.ts); the Score Counter's
   // sheet lists its own rounds alone.
-  paintRecentGames(doc, who === 'game' ? app.shell.recentGames : []);
+  paintRecentGames(doc, app.shell.historyOpen && who === 'game' ? app.shell.recentGames : []);
 };
 
 // ---- the whole paint -----------------------------------------------------------------------------
