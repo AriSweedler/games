@@ -875,7 +875,7 @@ export const endWords = (view: View): Pause | null => {
 
 /** The shell's \`table.pause\` adapter (AGENT.md "Understand what happened before proceeding"): the pause a new view raises against the one it replaces: the end, with how it came; a cold paint raises none. */
 export const pauseFor = (prev: View | null, next: View): Pause | null =>
-  prev === null || prev.game.result !== null ? null : endWords(next);
+  prev?.game.result !== null ? null : endWords(next);
 
 /** One key per position, so a re-sent frame plays nothing. */
 const cueKey = (v: View): string =>

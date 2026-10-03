@@ -1444,6 +1444,16 @@ describe('home', () => {
     expect(marks(refused.app)).toContain('refused');
     expect(toasts(refused.effects)).toEqual([['Waiting for the host to deal again.', null]]);
     expect(hostDealsAgainMsg('Ann')).toBe('Waiting for Ann to deal again.');
+    // A room of four dealt again: the seats past the second are `guest3`, `guest4`.
+    const over4 = act(dealt4(), { type: 'end' }, ctx, FAKE4).app;
+    const again4 = run4(over4, { type: 'again/click' });
+    expect(game4(again4.app)).toMatchObject({ over: false, moves: 0 });
+    expect(game4(again4.app).players.map((p) => p.id)).toEqual([
+      'host',
+      'guest',
+      'guest3',
+      'guest4',
+    ]);
   });
 
   test('the sheets and the result`s dismissal go away with the table at a deal, the host lost and a pass-and-play start', () => {

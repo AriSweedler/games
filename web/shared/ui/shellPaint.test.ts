@@ -662,6 +662,31 @@ describe('paintShellSheets', () => {
     expect(p.get('historyOverlay').hidden()).toBe(false);
     expect(p.get('recentGames').text()).toContain('Ann');
   });
+
+  test('the pause paints into #pauseOverlay where the page carries it: shown with its title and detail while one is up, hidden when none; a page without the partial is left alone', () => {
+    const p = fakePage([
+      ...pageEls(),
+      fakeEl('historyOverlay', { classes: ['overlay', 'hidden'] }),
+      fakeEl('historyList'),
+      fakeEl('recentGames'),
+      fakeEl('pauseOverlay', { classes: ['overlay', 'hidden'] }),
+      fakeEl('pauseTitle'),
+      fakeEl('pauseDetail'),
+    ]);
+    const base = { rulesOpen: false, historyOpen: false, recentGames: games };
+    paintShellSheets(p.doc, { ...base, pause: { title: 'Bob busted', detail: 'a second 7' } });
+    expect(p.get('pauseOverlay').hidden()).toBe(false);
+    expect(p.get('pauseTitle').text()).toBe('Bob busted');
+    expect(p.get('pauseDetail').text()).toBe('a second 7');
+    paintShellSheets(p.doc, { ...base, pause: null });
+    expect(p.get('pauseOverlay').hidden()).toBe(true);
+    // The words of the last pause stay in the hidden markup; nothing reads them.
+    expect(p.get('pauseTitle').text()).toBe('Bob busted');
+    // No partial: the sheets paint and nothing throws.
+    const bare = sheets();
+    paintShellSheets(bare.doc, { ...base, pause: { title: 'x', detail: 'y' } });
+    expect(bare.get('historyOverlay').hidden()).toBe(true);
+  });
 });
 
 describe('paintResult', () => {
@@ -789,6 +814,24 @@ describe('shellSheets / bindShellSheets', () => {
     );
     return { p, intents };
   };
+
+  test('the pause`s Continue dispatches pause/continue where the page carries it; a page without the partial binds the sheets alone', () => {
+    const p = fakePage([
+      ...pageEls(),
+      fakeEl('historyOverlay', { classes: ['overlay', 'hidden'] }),
+      fakeEl('closeHistoryBtn'),
+      fakeEl('continueBtn'),
+    ]);
+    const intents: I[] = [];
+    bindShellSheets<ShellTypes>(p.doc, (i) => {
+      intents.push(i);
+    });
+    p.get('continueBtn').fire('click');
+    expect(intents).toEqual([{ type: 'pause/continue' }]);
+    const { p: bare, intents: none } = wiredShell();
+    expect(bare.doc.getElementById('continueBtn')).toBeNull();
+    expect(none).toEqual([]);
+  });
 
   test('shellSheets is the two rows every page carried: the rules and the history, closing on the shell`s intents', () => {
     expect(shellSheets<ShellTypes>()).toEqual([
