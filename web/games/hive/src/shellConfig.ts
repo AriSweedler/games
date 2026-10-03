@@ -4,7 +4,7 @@
 // the option codec (two seats, always), the engine adapters (engine/view.ts: the host holds the
 // game, both seats see the whole board), the frame builders, the cue memory's start and the
 // shell's store. The table hooks and the rest of `home` are the reducer's (ui/state.ts `HIVE`).
-import type { ShellGameData } from '../../../shared/ui/shell.ts';
+import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
 import {
@@ -26,7 +26,6 @@ import {
   readMotion,
   type PlayMode,
 } from './storage.ts';
-import { INITIAL_CUES } from './ui/sound.ts';
 import type { Hive } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -92,7 +91,7 @@ export const HIVE_SHELL: ShellGameData<Hive> = {
     winnerOf: (view) => winnerSeat(view.game.result),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUES },
+  cues: { initial: INITIAL_CUE_MEMORY },
   // The tiles' motion and the hints, remembered per device (settings.ts): read at boot with the shell's keys.
   home: { read: (store) => ({ motion: readMotion(store), hints: readHints(store) }) },
   prefs: SHELL_STORE,

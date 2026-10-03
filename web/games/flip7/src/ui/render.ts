@@ -20,7 +20,6 @@ import {
   setHtml,
   setText,
   toggleClass,
-  trustedHtml,
   type DocumentLike,
   type Element,
   type PageLike,
@@ -37,14 +36,12 @@ import {
   paintHandoff as paintShellHandoff,
   paintScreen as paintShellScreen,
   paintSheet,
-  paintSound as paintShellSound,
   paintWaiting as paintShellWaiting,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
 import { cardName, type Card } from '../engine/cards.ts';
 import { lineScore } from '../engine/engine.ts';
 import { actorOf, nameOf, type Seat, type Status, type View } from '../engine/index.ts';
-import { aboutHtml } from './about.ts';
 import { bindHome, paintHome } from './home.ts';
 import {
   NO_MOMENTS,
@@ -54,7 +51,6 @@ import {
   writeClock,
   type Moments,
 } from './motion.ts';
-import { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
 import { SCREENS, handoffLabel, listNames, myTurn, type App, type Intent } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
@@ -72,23 +68,7 @@ export const REVEAL_LABEL = 'Start';
 /** `#curtainSub`: nothing on the table is hidden, so nobody looks away. */
 export const CURTAIN_SUB = 'Every card is face up: everyone can watch.';
 
-export const renderRules = (doc: DocumentLike): void => {
-  const markup = trustedHtml(rulesItemsHtml());
-  RULES_SLOT_IDS.forEach((id) => {
-    setHtml(requireId(doc, id), markup);
-  });
-};
-
-export const renderAbout = (doc: DocumentLike): void => {
-  setHtml(requireId(doc, 'aboutCopy'), trustedHtml(aboutHtml()));
-};
-
 // ---- the shell's halves ---------------------------------------------------------------------
-
-export const paintSound = (doc: DocumentLike, enabled: boolean): void => {
-  paintShellSound(doc, enabled);
-  setAttr(requireId(doc, 'soundBtn'), 'aria-pressed', enabled ? 'true' : 'false');
-};
 
 /** `#handoffBtn`: a two-seat pass-and-play game can go on as a hosted room. */
 const paintHandoff = (doc: DocumentLike, app: App): void => {

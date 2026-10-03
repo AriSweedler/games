@@ -4,6 +4,7 @@
 // reducer driven the way the page drives it (a seeded pass-and-play match, positions seated
 // through `position/load`), so what the painter sees is what main.ts hands it.
 import { describe, expect, test } from 'vitest';
+import { aboutHtml } from '../../../../shared/ui/glossary.ts';
 
 import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
 import { fakeEl, fakeTarget, optionsFromMarkup } from '../../../../shared/edge/page.fake.ts';
@@ -33,7 +34,6 @@ import {
   paint,
   paintScreen,
   paintSeat,
-  paintSound,
   paintWaiting,
   recordKind,
   renderAbout,
@@ -45,7 +45,8 @@ import {
   viewKey,
   waitNoteText,
 } from './render.ts';
-import { aboutHtml } from './about.ts';
+import { ABOUT_PARAGRAPHS } from './about.ts';
+import { GLOSSARY } from './glossary.ts';
 import { name } from './copy.ts';
 import { NAME_CAP } from './copy-budget.ts';
 import { rulesItemsHtml } from './rules.ts';
@@ -109,7 +110,7 @@ describe("the shell painters (gin's names)", () => {
   test('renderAbout fills #aboutCopy for the variant, keyed, with the links that ruleset has', () => {
     const p = page();
     renderAbout(p.doc, 'portes');
-    expect(p.get('aboutCopy').text()).toBe(aboutHtml('portes'));
+    expect(p.get('aboutCopy').text()).toBe(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY.portes));
     expect(p.get('aboutCopy').attr('data-key')).toBe('portes');
     // Portes has no cube rule: "doubling cube" lands on its scoring rule, "Crawford rule" is plain.
     expect(p.get('aboutCopy').text()).toContain('data-rule="scoring">doubling cube</a>');
@@ -183,17 +184,6 @@ describe("the shell painters (gin's names)", () => {
     hideToast(p.doc);
     expect(p.get('toast').hasClass('show')).toBe(false);
     expect(p.get('toast').text()).toBe('Invite copied to clipboard');
-  });
-
-  test('paintSound: the glyph, the tooltip and the pressed state', () => {
-    const p = page();
-    paintSound(p.doc, false);
-    expect(p.get('soundBtn').text()).toBe('🔇');
-    expect(p.get('soundBtn').attr('title')).toBe('Sound & vibration off');
-    expect(p.get('soundBtn').attr('aria-pressed')).toBe('false');
-    paintSound(p.doc, true);
-    expect(p.get('soundBtn').text()).toBe('🔊');
-    expect(p.get('soundBtn').attr('aria-pressed')).toBe('true');
   });
 
   test('connDotClass: on/off, hidden in pass-and-play', () => {

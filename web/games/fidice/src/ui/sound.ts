@@ -5,11 +5,10 @@
 // (web/shared/edge/boot.ts), so sound arrives with the shell markup at M4, muted by default on a
 // coarse pointer (web/shared/edge/prefs.ts `soundPref.enabled`); fidice's own cues (the roll, the
 // bid, the call, the reveal, a refused action) are M9's rows under these four, a feature named in
-// that PR's body. The cue memory (`CueState`) is the shell's `CueMemory`: the key of the position
+// that PR's body. The cue memory is the shell's `CueMemory` (`INITIAL_CUE_MEMORY`, shellConfig.ts): the key of the position
 // the cues last played for, so a re-sent frame chimes nothing. No notes live here: the fonts
 // (web/shared/lib/sound/fonts/*.ts) voice each cue, src/fx.ts plays a row through the shared edge.
 import { SHELL_CUES, type CueSpec } from '../../../../shared/lib/sound/cues.ts';
-import type { CueMemory } from '../../../../shared/ui/shell.ts';
 
 export type { CueSpec };
 
@@ -21,7 +20,3 @@ export const CUES = {
 /** The events the table names beyond the shell's `tap` (which the bag's `Cue<G>` adds itself). */
 export type Cue = Exclude<keyof typeof CUES, 'tap'>;
 export type CueName = keyof typeof CUES;
-
-/** What the cue machine remembers between paints (web/shared/ui/shell.ts `CueMemory`): the position it last played for. */
-export type CueState = CueMemory;
-export const INITIAL_CUES: CueState = { key: null };

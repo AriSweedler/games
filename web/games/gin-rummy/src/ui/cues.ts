@@ -3,7 +3,7 @@
 // pinned in test/fixtures/legacy/gin-ui.cjs). Everything here is a pure function of the view and
 // the player's selection; test/parity/gin.ui.test.ts runs each beside the legacy cut over seeded
 // views. The cue machine's mutable `cueState` becomes a value threaded through `nextCue`.
-import { fresh, type CueMemory } from '../../../../shared/ui/shell.ts';
+import { INITIAL_CUE_MEMORY, fresh, type CueMemory } from '../../../../shared/ui/shell.ts';
 import type { View } from '../engine/types.ts';
 
 export type Status = Readonly<{ main: string; sub: string }>;
@@ -111,7 +111,7 @@ export type CueRole = 'local' | 'online';
  * `turnKey`, the turn last seen, for the turn chime.
  */
 export type CueState = CueMemory & Readonly<{ turnKey: string | null }>;
-export const INITIAL_CUES: CueState = { key: null, turnKey: null };
+export const INITIAL_CUES: CueState = { ...INITIAL_CUE_MEMORY, turnKey: null };
 export type Cued = Readonly<{ state: CueState; cue: Cue | null }>;
 
 const totalsKey = (view: View): string => view.players.map((p) => String(p.total)).join(',');

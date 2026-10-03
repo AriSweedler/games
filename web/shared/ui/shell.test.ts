@@ -41,6 +41,7 @@ import {
   badPositionMsg,
   broadcast,
   fresh,
+  INITIAL_CUE_MEMORY,
   guestContextOf,
   guestGoneMsg,
   guestName,
@@ -2565,6 +2566,11 @@ describe('the finished game`s record (the owner, 2026-09-25)', () => {
 });
 
 describe('the cue memory', () => {
+  test('INITIAL_CUE_MEMORY has played for nothing: the first key is fresh', () => {
+    expect(INITIAL_CUE_MEMORY).toEqual({ key: null });
+    expect(fresh(INITIAL_CUE_MEMORY, 'round:1').fresh).toBe(true);
+  });
+
   test('fresh: a key not yet played for is fresh and remembered, the same key again is not, a new key is fresh again', () => {
     const first = fresh({ key: null }, 'round:1');
     expect(first).toEqual({ mem: { key: 'round:1' }, fresh: true });

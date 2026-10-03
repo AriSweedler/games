@@ -5,7 +5,6 @@
 // edge with the App's font. The buzz stays here because a vibration is not part of a font (§1
 // "Haptics"). Nothing else in the game names a sound.
 import { SHELL_CUES, type CueSpec } from '../../../../shared/lib/sound/cues.ts';
-import type { CueMemory } from '../../../../shared/ui/shell.ts';
 
 /** The events of the table (design §5.1): the reducer derives them from the change between two views, and `doubles` from the settled roll (§4.7). */
 export type Cue =
@@ -36,5 +35,3 @@ export const CUES: Readonly<Record<Cue | 'tap', CueSpec>> = {
  * Here rather than in state.ts because the shell config (shellConfig.ts) starts the shell with it,
  * and state.ts imports that config.
  */
-export type CueState = CueMemory;
-export const INITIAL_CUES: CueState = { key: null };

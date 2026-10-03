@@ -1,7 +1,15 @@
 import { describe, expect, test } from 'vitest';
+import { aboutHtml } from '../../../../shared/ui/glossary.ts';
 
 import { BUGS } from '../engine/pieces.ts';
-import { RULES_ITEMS, RULE_GROUPS, aboutHtml, bugArt, rulesItemsHtml } from './rules.ts';
+import {
+  ABOUT_PARAGRAPHS,
+  GLOSSARY,
+  RULES_ITEMS,
+  RULE_GROUPS,
+  bugArt,
+  rulesItemsHtml,
+} from './rules.ts';
 
 describe('the rules', () => {
   test('two groups, the bugs first: nine one-line rules, under 150 words in all', () => {
@@ -45,7 +53,7 @@ describe('the rules', () => {
     expect(html).toMatch(/id="rule-beetle" class="rule-card">.*data-rule="hive"/);
     // The About's link is the lower-case word itself, the one the shell's glossary spec taps
     // (e2e/shell-glossary.spec.ts: `aboutTerm: 'hive'`); the game's name later stays plain.
-    expect(aboutHtml()).toContain('data-rule="hive">hive</a>');
-    expect(aboutHtml()).not.toMatch(/data-rule="hive">Hive</);
+    expect(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY)).toContain('data-rule="hive">hive</a>');
+    expect(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY)).not.toMatch(/data-rule="hive">Hive</);
   });
 });

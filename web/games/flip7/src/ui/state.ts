@@ -40,6 +40,7 @@ import {
   type ShellState,
   type Step as SharedStep,
   type TableReset,
+  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import {
@@ -56,7 +57,7 @@ import {
 import { action as actionFrame } from '../protocol.ts';
 import { FLIP7_BONUS, cardName, scoreLine } from '../engine/cards.ts';
 import { FLIP7_SHELL, asSeat, parseOpts, seatNames } from '../shellConfig.ts';
-import { cueKey, cuesBetween, type Cue, type CueState } from './sound.ts';
+import { cueKey, cuesBetween, type Cue } from './sound.ts';
 import {
   EXTRA_NAME_PREFS,
   EXTRA_SEATS,
@@ -162,7 +163,7 @@ export type Flip7 = Readonly<{
   Screen: ScreenId;
   Timer: never;
   Cue: Cue;
-  Cues: CueState;
+  Cues: CueMemory;
   Resume: never;
   Home: Home;
   Intent: TableIntent;

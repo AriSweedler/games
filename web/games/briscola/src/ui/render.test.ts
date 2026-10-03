@@ -41,7 +41,6 @@ import {
   handIntentOf,
   paint,
   paintScreen,
-  paintSound,
   paintWaiting,
   replayLabel,
   resultLine,
@@ -172,7 +171,7 @@ const declareHand = (
 };
 
 describe('the shell painters and the pack', () => {
-  test('paintScreen shows one screen and fixes the body at the table; paintWaiting and paintSound', () => {
+  test('paintScreen shows one screen and fixes the body at the table; paintWaiting', () => {
     const p = page();
     paintScreen(p.doc, initialApp);
     expect(shown(p)).toEqual(['homeScreen']);
@@ -192,9 +191,6 @@ describe('the shell painters and the pack', () => {
     expect(p.get('roomCode').text()).toBe('KQZM');
     expect(p.get('hostWaitStatus').hasClass('pulse')).toBe(false);
     expect(p.get('startGameBtn').hidden()).toBe(false);
-    paintSound(p.doc, false);
-    expect(p.get('soundBtn').text()).toBe('🔇');
-    expect(p.get('soundBtn').attr('aria-pressed')).toBe('false');
   });
 
   test('connDotClass: on/off (the legacy pair`s, or the seat`s when told), hidden in pass-and-play', () => {

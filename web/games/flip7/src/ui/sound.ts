@@ -11,7 +11,6 @@
 // a repaint; until they do (docs/design/sounds.md "Follow-ups"), the shell's four rows alone sound.
 // Nothing else in the game names a sound.
 import { SHELL_CUES, type CueSpec } from '../../../../shared/lib/sound/cues.ts';
-import type { CueMemory } from '../../../../shared/ui/shell.ts';
 import { numbersOf, type Card } from '../engine/cards.ts';
 import type { Seat as SeatState, Status } from '../engine/engine.ts';
 import type { View } from '../engine/index.ts';
@@ -60,10 +59,6 @@ export const CUES: Readonly<Record<Cue | 'tap', CueSpec>> = {
   roundOver: { cue: 'neutral.round', buzz: [40, 40, 40] },
   deal: { cue: 'start.deal', buzz: [30, 40, 30] },
 };
-
-/** The cue machine's memory (the shell's `CueMemory`): the position the cues last played for, so a re-sent frame plays nothing. */
-export type CueState = CueMemory;
-export const INITIAL_CUES: CueState = { key: null };
 
 /** One key per position: the game, the round, the phase, whose turn, every line's length, what is pending and the scores. */
 export const cueKey = (v: View): string =>

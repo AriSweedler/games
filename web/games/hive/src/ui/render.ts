@@ -54,7 +54,6 @@ import {
   type Element,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
-import { RULES_SLOT_IDS } from '../../../../shared/ui/glossary.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
@@ -64,7 +63,6 @@ import {
   paintHandoff as paintShellHandoff,
   paintScreen as paintShellScreen,
   paintSheet,
-  paintSound as paintShellSound,
   paintWaiting as paintShellWaiting,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
@@ -88,7 +86,6 @@ import { bugHtml } from './bugs.ts';
 import { bindDrag } from './dragger.ts';
 import { bindHome, paintHome } from './home.ts';
 import { hopAlong } from './motion.ts';
-import { aboutHtml, rulesItemsHtml } from './rules.ts';
 import {
   HIVE_HINTS,
   HIVE_MOTION,
@@ -512,24 +509,6 @@ const paintOverlays = (doc: DocumentLike, app: App): void => {
   paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
   paintSheet(doc, 'historyOverlay', app.table.historyOpen);
   if (app.table.historyOpen) paintRecentGames(doc, app.shell.recentGames);
-};
-
-/** The rules into both slots (the Rules tab and the in-game sheet), once at boot. */
-export const renderRules = (doc: DocumentLike): void => {
-  const markup = trustedHtml(rulesItemsHtml());
-  RULES_SLOT_IDS.forEach((id) => {
-    setHtml(requireId(doc, id), markup);
-  });
-};
-
-export const renderAbout = (doc: DocumentLike): void => {
-  setHtml(requireId(doc, 'aboutCopy'), trustedHtml(aboutHtml()));
-};
-
-/** `#soundBtn`'s glyph, tooltip and pressed state. */
-export const paintSound = (doc: DocumentLike, enabled: boolean): void => {
-  paintShellSound(doc, enabled);
-  setAttr(requireId(doc, 'soundBtn'), 'aria-pressed', enabled ? 'true' : 'false');
 };
 
 /**

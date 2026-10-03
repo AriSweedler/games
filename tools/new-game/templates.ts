@@ -569,7 +569,7 @@ const shellConfigTs = (
 // option codec (two seats, always), the engine adapters (engine/view.ts), the frame builders, the
 // cue memory's start and the shell's store. The table hooks and the rest of \`home\` are the
 // reducer's (ui/state.ts \`${upper}\`).
-import type { ShellGameData } from '../../../shared/ui/shell.ts';
+import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
 import { applyAction, createState, decodeState, viewFor, winnerSeat } from './engine/view.ts';
@@ -582,7 +582,6 @@ import {
   SHELL_STORE,
   type PlayMode,
 } from './storage.ts';
-import { INITIAL_CUES } from './ui/sound.ts';
 import type { ${pascal} } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -644,7 +643,7 @@ export const ${upper}_SHELL: ShellGameData<${pascal}> = {
     winnerOf: (view) => winnerSeat(view.game.result),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUES },
+  cues: { initial: INITIAL_CUE_MEMORY },
   home: { read: () => ({}) },
   prefs: SHELL_STORE,
 };
@@ -768,14 +767,9 @@ const rulesTs = (
 ): string => `// The Rules tab and the in-game rules sheet (docs/design/${slug}.md §4; the owner, 2026-10-02: "the
 // ruleset to teach players should be as short as possible, ideally fitting on 1 screen"): the goal,
 // the turn, then the special cases one line each; the long form is docs/design/${slug}.md. The About
-// copy names the page. Both are static, filled once at boot (render.ts \`renderRules\`). TODO: the
+// copy names the page. Both are static, filled once at boot (web/shared/ui/shellPaint.ts \`renderCopy\`). TODO: the
 // real rules, as few lines as fit 390x844.
-import {
-  linkJargon,
-  rulesListHtml,
-  type Glossary,
-  type RuleItem,
-} from '../../../../shared/ui/glossary.ts';
+import { rulesListHtml, type Glossary, type RuleItem } from '../../../../shared/ui/glossary.ts';
 
 /** The words linked to their rule (docs/design/glossary-links.md): "pass" in the goal opens the Turn rule. */
 export const GLOSSARY: Glossary = [{ rule: 'turn', terms: ['pass', 'passes'] }];
@@ -792,18 +786,16 @@ export const RULES_ITEMS: ReadonlyArray<RuleItem> = [
 
 export const rulesItemsHtml = (): string => rulesListHtml(RULES_ITEMS, GLOSSARY);
 
-const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
+export const ABOUT_PARAGRAPHS: ReadonlyArray<string> = [
   '${title.replace(/'/g, '’')}, for two. This is the scaffold’s placeholder: each pass hands the turn over, and the tenth decides the game on a draw.',
   'Pass one phone back and forth, or open a table online and send the link.',
 ];
-
-export const aboutHtml = (): string =>
-  linkJargon(ABOUT_PARAGRAPHS.map((p) => \`<p>\${p}</p>\`).join('\\n'), GLOSSARY);
 `;
 
 const rulesTestTs = (): string => `import { describe, expect, test } from 'vitest';
 
-import { RULES_ITEMS, aboutHtml, rulesItemsHtml } from './rules.ts';
+import { aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { ABOUT_PARAGRAPHS, GLOSSARY, RULES_ITEMS, rulesItemsHtml } from './rules.ts';
 
 describe('the rules', () => {
   test('short enough for one phone screen: the goal, the turn and the end, under 150 words in all', () => {
@@ -816,7 +808,7 @@ describe('the rules', () => {
     const html = rulesItemsHtml();
     expect(html).toContain('<li id="rule-goal">');
     expect(html).toMatch(/id="rule-goal">.*data-rule="turn"/);
-    expect(aboutHtml()).toContain('data-rule="turn">pass</a>');
+    expect(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY)).toContain('data-rule="turn">pass</a>');
   });
 });
 `;
@@ -829,7 +821,6 @@ const soundTs = (
 // reducer picks them from the change between two views (ui/state.ts \`cuesBetween\`), once per view
 // (\`CueMemory\`). TODO: one row per key moment of the real game.
 import { SHELL_CUES, type CueSpec } from '../../../../shared/lib/sound/cues.ts';
-import type { CueMemory } from '../../../../shared/ui/shell.ts';
 
 export type Cue = 'yourTurn' | 'pass' | 'win' | 'lose';
 
@@ -837,21 +828,17 @@ export const CUES: Readonly<Record<Cue | 'tap', CueSpec>> = {
   ...SHELL_CUES,
   pass: { cue: 'move', buzz: 10 },
 };
-
-export type CueState = CueMemory;
-export const INITIAL_CUES: CueState = { key: null };
 `;
 
 const soundTestTs = (): string => `import { describe, expect, test } from 'vitest';
 
 import { SHELL_CUES } from '../../../../shared/lib/sound/cues.ts';
-import { CUES, INITIAL_CUES } from './sound.ts';
+import { CUES } from './sound.ts';
 
 describe('the cue table', () => {
   test("spreads the shell's cues and adds the table's own", () => {
     expect(CUES).toMatchObject(SHELL_CUES);
     expect(CUES.pass).toEqual({ cue: 'move', buzz: 10 });
-    expect(INITIAL_CUES).toEqual({ key: null });
   });
 });
 `;
@@ -895,6 +882,7 @@ import {
   withShell,
   withTable,
   type Ctx,
+  type CueMemory,
   type Effect as SharedEffect,
   type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
@@ -929,9 +917,9 @@ import {
   type Save,
   type Store,
 } from '../storage.ts';
-import { INITIAL_CUES, type Cue, type CueState } from './sound.ts';
+import type { Cue } from './sound.ts';
 
-export { DEFAULT_PLAY_MODE, HOME_TABS, INITIAL_CUES, type CueState, type HomeTab, type PlayMode };
+export { DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab, type PlayMode };
 
 export const SCREENS = [
   'homeScreen',
@@ -984,7 +972,7 @@ export type ${pascal} = Readonly<{
   Screen: ScreenId;
   Timer: never;
   Cue: Cue;
-  Cues: CueState;
+  Cues: CueMemory;
   Resume: never;
   Home: Home;
   Intent: TableIntent;
@@ -1330,17 +1318,13 @@ const renderTs = (
 // (Continue clears it, Play again starts anew).
 import {
   requireId,
-  setAttr,
   setDisabled,
-  setHtml,
   setText,
   toggleClass,
-  trustedHtml,
   type DocumentLike,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
 import { bindCurtain, paintCurtain as paintShellCurtain } from '../../../../shared/ui/curtain.ts';
-import { RULES_SLOT_IDS } from '../../../../shared/ui/glossary.ts';
 import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
@@ -1350,13 +1334,11 @@ import {
   paintHandoff as paintShellHandoff,
   paintScreen as paintShellScreen,
   paintSheet,
-  paintSound as paintShellSound,
   paintWaiting as paintShellWaiting,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
 import { turnSeat, type Seat, type View } from '../engine/view.ts';
 import { bindHome, paintHome } from './home.ts';
-import { aboutHtml, rulesItemsHtml } from './rules.ts';
 import { SCREENS, handoffLabel, type App, type Intent } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
@@ -1416,24 +1398,6 @@ const paintOverlays = (doc: DocumentLike, app: App): void => {
   paintSheet(doc, 'rulesOverlay', app.shell.rulesOpen);
   paintSheet(doc, 'historyOverlay', app.table.historyOpen);
   if (app.table.historyOpen) paintRecentGames(doc, app.shell.recentGames);
-};
-
-/** The rules into both slots (the Rules tab and the in-game sheet), once at boot. */
-export const renderRules = (doc: DocumentLike): void => {
-  const markup = trustedHtml(rulesItemsHtml());
-  RULES_SLOT_IDS.forEach((id) => {
-    setHtml(requireId(doc, id), markup);
-  });
-};
-
-export const renderAbout = (doc: DocumentLike): void => {
-  setHtml(requireId(doc, 'aboutCopy'), trustedHtml(aboutHtml()));
-};
-
-/** \`#soundBtn\`'s glyph, tooltip and pressed state. */
-export const paintSound = (doc: DocumentLike, enabled: boolean): void => {
-  paintShellSound(doc, enabled);
-  setAttr(requireId(doc, 'soundBtn'), 'aria-pressed', enabled ? 'true' : 'false');
 };
 
 export const paint = (doc: PageLike, app: App): void => {
@@ -1497,6 +1461,8 @@ const mainTs = (
 import { bootShell } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import { browserStore } from '../../shared/edge/storage.ts';
+import { aboutHtml } from '../../shared/ui/glossary.ts';
+import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { legalActions, type Action, type View } from './src/engine/view.ts';
 import { createFx } from './src/fx.ts';
 import { GuestSession } from './src/net/guest.ts';
@@ -1504,7 +1470,8 @@ import { HostSession } from './src/net/host.ts';
 import { isGuestFrame } from './src/protocol.ts';
 import { STORAGE_KEYS, soundEnabled } from './src/storage.ts';
 import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
-import { bindAll, paint, paintSound, renderAbout, renderRules } from './src/ui/render.ts';
+import { bindAll, paint } from './src/ui/render.ts';
+import { ABOUT_PARAGRAPHS, GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
 import {
   guestContextOf,
   hostContextOf,
@@ -1536,8 +1503,7 @@ bootShell<${pascal}, App, object, HostContext>({
   deps: {},
   hooks: {
     render: () => {
-      renderRules(document);
-      renderAbout(document);
+      renderCopy(document, { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) });
     },
     hook: ({ app, dispatch }) => ({
       act: (action: Action) => {
@@ -1600,7 +1566,7 @@ const copy: ShellCopy = {
 
 const notes: ShellNotes = {
   homeNote: \` (docs/design/${slug}.md §3): Online (the default) or Pass the phone, two players.\`,
-  rulesTabNote: ': ui/rules.ts fills both slots at boot (render.ts renderRules).',
+  rulesTabNote: ': ui/rules.ts fills both slots at boot (shellPaint.ts renderCopy).',
   glossaryDoc: 'glossary-links.md',
   aboutClose: '',
   curtainNote: ${

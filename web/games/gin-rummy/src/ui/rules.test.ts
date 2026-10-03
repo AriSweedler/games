@@ -3,8 +3,9 @@
 // a rule body lands on a rule, and a rule never links to itself. The words themselves are pinned
 // against the legacy page by test/parity/gin.ui.test.ts.
 import { describe, expect, test } from 'vitest';
+import { aboutHtml } from '../../../../shared/ui/glossary.ts';
 
-import { ABOUT_PARAGRAPHS, aboutHtml } from './about.ts';
+import { ABOUT_PARAGRAPHS } from './about.ts';
 import { GLOSSARY } from './glossary.ts';
 import { RULES_ITEMS, RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
 
@@ -50,7 +51,7 @@ describe('the rules items', () => {
           expect(target).not.toBe(own);
         });
       });
-    targets(aboutHtml()).forEach((target) => {
+    targets(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY)).forEach((target) => {
       expect(IDS, `About links ${target}`).toContain(target);
     });
   });
@@ -76,7 +77,7 @@ describe('the rules items', () => {
 describe('the About copy', () => {
   test('two paragraphs with the jargon linked and the game not named as a term', () => {
     expect(ABOUT_PARAGRAPHS).toHaveLength(2);
-    const html = aboutHtml();
+    const html = aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY);
     expect(html.split('\n')).toHaveLength(2);
     [
       'draw',

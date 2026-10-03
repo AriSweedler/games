@@ -10,6 +10,8 @@
 import { bootShell } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import { browserStore } from '../../shared/edge/storage.ts';
+import { aboutHtml } from '../../shared/ui/glossary.ts';
+import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { legalActions, type Action, type View } from './src/engine/view.ts';
 import { createFx } from './src/fx.ts';
 import { GuestSession } from './src/net/guest.ts';
@@ -18,7 +20,8 @@ import { isGuestFrame } from './src/protocol.ts';
 import { STORAGE_KEYS, soundEnabled } from './src/storage.ts';
 import { BUG_SPRITE_SVG } from './src/ui/bugs.ts';
 import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
-import { bindAll, paint, paintSound, renderAbout, renderRules } from './src/ui/render.ts';
+import { bindAll, paint } from './src/ui/render.ts';
+import { ABOUT_PARAGRAPHS, GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
 import {
   guestContextOf,
   hostContextOf,
@@ -51,8 +54,10 @@ bootShell<Hive, App, object, HostContext>({
   hooks: {
     render: () => {
       document.body.insertAdjacentHTML('afterbegin', BUG_SPRITE_SVG);
-      renderRules(document);
-      renderAbout(document);
+      renderCopy(document, {
+        rules: rulesItemsHtml(),
+        about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY),
+      });
     },
     // `act` through the reducer; `view` my seat's view; `setup` seats a position (pass-and-play
     // only: the shell's `position/load` over the engine's decoder); `legal` what my seat may do.

@@ -13,6 +13,7 @@ import {
   joinedMsg,
   type Player,
   type ShellGameData,
+  INITIAL_CUE_MEMORY,
 } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../shared/net/host.ts';
@@ -36,7 +37,6 @@ import {
   type Opts,
   type PlayMode,
 } from './storage.ts';
-import { INITIAL_CUES } from './ui/sound.ts';
 import type { Raw, Seat, Uno } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -143,7 +143,7 @@ export const UNO_SHELL: ShellGameData<Uno> = {
     winnerOf: (view) => (view.winner === null ? null : (view.winner as Seat)),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUES },
+  cues: { initial: INITIAL_CUE_MEMORY },
   home: {
     read: (store) => ({
       opts: readOpts(store),

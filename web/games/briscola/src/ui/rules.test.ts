@@ -5,8 +5,8 @@
 // goal is the deep link), the ranks' table of points left unlinked, and no rule linking to itself.
 import { describe, expect, test } from 'vitest';
 
-import { ruleAnchor } from '../../../../shared/ui/glossary.ts';
-import { ABOUT_PARAGRAPHS, aboutHtml } from './about.ts';
+import { ruleAnchor, aboutHtml } from '../../../../shared/ui/glossary.ts';
+import { ABOUT_PARAGRAPHS } from './about.ts';
 import { GLOSSARY } from './glossary.ts';
 import {
   RANK_POINTS,
@@ -96,7 +96,7 @@ describe('the About copy', () => {
     ABOUT_PARAGRAPHS.forEach((p) => {
       expect(p).not.toMatch(/carich/i);
     });
-    const html = aboutHtml();
+    const html = aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY);
     expect(html.match(/<p>/g)).toHaveLength(2);
     const links = [
       ...html.matchAll(/<a class="jargon"[^>]*data-rule="([a-z-]+)"[^>]*>([^<]+)<\/a>/g),

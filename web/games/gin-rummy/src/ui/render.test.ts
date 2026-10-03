@@ -8,7 +8,9 @@ import { describe, expect, test } from 'vitest';
 import { fakeEl, fakeTarget } from '../../../../shared/edge/page.fake.ts';
 import type { RecentGame } from '../../../../shared/lib/recentGames.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
+import { aboutHtml } from '../../../../shared/ui/glossary.ts';
 import { recentGamesHtml } from '../../../../shared/ui/recentGames.ts';
+import { renderCopy } from '../../../../shared/ui/shellPaint.ts';
 import {
   applyAction,
   createGame,
@@ -41,8 +43,6 @@ import {
   paintScreen,
   paintSound,
   paintWaiting,
-  renderAbout,
-  renderRules,
   roundResultText,
   rulesItemsHtml,
   showToast,
@@ -52,7 +52,8 @@ import {
   discardsSubText,
 } from './render.ts';
 import { state as stateFrame } from '../protocol.ts';
-import { aboutHtml } from './about.ts';
+import { ABOUT_PARAGRAPHS } from './about.ts';
+import { GLOSSARY } from './glossary.ts';
 import { RULES_ITEMS, RULES_LIST_HTML } from './rules.ts';
 import {
   SCREENS,
@@ -153,20 +154,20 @@ const local = (game: State, seat: Seat, over: Over = {}): App => ({
 
 const shown = (p: GinPage): ReadonlyArray<string> => SCREENS.filter((id) => !p.get(id).hidden());
 
-describe('renderAbout', () => {
+describe('renderCopy: the About copy', () => {
   test('fills #aboutCopy with the two paragraphs, their jargon linked to the rules', () => {
     const p = page();
-    renderAbout(p.doc);
-    expect(p.get('aboutCopy').text()).toBe(aboutHtml());
+    renderCopy(p.doc, { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) });
+    expect(p.get('aboutCopy').text()).toBe(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY));
     expect(p.get('aboutCopy').text().match(/<p>/g)).toHaveLength(2);
     expect(p.get('aboutCopy').text()).toContain('data-rule="knock">knocks</a>');
   });
 });
 
-describe('renderRules', () => {
+describe('renderCopy: the rules', () => {
   test('fills both slots with the eleven items, one per line, as ui/rules.ts has them', () => {
     const p = page();
-    renderRules(p.doc);
+    renderCopy(p.doc, { rules: rulesItemsHtml() });
     RULES_SLOT_IDS.forEach((id) => {
       expect(p.get(id).text()).toBe(rulesItemsHtml());
     });

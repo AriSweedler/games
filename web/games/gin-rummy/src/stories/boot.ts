@@ -13,9 +13,11 @@
 // without either flag; e2e/gin-arrange.spec.ts uses `live`.
 import type { PageLike } from '../../../../shared/edge/dom.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
+import { renderCopy } from '../../../../shared/ui/shellPaint.ts';
 import { bootStories, type StoriesDeps } from '../../../../shared/ui/stories.ts';
 import { slotHandView } from '../ui/hand/SlotHandView.ts';
-import { bindAll, paint, renderRules, showToast } from '../ui/render.ts';
+import { bindAll, paint, showToast } from '../ui/render.ts';
+import { rulesItemsHtml } from '../ui/rules.ts';
 import { reduce, type App, type Effect, type Intent, type TimerId } from '../ui/state.ts';
 import { EPOCH, SEED, STORIES, storyById, type Story } from './catalogue.ts';
 
@@ -63,6 +65,6 @@ const deps = (doc: PageLike): Deps => ({
 
 /** Paint the story `id` names, or the index when it names none; `nav` adds the bar, `live` the controls. */
 export const bootStory = (doc: PageLike, id: string, nav: boolean, live = false): void => {
-  renderRules(doc);
+  renderCopy(doc, { rules: rulesItemsHtml() });
   bootStories(doc, deps(doc), COPY).bootStory(id, nav, live);
 };

@@ -41,6 +41,7 @@ import {
   type ShellState,
   type Step as SharedStep,
   type TableReset,
+  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import {
@@ -65,17 +66,9 @@ import {
   type Save,
   type Store,
 } from '../storage.ts';
-import { INITIAL_CUES, cuesBetween, type Cue, type CueState } from './sound.ts';
+import { cuesBetween, type Cue } from './sound.ts';
 
-export {
-  DEFAULT_PLAY_MODE,
-  HOME_TABS,
-  INITIAL_CUES,
-  cuesBetween,
-  type CueState,
-  type HomeTab,
-  type PlayMode,
-};
+export { DEFAULT_PLAY_MODE, HOME_TABS, cuesBetween, type HomeTab, type PlayMode };
 
 export const SCREENS = [
   'homeScreen',
@@ -136,7 +129,7 @@ export type Uno = Readonly<{
   Screen: ScreenId;
   Timer: never;
   Cue: Cue;
-  Cues: CueState;
+  Cues: CueMemory;
   Resume: never;
   Home: Home;
   Intent: TableIntent;

@@ -69,6 +69,7 @@ import {
   type Step as SharedStep,
   type TableReset,
   type TimerId as SharedTimerId,
+  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { ok, type Result } from '../../../../shared/lib/result.ts';
@@ -124,7 +125,7 @@ import {
   type Place,
   type Target,
 } from './board.ts';
-import { INITIAL_CUES, type Cue, type CueState } from './sound.ts';
+import { type Cue } from './sound.ts';
 
 // The shell's strings and helpers the tests and painters import from here, as before C2.
 export {
@@ -179,9 +180,6 @@ export type ScreenId = (typeof SCREENS)[number];
 /** What the home screen's resume box offers (`resumeFor`), one per save role (web/shared/ui/shell.ts `ShellResume`; backgammon adds none). */
 export type Resume = SharedResume<Backgammon>;
 
-// The cue memory (`CueState`, the shared `CueMemory` since dry-round-2.md F6; `INITIAL_CUES`) lives in ui/sound.ts since C2: the shell config reads it too.
-export { INITIAL_CUES, type CueState };
-
 /**
  * Backgammon's types for the shared shell (web/shared/ui/shell.ts `ShellTypes`): the room's terms
  * are the match length and the variant (the host save's own fields, storage.ts `HostExtra`, and
@@ -202,7 +200,7 @@ export type Backgammon = Readonly<{
   Screen: ScreenId;
   Timer: 'shake' | 'noMove' | 'tumble';
   Cue: Cue;
-  Cues: CueState;
+  Cues: CueMemory;
   Resume: never;
   Home: Readonly<{ variant: ShippedVariant; matchLength: number; curtainMode: CurtainMode }>;
   Intent: TableIntent;

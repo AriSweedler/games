@@ -18,10 +18,7 @@
 import {
   clear,
   requireId,
-  setAttr,
-  setHtml,
   setText,
-  trustedHtml,
   type DocumentLike,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
@@ -34,7 +31,6 @@ import {
   paintHandoff as paintShellHandoff,
   paintScreen as paintShellScreen,
   paintSheet,
-  paintSound as paintShellSound,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
 import type { PublicState, Seat as EngineSeat } from '../domain/types.ts';
@@ -50,10 +46,8 @@ import type {
   Ui,
 } from '../view/types.ts';
 import { mount } from '../view/vdom.ts';
-import { aboutHtml } from './about.ts';
 import { bindHome, handoffLabel, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
-import { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
 import {
   SCREENS,
   handoffable,
@@ -69,19 +63,6 @@ export type { PageLike };
 export type Dispatch = (intent: Intent) => void;
 
 export { RULES_SLOT_IDS } from './rules.ts';
-
-/** Fill both rules slots from ui/rules.ts (once, at boot), the jargon in each body linked to its rule. */
-export const renderRules = (doc: DocumentLike): void => {
-  const markup = trustedHtml(rulesItemsHtml());
-  RULES_SLOT_IDS.forEach((id) => {
-    setHtml(requireId(doc, id), markup);
-  });
-};
-
-/** Fill `#aboutCopy` from ui/about.ts (once, at boot), its jargon linked to the rules. */
-export const renderAbout = (doc: DocumentLike): void => {
-  setHtml(requireId(doc, 'aboutCopy'), trustedHtml(aboutHtml()));
-};
 
 // ---- the shell (web/shared/ui/shellPaint.ts, each over the App's shell slice) ---------------------
 
@@ -102,12 +83,6 @@ export const paintWaiting = (doc: DocumentLike, app: App): void => {
     watch: app.shell.opts.watch,
     host: app.shell.role === 'host',
   });
-};
-
-/** `fx.renderToggle()`: `#soundBtn`'s glyph, tooltip and pressed state (it is a toggle). */
-export const paintSound = (doc: DocumentLike, enabled: boolean): void => {
-  paintShellSound(doc, enabled);
-  setAttr(requireId(doc, 'soundBtn'), 'aria-pressed', enabled ? 'true' : 'false');
 };
 
 /** `#handoffBtn` (the 🌐 on the table): a pass-the-phone game of two humans can go on as a hosted room (plan §7 D8); the tooltip names who hosts and who joins. */

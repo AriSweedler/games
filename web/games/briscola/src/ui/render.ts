@@ -46,7 +46,6 @@ import {
   setChecked,
   setDisabled,
   setHidden,
-  setHtml,
   setStyle,
   setText,
   targetIdOf,
@@ -74,7 +73,6 @@ import {
   paintHandoff as paintShellHandoff,
   paintScreen as paintShellScreen,
   paintSheet,
-  paintSound as paintShellSound,
   paintWaiting as paintShellWaiting,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
@@ -154,11 +152,9 @@ import {
   type RelativeCell,
   type SeatCell,
 } from './table.ts';
-import { aboutHtml } from './about.ts';
 import { deckHtml, deckKey, deckOf, deckSubText } from './deck.ts';
 import { bindDrag } from './dragger.ts';
 import { bindHome, paintHome } from './home.ts';
-import { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
 import { bindLocal, paintCurtain } from './local.ts';
 import {
   SCREENS,
@@ -180,19 +176,6 @@ export type Dispatch = (intent: Intent) => void;
 
 export { RULES_SLOT_IDS } from './rules.ts';
 
-/** Fill both rules slots from ui/rules.ts (once, at boot), the jargon in each body linked to its rule. */
-export const renderRules = (doc: DocumentLike): void => {
-  const markup = trustedHtml(rulesItemsHtml());
-  RULES_SLOT_IDS.forEach((id) => {
-    setHtml(requireId(doc, id), markup);
-  });
-};
-
-/** Fill `#aboutCopy` from ui/about.ts (once, at boot), its jargon linked to the rules. */
-export const renderAbout = (doc: DocumentLike): void => {
-  setHtml(requireId(doc, 'aboutCopy'), trustedHtml(aboutHtml()));
-};
-
 // ---- the shell (web/shared/ui/shellPaint.ts, each over the App's shell slice) ---------------------
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
@@ -205,12 +188,6 @@ export const paintScreen = (doc: PageLike, app: App): void => {
 /** `#roomCode`, `#hostWaitStatus` (+ its pulse), `#startGameBtn`, `#guestWaitStatus` (+ its pulse). */
 export const paintWaiting = (doc: DocumentLike, app: App): void => {
   paintShellWaiting(doc, app.shell);
-};
-
-/** `fx.renderToggle()`: `#soundBtn`'s glyph, tooltip and pressed state (it is a toggle). */
-export const paintSound = (doc: DocumentLike, enabled: boolean): void => {
-  paintShellSound(doc, enabled);
-  setAttr(requireId(doc, 'soundBtn'), 'aria-pressed', enabled ? 'true' : 'false');
 };
 
 /** `#handoffBtn` (the 🌐 beside the menu button): a two-seat pass-and-play game can go on as a hosted room (D17); the tooltip names who hosts and who joins. */

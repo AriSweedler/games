@@ -2,9 +2,10 @@
 // every id is unique, every word in the glossary names a rule the ruleset has, every link in the
 // About copy and in a rule body lands on a rule of that ruleset, and a rule never links to itself.
 import { describe, expect, test } from 'vitest';
+import { aboutHtml } from '../../../../shared/ui/glossary.ts';
 
 import { SHIPPED_VARIANTS } from '../engine/index.ts';
-import { ABOUT_PARAGRAPHS, aboutHtml } from './about.ts';
+import { ABOUT_PARAGRAPHS } from './about.ts';
 import { GLOSSARY } from './glossary.ts';
 import { RULES_ITEMS, RULES_SLOT_IDS, RULES_TITLE, rulesItemsHtml } from './rules.ts';
 
@@ -64,7 +65,7 @@ describe('the rules items', () => {
             expect(target).not.toBe(own);
           });
         });
-      targets(aboutHtml(variant)).forEach((target) => {
+      targets(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY[variant])).forEach((target) => {
         expect(ids, `${variant}: About links ${target}`).toContain(target);
       });
     });
@@ -85,7 +86,7 @@ describe('the About copy', () => {
   test('two paragraphs: the Sephardic one and the rulesets, with the jargon the owner named linked', () => {
     expect(ABOUT_PARAGRAPHS).toHaveLength(2);
     expect(ABOUT_PARAGRAPHS[0]).toContain('Sephardic');
-    const western = aboutHtml('backgammon');
+    const western = aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY.backgammon);
     expect(western.split('\n')).toHaveLength(2);
     ['gammon', 'doubling cube', 'Crawford rule', 'Bear off', 'opening roll'].forEach((word) => {
       expect(western).toMatch(
@@ -97,7 +98,11 @@ describe('the About copy', () => {
     expect(western).not.toMatch(/data-rule="[^"]+">backgammon</);
     // "Portes" links only where a rule names it: Portes's Scoring does, no Western rule does.
     expect(western).not.toMatch(/data-rule="[^"]+">Portes</);
-    expect(aboutHtml('portes')).toContain('data-rule="scoring">Portes</a>');
-    expect(aboutHtml('portes')).toContain('data-rule="scoring">doubling cube</a>');
+    expect(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY.portes)).toContain(
+      'data-rule="scoring">Portes</a>',
+    );
+    expect(aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY.portes)).toContain(
+      'data-rule="scoring">doubling cube</a>',
+    );
   });
 });
