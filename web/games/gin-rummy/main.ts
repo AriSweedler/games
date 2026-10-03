@@ -18,7 +18,6 @@ import { aboutHtml } from '../../shared/ui/glossary.ts';
 import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { bestLayoffActions, legalActions } from './src/engine/index.ts';
 import type { Action } from './src/engine/types.ts';
-import { createFx } from './src/fx.ts';
 import { GuestSession } from './src/net/guest.ts';
 import { HostSession } from './src/net/host.ts';
 import { isGuestFrame } from './src/protocol.ts';
@@ -33,6 +32,7 @@ import { fillNameInputs, fillP2NameInput, renderSandbox, setCodeInput } from './
 import { bindAll, fmtTime, paint } from './src/ui/render.ts';
 import { rulesItemsHtml } from './src/ui/rules.ts';
 import {
+  GIN,
   guestContextOf,
   hostContextOf,
   initialApp,
@@ -161,7 +161,7 @@ const boot = (): void => {
       fillP2Name: fillP2NameInput,
       setCode: setCodeInput,
     },
-    fx: createFx,
+    config: GIN,
     net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
     legal: legalActions,
     deps: {

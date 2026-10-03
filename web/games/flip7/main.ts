@@ -12,7 +12,6 @@ import { browserStore } from '../../shared/edge/storage.ts';
 import { aboutHtml } from '../../shared/ui/glossary.ts';
 import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { legalActions, type Action, type State, type View } from './src/engine/index.ts';
-import { createFx } from './src/fx.ts';
 import { GuestSession } from './src/net/guest.ts';
 import { HostSession } from './src/net/host.ts';
 import { isGuestFrame } from './src/protocol.ts';
@@ -22,6 +21,7 @@ import { GLOSSARY } from './src/ui/glossary.ts';
 import { bindAll, fillNameInputs, fillP2NameInput, paint, setCodeInput } from './src/ui/render.ts';
 import { rulesItemsHtml } from './src/ui/rules.ts';
 import {
+  FLIP7,
   guestContextOf,
   hostContextOf,
   initialApp,
@@ -46,7 +46,7 @@ bootShell<Flip7, App, object, HostContext>({
     fillP2Name: fillP2NameInput,
     setCode: setCodeInput,
   },
-  fx: createFx,
+  config: FLIP7,
   net: { Host: HostSession, Guest: GuestSession, isGuestFrame, seats: true },
   legal: legalActions,
   deps: {},

@@ -28,6 +28,7 @@ import {
   type PlayMode as StoredPlayMode,
 } from './storage.ts';
 import { INITIAL_CUES } from './ui/cues.ts';
+import { CUES } from './ui/sound.ts';
 import type { Gin } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -96,7 +97,7 @@ export const GIN_SHELL: ShellGameData<Gin> = {
     winnerOf: (view) => view.winner,
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUES },
+  cues: { initial: INITIAL_CUES, table: CUES },
   home: {
     // This page's own keys (defaults when unreadable; main.ts logs a bad card back), and the Score Counter's session.
     read: (store) => {

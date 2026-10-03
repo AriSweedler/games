@@ -38,6 +38,7 @@ import {
   readVariant,
   type PlayMode,
 } from './storage.ts';
+import { CUES } from './ui/sound.ts';
 import type { Backgammon } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -122,7 +123,7 @@ export const BACKGAMMON_SHELL: ShellGameData<Backgammon> = {
     winnerOf: (view) => matchWinner(view.match),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY },
+  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   home: {
     // This page's own keys: the options and the curtain mode (defaults when unreadable).
     read: (store) => {

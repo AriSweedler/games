@@ -2,19 +2,15 @@
 // is the legacy `fx` object's notes, voice and gain number for number, and its buzz is unchanged.
 // LEGACY below is a frozen copy of the numbers (legacy/gin-rummy/index.html, then ui/sound.ts
 // before the fonts), not a read of the file it checks. The player itself is the shared one
-// (web/shared/edge/cuePlayer.test.ts, docs/design/shared-shell.md §5 A4); the one createFx test
-// here pins what gin injects: this table and the `ginRummy_sound` key.
+// (web/shared/edge/cuePlayer.test.ts `shellFx`); the boot wires it to the `ginRummy_sound` key
+// from shellConfig.ts.
 import { describe, expect, test } from 'vitest';
 
-import type { AudioCues, Note, OscillatorType } from '../../../shared/edge/fx.ts';
-import { createSampleCache } from '../../../shared/edge/sound.ts';
-import { createStore, type StorageLike } from '../../../shared/edge/storage.ts';
-import { SHELL_CUES } from '../../../shared/lib/sound/cues.ts';
-import { fontByName, resolveSound } from '../../../shared/lib/sound/fonts.ts';
-import { createFx } from './fx.ts';
-import { STORAGE_KEYS } from './storage.ts';
-import type { Cue } from './ui/cues.ts';
-import { CUES } from './ui/sound.ts';
+import type { Note, OscillatorType } from '../../../../shared/edge/fx.ts';
+import { SHELL_CUES } from '../../../../shared/lib/sound/cues.ts';
+import { fontByName, resolveSound } from '../../../../shared/lib/sound/fonts.ts';
+import type { Cue } from './cues.ts';
+import { CUES } from './sound.ts';
 
 type Legacy = Readonly<{
   notes: ReadonlyArray<Note>;
@@ -70,7 +66,6 @@ const LEGACY: Readonly<Record<Cue | 'tap', Legacy>> = {
   oppDiscard: { notes: [n(494, 0.06, 0.07), n(587, 0.09)], type: 'triangle', gain: 0.1, buzz: 15 },
 };
 const EVENTS = Object.keys(LEGACY) as ReadonlyArray<Cue | 'tap'>;
-
 describe('the table on the default font', () => {
   test.each(EVENTS)(
     '%s: the legacy notes, voice and gain number for number; the buzz unchanged',
@@ -99,86 +94,5 @@ describe('the table on the default font', () => {
       expect(SHELL_CUES[event].buzz).toEqual(LEGACY[event].buzz);
       expect(CUES[event]).toBe(SHELL_CUES[event]);
     });
-  });
-});
-
-// ---------------------------------------------------------------------------------------------
-// createFx over fakes: the wiring
-// ---------------------------------------------------------------------------------------------
-type Call = ReadonlyArray<unknown>;
-
-const fakeAudio = (initial = true): Readonly<{ audio: AudioCues; calls: Call[] }> => {
-  const calls: Call[] = [];
-  const state = { enabled: initial };
-  const audio: AudioCues = {
-    tone: (freq, start, dur, type, gain) => {
-      calls.push(['tone', freq, start, dur, type, gain]);
-    },
-    seq: (notes: ReadonlyArray<Note>, type?: OscillatorType, gain?: number) => {
-      calls.push(['seq', notes, type, gain]);
-    },
-    warm: () => {
-      calls.push(['warm']);
-    },
-    setEnabled: (value) => {
-      state.enabled = value;
-    },
-    enabled: () => state.enabled,
-    context: () => null,
-  };
-  return { audio, calls };
-};
-
-const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => {
-  const map = new Map<string, string>();
-  return {
-    map,
-    getItem: (k) => map.get(k) ?? null,
-    setItem: (k, v) => {
-      map.set(k, v);
-    },
-    removeItem: (k) => {
-      map.delete(k);
-    },
-  };
-};
-
-const world = (
-  enabled = true,
-): Readonly<{
-  fx: ReturnType<typeof createFx>;
-  calls: Call[];
-  buzzes: unknown[];
-  toggles: boolean[];
-  storage: ReturnType<typeof fakeStorage>;
-}> => {
-  const { audio, calls } = fakeAudio(enabled);
-  const buzzes: unknown[] = [];
-  const toggles: boolean[] = [];
-  const storage = fakeStorage();
-  const fx = createFx({
-    audio,
-    sound: {
-      fetchBuffer: () => Promise.reject(new Error('no samples here')),
-      cache: createSampleCache(),
-    },
-    vibrate: (pattern) => buzzes.push(pattern),
-    store: createStore(storage),
-    onToggle: (on) => toggles.push(on),
-  });
-  return { fx, calls, buzzes, toggles, storage };
-};
-
-describe('createFx', () => {
-  test('wires the shared player to the table and the ginRummy_sound key', () => {
-    const { fx, calls, buzzes, toggles, storage } = world();
-    fx.play('gin', 'default');
-    expect(calls).toEqual([['seq', LEGACY.gin.notes, LEGACY.gin.type, LEGACY.gin.gain]]);
-    expect(buzzes).toEqual([LEGACY.gin.buzz]);
-    fx.toggle('default');
-    expect(fx.enabled()).toBe(false);
-    expect(storage.map.get(STORAGE_KEYS.sound)).toBe('off');
-    expect(storage.map.has(STORAGE_KEYS.soundFont)).toBe(false);
-    expect(toggles).toEqual([false]);
   });
 });

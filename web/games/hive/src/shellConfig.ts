@@ -26,6 +26,7 @@ import {
   readMotion,
   type PlayMode,
 } from './storage.ts';
+import { CUES } from './ui/sound.ts';
 import type { Hive } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -91,7 +92,7 @@ export const HIVE_SHELL: ShellGameData<Hive> = {
     winnerOf: (view) => winnerSeat(view.game.result),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY },
+  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   // The tiles' motion and the hints, remembered per device (settings.ts): read at boot with the shell's keys.
   home: { read: (store) => ({ motion: readMotion(store), hints: readHints(store) }) },
   prefs: SHELL_STORE,

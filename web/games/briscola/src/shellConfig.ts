@@ -61,6 +61,7 @@ import {
   readP4Name,
   type PlayMode,
 } from './storage.ts';
+import { CUES } from './ui/sound.ts';
 import type { Briscola, Raw } from './ui/state.ts';
 
 export type Opts = GameOptions;
@@ -227,7 +228,7 @@ export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
     winnerOf: (view) => view.result?.winner ?? null,
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY },
+  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   home: {
     // This page's own keys: the seat count (the default when unreadable) on the fixed terms, the card pack, the language pack, the beat's speed, the third and fourth names.
     read: (store) => {

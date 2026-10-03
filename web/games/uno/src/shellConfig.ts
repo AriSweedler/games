@@ -37,6 +37,7 @@ import {
   type Opts,
   type PlayMode,
 } from './storage.ts';
+import { CUES } from './ui/sound.ts';
 import type { Raw, Seat, Uno } from './ui/state.ts';
 
 export const DEFAULT_NAME = 'Ari';
@@ -143,7 +144,7 @@ export const UNO_SHELL: ShellGameData<Uno> = {
     winnerOf: (view) => (view.winner === null ? null : (view.winner as Seat)),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY },
+  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   home: {
     read: (store) => ({
       opts: readOpts(store),

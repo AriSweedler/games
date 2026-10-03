@@ -90,6 +90,7 @@ import {
   readP6Name,
   type Opts,
 } from './storage.ts';
+import { CUES } from './ui/sound.ts';
 import type { Fidice, Raw } from './ui/state.ts';
 
 export { DEFAULT_OPTS, type Opts };
@@ -345,7 +346,7 @@ export const FIDICE_SHELL: ShellGameData<Fidice> = {
     winnerOf: (view) => (view.winner === null ? null : shellSeatOfChair(view, view.winner)),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY },
+  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   home: {
     // This page's own keys: the host card's last terms (the defaults when unreadable) and the third to sixth names.
     read: (store) => {

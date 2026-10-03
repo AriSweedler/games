@@ -7,7 +7,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { SHELL_CUES, baseOf, isCueId, ladder } from '../../../../shared/lib/sound/cues.ts';
-import { fontByName, resolveCue } from '../../../../shared/lib/sound/fonts.ts';
+import { fontByName, resolveCue, resolveSound } from '../../../../shared/lib/sound/fonts.ts';
 import { DEFAULT_SOUNDS } from '../../../../shared/lib/sound/fonts/default.ts';
 import { schedule, sequenceOf, type Phrase } from '../../../../shared/lib/sound/phrase.ts';
 import { makeCard } from '../engine/index.ts';
@@ -23,7 +23,16 @@ import type {
   ValueClass,
   WinningClass,
 } from '../engine/index.ts';
-import { BUZZ, CUES, VOICES, lossLeaf, phraseOf, victoryLeaf, type Listener } from './sound.ts';
+import {
+  BUZZ,
+  CUES,
+  VOICES,
+  lossLeaf,
+  phraseOf,
+  victoryLeaf,
+  type Cue,
+  type Listener,
+} from './sound.ts';
 
 // ---- the cells -------------------------------------------------------------------------------
 
@@ -646,3 +655,44 @@ const INVENTORY: ReadonlyArray<string> = [
   'victory.game',
   'victory.match',
 ];
+
+// ---- the table as the shell sees it (once fx.test.ts's) --------------------------------------
+
+const EVENTS = Object.keys(CUES) as ReadonlyArray<Cue | 'tap'>;
+
+describe('the table', () => {
+  test.each(EVENTS)(
+    '%s spells its key as a qualified id the default font resolves to a synth, with a buzz',
+    (event) => {
+      const { cue, buzz } = CUES[event];
+      expect(isCueId(cue)).toBe(true);
+      expect(cue).toBe(
+        event === 'yourTurn'
+          ? 'turn'
+          : event === 'win'
+            ? 'victory'
+            : event === 'lose'
+              ? 'loss'
+              : event,
+      );
+      expect(resolveSound(fontByName('default'), cue).kind).toBe('synth');
+      const pattern = typeof buzz === 'number' ? [buzz] : buzz;
+      expect(pattern.length).toBeGreaterThan(0);
+      pattern.forEach((ms) => {
+        expect(ms).toBeGreaterThan(0);
+      });
+    },
+  );
+
+  test("the shell's four rows are the shared SHELL_CUES, byte for byte (dry-round-2.md E9)", () => {
+    expect(SHELL_CUES).toStrictEqual({
+      tap: { cue: 'tap', buzz: 12 },
+      yourTurn: { cue: 'turn', buzz: [40, 60, 40] },
+      win: { cue: 'victory', buzz: [80, 50, 80, 50, 200] },
+      lose: { cue: 'loss', buzz: [200] },
+    });
+    (Object.keys(SHELL_CUES) as ReadonlyArray<keyof typeof SHELL_CUES>).forEach((event) => {
+      expect(CUES[event]).toBe(SHELL_CUES[event]);
+    });
+  });
+});

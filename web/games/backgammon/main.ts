@@ -17,7 +17,6 @@ import { realClock } from '../../shared/edge/clock.ts';
 import { browserStore } from '../../shared/edge/storage.ts';
 import { paintSound } from '../../shared/ui/shellPaint.ts';
 import { legalActions, type Action, type View } from './src/engine/index.ts';
-import { createFx } from './src/fx.ts';
 import { GuestSession } from './src/net/guest.ts';
 import { HostSession } from './src/net/host.ts';
 import { isGuestFrame } from './src/protocol.ts';
@@ -53,7 +52,7 @@ bootShell<Backgammon, App>({
     fillP2Name: fillP2NameInput,
     setCode: setCodeInput,
   },
-  fx: createFx,
+  config: BACKGAMMON,
   net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
   legal: legalActions,
   deps: {},
