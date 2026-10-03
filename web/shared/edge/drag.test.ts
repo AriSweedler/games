@@ -162,6 +162,13 @@ describe('bindDrag', () => {
     expect(second.wasPrevented()).toBe(false);
   });
 
+  test('every surface is marked `drag-surface` at the binding (shell.css: `user-select: none`, so a long press there selects no text); the things on it are not', () => {
+    const t = table();
+    expect(t.a.hasClass('drag-surface')).toBe(true);
+    expect(t.b.hasClass('drag-surface')).toBe(true);
+    expect(t.coin.hasClass('drag-surface')).toBe(false);
+  });
+
   test('past the threshold: the start intents once, in order, then the ghost is made on the source rect, stripped, sized by its variable, and the surface pressed holds the pointer', () => {
     const t = table();
     t.b.fire('pointerdown', on(t.coin, 100, 100, 7));
