@@ -143,21 +143,6 @@ label {
   font-size: 0.82rem;
   padding-top: 6px;
 }
-.conn-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--muted);
-  flex-shrink: 0;
-}
-.conn-dot.on {
-  background: var(--accent-dark);
-}
-.conn-dot.off {
-  background: var(--danger);
-}
-
 /* ---------- the table ---------- */
 #tableScreen {
   display: flex;

@@ -309,9 +309,6 @@ label {
 .row + .btn {
   margin-top: 10px;
 }
-.row.tight {
-  gap: 6px;
-}
 .row.between {
   justify-content: space-between;
 }
@@ -390,19 +387,12 @@ label {
 .badge.dim {
   color: var(--muted);
 }
+/* The other seat's dot (shape: shell.css .conn-dot): sand until the peer answers, olive once it has. */
 .conn-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
   background: #a89c8a;
-  flex-shrink: 0;
 }
 .conn-dot.on {
   background: var(--olive);
-}
-.conn-dot.off {
-  background: var(--danger);
 }
 /* Which colour a name plays (the owner, 2026-09-28: "The names should get indicators for which
    color they are"): a 12px disc before each name in the two strips, painted like that seat's

@@ -109,9 +109,6 @@ label {
 .row + .btn {
   margin-top: 10px;
 }
-.row.tight {
-  gap: 6px;
-}
 .row.between {
   justify-content: space-between;
 }
@@ -174,21 +171,6 @@ label {
   font-size: 0.82rem;
   padding-top: 6px;
 }
-.conn-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--muted);
-  flex-shrink: 0;
-}
-.conn-dot.on {
-  background: var(--accent-dark);
-}
-.conn-dot.off {
-  background: var(--danger);
-}
-
 /* ---------- the table ---------- */
 #tableScreen {
   display: flex;
@@ -205,20 +187,15 @@ label {
   justify-content: space-between;
   gap: 8px;
 }
-/* The names strip (page.ts table block, render.ts paintTable): a hex swatch in the side's tile
-   colour before each name, a thin rule between them, no words; at 390px the strip has about 110px
-   between the leave/globe pair and the rules/history/sound trio, so each name may shrink and
-   ellipsize, and never past 12 characters. */
+/* The names strip (page.ts table block, render.ts paintTable; its layout is shell.css's
+   .names-strip): a hex swatch in the side's tile colour before each name, a thin rule between them,
+   no words, centred in the room it takes; at 390px the strip has about 110px between the leave/globe
+   pair and the rules/history/sound trio, so each name may shrink and ellipsize, and never past 12
+   characters. */
 .names-strip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   font-size: 0.9rem;
-  min-width: 0;
   flex: 1;
   justify-content: center;
-  white-space: nowrap;
-  overflow: hidden;
 }
 #myName,
 #oppName {

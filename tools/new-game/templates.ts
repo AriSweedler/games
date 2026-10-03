@@ -1394,9 +1394,6 @@ label {
   display: block;
   letter-spacing: 0.06em;
 }
-.row.tight {
-  gap: 6px;
-}
 .row.between {
   justify-content: space-between;
 }

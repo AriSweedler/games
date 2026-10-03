@@ -215,23 +215,6 @@ label {
   font-size: 0.82rem;
   padding-top: 6px;
 }
-.conn-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--muted);
-  flex-shrink: 0;
-}
-/* The opponent's dot (shellPaint.ts `connDotClass`, painted through `paintShellChrome`): the gold
-   accent-dark when connected, as the lobby's seat dots are; the shell's green would be gin's. */
-.conn-dot.on {
-  background: var(--accent-dark);
-}
-.conn-dot.off {
-  background: var(--danger);
-}
-
 /* ---- the table ---- */
 #tableScreen {
   display: flex;
