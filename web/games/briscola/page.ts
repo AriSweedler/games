@@ -11,12 +11,12 @@
 // table ships the 2-player shape (#seatR2 shown, R1 and R3 hidden) so the page fake and the goldens
 // see a whole table before any paint; the Italian suit sprite (web/shared/ui/cardFace.ts
 // SUIT_SPRITE_SVG) is inlined at boot, not here, so it cannot drift from suits.ts.
-import type {
-  ShellBlocks,
-  ShellCopy,
-  ShellLook,
-  ShellNotes,
-  ShellPage,
+import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
+import {
+  type ShellBlocks,
+  type ShellCopy,
+  type ShellNotes,
+  type ShellPage,
 } from '../../shared/markup/shell.ts';
 import { stepperHtml } from '../../shared/markup/stepper.ts';
 
@@ -53,73 +53,21 @@ const notes: ShellNotes = {
   curtainNote: ' (design §5.4): a terracotta wash, the table readable beneath, the hand face down.',
 };
 
-const look: ShellLook = {
-  resumeClass: ' resume',
-  resumeStyle: '',
-  resumeBtnKind: 'btn-primary',
-  onlineActive: ' active',
-  mt8: '',
-  mt10: '',
-  mt14: '',
-  mb8: '',
-  pt10: '',
-  m0: '',
-  noteLeft: 'class="empty-note left"',
-  centeredBox: 'class="card-box centered"',
-  pulseMuted: 'class="pulse muted"',
-  joinBtnWidth: '',
-  curtainClass: ' curtain',
-  curtainStyle: '',
-  curtainSheet: 'class="sheet centered"',
-  betweenRow: 'class="row between"',
-  historyClass: ' class="history"',
-  toastAttrs: ' role="status"',
-};
-
 const blocks: ShellBlocks = {
-  head: `<!doctype html>
-<html lang="en">
-  <head>
-    <meta property="og:title" content="Briscola" />
-    <meta
-      property="og:description"
-      content="Briscola, the Italian card game for two, three or four: pass one phone, or open a table online and send the link."
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://games.sweedler.com/briscola/" />
-    <meta property="og:image" content="https://games.sweedler.com/briscola/splash.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta
-      property="og:image:alt"
-      content="Briscola: three cards on lagoon water beside a sandy shore"
-    />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Briscola" />
-    <meta
-      name="twitter:description"
-      content="Briscola, the Italian card game for two, three or four: pass one phone, or open a table online and send the link."
-    />
-    <meta name="twitter:image" content="https://games.sweedler.com/briscola/splash.png" />
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-    />
-    <title>Briscola — cards</title>
-    <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
-    <link rel="alternate icon" href="../../shared/favicon.ico" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="../../shared/styles/tokens.css" />
-    <link rel="stylesheet" href="../../shared/styles/base.css" />
-    <link rel="stylesheet" href="../../shared/styles/shell.css" />
-    <link rel="stylesheet" href="./theme.css" />
-  </head>`,
+  head: headHtml({
+    slug: 'briscola',
+    name: 'Briscola',
+    tabTitle: 'Briscola — cards',
+    share:
+      'Briscola, the Italian card game for two, three or four: pass one phone, or open a table online and send the link.',
+    imageAlt: 'Briscola: three cards on lagoon water beside a sandy shore',
+    // The webfonts (design §5.1): Bodoni Moda for the masthead, Lora for the text.
+    extraTags: [
+      `<link rel="preconnect" href="https://fonts.googleapis.com" />`,
+      `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />`,
+      `<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />`,
+    ],
+  }),
   masthead: `        <div class="masthead">
           <h1>Briscola</h1>
           <div class="subtitle">Italian cards for two, three or four</div>
@@ -194,21 +142,7 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
   // device's own, data-you (theme.css `.seat-list`).
   hostWaitList: `      <ul class="seat-list" id="seatList" aria-label="Seats"></ul>`,
   guestWaitList: `      <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>`,
-  // The guest's name card under the list (web/shared/ui/shellPaint.ts `paintGuestName`; the owner,
-  // 2026-09-28: the client defines its own name): "Playing as", the box prefilled with my row's name
-  // as the host named it, Change (or Enter) re-sending the join under what the box says
-  // (web/shared/ui/home.ts `bindHomeShell`, shell.ts `name/rename`; the host's lobby then names my
-  // row again), and a note naming who sees it. Styled by id in theme.css (`#guestSeatName`,
-  // `#guestNameNote`; no new class); hidden until a lobby frame names my row. The four ids are this
-  // page's (tools/games.ts `pageShape.ids`), not SHELL_IDS.
-  guestSeatName: `      <div id="guestSeatName" class="hidden">
-        <label for="guestNameInput">Playing as</label>
-        <div class="row">
-          <input type="text" id="guestNameInput" class="grow" maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
-          <button class="btn btn-secondary btn-sm" id="guestRenameBtn">Change</button>
-        </div>
-        <div class="muted" id="guestNameNote"></div>
-      </div>`,
+  guestSeatName: GUEST_SEAT_NAME,
   table: `      <!-- TABLE (design §5.2): one DOM for 2, 3 and 4 seats. I sit at the bottom; the other
            seats are relative cells (#seatR1 right, #seatR2 across, #seatR3 left) that seatCells
            (src/ui/layout.ts) maps to absolute seats; the static markup ships the 2-player shape.
@@ -375,4 +309,4 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
   rulesIcon: '',
 };
 
-export const BRISCOLA_PAGE: ShellPage = { copy, notes, look, blocks };
+export const BRISCOLA_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };

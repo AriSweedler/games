@@ -2,7 +2,7 @@
 // page. Pure, so it runs without a build; class-contract.test.ts proves the rows against dist/.
 import { expect, test } from 'vitest';
 
-import { OWNERS, ownersOf, parseContract, rowsFor } from './classes.ts';
+import { OWNERS, ownersOf, parseContract, rowsFor, sourceFiles } from './classes.ts';
 
 const TABLE = `
 | Owner | Kind | Name | Toggled by (TS) | Styled in (CSS) | Notes |
@@ -55,4 +55,12 @@ test('a shell row applies to every shell game (fidice among them since M5 of fid
     'shared',
     'shell',
   ]);
+});
+
+test("sourceFiles reads a page.ts as markup, not TypeScript: the game's own and the shared blocks in web/shared/markup/page.ts (shell-hoist.md row J); shell.ts, which the shell runs, stays", () => {
+  const files = sourceFiles('uno');
+  expect(files.some((path) => path.endsWith('/web/games/uno/page.ts'))).toBe(false);
+  expect(files.some((path) => path.endsWith('/web/shared/markup/page.ts'))).toBe(false);
+  expect(files.some((path) => path.endsWith('/web/shared/markup/shell.ts'))).toBe(true);
+  expect(files.some((path) => path.endsWith('.test.ts'))).toBe(false);
 });

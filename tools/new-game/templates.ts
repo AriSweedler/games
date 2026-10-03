@@ -1559,6 +1559,8 @@ bootShell<${pascal}, App, object, HostContext>({
 const pageTs = (slug: string, upper: string, title: string, hidden: boolean): string => {
   const quoted = title.replace(/"/g, '&quot;');
   const tsTitle = title.replace(/'/g, "\\'");
+  // The title inside a single-quoted TS string that becomes an attribute value: both escapes.
+  const headTitle = quoted.replace(/'/g, "\\'");
   return `// ${title}'s shell page (docs/design/${slug}.md §3; docs/design/dry-round-2.md §3 row G2): what
 // tools/shell-markup.ts fills web/shared/markup/shell/*.html with to compose ./index.html, which
 // test/dist/shell-markup.test.ts pins byte for byte. The home is the shell's (the host card, the
@@ -1566,12 +1568,12 @@ const pageTs = (slug: string, upper: string, title: string, hidden: boolean): st
 // residue here (\`blocks\`) is the head, the table (the names strip, the board slot, the controls,
 // the status line) and the result sheet; the Open Graph card is assets/splash.svg rendered to
 // web/public/games/${slug}/splash.png.
-import type {
-  ShellBlocks,
-  ShellCopy,
-  ShellLook,
-  ShellNotes,
-  ShellPage,
+import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
+import {
+  type ShellBlocks,
+  type ShellCopy,
+  type ShellNotes,
+  type ShellPage,
 } from '../../shared/markup/shell.ts';
 
 const copy: ShellCopy = {
@@ -1610,62 +1612,14 @@ const notes: ShellNotes = {
   },
 };
 
-const look: ShellLook = {
-  resumeClass: ' resume',
-  resumeStyle: '',
-  resumeBtnKind: 'btn-primary',
-  onlineActive: ' active',
-  mt8: '',
-  mt10: '',
-  mt14: '',
-  mb8: '',
-  pt10: '',
-  m0: '',
-  noteLeft: 'class="empty-note left"',
-  centeredBox: 'class="card-box centered"',
-  pulseMuted: 'class="pulse muted"',
-  joinBtnWidth: '',
-  curtainClass: ' curtain',
-  curtainStyle: '',
-  curtainSheet: 'class="sheet centered"',
-  betweenRow: 'class="row between"',
-  historyClass: ' class="history"',
-  toastAttrs: ' role="status"',
-};
-
 const blocks: ShellBlocks = {
-  head: \`<!doctype html>
-<html lang="en">
-  <head>
-    <meta property="og:title" content="${quoted}" />
-    <meta
-      property="og:description"
-      content="${quoted} for two. Pass one phone, or open a table online."
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://games.sweedler.com/${slug}/" />
-    <meta property="og:image" content="https://games.sweedler.com/${slug}/splash.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="${quoted}" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${quoted}" />
-    <meta
-      name="twitter:description"
-      content="${quoted} for two. Pass one phone, or open a table online."
-    />
-    <meta name="twitter:image" content="https://games.sweedler.com/${slug}/splash.png" />
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>${quoted}</title>
-    <meta name="description" content="${quoted} for two: pass one phone, or open a table online." />
-    <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
-    <link rel="alternate icon" href="../../shared/favicon.ico" />
-    <link rel="stylesheet" href="../../shared/styles/tokens.css" />
-    <link rel="stylesheet" href="../../shared/styles/base.css" />
-    <link rel="stylesheet" href="../../shared/styles/shell.css" />
-    <link rel="stylesheet" href="./theme.css" />
-  </head>\`,
+  head: headHtml({
+    slug: '${slug}',
+    name: '${headTitle}',
+    share: '${headTitle} for two. Pass one phone, or open a table online.',
+    imageAlt: '${headTitle}',
+    description: '${headTitle} for two: pass one phone, or open a table online.',
+  }),
   masthead: \`        <div class="masthead">
           <h1>${quoted}</h1>
           <div class="subtitle">TODO: one line on what the game is</div>
@@ -1685,14 +1639,7 @@ const blocks: ShellBlocks = {
   extraScreens: '',
   hostWaitList: '',
   guestWaitList: '',
-  guestSeatName: \`      <div id="guestSeatName" class="hidden">
-        <label for="guestNameInput">Playing as</label>
-        <div class="row">
-          <input type="text" id="guestNameInput" class="grow" maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
-          <button class="btn btn-secondary btn-sm" id="guestRenameBtn">Change</button>
-        </div>
-        <div class="muted" id="guestNameNote"></div>
-      </div>\`,
+  guestSeatName: GUEST_SEAT_NAME,
   table: \`      <!-- TABLE (docs/design/${slug}.md §3): the names strip (me, the other seat and its connection),
            the board slot (TODO: the game's own markup, painted by render.ts), the status line and
            the controls. -->
@@ -1744,7 +1691,7 @@ const blocks: ShellBlocks = {
   rulesIcon: '',
 };
 
-export const ${upper}_PAGE: ShellPage = { copy, notes, look, blocks };
+export const ${upper}_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };
 // The title the shell heading, the share sheet and the registry spell: '${tsTitle}'.
 `;
 };
