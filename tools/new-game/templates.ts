@@ -1198,13 +1198,14 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   paintResult(doc, pause !== null, pause === null ? null : { title: pause.title, score: pause.detail });
 };
 
-/** The curtain for the seat the phone goes to (ui/state.ts \`viewer\`): its name and the last note; hidden when no seat waits. The button is the page's \`revealLabel\`. */
+/** The curtain for the seat the phone goes to (ui/state.ts \`viewer\`): its name and the last note; hidden when no seat waits. The button is the page's \`revealLabel\`; "Continue online" shows under it when the shell says the game can go on as a room. */
 const paintCurtain = (doc: DocumentLike, app: App): void => {
   const seat = app.table.curtain;
   const v = app.shell.view;
   paintShellCurtain(
     doc,
     seat === null || v === null ? null : shellCurtainText({ to: nameAt(v, seat), sub: '', last: v.game.note }),
+    handoffLabelOf(app.shell, ${upper}) !== null,
   );
 };
 

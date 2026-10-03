@@ -443,9 +443,6 @@ const blocks: ShellBlocks = {
           <button class="btn btn-go grow" id="nextGameBtn">Rematch</button>
         </div>
       </div>`,
-  curtainExtra: `        <button class="btn btn-ghost btn-block btn-sm" id="curtainHandoffBtn">
-          Continue online
-        </button>`,
   result: resultMarkup({
     note: 'the sheet over the dimmed board (design §4.11).',
     sub: true,

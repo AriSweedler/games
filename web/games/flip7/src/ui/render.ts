@@ -93,7 +93,7 @@ export const CURTAIN_SUB = 'Every card is face up: everyone can watch.';
 
 // ---- the shell's halves ---------------------------------------------------------------------
 
-/** The curtain for the seat the phone goes to: its name, and the round about to be dealt; the button is the page's `Start`. */
+/** The curtain for the seat the phone goes to: its name, and the round about to be dealt; the button is the page's `Start`. "Continue online" shows under it at two seats (the shell's `handoffLabelOf`). */
 const paintCurtain = (doc: DocumentLike, app: App): void => {
   const seat = app.table.curtain;
   const v = app.shell.view;
@@ -106,12 +106,8 @@ const paintCurtain = (doc: DocumentLike, app: App): void => {
           sub: CURTAIN_SUB,
           last: `Round ${String(v.round)} · ${nameOf(v, v.dealer)} deals`,
         }),
+    handoffLabelOf(app.shell, FLIP7) !== null,
   );
-  toggleHandoffUnderCurtain(doc, v);
-};
-
-const toggleHandoffUnderCurtain = (doc: DocumentLike, v: View | null): void => {
-  toggleClass(requireId(doc, 'curtainHandoffBtn'), 'hidden', v?.seats.length !== 2);
 };
 
 // ---- the table ------------------------------------------------------------------------------
@@ -314,7 +310,6 @@ export const bindAll = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
   home.bindHome(doc, dispatch);
   bindCurtain<Flip7>(doc, dispatch);
   bindButtons(doc, dispatch, [
-    ['curtainHandoffBtn', { type: 'handoff/click' }],
     ...shellButtons<Flip7>(),
     ['hitBtn', { type: 'hit/click' }],
     ['stayBtn', { type: 'stay/click' }],

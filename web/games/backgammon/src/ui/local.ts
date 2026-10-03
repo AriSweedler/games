@@ -9,16 +9,17 @@
 // stays here. The first curtain of a game names the starter instead of asking for the phone and
 // says the roll that decided it, once (`openingCurtain`, `curtainText`): whoever tapped Start is
 // holding it, and may be the starter; "Continue online" waits for a later curtain.
-import { listenId, requireId, toggleClass, type PageLike } from '../../../../shared/edge/dom.ts';
+import type { PageLike } from '../../../../shared/edge/dom.ts';
 import {
   bindCurtain,
   curtainText as shellCurtainText,
   paintCurtain as paintShellCurtain,
   type CurtainText,
 } from '../../../../shared/ui/curtain.ts';
+import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import { diceText, type Seat, type View } from '../engine/index.ts';
 import { hitsAgainst, lastTurnEntry } from './board.ts';
-import type { App, Backgammon, Intent } from './state.ts';
+import { BACKGAMMON, type App, type Backgammon, type Intent } from './state.ts';
 
 /** The shell's, with `last` the last `move`/`noMove` log line and its hits (empty on the first curtain, whose sub says the roll) and `button` the phase's words, always painted. */
 export type { CurtainText };
@@ -127,15 +128,14 @@ export const curtainText = (v: View, incoming: Seat): CurtainText => {
 export const paintCurtain = (doc: PageLike, app: App): void => {
   const seat = app.table.curtain;
   const v = app.shell.view;
-  paintShellCurtain(doc, seat === null || v === null ? null : curtainText(v, seat));
-  if (v !== null && seat !== null)
-    toggleClass(requireId(doc, 'curtainHandoffBtn'), 'hidden', openingCurtain(v));
+  paintShellCurtain(
+    doc,
+    seat === null || v === null ? null : curtainText(v, seat),
+    v !== null && !openingCurtain(v) && handoffLabelOf(app.shell, BACKGAMMON) !== null,
+  );
 };
 
-/** `#curtainBtn`: the incoming seat reveals (the roll modal then asks for the roll); `#curtainHandoffBtn` hands off. */
+/** `#curtainBtn`: the incoming seat reveals (the roll modal then asks for the roll); `#curtainHandoffBtn` hands off (both the shell's). */
 export const bindLocal = (doc: PageLike, dispatch: (intent: Intent) => void): void => {
   bindCurtain<Backgammon>(doc, dispatch);
-  listenId(doc, 'curtainHandoffBtn', 'click', () => {
-    dispatch({ type: 'handoff/click' });
-  });
 };
