@@ -23,6 +23,7 @@ import {
   type App,
   type EffectDeps,
   type Intent,
+  resumeFor,
 } from './state.ts';
 import {
   handoffLabel,
@@ -407,6 +408,9 @@ describe('storage', () => {
     runEffect(app, { type: 'persist' }, deps);
     expect(JSON.parse(s.map.get(STORAGE_KEYS.save) ?? 'null')).toMatchObject({ role: 'local' });
     expect(readHome(store).save).toMatchObject({ role: 'local' });
+    // The resume box's offer is the shell's rule over that save; nothing saved offers nothing.
+    expect(resumeFor(readHome(store).save)).not.toBeNull();
+    expect(resumeFor(null)).toBeNull();
     // `home/init`: the remembered count into the shell, the saved game offered to resume.
     const home = run(initialApp, { type: 'home/init', home: readHome(store) }).app;
     expect(home.shell.opts).toEqual({ seatCount: 3 });
