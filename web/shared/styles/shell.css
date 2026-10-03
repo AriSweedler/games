@@ -327,8 +327,12 @@ body:not([data-frame]) {
    the card; on UNO the last play of a game wins it, so the tile glides while the result sheet opens
    (dry-review-2026-10.md §5.1). The stacking order, bottom up: the frame band 0, the tab submenu
    30, flyers 40, overlays 50, the gate 90, the toast 100. Each theme adds the glide itself (its
-   transition, backgammon's lift) and nothing of the stacking. */
-.flyer {
+   transition, backgammon's lift) and nothing of the stacking. `body >` because the clone is a
+   copy of a table element and keeps its class: the theme's own rule for that element (briscola's
+   `.card { position: relative }`, backgammon's `.checker { position: absolute }`) is linked after
+   this sheet and would win a plain `.flyer` at equal specificity, taking the clone back into the
+   body's flow; the clone is the body's child by `launchClone`'s design, so the selector says so. */
+body > .flyer {
   position: fixed;
   pointer-events: none;
   z-index: 40;
