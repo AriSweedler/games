@@ -34,15 +34,14 @@
 import { normaliseName } from '../../../shared/lib/name.ts';
 import { err, ok } from '../../../shared/lib/result.ts';
 import type { Rng } from '../../../shared/lib/rng.ts';
-import { connectingMsg } from '../../../shared/net/guest.ts';
-import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../shared/net/host.ts';
+import { WAITING_MSG } from '../../../shared/lib/shellDefaults.ts';
 import { parseSeatCount, seatedCopy } from '../../../shared/ui/seatCopy.ts';
 import {
   joinedMsg,
   type Player,
   type SeatOf,
   type ShellGameData,
-  INITIAL_CUE_MEMORY,
+  DEFAULT_NAME,
 } from '../../../shared/ui/shell.ts';
 import { difficultyById, profileFor } from './bots/registry.ts';
 import { decodeState } from './codec.ts';
@@ -70,7 +69,6 @@ import { MAX_BOTS, SEAT_COUNTS, action, join, lobby, state, toast } from './prot
 import {
   DEFAULT_HOME_TAB,
   DEFAULT_OPTS,
-  DEFAULT_PLAY_MODE,
   HOME_TABS,
   SHELL_STORE,
   readOpts,
@@ -86,13 +84,7 @@ import type { Fidice, Raw } from './ui/state.ts';
 
 export { DEFAULT_OPTS, type Opts };
 
-export const DEFAULT_NAME = 'Ari';
-/**
- * The pass-the-phone seats when nothing is remembered or typed: the shell's two proper names
- * (web/shared/ui/shell.ts `DEFAULT_LOCAL_NAMES`), `Player N` beyond (`localNameFor`); the first is
- * `#nameInput`'s markup value (DEFAULT_NAME) too, since the shell's `fillName` reaches that input.
- */
-export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi'];
+export { DEFAULT_NAME };
 /** The host's name at a table nobody plays from this device (Watch, plan §7 D6): the legacy `menu.watchBots`'s. */
 export const WATCH_HOST_NAME = 'Host';
 /** Watch seats this many computers when the card names none (the legacy `menu.watchBots`: four); Solo two (its `menu.solo`). */
@@ -234,11 +226,8 @@ export const withBotNames = (s: State, names: ReadonlyArray<string | null>): Sta
 
 export const FIDICE_SHELL: ShellGameData<Fidice> = {
   id: 'fidice',
-  names: { default: DEFAULT_NAME },
-  localNames: LOCAL_NAMES,
   tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
   modes: {
-    default: DEFAULT_PLAY_MODE,
     // Solo and Watch are shown, never stored (plan §7 D9; gin's Sandbox): a reload opens Online.
     parse: (raw) =>
       raw === 'local'
@@ -248,12 +237,9 @@ export const FIDICE_SHELL: ShellGameData<Fidice> = {
           : { shown: 'online', stored: 'online' },
   },
   copy: {
-    ...seatedCopy({ verb: 'start', waitingAtTwo: WAITING_MSG }),
+    ...seatedCopy({ verb: 'start' }),
     leaveLocal: LEAVE_LOCAL_MSG,
     leaveOnline: LEAVE_ONLINE_MSG,
-    opening: OPENING_MSG,
-    connecting: connectingMsg,
-    handoff: handoffMsg,
     waiting: waitingMsg,
     joined: (name, names, remaining) =>
       joinedText(name, names.length + 1, names.length + 1 + remaining),
@@ -313,7 +299,7 @@ export const FIDICE_SHELL: ShellGameData<Fidice> = {
     winnerOf: (view) => (view.winner === null ? null : shellSeatOfChair(view, view.winner)),
   },
   frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
+  cues: { table: CUES },
   home: {
     // This page's own keys: the host card's last terms (the defaults when unreadable) and the third to sixth names.
     read: (store) => {

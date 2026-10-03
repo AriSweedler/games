@@ -32,10 +32,18 @@ import { appendCapped, decodeRecentGames, type RecentGame } from '../lib/recentG
 import { ROOM_CODE, isWellFormedCode, type Game } from '../lib/roomCode.ts';
 import { LANGUAGE_PACKS, type LanguagePackName } from '../lib/lang/packs.ts';
 import { SOUND_FONTS, type SoundFontName } from '../lib/sound/fonts.ts';
+import { PLAY_MODES, type PlayMode } from '../lib/shellDefaults.ts';
 import type { StorageError, Store } from './storage.ts';
 
-export const PLAY_MODES = ['online', 'local'] as const;
-export type PlayMode = (typeof PLAY_MODES)[number];
+/** The stored tab and mode and their defaults (web/shared/lib/shellDefaults.ts): what every game's storage.ts decodes its `homeTab` and `playMode` keys against. */
+export {
+  DEFAULT_HOME_TAB,
+  DEFAULT_PLAY_MODE,
+  HOME_TABS,
+  PLAY_MODES,
+  type HomeTab,
+  type PlayMode,
+} from '../lib/shellDefaults.ts';
 export const SOUND_STATES = ['on', 'off'] as const;
 export type SoundState = (typeof SOUND_STATES)[number];
 /**

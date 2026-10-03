@@ -43,6 +43,7 @@ import {
 import type { Connection, PeerHandle } from '../edge/transport.ts';
 import type { Result } from '../lib/result.ts';
 import { peerIdFor, type Game } from '../lib/roomCode.ts';
+import { connectingMsg } from '../lib/shellDefaults.ts';
 import { isHeartbeat, liveness, type Liveness } from './liveness.ts';
 
 export { HB_GRACE_MS, HB_MS } from './liveness.ts';
@@ -58,7 +59,7 @@ export const STALL_MS = 12_000;
 /** Errors are toasted for this long. */
 export const ERROR_TOAST_MS = 5000;
 
-export const connectingMsg = (code: string): string => `Connecting to room ${code}…`;
+export { connectingMsg };
 export const GUEST_WATCHDOG_MSG =
   'Still trying to reach the connection service… Your network may be blocking it (VPN / strict Wi-Fi). Try mobile data or another network.';
 export const reconnectingMsg = (tries: number): string =>

@@ -1,8 +1,9 @@
 // The half of backgammon's shell config the game spells from its engine, protocol and storage
-// alone (docs/design/shared-shell.md §4.3; C2): the id the room codes are made for, the default
-// host name, the tabs, the two stored modes, the copy the shared flows paint (the two leave
-// confirms, the room named by its host (the shell's seatCopy.ts, started), and the sessions' three status strings the shell paints
-// before a session speaks), the option codec (`{ matchLength, variant }`: the host save's own
+// alone (docs/design/shared-shell.md §4.3; C2): the id the room codes are made for, the
+// pass-and-play pair, the copy the shared flows paint (the two leave confirms, over a match and a
+// room, and the room named by its host: the shell's seatCopy.ts, started; the host name, the tabs,
+// the modes and the status strings are the shell's defaults, dry-review-2026-10.md §7 row 2), the
+// option codec (`{ matchLength, variant }`: the host save's own
 // fields, the welcome frame's, the resume offer's, each select falling back to the shell's
 // current value), the engine adapters, the frame builders, the cue memory's start and the
 // shell's store. The table hooks (`rendered`, `refuse`, the per-site `reset`, pass-and-play's
@@ -10,8 +11,8 @@
 // completes this record: they use its own helpers, and a value import both ways would be a cycle.
 // Every literal here was ui/state.ts's before the move; the constants and helpers the tests
 // import are re-exported there.
-import { hostRoomMsg } from '../../../shared/ui/seatCopy.ts';
-import { INITIAL_CUE_MEMORY, type ShellGameData } from '../../../shared/ui/shell.ts';
+import { hostRoomMsg, leaveCopy } from '../../../shared/ui/seatCopy.ts';
+import { DEFAULT_NAME, type ShellGameData } from '../../../shared/ui/shell.ts';
 import {
   applyAction,
   createGame,
@@ -25,14 +26,9 @@ import {
   viewFor,
   type ShippedVariant,
 } from './engine/index.ts';
-import { connectingMsg } from '../../../shared/net/guest.ts';
-import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
-import { action, join, lobby, state, toast } from './protocol.ts';
+import { PROTOCOL } from './protocol.ts';
 import {
   DEFAULT_CURTAIN_MODE,
-  DEFAULT_HOME_TAB,
-  DEFAULT_PLAY_MODE,
-  HOME_TABS,
   SHELL_STORE,
   readCurtainMode,
   readMatchLength,
@@ -43,15 +39,13 @@ import {
 import { CUES } from './ui/sound.ts';
 import type { Backgammon } from './ui/state.ts';
 
-export const DEFAULT_NAME = 'Ari';
 /**
  * The pass-and-play seats when nothing is remembered or typed (the owner, 2026-09-25:
- * "backgammon is Ari and Ethan"); the first is `#nameInput`'s markup value (DEFAULT_NAME) too,
- * since the shell's `fillName` reaches that input. tools/games.ts SHELL pins the pair for the e2e.
+ * "backgammon is Ari and Ethan"): the one game whose pair is not the shell's `DEFAULT_LOCAL_NAMES`.
+ * The first is `#nameInput`'s markup value (the shell's DEFAULT_NAME) too, since the shell's
+ * `fillName` reaches that input. tools/games.ts SHELL pins the pair for the e2e.
  */
-export const LOCAL_NAMES: readonly [string, string] = ['Ari', 'Ethan'];
-export const LEAVE_LOCAL_MSG = 'End this match? The score will be cleared.';
-export const LEAVE_ONLINE_MSG = 'Leave this match? The room will close.';
+export const LOCAL_NAMES: readonly [string, string] = [DEFAULT_NAME, 'Ethan'];
 /** A match length from a select's raw value (the shell's `opts/set` and the start buttons carry strings alone): one of MATCH_LENGTHS, else `fallback`. */
 export const parseMatchLength = (raw: string | undefined, fallback: number): number => {
   const n = parseInt(raw ?? '', 10);
@@ -67,18 +61,8 @@ export const BACKGAMMON_SHELL: ShellGameData<Backgammon> = {
   // The flat board is played with the phone sideways (docs/design/backgammon-landscape.md): the
   // shell watches the orientation and asks for a turn of the phone at the table (its turn gate).
   orientation: 'landscape',
-  names: { default: DEFAULT_NAME },
   localNames: LOCAL_NAMES,
-  tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
-  modes: { default: DEFAULT_PLAY_MODE },
-  copy: {
-    leaveLocal: LEAVE_LOCAL_MSG,
-    leaveOnline: LEAVE_ONLINE_MSG,
-    opening: OPENING_MSG,
-    connecting: connectingMsg,
-    handoff: handoffMsg,
-    hostRoom: hostRoomMsg('start'),
-  },
+  copy: { ...leaveCopy({ ends: 'match', closes: 'room' }), hostRoom: hostRoomMsg('start') },
   opts: {
     initial: { matchLength: DEFAULT_MATCH_LENGTH, variant: DEFAULT_VARIANT },
     // The match length and variant are the shell's (set by the selects' `opts/set`), unless the binder passes the raw select values along.
@@ -110,13 +94,12 @@ export const BACKGAMMON_SHELL: ShellGameData<Backgammon> = {
   // The finished match's record (the owner, 2026-09-25): a match is its opening's clock (a
   // rematch opens under a new one), its score the match score, its victor `matchWinner`.
   result: {
-    keyOf: (view) => String(view.startedAt),
     playersOf: (view) => view.players.map((p) => p.name),
     scoreOf: (view) => `${String(view.match.score[0])}–${String(view.match.score[1])}`,
     winnerOf: (view) => matchWinner(view.match),
   },
-  frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
+  frames: PROTOCOL,
+  cues: { table: CUES },
   home: {
     // This page's own key: the curtain mode (the default when unreadable).
     read: (store) => {

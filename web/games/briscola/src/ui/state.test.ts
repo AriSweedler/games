@@ -23,7 +23,7 @@ import {
   withPosition,
 } from '../engine/index.ts';
 import type { Card, GameEvent, Seat, State, TrickRecord, View } from '../engine/index.ts';
-import { EMPTY_SEAT } from '../../../../shared/ui/shell.ts';
+import { DEFAULT_LOCAL_NAMES, EMPTY_SEAT } from '../../../../shared/ui/shell.ts';
 import { TABLE_FULL_MSG } from '../../../../shared/ui/seatCopy.ts';
 import { isHeartbeat } from '../../../../shared/net/liveness.ts';
 import { peerIdFor } from '../../../../shared/lib/roomCode.ts';
@@ -46,7 +46,7 @@ import {
 } from '../protocol.ts';
 import type { HostEvents } from '../../../../shared/net/host.ts';
 import { seatedSessions } from '../../../../shared/net/sessions.ts';
-import { LOCAL_NAMES, pickOpts } from '../shellConfig.ts';
+import { pickOpts } from '../shellConfig.ts';
 
 /** The host session as main.ts builds it (web/shared/net/sessions.ts `seatedSessions` over the protocol). */
 const { Host: HostSession } = seatedSessions('briscola', PROTOCOL, pickOpts);
@@ -55,6 +55,7 @@ import { BEAT_MS, DURATIONS, drawSpan } from './beat.ts';
 import { TEMPO_SCALE } from './variant.ts';
 import { CUES } from './sound.ts';
 import {
+  BRISCOLA,
   DEFAULT_OPTS,
   DRAW_GAP_MS,
   DRAW_MS,
@@ -64,7 +65,6 @@ import {
   INTENT_BUDGET,
   INTENT_MS,
   INTENT_WINDOW_MS,
-  LEAVE_LOCAL_MSG,
   NOT_CONNECTED_MSG,
   SANDBOX_LOCAL_ONLY_MSG,
   SHELL_INTENT_TYPES,
@@ -113,6 +113,9 @@ import {
   type SettleStage,
   type Step,
 } from './state.ts';
+
+// The pass-and-play leave confirm is the shell's words at their defaults (seatCopy.ts `leaveCopy`), read off the config.
+const { leaveLocal: LEAVE_LOCAL_MSG } = BRISCOLA.copy;
 import {
   handoffLabel,
   listNames,
@@ -400,13 +403,13 @@ describe('pass and play: seating two, three and four', () => {
     // (with p3 Sandro and p4 Grant)"); a clash with an earlier seat is suffixed by its number.
     const defaults = local({ localPlayers: '4', names: ['', 'ann'] });
     expect(game(defaults).players.map((p) => p.name)).toEqual(['Ann', 'Bob', 'Sandro', 'ann 4']);
-    expect(LOCAL_NAMES).toEqual(['Ari', 'Lavi', 'Sandro', 'Grant']);
+    expect(DEFAULT_LOCAL_NAMES.slice(0, 4)).toEqual(['Ari', 'Lavi', 'Sandro', 'Grant']);
     const untouched = run(
       initialApp,
       { type: 'home/init', home },
       { type: 'local/click', p1: '', p2: '', localPlayers: '4', names: ['', ''] },
     ).app;
-    expect(game(untouched).players.map((p) => p.name)).toEqual(LOCAL_NAMES);
+    expect(game(untouched).players.map((p) => p.name)).toEqual(DEFAULT_LOCAL_NAMES.slice(0, 4));
     // A fourth name typed into the input but not carried by the click is not used: the click is the truth.
     const typed = run(local({ localPlayers: '3' }), {
       type: 'seatName/typed',

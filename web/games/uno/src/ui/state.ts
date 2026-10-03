@@ -137,7 +137,6 @@ export const UNO: ShellConfig<Uno> = {
   table: { initial: initialTable, rendered: cueStep(CUE_MACHINE) },
   // Pass-and-play: the seat whose turn it is acts (`revealer`; any seat deals again).
   local: { viewer, revealer, newGame },
-  home: { ...UNO_SHELL.home, apply: (app) => app },
 };
 
 /** The table's one intent: a tap's click, then the shell's `act` by role (the sheets and Escape are the shell's). */

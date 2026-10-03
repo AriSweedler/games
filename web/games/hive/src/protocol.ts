@@ -42,7 +42,8 @@ export type StateFrame = SharedStateFrame<View>;
 export type HostFrame = SharedHostFrame<View, Room>;
 export type Frame = SharedFrame<Action, View, Room>;
 
-const protocol = twoSeatProtocol({ decodeAction, decodeView, room });
+/** The protocol whole: what the shell sends from (shellConfig.ts `frames`). */
+export const PROTOCOL = twoSeatProtocol({ decodeAction, decodeView, room });
 
 export const {
   decodeFrame,
@@ -55,7 +56,7 @@ export const {
   state,
   welcome,
   lobby,
-} = protocol;
+} = PROTOCOL;
 
 /** The name a join carries (the session reseats a same-named rejoin), null for an action. */
 export const joinName = (frame: GuestFrame): string | null =>

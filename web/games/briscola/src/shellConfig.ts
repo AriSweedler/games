@@ -1,8 +1,8 @@
 // The half of briscola's shell config the game spells from its engine, protocol and storage alone
 // (docs/design/briscola.md §5.8; docs/design/shared-shell.md §4.3): the id the table codes are made
-// for, the default host name, the tabs, the two stored modes, the copy the shared flows paint (the
-// two leave confirms, the guest's status once the host has answered, the sessions' three status
-// strings the shell paints before a session speaks, and the shell's N-seat forms, dealt), the option codec
+// for, the copy the shared flows paint (the shell's seated forms, dealt: the two leave confirms
+// and the guest's status once the host has answered; the host name, the tabs, the modes and the
+// sessions' status strings are the shell's defaults, dry-review-2026-10.md §7 row 2), the option codec
 // (`GameOptions`, the room's six terms: the host save's own fields, the welcome frame's, the resume
 // offer's; the home screen sets the seat count alone, the rest are the fixed `TABLE_TERMS`, and the
 // whole is normalised as the engine normalises a room), the engine adapters, the frame builders,
@@ -21,9 +21,7 @@
 // (shell-hoist.md §4 B): the shell's two-seat string at a table of two, so the two-seat pins and
 // specs read what they read.
 import { parseSeatCount, seatedCopy } from '../../../shared/ui/seatCopy.ts';
-import { INITIAL_CUE_MEMORY, type Player, type ShellGameData } from '../../../shared/ui/shell.ts';
-import { connectingMsg } from '../../../shared/net/guest.ts';
-import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../shared/net/host.ts';
+import type { Player, ShellGameData } from '../../../shared/ui/shell.ts';
 import {
   SEAT_COUNTS,
   applyAction,
@@ -36,14 +34,11 @@ import {
   type Players,
   type SeatCount,
 } from './engine/index.ts';
-import { action, join, lobby, state, toast } from './protocol.ts';
+import { PROTOCOL } from './protocol.ts';
 import {
   DEFAULT_CARD_PACK,
   DEFAULT_SPEED,
-  DEFAULT_HOME_TAB,
   DEFAULT_OPTS,
-  DEFAULT_PLAY_MODE,
-  HOME_TABS,
   LANG_PREF,
   ONE_GAME,
   SHELL_STORE,
@@ -59,17 +54,6 @@ import type { Briscola, Raw } from './ui/state.ts';
 
 export type Opts = GameOptions;
 export { DEFAULT_OPTS, ONE_GAME, TABLE_TERMS };
-
-export const DEFAULT_NAME = 'Ari';
-/**
- * The four pass-and-play seats when nothing is remembered or typed (the owner, 2026-09-25:
- * "briscola is Ari and Lavi (with p3 Sandro and p4 Grant)"); the first is `#nameInput`'s markup
- * value (DEFAULT_NAME) too, since the shell's `fillName` reaches that input. The first two are
- * tools/games.ts SHELL's `localNames` for the e2e; ui/home.ts paints the third and fourth.
- */
-export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi', 'Sandro', 'Grant'];
-export const LEAVE_LOCAL_MSG = 'End this game? The score will be cleared.';
-export const LEAVE_ONLINE_MSG = 'Leave this game? The table will close.';
 
 // ---- the options and the seats -----------------------------------------------------------------
 
@@ -116,18 +100,7 @@ export const seatPlayers = (n: SeatCount, seats: ReadonlyArray<Player>): Players
 
 export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
   id: 'briscola',
-  names: { default: DEFAULT_NAME },
-  localNames: LOCAL_NAMES,
-  tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
-  modes: { default: DEFAULT_PLAY_MODE },
-  copy: {
-    ...seatedCopy({ verb: 'deal', waitingAtTwo: WAITING_MSG }),
-    leaveLocal: LEAVE_LOCAL_MSG,
-    leaveOnline: LEAVE_ONLINE_MSG,
-    opening: OPENING_MSG,
-    connecting: connectingMsg,
-    handoff: handoffMsg,
-  },
+  copy: seatedCopy({ verb: 'deal' }),
   /** Two, three or four at a table, fixed when the room opens (`opts.capacity`, n-seat-sessions.md D2) and started full (`fixed`). */
   seats: { min: 2, max: 4, fixed: true },
   opts: {
@@ -163,13 +136,12 @@ export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
   // side (a free-for-all at three and four), so the outcome for the device's user reads off it as
   // off a seat.
   result: {
-    keyOf: (view) => String(view.startedAt),
     playersOf: (view) => view.players.map((p) => p.name),
     scoreOf: (view) => (view.result?.totals ?? view.sides).map(String).join('–'),
     winnerOf: (view) => view.result?.winner ?? null,
   },
-  frames: { lobby, state, toast, action, join },
-  cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
+  frames: PROTOCOL,
+  cues: { table: CUES },
   home: {
     // This page's own keys: the card pack, the language pack, the beat's speed.
     read: (store) => {

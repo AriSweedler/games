@@ -11,8 +11,9 @@
 // union, and the game's own half (`G['Tab']`, `G['Mode']`, …) is added by the config. Nothing
 // here names a game (eslint.config.js: shared code never imports one), touches the store (the
 // `Store` type is the game's, through `G['Store']`, because this zone reaches only web/shared/lib
-// and the DOM edge) or spells a session's status copy (`cfg.copy.opening`, `connecting`,
-// `handoff` come from web/shared/net through the game's config for the same reason). The effect
+// and the DOM edge); a session's status copy (`copyOf`: `opening`, `connecting`, `handoff`) is
+// web/shared/lib/shellDefaults.ts's, which web/shared/net speaks too, unless the game's config
+// has words of its own. The effect
 // runner is web/shared/ui/shellEffects.ts, beside this file, because it calls the adapters
 // (statements the pure profile refuses). A game's `ui/state.ts` keeps its table slice and hooks,
 // spells `reduce = isShellIntent ? reduceShell : tableIntent`, and re-exports what its tests
@@ -45,6 +46,16 @@ import { appendCapped, outcomeFor, type RecentGame } from '../lib/recentGames.ts
 import { ok, type Result } from '../lib/result.ts';
 import type { Rng } from '../lib/rng.ts';
 import { randomCode, sanitiseCode, validateCode, type Game } from '../lib/roomCode.ts';
+import {
+  DEFAULT_HOME_TAB,
+  DEFAULT_NAME,
+  DEFAULT_PLAY_MODE,
+  HOME_TABS,
+  OPENING_MSG,
+  connectingMsg,
+  handoffMsg,
+  type PlayMode,
+} from '../lib/shellDefaults.ts';
 import { DEFAULT_SOUND_FONT, type SoundFontName } from '../lib/sound/fonts.ts';
 import type { Phrase } from '../lib/sound/phrase.ts';
 import type { RulesSlot } from './glossary.ts';
@@ -54,8 +65,8 @@ import type { RulesSlot } from './glossary.ts';
 /** The two seats every shell flow names: the host and its guest, pass-and-play's two players. A game with more adds them through its bag (`ShellTypes.Seat`) and the flows type on `SeatOf<G>`. */
 export type Seat = 0 | 1;
 export type Role = 'host' | 'guest' | 'local';
-/** The stored modes (web/shared/edge/prefs.ts `PLAY_MODES`); a game may show more (`G['Mode']`). */
-export type PlayMode = 'online' | 'local';
+/** The stored modes (web/shared/lib/shellDefaults.ts `PLAY_MODES`); a game may show more (`G['Mode']`). */
+export { DEFAULT_NAME, type PlayMode };
 /** The stored flip setting (prefs.ts `FLIP_STATES`), which the shell holds as the boolean `flipForFar`. */
 export type FlipState = 'on' | 'off';
 /** A seat as the engines take it: gin's `PlayerInfo`, backgammon's `Player`. */
@@ -119,7 +130,8 @@ export type SeatOf<G extends ShellTypes> = Seat | ExtraSeats<G>;
 export type PlayersOf<G extends ShellTypes> = [ExtraSeats<G>] extends [never]
   ? Readonly<[Player, Player]>
   : ReadonlyArray<Player>;
-export type Tab<G extends ShellTypes> = 'play' | 'rules' | G['Tab'];
+/** The three tabs every shell page carries (`HOME_TABS`) and the game's own (gin's `score`, fidice's `ladder`). */
+export type Tab<G extends ShellTypes> = 'play' | 'rules' | 'about' | G['Tab'];
 export type Mode<G extends ShellTypes> = PlayMode | G['Mode'];
 /**
  * The five screens every shell page carries (web/shared/markup/shell.ts composes them;
@@ -846,7 +858,12 @@ export type ShellPrefs<G extends ShellTypes> = Readonly<{
 }>;
 
 /** Everything the shared flows call where the two reducers differed, and every literal shared code may not contain. */
-export type ShellConfig<G extends ShellTypes> = Readonly<{
+export type ShellConfig<G extends ShellTypes> = Readonly<
+  ShellConfigBase<G> & HomeField<G, HomeHooks<G>>
+>;
+
+/** `ShellConfig` less `home`, whose presence turns on the game's `Home` (`HomeField`). */
+export type ShellConfigBase<G extends ShellTypes> = Readonly<{
   /** The peer prefix and the room-code spec (web/shared/lib/roomCode.ts). */
   id: Game;
   /**
@@ -861,9 +878,10 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
    * fidice): nothing is watched, no gate, the upright home as it is.
    */
   orientation?: PlayOrientation | 'any';
-  names: Readonly<{
-    /** The host name an empty input means, and the prefill of every name input. */
-    default: string;
+  /** Absent (every game so far), the shell's `DEFAULT_NAME` and `DEFAULT_GUEST_NAME`. */
+  names?: Readonly<{
+    /** The host name an empty input means, and the prefill of every name input; `DEFAULT_NAME` when absent. */
+    default?: string;
     /** What a guest that typed nothing joins as (`guestName`); `DEFAULT_GUEST_NAME` when absent. */
     guest?: string;
   }>;
@@ -871,12 +889,15 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
    * The pass-and-play seats' defaults, first seat first: shown in the inputs when nothing is
    * remembered and seated when they are left empty (the owner, 2026-09-25: "backgammon is Ari and
    * Ethan", "briscola is Ari and Lavi (with p3 Sandro and p4 Grant)"). Absent, the shell's
-   * `DEFAULT_LOCAL_NAMES` (gin); a seat past the list is `Player N` (`localNameFor`).
+   * `DEFAULT_LOCAL_NAMES`; a seat past the list is `Player N` (`localNameFor`).
    */
   localNames?: ReadonlyArray<string>;
-  tabs: Readonly<{ list: ReadonlyArray<Tab<G>>; default: Tab<G> }>;
-  modes: Readonly<{
-    default: PlayMode;
+  /** The home tabs and the one shown first; absent, `HOME_TABS` and `DEFAULT_HOME_TAB` (`tabsOf`): a game with a tab of its own (gin, fidice) spells the list. */
+  tabs?: Readonly<{ list: ReadonlyArray<Tab<G>>; default: Tab<G> }>;
+  /** Absent, online by default and the two stored modes parsed as `defaultModeParse` reads them. */
+  modes?: Readonly<{
+    /** The mode shown before anything is stored; `DEFAULT_PLAY_MODE` when absent. */
+    default?: PlayMode;
     /**
      * `mode/set`'s raw value: the mode shown and the one stored (null: shown only, gin's sandbox),
      * or null to ignore the intent (a sandbox the name does not unlock). Absent, `local` is
@@ -889,12 +910,13 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
     ) => Readonly<{ shown: Mode<G>; stored: PlayMode | null }> | null;
   }>;
   copy: Readonly<{
+    /** The leave confirms (seatCopy.ts `leaveCopy` spells them from the game's three nouns). */
     leaveLocal: string;
     leaveOnline: string;
-    /** The sessions' status copy (web/shared/net), which this zone may not import. */
-    opening: string;
-    connecting: (code: string) => string;
-    handoff: (code: string, oppName: string | null) => string;
+    /** The sessions' status copy (web/shared/lib/shellDefaults.ts, which web/shared/net speaks too); each absent, the shell's (`copyOf`). */
+    opening?: string;
+    connecting?: (code: string) => string;
+    handoff?: (code: string, oppName: string | null) => string;
     /**
      * The guest's status once the host's welcome or lobby frame names the room (gin names the
      * target). `seated` is how many are at the table, the host included, of `capacity` seats: an
@@ -980,7 +1002,6 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
    * plays in sides (briscola's teams), so `outcomeFor` reads it against the user's seat either way.
    */
   result: Readonly<{
-    keyOf: (view: G['View']) => string;
     playersOf: (view: G['View']) => ReadonlyArray<string>;
     /**
      * My seat's name off a view, null when the view has no row for it; absent,
@@ -991,8 +1012,9 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
     seatName?: (view: G['View'], seat: SeatOf<G>) => string | null;
     scoreOf: (view: G['View']) => string;
     winnerOf: (view: G['View']) => SeatOf<G> | null;
-  }>;
-  /** The game's protocol.ts builders the shell sends. */
+  }> &
+    KeyOfField<G>;
+  /** The game's protocol.ts builders the shell sends: its `PROTOCOL` record whole (`seatedProtocol`, `twoSeatProtocol`), of which these five are read. */
   frames: Readonly<{
     /** The lobby frame for seat `you`: an N-seat game's carries the seat list and the receiver's seat (D3); a two-seat game's takes the first two. */
     lobby: (
@@ -1011,10 +1033,10 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
     join: (name: string) => GuestFrameOf<G>;
   }>;
   cues: Readonly<{
-    initial: G['Cues'];
     /** The cue table (ui/sound.ts, event -> cue + buzz) the boot's default fx plays (cuePlayer.ts `shellFx`). */
     table: Readonly<Record<Cue<G>, Phrase>>;
-  }>;
+  }> &
+    InitialCuesField<G>;
   table: Readonly<{
     initial: G['Table'];
     /**
@@ -1090,30 +1112,101 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
      */
     holder?: (view: G['View']) => SeatOf<G>;
   }>;
-  home: Readonly<{
-    /** The game's own keys for the snapshot (`G['Home']`). */
-    read: (store: G['Store']) => G['Home'];
-    /** The snapshot's own part into the App (gin's sort and card back onto the table; backgammon's options into the shell and its curtain mode onto the table). */
-    apply: (app: ShellApp<G>, home: HomeSnapshot<G>) => ShellApp<G>;
-    /**
-     * The resume box for a snapshot, in the game's order of precedence (gin's scorer first).
-     * Absent, the shell's three offers off the save (`resumeFor(home.save, cfg)`): a game with no
-     * offer of its own leaves it out.
-     */
-    resume?: (home: HomeSnapshot<G>) => Resume<G> | null;
-    /** `resume/click` on an offer the shell does not know (`G['Resume']`); absent, nothing happens (a game whose `Resume` is `never` leaves it out). */
-    resumeExtra?: (app: ShellApp<G>, offer: G['Resume'], ctx: Ctx) => Step<G>;
-  }>;
   prefs: ShellPrefs<G>;
 }>;
+
+/** The home screen's game half: what `initHome` reads and applies beyond the shell's own keys. */
+export type HomeHooks<G extends ShellTypes> = Readonly<{
+  /** The game's own keys for the snapshot (`G['Home']`). */
+  read: (store: G['Store']) => G['Home'];
+  /** The snapshot's own part into the App (gin's sort and card back onto the table; backgammon's options into the shell and its curtain mode onto the table). */
+  apply: (app: ShellApp<G>, home: HomeSnapshot<G>) => ShellApp<G>;
+  /**
+   * The resume box for a snapshot, in the game's order of precedence (gin's scorer first).
+   * Absent, the shell's three offers off the save (`resumeFor(home.save, cfg)`): a game with no
+   * offer of its own leaves it out.
+   */
+  resume?: (home: HomeSnapshot<G>) => Resume<G> | null;
+  /** `resume/click` on an offer the shell does not know (`G['Resume']`); absent, nothing happens (a game whose `Resume` is `never` leaves it out). */
+  resumeExtra?: (app: ShellApp<G>, offer: G['Resume'], ctx: Ctx) => Step<G>;
+}>;
+
+// ---- the fields a game spells only when the shell's default is not its type -------------------
+// Each is required exactly when the shell could not supply the value: the type says so, and the
+// one reader of each (`homeOf`, `initialCuesOf`, `keyOfView`) carries the one cast that fact
+// licenses, so the flows read a plain value.
+
+/** `home`, optional when the game's `Home` is the bare `object` (uno, flip7: nothing to read, nothing to apply). */
+export type HomeField<G extends ShellTypes, H> = [object] extends [G['Home']]
+  ? Readonly<{ home?: H }>
+  : Readonly<{ home: H }>;
+/** `cues.initial`, optional when the game's memory is the plain `CueMemory` (every game but gin, which adds `turnKey`). */
+export type InitialCuesField<G extends ShellTypes> = [CueMemory] extends [G['Cues']]
+  ? Readonly<{ initial?: G['Cues'] }>
+  : Readonly<{ initial: G['Cues'] }>;
+/** A view stamped with its game's start, the key every game but fidice records under. */
+export type StartedView = Readonly<{ startedAt: number }>;
+/** `result.keyOf`, optional when the view carries `startedAt` (`String(view.startedAt)` is then the key). */
+export type KeyOfField<G extends ShellTypes> = G['View'] extends StartedView
+  ? Readonly<{ keyOf?: (view: G['View']) => string }>
+  : Readonly<{ keyOf: (view: G['View']) => string }>;
+
+/** `HOME_TABS` and `DEFAULT_HOME_TAB` as a config's `tabs`: the three every page carries fit any game's `Tab<G>`. */
+export const SHELL_TABS = { list: HOME_TABS, default: DEFAULT_HOME_TAB } as const;
+/** The game's `tabs`, or the shell's three. */
+export const tabsOf = <G extends ShellTypes>(
+  cfg: Readonly<{ tabs?: Readonly<{ list: ReadonlyArray<Tab<G>>; default: Tab<G> }> }>,
+): Readonly<{ list: ReadonlyArray<Tab<G>>; default: Tab<G> }> => cfg.tabs ?? SHELL_TABS;
+/** The host name an empty input means: the game's, or `DEFAULT_NAME`. */
+export const defaultNameOf = (cfg: Readonly<{ names?: Readonly<{ default?: string }> }>): string =>
+  cfg.names?.default ?? DEFAULT_NAME;
+/** The mode shown before anything is stored: the game's, or online. */
+export const defaultModeOf = (
+  cfg: Readonly<{ modes?: Readonly<{ default?: PlayMode }> }>,
+): PlayMode => cfg.modes?.default ?? DEFAULT_PLAY_MODE;
+/** The sessions' three status strings the shell paints before a session speaks (`ShellConfig['copy']`'s optional three). */
+export type SessionCopy = Readonly<{
+  opening: string;
+  connecting: (code: string) => string;
+  handoff: (code: string, oppName: string | null) => string;
+}>;
+/** The sessions' three status strings: the game's where it has words of its own, else the shell's. */
+export const copyOf = (cfg: Readonly<{ copy: Readonly<Partial<SessionCopy>> }>): SessionCopy => ({
+  opening: cfg.copy.opening ?? OPENING_MSG,
+  connecting: cfg.copy.connecting ?? connectingMsg,
+  handoff: cfg.copy.handoff ?? handoffMsg,
+});
+/** The game's `home` hooks, or the shell's: nothing read, the App as it is. */
+export const homeOf = <G extends ShellTypes>(
+  cfg: Readonly<{ home?: HomeHooks<G> }>,
+): HomeHooks<G> =>
+  // `HomeField` makes `home` optional only when `object` is the game's `Home`, which `{}` is.
+  cfg.home ?? { read: () => ({}), apply: (app) => app };
+/** The cue memory before any paint: the game's, or `INITIAL_CUE_MEMORY`. */
+export const initialCuesOf = <G extends ShellTypes>(
+  cfg: Readonly<{ cues: Readonly<{ initial?: G['Cues'] }> }>,
+): G['Cues'] =>
+  // `InitialCuesField` makes `initial` optional only when `CueMemory` is the game's `Cues`.
+  cfg.cues.initial ?? INITIAL_CUE_MEMORY;
+/** The finished game's key (`result.keyOf`): the game's, or its view's `startedAt`. */
+export const keyOfView = <V>(
+  cfg: Readonly<{ result: Readonly<{ keyOf?: (view: V) => string }> }>,
+  view: V,
+): string => (cfg.result.keyOf === undefined ? startedKey(view) : cfg.result.keyOf(view));
+/** `String(view.startedAt)`: `KeyOfField` leaves `keyOf` out only for a view that is a `StartedView`, which licenses the one assertion. */
+const startedKey = (view: unknown): string => String((view as StartedView).startedAt);
 
 /**
  * The half of a config a game spells from its engine, protocol and storage alone
  * (`src/shellConfig.ts`); its `ui/state.ts` adds the table hooks, which use the reducer's own
  * helpers, and completes `home`.
  */
-export type ShellGameData<G extends ShellTypes> = Omit<ShellConfig<G>, 'table' | 'local' | 'home'> &
-  Readonly<{ home: Pick<ShellConfig<G>['home'], 'read'> }>;
+export type ShellGameData<G extends ShellTypes> = Readonly<
+  Omit<ShellConfigBase<G>, 'table' | 'local'> &
+    ([object] extends [G['Home']]
+      ? Readonly<{ home?: never }>
+      : Readonly<{ home: Pick<HomeHooks<G>, 'read'> }>)
+>;
 
 // ---- the strings the shell (not the sessions) writes, the same in both games -------------------
 
@@ -1467,21 +1560,29 @@ const nameOr = (raw: string, fallback: string): string => {
  */
 export const guestName = (
   raw: string,
-  cfg: Readonly<{ names: Readonly<{ guest?: string }> }>,
+  cfg: Readonly<{ names?: Readonly<{ guest?: string }> }>,
 ): string => {
   const typed = raw.slice(0, NAME_MAX).trim();
-  return typed === '' ? (cfg.names.guest ?? DEFAULT_GUEST_NAME) : typed;
+  return typed === '' ? (cfg.names?.guest ?? DEFAULT_GUEST_NAME) : typed;
 };
 
 /**
- * The two pass-and-play seats when their inputs are empty, and what `initHome` fills the inputs
- * with when nothing is remembered (the owner, 2026-09-25: "Make the default p1 ari and p2 lavi",
- * spelled as the proper names), unless the game names its own (`ShellConfig.localNames`: the
- * owner, later that day, "backgammon is Ari and Ethan"). The first is also the online name input's
- * markup default (each game's shellConfig.ts DEFAULT_NAME, pinned there), since `fillName` reaches
- * that input too and must find the name it already shows. A seat past the list is `Player N`.
+ * The pass-and-play seats when their inputs are empty, and what `initHome` fills the inputs with
+ * when nothing is remembered (the owner, 2026-09-25: "Make the default p1 ari and p2 lavi",
+ * spelled as the proper names; the four more are the seats flip7 named, the longest list a game
+ * kept), unless the game names its own (`ShellConfig.localNames`: the owner, later that day,
+ * "backgammon is Ari and Ethan"). The first is `DEFAULT_NAME`, the online name input's markup
+ * default, since `fillName` reaches that input too and must find the name it already shows. A
+ * seat past the list is `Player N`.
  */
-export const DEFAULT_LOCAL_NAMES: readonly [string, string] = ['Ari', 'Lavi'];
+export const DEFAULT_LOCAL_NAMES: ReadonlyArray<string> = [
+  DEFAULT_NAME,
+  'Lavi',
+  'Sandro',
+  'Grant',
+  'Noa',
+  'Ethan',
+];
 
 /** The game's pass-and-play defaults (`localNames`), or the shell's two. */
 export const localNamesOf = (
@@ -1770,7 +1871,7 @@ const recordResult = <G extends ShellTypes>(
   // My seat: 0 in pass-and-play and for the host, the frame's `you` for a guest (past 1 at an N-seat table); none at home.
   const seat = s.role === null ? null : s.mySeat;
   if (view === null || seat === null || !cfg.engine.over(view)) return pure(app);
-  const key = cfg.result.keyOf(view);
+  const key = keyOfView(cfg, view);
   if (s.recorded === key) return pure(app);
   const winner = cfg.result.winnerOf(view);
   const game: RecentGame = {
@@ -2077,7 +2178,7 @@ const startHost = <G extends ShellTypes>(
           }),
           seats,
         ),
-        cfg.copy.opening,
+        copyOf(cfg).opening,
       ),
       'hostWaitScreen',
     ),
@@ -2122,7 +2223,7 @@ const startGuest = <G extends ShellTypes>(
           seats: [],
           seatedName: null,
         }),
-        cfg.copy.connecting(code),
+        copyOf(cfg).connecting(code),
       ),
       'guestWaitScreen',
     ),
@@ -2142,7 +2243,7 @@ const guestGone = <G extends ShellTypes>(
   cfg: ShellConfig<G>,
 ): Step<G> => {
   const s = app.shell;
-  if (s.handoff) return pure(withHostStatus(app, cfg.copy.handoff(s.code ?? '', s.oppName)));
+  if (s.handoff) return pure(withHostStatus(app, copyOf(cfg).handoff(s.code ?? '', s.oppName)));
   if (s.game !== null && s.view !== null && !cfg.engine.over(s.view))
     return andThen(painted(app, s.view, ctx, cfg), (a) => {
       const name = seatsOf(a.shell, cfg)[seat - 1]?.name ?? null;
@@ -2368,7 +2469,8 @@ const setHomeTab = <G extends ShellTypes>(
   persist: boolean,
   cfg: ShellConfig<G>,
 ): Step<G> => {
-  const known = cfg.tabs.list.find((t) => t === tab) ?? cfg.tabs.default;
+  const tabs = tabsOf(cfg);
+  const known = tabs.list.find((t) => t === tab) ?? tabs.default;
   return step(
     withShell(app, { homeTab: known }),
     ...(persist ? [{ type: 'writeHomeTab', tab: known } as const] : []),
@@ -2401,7 +2503,7 @@ const initHome = <G extends ShellTypes>(
     andThen(
       andThen(
         step(
-          cfg.home.apply(
+          homeOf(cfg).apply(
             withShell(a, {
               savedName: home.name,
               p1Name: home.name ?? '',
@@ -2426,15 +2528,18 @@ const initHome = <G extends ShellTypes>(
         ),
         (b) => setHomeTab(b, home.homeTab, false, cfg),
       ),
-      (b) =>
-        pure(
-          withShell(b, {
-            resume:
-              cfg.home.resume === undefined ? resumeFor(home.save, cfg) : cfg.home.resume(home),
-          }),
-        ),
+      (b) => pure(withShell(b, { resume: resumeOffer(home, cfg) })),
     ),
   );
+
+/** The resume box for a snapshot: the game's order (`home.resume`), else the shell's three offers off the save. */
+const resumeOffer = <G extends ShellTypes>(
+  home: HomeSnapshot<G>,
+  cfg: ShellConfig<G>,
+): Resume<G> | null => {
+  const own = homeOf(cfg).resume;
+  return own === undefined ? resumeFor(home.save, cfg) : own(home);
+};
 
 /** `#resumeBtn` for each offer; one the shell does not know is the game's (`cfg.home.resumeExtra`). */
 const resume = <G extends ShellTypes>(
@@ -2443,8 +2548,10 @@ const resume = <G extends ShellTypes>(
   ctx: Ctx,
   cfg: ShellConfig<G>,
 ): Step<G> => {
-  if (!isShellResume(offer))
-    return cfg.home.resumeExtra === undefined ? pure(app) : cfg.home.resumeExtra(app, offer, ctx);
+  if (!isShellResume(offer)) {
+    const extra = homeOf(cfg).resumeExtra;
+    return extra === undefined ? pure(app) : extra(app, offer, ctx);
+  }
   switch (offer.kind) {
     case 'local':
       return startLocal(app, offer.game, ctx, cfg);
@@ -2568,7 +2675,7 @@ const leaveFinish = <G extends ShellTypes>(app: ShellApp<G>, cfg: ShellConfig<G>
         code: null,
         revealed: null,
         handoff: false,
-        cues: cfg.cues.initial,
+        cues: initialCuesOf(cfg),
         recorded: null,
         // No room and no table: the legacy `oppName` lingers until the next room names one.
         seats: [],
@@ -2676,7 +2783,7 @@ export const reduceShell = <G extends ShellTypes>(
       );
     }
     case 'mode/set': {
-      const parsed = (cfg.modes.parse ?? defaultModeParse)(intent.mode, s);
+      const parsed = (cfg.modes?.parse ?? defaultModeParse)(intent.mode, s);
       if (parsed === null) return pure(app);
       return step(
         withShell(app, { playMode: parsed.shown }),
@@ -2692,7 +2799,7 @@ export const reduceShell = <G extends ShellTypes>(
         startHost(
           withSeats(
             withShell(app, {
-              myName: nameOr(intent.name, cfg.names.default),
+              myName: nameOr(intent.name, defaultNameOf(cfg)),
               opts: cfg.opts.parse(intent, s.opts),
               game: null,
               view: null,
@@ -3014,7 +3121,7 @@ export const reduceShell = <G extends ShellTypes>(
 export const initialShell = <G extends ShellTypes>(cfg: ShellConfig<G>): ShellState<G> => ({
   role: null,
   code: null,
-  myName: cfg.names.default,
+  myName: defaultNameOf(cfg),
   opts: cfg.opts.initial,
   game: null,
   view: null,
@@ -3027,8 +3134,8 @@ export const initialShell = <G extends ShellTypes>(cfg: ShellConfig<G>): ShellSt
   localSeats: [],
   nameTouched: false,
   revealed: null,
-  homeTab: cfg.tabs.default,
-  playMode: cfg.modes.default,
+  homeTab: tabsOf(cfg).default,
+  playMode: defaultModeOf(cfg),
   p1Name: '',
   p2Name: '',
   seatNames: noSeatNames(cfg),
@@ -3039,7 +3146,7 @@ export const initialShell = <G extends ShellTypes>(cfg: ShellConfig<G>): ShellSt
   rotationHintShown: false,
   orientationLocked: false,
   netAttempt: 0,
-  hostStatus: { text: cfg.copy.opening, pulse: true },
+  hostStatus: { text: copyOf(cfg).opening, pulse: true },
   guestStatus: { text: CONNECTING_MSG, pulse: true },
   startGameVisible: false,
   handoff: false,
@@ -3049,7 +3156,7 @@ export const initialShell = <G extends ShellTypes>(cfg: ShellConfig<G>): ShellSt
   rulesOpen: false,
   historyOpen: false,
   resultDismissed: false,
-  cues: cfg.cues.initial,
+  cues: initialCuesOf(cfg),
   submenuOpen: false,
   longPressed: false,
   codeDraft: '',
@@ -3100,8 +3207,8 @@ export const readHome = <G extends ShellTypes>(
   return {
     name: name.ok ? name.value : null,
     p2Name: p2Name.ok ? p2Name.value : null,
-    homeTab: tab.ok ? tab.value : cfg.tabs.default,
-    playMode: mode.ok ? mode.value : cfg.modes.default,
+    homeTab: tab.ok ? tab.value : tabsOf(cfg).default,
+    playMode: mode.ok ? mode.value : defaultModeOf(cfg),
     soundFont: font.ok ? font.value : DEFAULT_SOUND_FONT,
     flipTable: flip.ok && flip.value === 'on',
     save: save.ok ? save.value : null,
@@ -3116,7 +3223,7 @@ export const readHome = <G extends ShellTypes>(
             return name.ok ? name.value : null;
           }),
         }),
-    ...cfg.home.read(store),
+    ...homeOf(cfg).read(store),
   };
 };
 

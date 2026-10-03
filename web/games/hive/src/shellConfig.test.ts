@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { ORIGIN } from './engine/hex.ts';
 import { viewFor } from './engine/view.ts';
+import { defaultModeOf, keyOfView } from '../../../shared/ui/shell.ts';
 import { HIVE_SHELL, sideName } from './shellConfig.ts';
 
 const PLAYERS = [
@@ -18,7 +19,8 @@ describe('the shell config', () => {
     expect(sideName(0)).toBe('White');
     expect(sideName(1)).toBe('Black');
     // The play mode is the shell's default (local or online; shell.test.ts).
-    expect(HIVE_SHELL.modes).toEqual({ default: 'online' });
+    expect(HIVE_SHELL.modes).toBeUndefined();
+    expect(defaultModeOf(HIVE_SHELL)).toBe('online');
     expect(HIVE_SHELL.opts.parse({}, { seatCount: 2 })).toEqual({ seatCount: 2 });
     expect(HIVE_SHELL.seats).toBeUndefined();
   });
@@ -33,7 +35,7 @@ describe('the shell config', () => {
     expect(e.finished(game)).toBe(false);
     const view = viewFor(game, 0);
     expect(e.over(view)).toBe(false);
-    expect(HIVE_SHELL.result.keyOf(view)).toBe('77');
+    expect(keyOfView(HIVE_SHELL, view)).toBe('77');
     expect(HIVE_SHELL.result.playersOf(view)).toEqual(['Ann', 'Bob']);
     expect(HIVE_SHELL.result.scoreOf(view)).toBe('');
     expect(HIVE_SHELL.result.winnerOf(view)).toBeNull();

@@ -15,13 +15,13 @@ import {
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
 import { seatedHome } from '../../../../shared/ui/seatedHome.ts';
-import { LOCAL_NAMES } from '../shellConfig.ts';
+import { DEFAULT_LOCAL_NAMES } from '../../../../shared/ui/shell.ts';
 import { HOME_TABS, namesOf, type App, type Briscola, type Intent } from './state.ts';
 
 /** The seated home: two to four on both steppers (design §5.8), the third and fourth names under `#moreNames`. */
 const home = seatedHome<Briscola>({
   seats: { min: 2, max: 4 },
-  localNames: LOCAL_NAMES,
+  localNames: DEFAULT_LOCAL_NAMES,
   allNames: namesOf,
   tabs: HOME_TABS,
   group: 'moreNames',

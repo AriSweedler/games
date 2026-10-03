@@ -12,6 +12,10 @@ import {
   type GuestSave as ShellGuestSave,
   type HostSave as ShellHostSave,
   type LocalSave as ShellLocalSave,
+  DEFAULT_HOME_TAB,
+  DEFAULT_PLAY_MODE,
+  HOME_TABS,
+  type HomeTab,
   type PlayMode,
   type Save as ShellSave,
 } from '../../../shared/edge/prefs.ts';
@@ -52,10 +56,8 @@ export const writeHints = (store: Store, hints: Hints): void => {
 /** The other hints: what `#hintsBtn` switches to. */
 export const nextHints = (hints: Hints): Hints => nextSetting(HIVE_HINTS, hints);
 
-export const HOME_TABS = ['play', 'rules', 'about'] as const;
-export type HomeTab = (typeof HOME_TABS)[number];
-export const DEFAULT_HOME_TAB: HomeTab = 'play';
-export const DEFAULT_PLAY_MODE: PlayMode = 'online';
+// The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
+export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 
 /** The room's terms: two seats, always (the shell's option record needs one field). */
 export type Opts = Readonly<{ seatCount: 2 }>;
