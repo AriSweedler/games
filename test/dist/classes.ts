@@ -75,6 +75,9 @@ const filesUnder = (dir: string): ReadonlyArray<string> =>
  * without web/games/<g>/page.ts: that file is the page's markup (the slot values and the residue
  * blocks tools/shell-markup.ts composes the committed index.html from, docs/design/dry-round-2.md
  * G2), read here as markup already through the served page, not TypeScript that names a class.
+ * web/shared/markup/page.ts falls under the same name and the same reason: it spells the blocks
+ * every page.ts shares (THEME_LOOK, headHtml, GUEST_SEAT_NAME, docs/design/shell-hoist.md row J),
+ * strings that reach the player only through the composed index.html.
  */
 export const sourceFiles = (game: Game): ReadonlyArray<string> =>
   [resolve(REPO_ROOT, 'web', 'games', game), resolve(REPO_ROOT, 'web', 'shared')]

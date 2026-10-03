@@ -5,12 +5,12 @@
 // The residue here (`blocks`) is the head, the table (the names strip, the SVG board, the two
 // hands, Pass and Resign, the status line) and the result sheet (the end, Continue, Play again);
 // the Open Graph card is assets/splash.svg rendered to web/public/games/hive/splash.png.
-import type {
-  ShellBlocks,
-  ShellCopy,
-  ShellLook,
-  ShellNotes,
-  ShellPage,
+import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
+import {
+  type ShellBlocks,
+  type ShellCopy,
+  type ShellNotes,
+  type ShellPage,
 } from '../../shared/markup/shell.ts';
 
 const copy: ShellCopy = {
@@ -43,65 +43,16 @@ const notes: ShellNotes = {
     ': composed by the shell, never raised: Hive hides nothing, so both players share the one screen (ui/state.ts `viewer`; the owner, 2026-10-02: "you don\'t need to pass the phone for turns").',
 };
 
-const look: ShellLook = {
-  resumeClass: ' resume',
-  resumeStyle: '',
-  resumeBtnKind: 'btn-primary',
-  onlineActive: ' active',
-  mt8: '',
-  mt10: '',
-  mt14: '',
-  mb8: '',
-  pt10: '',
-  m0: '',
-  noteLeft: 'class="empty-note left"',
-  centeredBox: 'class="card-box centered"',
-  pulseMuted: 'class="pulse muted"',
-  joinBtnWidth: '',
-  curtainClass: ' curtain',
-  curtainStyle: '',
-  curtainSheet: 'class="sheet centered"',
-  betweenRow: 'class="row between"',
-  historyClass: ' class="history"',
-  toastAttrs: ' role="status"',
-};
-
 const blocks: ShellBlocks = {
-  head: `<!doctype html>
-<html lang="en">
-  <head>
-    <meta property="og:title" content="Hive" />
-    <meta
-      property="og:description"
-      content="Hive for two: place and move the eleven bugs, surround the Queen. Pass one phone, or open a table online."
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://games.sweedler.com/hive/" />
-    <meta property="og:image" content="https://games.sweedler.com/hive/splash.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Hive: a cluster of black and white hexagonal tiles" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Hive" />
-    <meta
-      name="twitter:description"
-      content="Hive for two: place and move the eleven bugs, surround the Queen. Pass one phone, or open a table online."
-    />
-    <meta name="twitter:image" content="https://games.sweedler.com/hive/splash.png" />
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Hive</title>
-    <meta
-      name="description"
-      content="Hive for two: place and move the eleven bugs around one growing hive; surround the other Queen to win."
-    />
-    <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
-    <link rel="alternate icon" href="../../shared/favicon.ico" />
-    <link rel="stylesheet" href="../../shared/styles/tokens.css" />
-    <link rel="stylesheet" href="../../shared/styles/base.css" />
-    <link rel="stylesheet" href="../../shared/styles/shell.css" />
-    <link rel="stylesheet" href="./theme.css" />
-  </head>`,
+  head: headHtml({
+    slug: 'hive',
+    name: 'Hive',
+    share:
+      'Hive for two: place and move the eleven bugs, surround the Queen. Pass one phone, or open a table online.',
+    imageAlt: 'Hive: a cluster of black and white hexagonal tiles',
+    description:
+      'Hive for two: place and move the eleven bugs around one growing hive; surround the other Queen to win.',
+  }),
   masthead: `        <div class="masthead">
           <h1>Hive</h1>
           <div class="subtitle">Place and move the bugs; surround the Queen</div>
@@ -135,14 +86,7 @@ const blocks: ShellBlocks = {
   extraScreens: '',
   hostWaitList: '',
   guestWaitList: '',
-  guestSeatName: `      <div id="guestSeatName" class="hidden">
-        <label for="guestNameInput">Playing as</label>
-        <div class="row">
-          <input type="text" id="guestNameInput" class="grow" maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
-          <button class="btn btn-secondary btn-sm" id="guestRenameBtn">Change</button>
-        </div>
-        <div class="muted" id="guestNameNote"></div>
-      </div>`,
+  guestSeatName: GUEST_SEAT_NAME,
   table: `      <!-- TABLE (docs/design/hive.md §7): the names strip (a hex swatch for each seat's side, its
            name, the other seat's connection; it fits 390px between six icon buttons), Black's hand above the board and White's below, the SVG hive between
            them (render.ts boardHtml: a g.hex per cell), Pass and Resign, the status line; in the
@@ -209,4 +153,4 @@ const blocks: ShellBlocks = {
   rulesIcon: '',
 };
 
-export const HIVE_PAGE: ShellPage = { copy, notes, look, blocks };
+export const HIVE_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };

@@ -10,12 +10,12 @@
 // fidice's own button kinds where a kind is chosen. Dark until M6: the legacy app's `mount`
 // (src/view/vdom.ts) replaces `#app`'s children with `#app-root`, and main.ts removes the nodes the
 // page puts outside `#app` before it, so nothing here shows on the old path.
-import type {
-  ShellBlocks,
-  ShellCopy,
-  ShellLook,
-  ShellNotes,
-  ShellPage,
+import { THEME_LOOK } from '../../shared/markup/page.ts';
+import {
+  type ShellBlocks,
+  type ShellCopy,
+  type ShellNotes,
+  type ShellPage,
 } from '../../shared/markup/shell.ts';
 
 const copy: ShellCopy = {
@@ -47,29 +47,6 @@ const notes: ShellNotes = {
   aboutClose: '',
   curtainNote:
     ' (plan §7 D9): a translucent wash; the cup stays down until the next player confirms it is them.',
-};
-
-const look: ShellLook = {
-  resumeClass: ' resume',
-  resumeStyle: '',
-  resumeBtnKind: 'btn-primary',
-  onlineActive: ' active',
-  mt8: '',
-  mt10: '',
-  mt14: '',
-  mb8: '',
-  pt10: '',
-  m0: '',
-  noteLeft: 'class="empty-note left"',
-  centeredBox: 'class="card-box centered"',
-  pulseMuted: 'class="pulse muted"',
-  joinBtnWidth: '',
-  curtainClass: ' curtain',
-  curtainStyle: '',
-  curtainSheet: 'class="sheet centered"',
-  betweenRow: 'class="row between"',
-  historyClass: ' class="history"',
-  toastAttrs: ' role="status"',
 };
 
 const blocks: ShellBlocks = {
@@ -250,4 +227,4 @@ const blocks: ShellBlocks = {
   rulesIcon: '',
 };
 
-export const FIDICE_PAGE: ShellPage = { copy, notes, look, blocks };
+export const FIDICE_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };

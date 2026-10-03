@@ -7,12 +7,12 @@
 // UNO's accent alone (theme.css). The residue here (`blocks`) is the head, the table (the seats with
 // their card counts, the names strip, the pile, the colour in play, the hand, the controls) and the
 // result sheet (the winner, Play again); the Open Graph card is assets/splash.svg rendered to web/public/games/uno/splash.png.
-import type {
-  ShellBlocks,
-  ShellCopy,
-  ShellLook,
-  ShellNotes,
-  ShellPage,
+import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
+import {
+  type ShellBlocks,
+  type ShellCopy,
+  type ShellNotes,
+  type ShellPage,
 } from '../../shared/markup/shell.ts';
 import { seatNamesHtml } from '../../shared/markup/seatNames.ts';
 import { stepperHtml } from '../../shared/markup/stepper.ts';
@@ -46,67 +46,17 @@ const notes: ShellNotes = {
   curtainNote: ': the table hidden while the phone changes hands.',
 };
 
-const look: ShellLook = {
-  resumeClass: ' resume',
-  resumeStyle: '',
-  resumeBtnKind: 'btn-primary',
-  onlineActive: ' active',
-  mt8: '',
-  mt10: '',
-  mt14: '',
-  mb8: '',
-  pt10: '',
-  m0: '',
-  noteLeft: 'class="empty-note left"',
-  centeredBox: 'class="card-box centered"',
-  pulseMuted: 'class="pulse muted"',
-  joinBtnWidth: '',
-  curtainClass: ' curtain',
-  curtainStyle: '',
-  curtainSheet: 'class="sheet centered"',
-  betweenRow: 'class="row between"',
-  historyClass: ' class="history"',
-  toastAttrs: ' role="status"',
-};
-
 const PLAYERS = { label: 'Players', min: 2, max: 12, value: 2, noun: 'players' } as const;
 
 const blocks: ShellBlocks = {
-  head: `<!doctype html>
-<html lang="en">
-  <head>
-    <meta property="og:title" content="UNO" />
-    <meta
-      property="og:description"
-      content="UNO for two to twelve: pass one phone, or open a table online and send the link."
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://games.sweedler.com/uno/" />
-    <meta property="og:image" content="https://games.sweedler.com/uno/splash.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="UNO: four coloured cards fanned on a dark table" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="UNO" />
-    <meta
-      name="twitter:description"
-      content="UNO for two to twelve: pass one phone, or open a table online and send the link."
-    />
-    <meta name="twitter:image" content="https://games.sweedler.com/uno/splash.png" />
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>UNO</title>
-    <meta
-      name="description"
-      content="UNO for two to twelve: match the colour or the number; the first to empty a hand wins."
-    />
-    <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
-    <link rel="alternate icon" href="../../shared/favicon.ico" />
-    <link rel="stylesheet" href="../../shared/styles/tokens.css" />
-    <link rel="stylesheet" href="../../shared/styles/base.css" />
-    <link rel="stylesheet" href="../../shared/styles/shell.css" />
-    <link rel="stylesheet" href="./theme.css" />
-  </head>`,
+  head: headHtml({
+    slug: 'uno',
+    name: 'UNO',
+    share: 'UNO for two to twelve: pass one phone, or open a table online and send the link.',
+    imageAlt: 'UNO: four coloured cards fanned on a dark table',
+    description:
+      'UNO for two to twelve: match the colour or the number; the first to empty a hand wins.',
+  }),
   masthead: `        <div class="masthead">
           <h1>UNO</h1>
           <div class="subtitle">Match the colour or the number, for two to twelve</div>
@@ -125,14 +75,7 @@ ${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
   extraScreens: '',
   hostWaitList: `      <ul class="seat-list" id="seatList" aria-label="Seats"></ul>`,
   guestWaitList: `      <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>`,
-  guestSeatName: `      <div id="guestSeatName" class="hidden">
-        <label for="guestNameInput">Playing as</label>
-        <div class="row">
-          <input type="text" id="guestNameInput" class="grow" maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
-          <button class="btn btn-secondary btn-sm" id="guestRenameBtn">Change</button>
-        </div>
-        <div class="muted" id="guestNameNote"></div>
-      </div>`,
+  guestSeatName: GUEST_SEAT_NAME,
   table: `      <!-- TABLE (docs/design/uno.md §9): every seat with its card count (the turn lit), the names
            strip (me, the seat after me and its connection), the pile with the colour in play, my
            hand, Draw and Pass, UNO and Call out UNO (§7, shown to the seats they apply to), the
@@ -198,4 +141,4 @@ ${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
   rulesIcon: '',
 };
 
-export const UNO_PAGE: ShellPage = { copy, notes, look, blocks };
+export const UNO_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };

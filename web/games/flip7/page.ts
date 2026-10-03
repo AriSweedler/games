@@ -3,12 +3,12 @@
 // pins byte for byte. The residue here is the head, the two Players selects (two to six), the six
 // pass-and-play name inputs, the table (the topbar, the names strip, the round, every seat's line,
 // Hit and Stay, the taker picker, the round's scores) and the endgame screen the shell requires.
-import type {
-  ShellBlocks,
-  ShellCopy,
-  ShellLook,
-  ShellNotes,
-  ShellPage,
+import { GUEST_SEAT_NAME, THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
+import {
+  type ShellBlocks,
+  type ShellCopy,
+  type ShellNotes,
+  type ShellPage,
 } from '../../shared/markup/shell.ts';
 import { stepperHtml } from '../../shared/markup/stepper.ts';
 
@@ -44,64 +44,14 @@ const notes: ShellNotes = {
   curtainNote: ': the first player takes the phone; every card is face up after it.',
 };
 
-const look: ShellLook = {
-  resumeClass: ' resume',
-  resumeStyle: '',
-  resumeBtnKind: 'btn-primary',
-  onlineActive: ' active',
-  mt8: '',
-  mt10: '',
-  mt14: '',
-  mb8: '',
-  pt10: '',
-  m0: '',
-  noteLeft: 'class="empty-note left"',
-  centeredBox: 'class="card-box centered"',
-  pulseMuted: 'class="pulse muted"',
-  joinBtnWidth: '',
-  curtainClass: ' curtain',
-  curtainStyle: '',
-  curtainSheet: 'class="sheet centered"',
-  betweenRow: 'class="row between"',
-  historyClass: ' class="history"',
-  toastAttrs: ' role="status"',
-};
-
 const blocks: ShellBlocks = {
-  head: `<!doctype html>
-<html lang="en">
-  <head>
-    <meta property="og:title" content="Flip 7" />
-    <meta
-      property="og:description"
-      content="Flip 7, the press-your-luck card game for two to six: pass one phone, or open a table online and send the link."
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://games.sweedler.com/flip7/" />
-    <meta property="og:image" content="https://games.sweedler.com/flip7/splash.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Flip 7: a line of number tiles, one of them a seven" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Flip 7" />
-    <meta
-      name="twitter:description"
-      content="Flip 7, the press-your-luck card game for two to six: pass one phone, or open a table online and send the link."
-    />
-    <meta name="twitter:image" content="https://games.sweedler.com/flip7/splash.png" />
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-    />
-    <title>Flip 7</title>
-    <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
-    <link rel="alternate icon" href="../../shared/favicon.ico" />
-    <link rel="stylesheet" href="../../shared/styles/tokens.css" />
-    <link rel="stylesheet" href="../../shared/styles/base.css" />
-    <link rel="stylesheet" href="../../shared/styles/shell.css" />
-    <link rel="stylesheet" href="./theme.css" />
-  </head>`,
+  head: headHtml({
+    slug: 'flip7',
+    name: 'Flip 7',
+    share:
+      'Flip 7, the press-your-luck card game for two to six: pass one phone, or open a table online and send the link.',
+    imageAlt: 'Flip 7: a line of number tiles, one of them a seven',
+  }),
   masthead: `        <div class="masthead">
           <h1>Flip 7</h1>
           <div class="subtitle">Press your luck, two to six players</div>
@@ -221,14 +171,7 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
   extraScreens: '',
   hostWaitList: `      <ul class="seat-list" id="seatList" aria-label="Seats"></ul>`,
   guestWaitList: `      <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>`,
-  guestSeatName: `      <div id="guestSeatName" class="hidden">
-        <label for="guestNameInput">Playing as</label>
-        <div class="row">
-          <input type="text" id="guestNameInput" class="grow" maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
-          <button class="btn btn-secondary btn-sm" id="guestRenameBtn">Change</button>
-        </div>
-        <div class="muted" id="guestNameNote"></div>
-      </div>`,
+  guestSeatName: GUEST_SEAT_NAME,
   table: `      <!-- TABLE (docs/design/flip7.md §8): every seat's line, face up, in seat order; mine is
            marked data-you. Hit and Stay show for the seat whose turn it is, the taker picker for the
            seat that flipped an action card, the scores when a round ends. -->
@@ -319,4 +262,4 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
   rulesIcon: '',
 };
 
-export const FLIP7_PAGE: ShellPage = { copy, notes, look, blocks };
+export const FLIP7_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks };
