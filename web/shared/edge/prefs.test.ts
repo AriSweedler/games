@@ -7,15 +7,21 @@ import {
   SOUND_STATES,
   cardPackPref,
   decodeCardPackFor,
+  decodeDigitsOf,
   decodeLanguagePack,
   decodeName,
   decodePlayMode,
   decodeSoundFont,
   decodeSoundState,
+  digitsPref,
+  extraNamePref,
+  extraNamePrefs,
   namePref,
   langPref,
   readTextWith,
   recentGamesPref,
+  seatCountPref,
+  shellKeys,
   shellSave,
   shellStore,
   soundPref,
@@ -539,5 +545,146 @@ describe('shellStore', () => {
     });
     shell.save.clearSave(store);
     expect(storage.map.has('g_save')).toBe(false);
+  });
+});
+
+describe('shellKeys', () => {
+  // The seven games' tables as each storage.ts spelled them before the helper existed (and
+  // tools/games.ts REGISTRY.storage pins): a saved game or a remembered name survives the hoist.
+  const LEGACY = {
+    backgammon: ['backgammon_', 'backgammonMP_v1'],
+    briscola: ['briscola_', 'briscolaMP_v1'],
+    fidice: ['fidice_', 'fidiceMP_v1'],
+    flip7: ['flip7_', 'flip7MP_v1'],
+    'gin-rummy': ['ginRummy_', 'ginRummyMP_v1'],
+    hive: ['hive_', 'hiveMP_v1'],
+    uno: ['uno_', 'unoMP_v1'],
+  } as const;
+
+  test("derives the nine keys every shell keeps from a game's prefix and save key, byte for byte the old tables", () => {
+    expect(shellKeys('ginRummy_', 'ginRummyMP_v1')).toEqual({
+      save: 'ginRummyMP_v1',
+      name: 'ginRummy_name',
+      p2Name: 'ginRummy_p2Name',
+      homeTab: 'ginRummy_homeTab',
+      playMode: 'ginRummy_playMode',
+      sound: 'ginRummy_sound',
+      soundFont: 'ginRummy_soundFont',
+      recentGames: 'ginRummy_recentGames',
+      flipTable: 'ginRummy_flipTable',
+    });
+    Object.values(LEGACY).forEach(([prefix, saveKey]) => {
+      const keys = shellKeys(prefix, saveKey);
+      expect(keys.save).toBe(saveKey);
+      expect(Object.keys(keys)).toEqual([
+        'save',
+        'name',
+        'p2Name',
+        'homeTab',
+        'playMode',
+        'sound',
+        'soundFont',
+        'recentGames',
+        'flipTable',
+      ]);
+      Object.entries(keys)
+        .filter(([field]) => field !== 'save')
+        .forEach(([field, key]) => {
+          expect(key).toBe(`${prefix}${field}`);
+        });
+    });
+  });
+
+  test('a store written under the old key names reads back through shellStore over the derived keys', () => {
+    const storage = fakeStorage();
+    const store = createStore(storage);
+    // What a backgammon page wrote before this helper: the literals from its old STORAGE_KEYS.
+    storage.map.set('backgammon_name', 'Ann');
+    storage.map.set('backgammon_p2Name', 'Bob');
+    storage.map.set('backgammon_homeTab', 'rules');
+    storage.map.set('backgammon_playMode', 'local');
+    storage.map.set('backgammon_sound', 'off');
+    storage.map.set('backgammon_flipTable', 'on');
+    storage.map.set('backgammonMP_v1', '{"role":"local","game":{"n":7}}');
+    const shell = shellStore<
+      Readonly<{ n: number }>,
+      Readonly<{ matchLength: number }>,
+      'play' | 'rules'
+    >(shellKeys(...LEGACY.backgammon), {
+      game: 'backgammon',
+      decodeGame: object({ n: integer() }),
+      hostExtra: {
+        decode: object({ matchLength: integer(1) }),
+        literal: (save) => ({ matchLength: save.matchLength }),
+      },
+      decodeHomeTab: literal('play', 'rules'),
+    });
+    expect(shell.name.read(store)).toEqual({ ok: true, value: 'Ann' });
+    expect(shell.p2Name.read(store)).toEqual({ ok: true, value: 'Bob' });
+    expect(shell.homeTab.read(store)).toEqual({ ok: true, value: 'rules' });
+    expect(shell.playMode.read(store)).toEqual({ ok: true, value: 'local' });
+    expect(shell.sound.enabled(store)).toBe(false);
+    expect(shell.flipTable.read(store)).toEqual({ ok: true, value: 'on' });
+    expect(shell.save.readSave(store)).toEqual({
+      ok: true,
+      value: { role: 'local', game: { n: 7 } },
+    });
+  });
+});
+
+describe('extraNamePref and extraNamePrefs', () => {
+  test('seat n (0-based) is `<prefix>p<n + 1>Name`: the old keys of the four N-seat games, read and written under the name rule', () => {
+    const storage = fakeStorage();
+    const store = createStore(storage);
+    // Names a device remembered under the keys the pages spelled by hand.
+    storage.map.set('uno_p3Name', 'Cara');
+    storage.map.set('flip7_p12Name', 'Lior');
+    storage.map.set('fidice_p6Name', 'Fay');
+    storage.map.set('briscola_p4Name', 'Dan');
+    expect(extraNamePref('uno_', 2).read(store)).toEqual({ ok: true, value: 'Cara' });
+    expect(extraNamePref('flip7_', 11).read(store)).toEqual({ ok: true, value: 'Lior' });
+    expect(extraNamePref('fidice_', 5).read(store)).toEqual({ ok: true, value: 'Fay' });
+    expect(extraNamePref('briscola_', 3).read(store)).toEqual({ ok: true, value: 'Dan' });
+
+    const prefs = extraNamePrefs('briscola_', [2, 3]);
+    expect(Object.keys(prefs)).toEqual(['2', '3']);
+    prefs[2].write(store, 'abcdefghijklmnopqrstuvwxyz');
+    expect(storage.map.get('briscola_p3Name')).toBe('abcdefghijklmnopqrst');
+    prefs[3].write(store, '');
+    expect(storage.map.has('briscola_p4Name')).toBe(false);
+    expect(prefs[3].read(store)).toMatchObject({ ok: false, error: { kind: 'missing' } });
+  });
+});
+
+describe('decodeDigitsOf, digitsPref and seatCountPref', () => {
+  test('a number is its digits in the store and one of the values in the app; a stranger names the values', () => {
+    expect(decodeDigitsOf([2, 3, 4])('3')).toEqual({ ok: true, value: 3 });
+    expect(decodeDigitsOf([2, 3, 4])('5')).toMatchObject({ ok: false });
+    expect(decodeDigitsOf([2, 3, 4])(3)).toMatchObject({ ok: false });
+    const storage = fakeStorage();
+    const store = createStore(storage);
+    const pref = digitsPref('g_level', decodeDigitsOf([1, 5, 10]));
+    pref.write(store, 10);
+    expect(storage.map.get('g_level')).toBe('10');
+    expect(pref.read(store)).toEqual({ ok: true, value: 10 });
+    storage.map.set('g_level', '7');
+    expect(pref.read(store)).toEqual({
+      ok: false,
+      error: { kind: 'invalid', key: 'g_level', reason: '$: expected one of 1 | 5 | 10' },
+    });
+  });
+
+  test('seatCountPref: the `<prefix>players` digit the three N-seat pages wrote, read back as the count; a count the game lacks is refused', () => {
+    const storage = fakeStorage();
+    const store = createStore(storage);
+    storage.map.set('uno_players', '12');
+    storage.map.set('briscola_players', '5');
+    expect(seatCountPref('uno_players', [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).read(store)).toEqual({
+      ok: true,
+      value: 12,
+    });
+    expect(seatCountPref('briscola_players', [2, 3, 4]).read(store)).toMatchObject({ ok: false });
+    seatCountPref('flip7_players', [2, 3, 4]).write(store, 4);
+    expect(storage.map.get('flip7_players')).toBe('4');
   });
 });

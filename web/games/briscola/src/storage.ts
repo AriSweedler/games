@@ -26,10 +26,12 @@ import {
   decodeName,
   decodePlayMode,
   decodeSoundFont,
+  decodeDigitsOf,
   decodeSoundState,
+  extraNamePrefs,
   langPref,
-  namePref,
-  readTextWith,
+  seatCountPref,
+  shellKeys,
   shellStore,
   textPref,
   type GuestSave as ShellGuestSave,
@@ -38,11 +40,10 @@ import {
   type PlayMode,
   type Save as ShellSave,
   type SoundState,
-  type TextPref,
 } from '../../../shared/edge/prefs.ts';
 import { defaultPackFor, type CardPackFor } from '../../../shared/lib/cards/packs.ts';
 import type { LanguagePackName } from '../../../shared/lib/lang/packs.ts';
-import { literal, map, refine, string, type Decoder } from '../../../shared/lib/json.ts';
+import { literal, type Decoder } from '../../../shared/lib/json.ts';
 import type { Result } from '../../../shared/lib/result.ts';
 import {
   DEFAULT_SPEED,
@@ -85,31 +86,13 @@ export {
 } from '../../../shared/lib/sound/fonts.ts';
 export { LANGUAGE_PACKS, type LanguagePackName } from '../../../shared/lib/lang/packs.ts';
 
+const PREFIX = 'briscola_';
 export const STORAGE_KEYS = {
-  /** The game in progress: pass-and-play, or the host's table and game, or the guest's table. */
-  save: 'briscolaMP_v1',
-  /** The player's name, as typed (bare string, at most 20 characters). */
-  name: 'briscola_name',
-  /** The pass-and-play second name, as typed (bare string, at most 20 characters). */
-  p2Name: 'briscola_p2Name',
-  /** The third and fourth pass-and-play names, under the same rule (this page alone seats them). */
+  /** The shell's keys (prefs.ts `ShellKeysOf`): the save and the eight preferences every shell keeps. */
+  ...shellKeys(PREFIX, 'briscolaMP_v1'),
+  /** The third and fourth pass-and-play names, under the name rule (this page alone seats them; `extraNamePrefs`). */
   p3Name: 'briscola_p3Name',
   p4Name: 'briscola_p4Name',
-  /** The home tab last shown (bare string). */
-  homeTab: 'briscola_homeTab',
-  /** Online or pass-and-play (bare string). */
-  playMode: 'briscola_playMode',
-  /** `on` or `off` (bare string); anything but `off` counts as on. */
-  sound: 'briscola_sound',
-  /** The sound font (web/shared/lib/sound/fonts.ts, bare string): this game's own key (docs/design/sound-fonts.md §6). */
-  soundFont: 'briscola_soundFont',
-  /** The far seat's flip, `on`/`off` (the shell's `flipForFar`; no toggle on this page yet, the key is the shell's). */
-  flipTable: 'briscola_flipTable',
-  /**
-   * The finished matches this device remembers (web/shared/lib/recentGames.ts, JSON, newest
-   * first, at most 20; the owner's game history of 2026-09-25). This game's own key, like the font.
-   */
-  recentGames: 'briscola_recentGames',
   /** The card pack (web/shared/lib/cards/packs.ts, bare string): one of the packs that draw the Italian deck (docs/design/card-packs.md §2). */
   cardPack: 'briscola_cardPack',
   /** The language pack the cards are named in (web/shared/lib/lang/packs.ts, bare string): the tooltip, the captions, the aria labels (docs/design/language-packs.md §3). */
@@ -191,10 +174,7 @@ export const {
 // ---- this page's own preferences -----------------------------------------------------------
 
 /** The third and fourth pass-and-play names, by seat (2 and 3), under `rememberName`'s rule. */
-export const EXTRA_NAME_PREFS: Readonly<Record<2 | 3, TextPref<string>>> = {
-  2: namePref(STORAGE_KEYS.p3Name),
-  3: namePref(STORAGE_KEYS.p4Name),
-};
+export const EXTRA_NAME_PREFS = extraNamePrefs(PREFIX, [2, 3]);
 export const { read: readP3Name, write: writeP3Name } = EXTRA_NAME_PREFS[2];
 export const { read: readP4Name, write: writeP4Name } = EXTRA_NAME_PREFS[3];
 
@@ -213,25 +193,9 @@ export const { read: readSpeed, write: writeSpeed } = textPref(STORAGE_KEYS.spee
 export const LANG_PREF = langPref(STORAGE_KEYS.lang, DEFAULT_LANG);
 export const { read: readLang, write: writeLang } = LANG_PREF;
 
-/** A number stored as its digits (`"3"`), read back as one of `values` (the refine admits those alone, so the cast holds): the seat count. */
-const digitsOf = <T extends number>(values: ReadonlyArray<T>): Decoder<T> =>
-  map(
-    refine(
-      string,
-      (s) => values.some((v) => String(v) === s),
-      `one of ${values.map(String).join(' | ')}`,
-    ),
-    (s) => Number(s) as T,
-  );
-
-export const decodeSeatCount: Decoder<SeatCount> = digitsOf(SEAT_COUNTS);
-
-/** A number is its digits in the store, so it is not a `textPref` (backgammon's match length has the same shape). */
-const digitsPref = <T extends number>(key: string, decoder: Decoder<T>): TextPref<T> => ({
-  read: (store) => readTextWith(store, key, decoder),
-  write: (store, value) => store.writeText(key, String(value)),
-});
-const seatCountPref = digitsPref(STORAGE_KEYS.players, decodeSeatCount);
+/** The seat count from its digit (`"3"`), one of SEAT_COUNTS (prefs.ts `decodeDigitsOf`). */
+export const decodeSeatCount: Decoder<SeatCount> = decodeDigitsOf(SEAT_COUNTS);
+const PLAYERS_PREF = seatCountPref(STORAGE_KEYS.players, SEAT_COUNTS);
 
 const orDefault = <T>(r: Result<T, StorageError>, fallback: T): T => (r.ok ? r.value : fallback);
 
@@ -240,11 +204,11 @@ const orDefault = <T>(r: Result<T, StorageError>, fallback: T): T => (r.ok ? r.v
  * unreadable) on the fixed terms, normalised as the engine normalises a room.
  */
 export const readOpts = (store: Store): GameOptions =>
-  normaliseOptions(orDefault(seatCountPref.read(store), DEFAULT_OPTS.seatCount), TABLE_TERMS);
+  normaliseOptions(orDefault(PLAYERS_PREF.read(store), DEFAULT_OPTS.seatCount), TABLE_TERMS);
 
 /** The one key written from a room's options: the seat count's digits. */
 export const writeOpts = (store: Store, opts: GameOptions): void => {
-  seatCountPref.write(store, opts.seatCount);
+  PLAYERS_PREF.write(store, opts.seatCount);
 };
 
 export const ALL_KEYS: ReadonlyArray<StorageKey> = Object.values(STORAGE_KEYS);

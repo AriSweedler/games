@@ -3,25 +3,27 @@
 // the seat count the two Players selects share, and the third to sixth pass-and-play names.
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
 import {
-  namePref,
-  readTextWith,
+  decodeDigitsOf,
+  extraNamePrefs,
+  seatCountPref,
+  shellKeys,
   shellStore,
   type GuestSave as ShellGuestSave,
   type HostSave as ShellHostSave,
   type LocalSave as ShellLocalSave,
   type PlayMode,
   type Save as ShellSave,
-  type TextPref,
 } from '../../../shared/edge/prefs.ts';
-import { literal, map, object, refine, string, type Decoder } from '../../../shared/lib/json.ts';
+import { literal, object, type Decoder } from '../../../shared/lib/json.ts';
 import { SEAT_COUNTS, decodeState, type SeatCount, type State } from './engine/index.ts';
 
 export type { PlayMode, Store, StorageError };
 
+const PREFIX = 'flip7_';
 export const STORAGE_KEYS = {
-  save: 'flip7MP_v1',
-  name: 'flip7_name',
-  p2Name: 'flip7_p2Name',
+  /** The shell's keys (prefs.ts `ShellKeysOf`): the save and the eight preferences every shell keeps. */
+  ...shellKeys(PREFIX, 'flip7MP_v1'),
+  /** The third to twelfth pass-and-play names, under the name rule (this page alone seats them; `extraNamePrefs`). */
   p3Name: 'flip7_p3Name',
   p4Name: 'flip7_p4Name',
   p5Name: 'flip7_p5Name',
@@ -32,12 +34,6 @@ export const STORAGE_KEYS = {
   p10Name: 'flip7_p10Name',
   p11Name: 'flip7_p11Name',
   p12Name: 'flip7_p12Name',
-  homeTab: 'flip7_homeTab',
-  playMode: 'flip7_playMode',
-  sound: 'flip7_sound',
-  soundFont: 'flip7_soundFont',
-  flipTable: 'flip7_flipTable',
-  recentGames: 'flip7_recentGames',
   players: 'flip7_players',
 } as const;
 
@@ -69,30 +65,17 @@ export const { enabled: soundEnabled } = SHELL_STORE.sound;
 /** The seats past the shell's two (the third to the twelfth): their names, remembered as typed. */
 export type ExtraSeat = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 export const EXTRA_SEATS: ReadonlyArray<ExtraSeat> = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-export const EXTRA_NAME_PREFS: Readonly<Record<ExtraSeat, TextPref<string>>> = {
-  2: namePref(STORAGE_KEYS.p3Name),
-  3: namePref(STORAGE_KEYS.p4Name),
-  4: namePref(STORAGE_KEYS.p5Name),
-  5: namePref(STORAGE_KEYS.p6Name),
-  6: namePref(STORAGE_KEYS.p7Name),
-  7: namePref(STORAGE_KEYS.p8Name),
-  8: namePref(STORAGE_KEYS.p9Name),
-  9: namePref(STORAGE_KEYS.p10Name),
-  10: namePref(STORAGE_KEYS.p11Name),
-  11: namePref(STORAGE_KEYS.p12Name),
-};
+export const EXTRA_NAME_PREFS = extraNamePrefs(PREFIX, EXTRA_SEATS);
 
-/** A seat count from its digit (`"3"`). */
-export const decodeSeatCount: Decoder<SeatCount> = map(
-  refine(string, (s) => SEAT_COUNTS.some((n) => String(n) === s), 'an integer in [2, 12]'),
-  (s) => Number(s) as SeatCount,
-);
+/** A seat count from its digit (`"3"`), one of SEAT_COUNTS (prefs.ts `decodeDigitsOf`). */
+export const decodeSeatCount: Decoder<SeatCount> = decodeDigitsOf(SEAT_COUNTS);
+const PLAYERS_PREF = seatCountPref(STORAGE_KEYS.players, SEAT_COUNTS);
 
 export const readOpts = (store: Store): Opts => {
-  const read = readTextWith(store, STORAGE_KEYS.players, decodeSeatCount);
+  const read = PLAYERS_PREF.read(store);
   return { seatCount: read.ok ? read.value : DEFAULT_OPTS.seatCount };
 };
 
 export const writeOpts = (store: Store, opts: Opts): void => {
-  store.writeText(STORAGE_KEYS.players, String(opts.seatCount));
+  PLAYERS_PREF.write(store, opts.seatCount);
 };

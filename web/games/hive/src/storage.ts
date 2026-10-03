@@ -7,6 +7,7 @@
 // the save key and the prefix.
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
 import {
+  shellKeys,
   shellStore,
   type GuestSave as ShellGuestSave,
   type HostSave as ShellHostSave,
@@ -26,18 +27,8 @@ import { decodeState, type State } from './engine/view.ts';
 
 export type { PlayMode, Store, StorageError };
 
-export const STORAGE_KEYS = {
-  /** The game in progress: pass-and-play, or the host's table and game, or the guest's table. */
-  save: 'hiveMP_v1',
-  name: 'hive_name',
-  p2Name: 'hive_p2Name',
-  homeTab: 'hive_homeTab',
-  playMode: 'hive_playMode',
-  sound: 'hive_sound',
-  soundFont: 'hive_soundFont',
-  recentGames: 'hive_recentGames',
-  flipTable: 'hive_flipTable',
-} as const;
+/** The shell's keys alone (prefs.ts `ShellKeysOf`): hive's own options are settings rows below. */
+export const STORAGE_KEYS = shellKeys('hive_', 'hiveMP_v1');
 
 /** The tiles' motion: `crawl` (one hop a hex, the default) or `snap` to where they land. */
 export type Motion = (typeof HIVE_MOTION.values)[number];

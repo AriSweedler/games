@@ -83,11 +83,11 @@ describe('frozen constants', () => {
       'ginRummy_homeTab',
       'ginRummy_playMode',
       'ginRummy_sound',
+      'ginRummy_soundFont',
+      'ginRummy_recentGames',
+      'ginRummy_flipTable',
       'ginRummy_sort',
       'ginRummy_cardPack',
-      'ginRummy_soundFont',
-      'ginRummy_flipTable',
-      'ginRummy_recentGames',
       'ginRummyScorerState_v2',
     ]);
     expect(HOME_TABS).toEqual(['play', 'rules', 'score', 'about']);

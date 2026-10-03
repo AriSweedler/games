@@ -15,6 +15,7 @@ import {
   arrayOf,
   formatError,
   literal,
+  map,
   nullable,
   number,
   object,
@@ -99,6 +100,51 @@ export const namePref = (key: string): TextPref<string> => ({
   write: (store, name) =>
     name === '' ? store.remove(key) : store.writeText(key, name.slice(0, NAME_MAX)),
 });
+
+/**
+ * The pass-and-play name of seat `seat` (0-based; the shell keeps seats 0 and 1 as `name` and
+ * `p2Name`), under `rememberName`'s rule at `<prefix>p<seat + 1>Name`: seat 2 is `<prefix>p3Name`,
+ * the key every N-seat game spelled by hand before this helper, so the names a device remembers
+ * read back (prefs.test.ts reads the four games' old key names through it).
+ */
+export const extraNamePref = (prefix: string, seat: number): TextPref<string> =>
+  namePref(`${prefix}p${String(seat + 1)}Name`);
+
+/** `extraNamePref` for each of `seats`, keyed by seat: a table's third chair on, as its reducer looks them up. */
+export const extraNamePrefs = <S extends number>(
+  prefix: string,
+  seats: ReadonlyArray<S>,
+): Readonly<Record<S, TextPref<string>>> =>
+  Object.fromEntries(seats.map((seat) => [seat, extraNamePref(prefix, seat)])) as Record<
+    S,
+    TextPref<string>
+  >;
+
+/** A bare string of digits naming one of `values`, read back as the number (`"3"` reads as 3). */
+export const decodeDigitsOf = <T extends number>(values: ReadonlyArray<T>): Decoder<T> =>
+  map(
+    refine(
+      string,
+      (s) => values.some((v) => String(v) === s),
+      `one of ${values.map(String).join(' | ')}`,
+    ),
+    (s) => Number(s) as T,
+  );
+
+/** A preference that is a number in the app and its digits in the store, so it is not a `textPref`. */
+export const digitsPref = <T extends number>(key: string, decoder: Decoder<T>): TextPref<T> => ({
+  read: (store) => readTextWith(store, key, decoder),
+  write: (store, value) => store.writeText(key, String(value)),
+});
+
+/**
+ * The seat count a home screen last chose (the game's `<prefix>players` key), one of the game's
+ * `counts` as digits: uno, flip7 and briscola's one pref in one spelling (shell-hoist.md §3 M).
+ */
+export const seatCountPref = <T extends number>(
+  key: string,
+  counts: ReadonlyArray<T>,
+): TextPref<T> => digitsPref(key, decodeDigitsOf(counts));
 
 /** A game's card-pack preference under its own key, validated for its deck kind like the sound font. */
 export const cardPackPref = <K extends DeckKind>(key: string, kind: K): TextPref<CardPackFor<K>> =>
@@ -319,20 +365,51 @@ export const shellSave = <S, X extends object>(
 
 // ---- the shell's store -----------------------------------------------------------------------
 
-/** The keys every shell keeps, as a game's `STORAGE_KEYS` names them (its own keys sit beside these). */
-export type ShellKeys = Readonly<{
-  save: string;
-  name: string;
-  p2Name: string;
-  homeTab: string;
-  playMode: string;
-  sound: string;
-  soundFont: string;
-  /** The finished games (`<game>_recentGames`, JSON; web/shared/lib/recentGames.ts). */
-  recentGames: string;
-  /** The far seat's flip (`<game>_flipTable`, `on`/`off`; shell.ts `flipForFar`). */
-  flipTable: string;
+/**
+ * The keys every shell keeps, derived from a game's prefix and save key: the pair
+ * `tools/games.ts` REGISTRY.storage pins per game (`uno_` and `unoMP_v1`; gin's legacy `ginRummy_`
+ * and `ginRummyMP_v1`). A game spreads `shellKeys(prefix, saveKey)` into its `STORAGE_KEYS` ahead
+ * of its own keys, so it spells its prefix once and the keys it wrote before this helper existed
+ * are the keys it writes after it (every storage.test.ts pins the literals; prefs.test.ts reads
+ * the seven games' old key names through it).
+ */
+export type ShellKeysOf<P extends string, S extends string> = Readonly<{
+  /** The game in progress: pass-and-play, or the host's room and game, or the guest's room (JSON). */
+  save: S;
+  /** The player's name, as typed (bare string, at most NAME_MAX characters). */
+  name: `${P}name`;
+  /** The pass-and-play second name, as typed, under the same rule; no legacy page stored it. */
+  p2Name: `${P}p2Name`;
+  /** The home tab last shown (bare string, one of the game's HOME_TABS). */
+  homeTab: `${P}homeTab`;
+  /** Online or pass-and-play (bare string, PLAY_MODES). */
+  playMode: `${P}playMode`;
+  /** `on` or `off` (bare string); anything but `off` counts as on. */
+  sound: `${P}sound`;
+  /** The sound font (web/shared/lib/sound/fonts.ts, bare string): the game's own, so another game on the origin keeps its choice (docs/design/sound-fonts.md §6). */
+  soundFont: `${P}soundFont`;
+  /** The finished games (JSON, newest first, at most RECENT_GAMES_CAP; web/shared/lib/recentGames.ts). */
+  recentGames: `${P}recentGames`;
+  /** The far seat's flip (`on`/`off`; shell.ts `flipForFar`). Every shell has the key, with or without a toggle. */
+  flipTable: `${P}flipTable`;
 }>;
+/** The shell's keys as a game's `STORAGE_KEYS` carries them (its own keys sit beside these). */
+export type ShellKeys = Readonly<Record<keyof ShellKeysOf<string, string>, string>>;
+
+export const shellKeys = <P extends string, S extends string>(
+  prefix: P,
+  saveKey: S,
+): ShellKeysOf<P, S> => ({
+  save: saveKey,
+  name: `${prefix}name`,
+  p2Name: `${prefix}p2Name`,
+  homeTab: `${prefix}homeTab`,
+  playMode: `${prefix}playMode`,
+  sound: `${prefix}sound`,
+  soundFont: `${prefix}soundFont`,
+  recentGames: `${prefix}recentGames`,
+  flipTable: `${prefix}flipTable`,
+});
 
 /** The shell's readers and writers over one game's keys: what `web/shared/ui/shell.ts` reads `initHome` from and `shellEffects.ts` writes the effects through. */
 export type ShellStore<S, X extends object, Tab extends string> = Readonly<{

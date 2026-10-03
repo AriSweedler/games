@@ -28,9 +28,12 @@ import {
   decodeName,
   decodePlayMode,
   decodeSoundFont,
+  decodeDigitsOf,
   decodeSoundState,
-  namePref,
-  readTextWith,
+  digitsPref,
+  extraNamePrefs,
+  seatCountPref,
+  shellKeys,
   shellStore,
   textPref,
   type GuestSave as ShellGuestSave,
@@ -39,7 +42,6 @@ import {
   type PlayMode,
   type Save as ShellSave,
   type SoundState,
-  type TextPref,
 } from '../../../shared/edge/prefs.ts';
 import {
   boolean,
@@ -78,30 +80,19 @@ export {
 } from '../../../shared/lib/sound/fonts.ts';
 export { SEAT_COUNTS, MAX_BOTS, type SeatCount };
 
+const PREFIX = 'fidice_';
 export const STORAGE_KEYS = {
-  /** The game in progress: pass the phone (Solo and Watch included), or the host's table and game, or the guest's table. */
-  save: 'fidiceMP_v1',
-  /** The player's name, as typed (bare string, at most 20 characters; plan §7 D1). */
-  name: 'fidice_name',
-  /** The pass-the-phone second name, as typed (bare string, at most 20 characters). */
-  p2Name: 'fidice_p2Name',
-  /** The third to sixth pass-the-phone names, under the same rule (this page alone seats them). */
+  /**
+   * The shell's keys (prefs.ts `ShellKeysOf`): the save (pass the phone, Solo and Watch included,
+   * or the host's or guest's table) and the eight preferences every shell keeps; `playMode` holds
+   * online or pass the phone, Solo and Watch are shown, never stored (plan §7 D9).
+   */
+  ...shellKeys(PREFIX, 'fidiceMP_v1'),
+  /** The third to sixth pass-the-phone names, under the name rule (this page alone seats them; `extraNamePrefs`). */
   p3Name: 'fidice_p3Name',
   p4Name: 'fidice_p4Name',
   p5Name: 'fidice_p5Name',
   p6Name: 'fidice_p6Name',
-  /** The home tab last shown (bare string). */
-  homeTab: 'fidice_homeTab',
-  /** Online or pass the phone (bare string); Solo and Watch are shown, never stored (plan §7 D9). */
-  playMode: 'fidice_playMode',
-  /** `on` or `off` (bare string); anything but `off` counts as on. */
-  sound: 'fidice_sound',
-  /** The sound font (web/shared/lib/sound/fonts.ts, bare string): this game's own key (docs/design/sound-fonts.md §6). */
-  soundFont: 'fidice_soundFont',
-  /** The far seat's flip, `on`/`off` (the shell's `flipForFar`; no toggle on this page, the key is the shell's). */
-  flipTable: 'fidice_flipTable',
-  /** The finished games this device remembers (web/shared/lib/recentGames.ts, JSON, newest first, at most 20). */
-  recentGames: 'fidice_recentGames',
   /** The kayaks each the host card last chose (bare digits; `0` keeps score). */
   lives: 'fidice_lives',
   /** The chairs the host card last opened (bare digits, `2`..`6`). */
@@ -196,47 +187,29 @@ export const {
 
 /** The seats beyond the shell's two: the third to sixth players (plan §3 `Seat: 2 | 3 | 4 | 5`). */
 export type ExtraSeat = 2 | 3 | 4 | 5;
+export const EXTRA_SEATS: ReadonlyArray<ExtraSeat> = [2, 3, 4, 5];
 /** The third to sixth pass-the-phone names, by seat (2..5), under `rememberName`'s rule. */
-export const EXTRA_NAME_PREFS: Readonly<Record<ExtraSeat, TextPref<string>>> = {
-  2: namePref(STORAGE_KEYS.p3Name),
-  3: namePref(STORAGE_KEYS.p4Name),
-  4: namePref(STORAGE_KEYS.p5Name),
-  5: namePref(STORAGE_KEYS.p6Name),
-};
+export const EXTRA_NAME_PREFS = extraNamePrefs(PREFIX, EXTRA_SEATS);
 export const { read: readP3Name, write: writeP3Name } = EXTRA_NAME_PREFS[2];
 export const { read: readP4Name, write: writeP4Name } = EXTRA_NAME_PREFS[3];
 export const { read: readP5Name, write: writeP5Name } = EXTRA_NAME_PREFS[4];
 export const { read: readP6Name, write: writeP6Name } = EXTRA_NAME_PREFS[5];
 
-/** A number stored as its digits (`"3"`), read back as one of `values` (the refine admits those alone, so the cast holds). */
-const digitsOf = <T extends number>(values: ReadonlyArray<T>): Decoder<T> =>
-  map(
-    refine(
-      string,
-      (s) => values.some((v) => String(v) === s),
-      `one of ${values.map(String).join(' | ')}`,
-    ),
-    (s) => Number(s) as T,
-  );
 /** Any non-negative integer stored as its digits. */
 const digits: Decoder<number> = map(
   refine(string, (s) => /^\d{1,6}$/.test(s), 'digits'),
   (s) => Number(s),
 );
 
-export const decodeSeatCount: Decoder<SeatCount> = digitsOf(SEAT_COUNTS);
+export const decodeSeatCount: Decoder<SeatCount> = decodeDigitsOf(SEAT_COUNTS);
 /** `0`..`5` computers. */
-export const decodeBots: Decoder<number> = digitsOf(
+export const decodeBots: Decoder<number> = decodeDigitsOf(
   Array.from({ length: MAX_BOTS + 1 }, (_, i) => i),
 );
 
-/** A number is its digits in the store, so it is not a `textPref` (briscola's seat count has the same shape). */
-const digitsPref = <T extends number>(key: string, decoder: Decoder<T>): TextPref<T> => ({
-  read: (store) => readTextWith(store, key, decoder),
-  write: (store, value) => store.writeText(key, String(value)),
-});
+// A number is its digits in the store, so not a `textPref` (prefs.ts `digitsPref`, `seatCountPref`).
 const livesPref = digitsPref(STORAGE_KEYS.lives, digits);
-const seatCountPref = digitsPref(STORAGE_KEYS.seats, decodeSeatCount);
+const seatsPref = seatCountPref(STORAGE_KEYS.seats, SEAT_COUNTS);
 const botsPref = digitsPref(STORAGE_KEYS.bots, decodeBots);
 const botChoicePref = textPref(STORAGE_KEYS.botChoice, decodeName);
 
@@ -248,7 +221,7 @@ const orDefault = <T>(r: Result<T, StorageError>, fallback: T): T => (r.ok ? r.v
  */
 export const readOpts = (store: Store): Opts => ({
   lives: orDefault(livesPref.read(store), DEFAULT_OPTS.lives),
-  seatCount: orDefault(seatCountPref.read(store), DEFAULT_OPTS.seatCount),
+  seatCount: orDefault(seatsPref.read(store), DEFAULT_OPTS.seatCount),
   bots: orDefault(botsPref.read(store), DEFAULT_OPTS.bots),
   botChoice: orDefault(botChoicePref.read(store), DEFAULT_OPTS.botChoice),
   watch: false,
@@ -257,7 +230,7 @@ export const readOpts = (store: Store): Opts => ({
 /** The four keys written from a room's terms: each as its digits (the choice as is); `watch` is not written. */
 export const writeOpts = (store: Store, opts: Opts): void => {
   livesPref.write(store, opts.lives);
-  seatCountPref.write(store, opts.seatCount);
+  seatsPref.write(store, opts.seatCount);
   botsPref.write(store, opts.bots);
   botChoicePref.write(store, opts.botChoice);
 };
