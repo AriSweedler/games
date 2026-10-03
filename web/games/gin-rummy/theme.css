@@ -4,7 +4,7 @@
    web/shared/styles/tokens.css; the page links tokens.css and base.css before this file. Since
    docs/design/dry-round-2.md G1 the shell's rules (the page, the home screen's boxes, buttons,
    fields and tabs, the overlays, sheets and toast) are web/shared/styles/shell.css's, linked
-   between base.css and this file, with the fourteen shell tokens (tokens.css) at this theme's
+   between base.css and this file, with the fifteen shell tokens (tokens.css) at this theme's
    values; what stays here under a shell selector is this theme's own (its type scale, the felt,
    the gold sheet border, the toast's cream).
    Everything else is verbatim except the table (docs/design/gin-draw-ghost-slot.md §5): the

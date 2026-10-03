@@ -88,10 +88,16 @@ export const normalise = (html: string): string =>
     // gin-home-column-bottom"): the recent games or "How it goes", markup the legacy never had,
     // dropped from its comment to the marker that closes it.
     .replace(/<!-- The fourth card[\s\S]*?<!-- \/recent -->/g, '')
+    // The shown curtain's scrim: the legacy painted it inline (`style="background:#0b2418;"`), the
+    // new page through the shell's `curtain` class and the `--curtain-scrim` token (the same colour).
+    .replace(
+      /^<div id="curtainOverlay" class="overlay(?: curtain)?"(?: style="background:#0b2418;")?>/,
+      '<div id="curtainOverlay" class="overlay">',
+    )
     // A hidden curtain keeps the text of its last showing, and the new page shows one the legacy
     // never had: a knock hands the phone to the defender to lay off (§7b). Unseen, it is blanked.
     .replace(
-      /^<div id="curtainOverlay" class="overlay hidden"[^>]*>[\s\S]*$/,
+      /^<div id="curtainOverlay" class="overlay(?: curtain)? hidden"[^>]*>[\s\S]*$/,
       '<div id="curtainOverlay" class="overlay hidden"></div>',
     )
     // The sandbox (src/sandbox.ts): a third mode button in the switch and the submenu, and its

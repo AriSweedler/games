@@ -12,6 +12,7 @@
     "--card-2": "#ece1cc",
     "--cream": "#f6efe2",
     "--cream-2": "#ece1cc",
+    "--curtain-scrim": "#153627",
     "--danger": "#b8433a",
     "--emphasis": "#d9782f",
     "--felt": "#1f4d3a",
@@ -807,14 +808,6 @@
       "v": [231, 174, 193, 40, 174, 40, 174, 193, 157, 152, 103, 115, 177, 177, 41, 61, 40, 174, 250],
       "vars": {}
     },
-    "5d1458b50542": {
-      "v": [231, 174, 221, 40, 174, 40, 174, 221, 174, 155, 92, 115, 177, 177, 41, 61, 92, 174, 250],
-      "vars": {
-        "--column-wide": 73,
-        "--gutter": 74,
-        "--gutter-bottom": 92
-      }
-    },
     "5e90446a5df3": {
       "v": [231, 174, 205, 74, 158, 108, 174, 182, 159, 155, 82, 135, 130, 177, 41, 61, 74, 174, 250],
       "vars": {}
@@ -957,14 +950,6 @@
     },
     "781d85ed375f": {
       "v": [231, 174, 216, 40, 174, 40, 174, 216, 159, 155, 92, 115, 130, 177, 41, 61, 40, 174, 250],
-      "vars": {
-        "--column-wide": 73,
-        "--gutter": 74,
-        "--gutter-bottom": 92
-      }
-    },
-    "783930dfb7ec": {
-      "v": [231, 174, 221, 40, 174, 40, 174, 221, 159, 155, 92, 115, 177, 177, 41, 61, 92, 174, 250],
       "vars": {
         "--column-wide": 73,
         "--gutter": 74,
@@ -1128,6 +1113,14 @@
       "v": [220, 174, 216, 130, 174, 40, 174, 216, 157, 155, 62, 136, 177, 37, 41, 61, 110, 249, 250],
       "vars": {}
     },
+    "90fe4c3314ae": {
+      "v": [200, 174, 221, 40, 174, 40, 174, 221, 174, 155, 92, 115, 177, 177, 41, 61, 92, 174, 250],
+      "vars": {
+        "--column-wide": 73,
+        "--gutter": 74,
+        "--gutter-bottom": 92
+      }
+    },
     "911b58342a2c": {
       "v": [231, 174, 182, 40, 174, 40, 174, 182, 174, 155, 82, 115, 177, 177, 41, 61, 40, 174, 250],
       "vars": {}
@@ -1206,6 +1199,74 @@
         "--column-wide": 73,
         "--gutter": 74,
         "--gutter-bottom": 92
+      }
+    },
+    "9e219f13de29": {
+      "v": [231, 174, 181, 40, 174, 40, 174, 181, 157, 156, 92, 115, 177, 177, 41, 61, 40, 174, 250],
+      "vars": {
+        "--accent": 18,
+        "--accent-dark": 15,
+        "--bg": 19,
+        "--birch": 25,
+        "--blue": 5,
+        "--card": 25,
+        "--card-2": 23,
+        "--cream": 24,
+        "--cream-2": 23,
+        "--curtain-scrim": 1,
+        "--danger": 16,
+        "--emphasis": 18,
+        "--felt": 3,
+        "--felt-dark": 1,
+        "--felt-light": 6,
+        "--fill": 23,
+        "--fill-hover": 22,
+        "--font-body": 29,
+        "--font-display": 28,
+        "--frame-band": 130,
+        "--frame-color": 18,
+        "--frame-corner": 173,
+        "--frame-corner-bl": 173,
+        "--frame-corner-br": 173,
+        "--frame-corner-tl": 173,
+        "--frame-corner-tr": 173,
+        "--frame-gap": 118,
+        "--frame-hairline": 248,
+        "--frame-hairline-w": 100,
+        "--frame-inset-bottom": 40,
+        "--frame-inset-left": 40,
+        "--frame-inset-right": 40,
+        "--frame-inset-top": 40,
+        "--go": 13,
+        "--go-text": 0,
+        "--gold": 21,
+        "--ink": 4,
+        "--ink-hover": 26,
+        "--ink-on-bar": 27,
+        "--ink-on-fill": 7,
+        "--lake": 5,
+        "--lake-deep": 2,
+        "--lake-light": 11,
+        "--line": 20,
+        "--mist": 19,
+        "--moss": 14,
+        "--muted": 10,
+        "--pine": 3,
+        "--pine-light": 9,
+        "--radius": 92,
+        "--radius-control": 74,
+        "--radius-inner": 74,
+        "--radius-tab": 63,
+        "--red": 16,
+        "--shadow": 32,
+        "--shadow-shell": 32,
+        "--surface-bar": 3,
+        "--surface-shell": 25,
+        "--text": 4,
+        "--timber": 7,
+        "--wood": 12,
+        "--wood-dark": 8,
+        "--wood-light": 17
       }
     },
     "9e4a082875c2": {
@@ -1298,6 +1359,14 @@
     "ad5a24d02d64": {
       "v": [231, 174, 182, 40, 174, 40, 174, 182, 157, 155, 82, 115, 177, 177, 41, 61, 40, 174, 250],
       "vars": {}
+    },
+    "adf7c14f517b": {
+      "v": [200, 174, 221, 40, 174, 40, 174, 221, 159, 155, 92, 115, 177, 177, 41, 61, 92, 174, 250],
+      "vars": {
+        "--column-wide": 73,
+        "--gutter": 74,
+        "--gutter-bottom": 92
+      }
     },
     "afc294f3c4e4": {
       "v": [231, 174, 221, 74, 174, 40, 174, 221, 172, 155, 92, 115, 177, 177, 41, 61, 40, 174, 250],
@@ -1498,6 +1567,13 @@
       "v": [225, 174, 189, 130, 246, 100, 233, 216, 160, 155, 99, 115, 177, 177, 41, 61, 40, 174, 250],
       "vars": {}
     },
+    "ca5c88b482ec": {
+      "v": [200, 174, 221, 40, 174, 40, 174, 221, 174, 155, 92, 115, 177, 177, 41, 61, 92, 174, 250],
+      "vars": {
+        "--gutter": 74,
+        "--gutter-bottom": 92
+      }
+    },
     "ca8d77f79e37": {
       "v": [231, 174, 221, 40, 174, 40, 174, 221, 160, 155, 92, 115, 92, 177, 41, 61, 40, 174, 250],
       "vars": {}
@@ -1585,13 +1661,6 @@
         "--gutter-bottom": 92
       }
     },
-    "d1fbf989b5d5": {
-      "v": [231, 174, 221, 40, 174, 40, 174, 221, 174, 155, 92, 115, 177, 177, 41, 61, 92, 174, 250],
-      "vars": {
-        "--gutter": 74,
-        "--gutter-bottom": 92
-      }
-    },
     "d240a950c348": {
       "v": [231, 174, 245, 40, 174, 40, 174, 245, 157, 155, 72, 129, 177, 177, 41, 61, 40, 174, 250],
       "vars": {
@@ -1645,73 +1714,6 @@
         "--column-wide": 73,
         "--gutter": 74,
         "--gutter-bottom": 92
-      }
-    },
-    "d83f72803ca5": {
-      "v": [231, 174, 181, 40, 174, 40, 174, 181, 157, 156, 92, 115, 177, 177, 41, 61, 40, 174, 250],
-      "vars": {
-        "--accent": 18,
-        "--accent-dark": 15,
-        "--bg": 19,
-        "--birch": 25,
-        "--blue": 5,
-        "--card": 25,
-        "--card-2": 23,
-        "--cream": 24,
-        "--cream-2": 23,
-        "--danger": 16,
-        "--emphasis": 18,
-        "--felt": 3,
-        "--felt-dark": 1,
-        "--felt-light": 6,
-        "--fill": 23,
-        "--fill-hover": 22,
-        "--font-body": 29,
-        "--font-display": 28,
-        "--frame-band": 130,
-        "--frame-color": 18,
-        "--frame-corner": 173,
-        "--frame-corner-bl": 173,
-        "--frame-corner-br": 173,
-        "--frame-corner-tl": 173,
-        "--frame-corner-tr": 173,
-        "--frame-gap": 118,
-        "--frame-hairline": 248,
-        "--frame-hairline-w": 100,
-        "--frame-inset-bottom": 40,
-        "--frame-inset-left": 40,
-        "--frame-inset-right": 40,
-        "--frame-inset-top": 40,
-        "--go": 13,
-        "--go-text": 0,
-        "--gold": 21,
-        "--ink": 4,
-        "--ink-hover": 26,
-        "--ink-on-bar": 27,
-        "--ink-on-fill": 7,
-        "--lake": 5,
-        "--lake-deep": 2,
-        "--lake-light": 11,
-        "--line": 20,
-        "--mist": 19,
-        "--moss": 14,
-        "--muted": 10,
-        "--pine": 3,
-        "--pine-light": 9,
-        "--radius": 92,
-        "--radius-control": 74,
-        "--radius-inner": 74,
-        "--radius-tab": 63,
-        "--red": 16,
-        "--shadow": 32,
-        "--shadow-shell": 32,
-        "--surface-bar": 3,
-        "--surface-shell": 25,
-        "--text": 4,
-        "--timber": 7,
-        "--wood": 12,
-        "--wood-dark": 8,
-        "--wood-light": 17
       }
     },
     "d8696e3c0524": {
@@ -2126,7 +2128,7 @@
         ".zone": null,
         ".zone .dice": null,
         ".zone .hint": null,
-        ":root": "d83f72803ca5",
+        ":root": "9e219f13de29",
         "body": "e7b54b8fe8fa",
         "body::before": "a91a382fdaa7",
         "button": "d8696e3c0524",
@@ -2838,7 +2840,7 @@
         ".mode-btn.active": "6fac9af82431",
         ".mode-switch": "894d80ed67a9",
         ".muted": "0691883ca6f0",
-        ".overlay": "d1fbf989b5d5",
+        ".overlay": "ca5c88b482ec",
         ".pill": null,
         ".pulse": "0691883ca6f0",
         ".room-code": "f9c1242ecbcd",
@@ -3015,7 +3017,7 @@
         ".mode-btn.active": "bd70e1078236",
         ".mode-switch": "b6931498decd",
         ".muted": "b4cc7d4dea1e",
-        ".overlay": "783930dfb7ec",
+        ".overlay": "adf7c14f517b",
         ".panel": "fe316f395b58",
         ".pulse": "b4cc7d4dea1e",
         ".room-code": "b259b4ad6c0f",
@@ -3064,7 +3066,7 @@
     {
       "name": "28 shell local: round 1, the cup holder",
       "changes": {
-        ".overlay": "5d1458b50542"
+        ".overlay": "90fe4c3314ae"
       }
     },
     {
@@ -3165,7 +3167,7 @@
         ".mode-btn.active": "6fac9af82431",
         ".mode-switch": "894d80ed67a9",
         ".muted": "0691883ca6f0",
-        ".overlay": "d1fbf989b5d5",
+        ".overlay": "ca5c88b482ec",
         ".panel": null,
         ".pulse": "0691883ca6f0",
         ".room-code": "f9c1242ecbcd",

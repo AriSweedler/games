@@ -55,4 +55,10 @@
   --radius-control: 14px;
   --radius-inner: 12px;
   --radius-tab: 10px;
+  /* The pass-and-play curtain's scrim (`.overlay.curtain`, shell.css). Opaque by default: a hand
+     face up beneath the curtain (uno, flip7) must not read through it to the next seat, so a theme
+     without a curtain rule of its own gets a wall, not a wash. Gin's felt's darkest stop (the value
+     gin's curtain painted inline before the token). A theme whose table may stay readable beneath (briscola's hand paints
+     backs, backgammon's position is public) redeclares it translucent. */
+  --curtain-scrim: #0b2418;
 }

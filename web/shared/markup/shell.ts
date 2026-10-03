@@ -106,7 +106,7 @@ export type ShellLook = Readonly<{
   pulseMuted: string;
   /** `#joinBtn`: gin's ` style="min-width:96px;"`. */
   joinBtnWidth: string;
-  /** `#curtainOverlay`: a class after `overlay` (` curtain`, the translucent wash) and a style after `hidden` (gin's felt). */
+  /** `#curtainOverlay`: a class after `overlay` (` curtain`: the shell's scrim, `--curtain-scrim`; every page since gin's inline felt became the token's default) and a style after `hidden` (none today). */
   curtainClass: string;
   curtainStyle: string;
   /** Attribute list: the curtain's `sheet` (backgammon's `centered`; gin centres it inline and colours its border). */
