@@ -33,13 +33,10 @@ import {
   isShellEffect,
   isShellIntent,
   localBroadcast,
-  localNamesOf,
-  localSeats,
   pure,
   readHome as shellReadHome,
   reduceShell,
   resumeFor as shellResumeFor,
-  startLocal,
   step,
   toast,
   withShell,
@@ -73,7 +70,6 @@ import type { Bug, Side } from '../engine/pieces.ts';
 import {
   NOT_YOUR_TURN_MSG,
   applyAction,
-  createState,
   turnSeat,
   viewFor,
   type Action,
@@ -674,15 +670,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
   }
 };
 
-/** `local/click`: the two names through the shared `localSeats` rule with this game's defaults, White first. */
-const localStart = (app: App, intent: Readonly<{ p1: string; p2: string }>, ctx: Ctx): Step => {
-  const seats = localSeats([intent.p1, intent.p2], localNamesOf(HIVE_SHELL));
-  const game = createState([seats[0]?.name ?? '', seats[1]?.name ?? ''], ctx.now);
-  return startLocal(app, game, ctx, HIVE);
-};
-
 export const reduce = (app: App, intent: Intent, ctx: Ctx): Step => {
-  if (intent.type === 'local/click') return localStart(app, intent, ctx);
   if (!isShellIntent(intent)) return tableIntent(app, intent, ctx);
   return reduceShell(app, intent, ctx, HIVE);
 };

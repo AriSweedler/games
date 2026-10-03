@@ -6,7 +6,7 @@
 // (src/ui/render.ts). This file passes Hive's reducer, painters, sessions, cue table, sound key, the
 // rules and About copy, the bug sprite the tiles `<use>` (ui/bugs.ts, inlined once here before any
 // paint, as briscola inlines its suits), and the members of `window.__hive` (the documented test
-// hook) beyond the shared ones: `act`, `view`, `setup` and `legal`.
+// hook) beyond the shared ones: `act`, `view` and `setup` (`legal` is the boot's).
 import { bootShell } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import { browserStore } from '../../shared/edge/storage.ts';
@@ -55,7 +55,8 @@ bootShell<Hive, App, object, HostContext>({
       renderAbout(document);
     },
     // `act` through the reducer; `view` my seat's view; `setup` seats a position (pass-and-play
-    // only: the shell's `position/load` over the engine's decoder); `legal` what my seat may do.
+    // only: the shell's `position/load` over the engine's decoder). `legal` is the boot's own, over
+    // the `legal` adapter above.
     hook: ({ app, dispatch }) => ({
       act: (action: Action) => {
         dispatch({ type: 'act', action });
@@ -63,10 +64,6 @@ bootShell<Hive, App, object, HostContext>({
       view: (): View | null => app().shell.view,
       setup: (state: unknown) => {
         dispatch({ type: 'position/load', state });
-      },
-      legal: (): ReadonlyArray<Action> => {
-        const view = app().shell.view;
-        return view === null ? [] : legalActions(view);
       },
     }),
   },
