@@ -8,11 +8,11 @@
 // hexes it may reach light and the source dims as `dragging`) and the ghost follows the pointer:
 // a tray tile's clone, or the clone of the `svg.lift` the paint lays over a picked board tile
 // (render.ts `liftHtml`; a `g` cloned onto the body would not render, a nested `<svg>` does). Every
-// move looks for the lit hex nearest the pointer within SNAP of a hex's width (`nearestLit`) and says
-// when that changes (`drag/over`; the painter marks it `drop`). On release over one `drag/end` plays
-// the tile at once; off every one the ghost glides back first (LAND_MS) and the end drops the pick.
-// The click a release fires is the reducer's to ignore while its `drag` stands. Only the DOM edge is
-// reached.
+// move looks for the lit hex nearest the pointer within SNAP of a hex's width (`nearestLit`), none
+// while the tile's own place is nearer still, and says when that changes (`drag/over`; the painter
+// marks it `drop`). On release over one `drag/end` plays the tile at once; off every one the ghost
+// glides back first (LAND_MS) and the end drops the pick. The click a release fires is the
+// reducer's to ignore while its `drag` stands. Only the DOM edge is reached.
 import {
   closestFrom,
   dataOf,
@@ -59,22 +59,36 @@ export type Target<K> = Readonly<{ key: K; rect: Rect }>;
 
 const centre = (r: Rect): Point => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
 
+const distance = (r: Rect, p: Point): number => Math.hypot(centre(r).x - p.x, centre(r).y - p.y);
+
 /**
  * The target whose centre is nearest `p`, within SNAP of its own width (a rect with no size, a
- * fake's or an unmeasured element's, is never near), or null.
+ * fake's or an unmeasured element's, is never near), or null. `home` is where the tile was lifted
+ * from (the kernel's `base`: a board cell, or the tray tile's slot): while the pointer is nearer
+ * the home's centre than the nearest target's, nothing takes the drop. Neighbouring hex centres
+ * sit one width apart, so without it a lit neighbour took the drop (and lit as `drop`) as soon as
+ * the finger was a tenth of a hex off the lifted tile's own centre, still over the tile.
  */
-export const nearestLit = <K>(targets: ReadonlyArray<Target<K>>, p: Point): K | null =>
-  targets
+export const nearestLit = <K>(
+  targets: ReadonlyArray<Target<K>>,
+  p: Point,
+  home: Rect | null = null,
+): K | null => {
+  const best = targets
     .map((t): Readonly<{ key: K; d: number; r: number }> => ({
       key: t.key,
-      d: Math.hypot(centre(t.rect).x - p.x, centre(t.rect).y - p.y),
+      d: distance(t.rect, p),
       r: t.rect.width * SNAP,
     }))
     .filter((t) => t.r > 0 && t.d <= t.r)
     .reduce<Readonly<{ key: K; d: number }> | null>(
       (best, t) => (best === null || t.d < best.d ? t : best),
       null,
-    )?.key ?? null;
+    );
+  if (best === null) return null;
+  const nearerHome = home !== null && home.width > 0 && distance(home, p) < best.d;
+  return nearerHome ? null : best.key;
+};
 
 const isBug = (raw: string | null): raw is Bug => BUGS.some((bug) => bug === raw);
 
@@ -100,14 +114,15 @@ const pickAt = (
 export const bindDrag = (doc: PageLike, dispatch: DragDispatch): void => {
   const board = requireId(doc, 'board');
   const hands = [requireId(doc, 'whiteHand'), requireId(doc, 'blackHand')];
-  /** The lit hex nearest the pointer (its key), or null. */
-  const targetAt = (p: Point): string | null =>
+  /** The lit hex nearest the pointer (its key), or null; none while the tile's own place is nearer. */
+  const targetAt = (p: Point, home: Rect): string | null =>
     nearestLit(
       queryAllIn(board, '.hex.lit').map((el) => ({
         key: dataOf(el, 'hex') ?? '',
         rect: rectOf(el),
       })),
       p,
+      home,
     );
   bindDragKernel<Picked, string, DragIntent>(doc, dispatch, {
     surfaces: [board, ...hands],
@@ -119,7 +134,9 @@ export const bindDrag = (doc: PageLike, dispatch: DragDispatch): void => {
       s.key.kind === 'hex'
         ? queryIn(board, 'svg.lift')
         : queryIn(s.surface, `.hand-tile[data-bug="${s.key.bug}"]`),
-    targetAt,
+    // The session's `base` is the source's box when the ghost was made: the cell or the tray
+    // slot the tile left, the home nothing takes the drop from while the pointer is nearer it.
+    targetAt: (p, s) => targetAt(p, s.base),
     onStart: (s) => [{ type: 'drag/start', picked: s.key }],
     onOver: (s) => [{ type: 'drag/over', hex: s.over === null ? null : hexOf(s.over) }],
     onEnd: () => [{ type: 'drag/end' }],

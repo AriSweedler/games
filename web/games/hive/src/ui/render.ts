@@ -225,16 +225,20 @@ export const tileHtml = (bug: Bug): string =>
 
 /**
  * The lift (ui/dragger.ts `source`): the top tile at `hex` once more, as a nested `<svg>` laid over
- * its cell (the cell's box, the tray tile's face inside, so the drag kernel's clone of it renders
- * on the body where a `g` would not) in the side's class, hidden by its own rule; the kernel strips
- * `lift` from the clone and the ghost shows. Empty for an empty hex.
+ * its cell (the cell's box, the face drawn about the origin of the tray tile's viewBox, so the drag
+ * kernel's clone of it renders on the body where a `g` would not) in the side's class, hidden by
+ * its own rule; the kernel strips `lift` from the clone and the ghost shows. Empty for an empty
+ * hex. The face is drawn here, not as a nested `svg.tile`: a nested svg sits at its parent's
+ * user origin, and this viewBox's origin is the hex's centre, so a `tileHtml` inside landed half
+ * a hex down and right and clipped to a quarter (the ghost of PR #24: a corner of a tile beside
+ * the finger, gliding back to a point half a hex off its cell).
  */
 export const liftHtml = (game: Game, hex: Hex): string => {
   const top = stackAt(game.board, hex).at(-1);
   if (top === undefined) return '';
   const c = centerOf(hex);
   const open = safeHtml`<svg class="hex lift ${sideClass(top.side)}" x="${(c.x - HEX_W / 2).toFixed(2)}" y="${(c.y - HEX_H / 2).toFixed(2)}" width="${HEX_W.toFixed(2)}" height="${HEX_H.toFixed(2)}" viewBox="${TILE_VIEWBOX}" aria-hidden="true">`;
-  return `${open.markup}${tileHtml(top.bug)}</svg>`;
+  return `${open.markup}${faceHtml({ x: 0, y: 0 }, top.bug)}</svg>`;
 };
 
 /**

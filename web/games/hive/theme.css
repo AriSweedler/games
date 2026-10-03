@@ -561,6 +561,12 @@ label {
 .drag-ghost.landing {
   transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+/* A board tile's ghost is the lift's clone, an `<svg>` of its own on the body: its shadow and
+   bevel reach past the viewBox, as the tray tile's do (`.hand-tile svg.tile`), so it is not clipped
+   to the hex's box. */
+svg.drag-ghost {
+  overflow: visible;
+}
 .drag-ghost .count {
   display: none;
 }

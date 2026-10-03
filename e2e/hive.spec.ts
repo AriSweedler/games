@@ -20,7 +20,7 @@
 import type { Page } from '@playwright/test';
 
 import type { Bug } from '../web/games/hive/src/engine/pieces.ts';
-import { DESKTOP, PHONE, type Viewport } from './fixtures/geometry.ts';
+import { DESKTOP, PHONE, readFrame, type Viewport } from './fixtures/geometry.ts';
 import { hiveAct, hiveStartLocal, requireView } from './fixtures/hive.ts';
 import { pagePath } from './fixtures/site.ts';
 import { expect, test } from './fixtures/two-players.ts';
@@ -185,12 +185,20 @@ const dragAt = (viewport: Viewport): void => {
     await expect(ant).toHaveClass(/dragging/);
     await expect(page.locator(GHOST)).toHaveCount(1);
     await expect(page.locator('#board .hex.drop')).toHaveCount(0);
+    // The ghost is the tile's size, and it keeps its offset from the pointer as it follows.
+    const lifted = await centreOf(page, GHOST);
+    expect(Math.abs(lifted.w - antAt.w)).toBeLessThanOrEqual(1);
+    expect(Math.abs(lifted.h - antAt.h)).toBeLessThanOrEqual(1);
+    const grab = { x: lifted.x - (antAt.x + 12), y: lifted.y - (antAt.y - 12) };
     // The hex is a thumb's target; beside it, outside its box but inside the snap, it takes the drop.
     const to = await centreOf(page, '#board .hex.lit');
     expect(to.w).toBeGreaterThanOrEqual(44);
     expect(to.h).toBeGreaterThanOrEqual(44);
     await page.mouse.move(to.x + to.w * 0.7, to.y, { steps: 4 });
     await expect(litHex).toHaveClass(/drop/);
+    const carried = await centreOf(page, GHOST);
+    expect(Math.abs(carried.x - (to.x + to.w * 0.7) - grab.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(carried.y - to.y - grab.y)).toBeLessThanOrEqual(1);
     // Far away again: dark. Back over it and released: the Ant is down and Black's view is up.
     await page.mouse.move(antAt.x, antAt.y, { steps: 4 });
     await expect(page.locator('#board .hex.drop')).toHaveCount(0);
@@ -224,10 +232,24 @@ const dragAt = (viewport: Viewport): void => {
     await expect(page.locator('#myName')).toHaveText(seated(1));
     const queen = page.locator('#board .hex.b.movable');
     await expect(queen).toHaveCount(1);
-    await lift(page, await centreOf(page, '#board .hex.b.movable'), 0, -12);
+    const queenAt = await centreOf(page, '#board .hex.b.movable');
+    await lift(page, queenAt, 0, -12);
     await expect(page.locator('#board .hex.picked')).toHaveCount(1);
     await expect(page.locator('#board svg.lift')).toHaveCount(1);
     await expect(page.locator(GHOST)).toHaveCount(1);
+    // The ghost lifts in place: the lift's clone sits on the Queen's own cell, her box to the
+    // pixel (both read in-page: `boundingBox()` measures an SVG `g` by another box); and while
+    // the pointer is still over her cell no lit neighbour takes the drop.
+    const PICKED = '#board .hex.picked';
+    const frame = await readFrame(page, [GHOST, PICKED]);
+    const [ghostBox, cellBox] = [frame[GHOST], frame[PICKED]];
+    if (ghostBox === null || ghostBox === undefined || cellBox === null || cellBox === undefined)
+      throw new Error('the ghost or the picked cell has no box');
+    expect(Math.abs(ghostBox.x - cellBox.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(ghostBox.y - cellBox.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(ghostBox.w - cellBox.w)).toBeLessThanOrEqual(1);
+    expect(Math.abs(ghostBox.h - cellBox.h)).toBeLessThanOrEqual(1);
+    await expect(page.locator('#board .hex.drop')).toHaveCount(0);
     const target = page.locator('#board .hex.lit').first();
     const key = await target.getAttribute('data-hex');
     if (key === null) throw new Error('the lit hex has no key');
@@ -245,6 +267,7 @@ const dragAt = (viewport: Viewport): void => {
 };
 
 dragAt(PHONE);
+dragAt(DESKTOP);
 
 test("the Spider's path reads 1-2-3 over the aimed hex, and her move hops along it", async ({
   phone,

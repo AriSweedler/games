@@ -101,6 +101,22 @@ describe('nearestLit', () => {
     expect(nearestLit([{ key: 'fake', rect: rect(0, 0, 0, 0) }], { x: 0, y: 0 })).toBeNull();
     expect(nearestLit([], { x: 290, y: 335 })).toBeNull();
   });
+
+  test('the home the tile left: nothing takes the drop while the pointer is nearer its centre than the nearest lit hex; a home with no size is no home', () => {
+    // The cell west of the east hex, its centre (230, 335) one width from the east one's (290, 335).
+    const home = rect(200, 300, 60, 70);
+    // A tenth of a hex east of the home's centre: inside the east hex's snap, nearer home.
+    expect(nearestLit(targets, { x: 245, y: 335 })).toBe('east');
+    expect(nearestLit(targets, { x: 245, y: 335 }, home)).toBeNull();
+    // Past the midpoint: the east hex is nearer.
+    expect(nearestLit(targets, { x: 265, y: 335 }, home)).toBe('east');
+    expect(nearestLit(targets, { x: 290, y: 335 }, home)).toBe('east');
+    // The south hex from the home: the same rule on the diagonal.
+    expect(nearestLit(targets, { x: 240, y: 352 }, home)).toBeNull();
+    expect(nearestLit(targets, { x: 255, y: 378 }, home)).toBe('south');
+    // A home never measured (a fake's) holds nothing back.
+    expect(nearestLit(targets, { x: 245, y: 335 }, rect(0, 0, 0, 0))).toBe('east');
+  });
 });
 
 describe('bindDrag', () => {
@@ -181,7 +197,14 @@ describe('bindDrag', () => {
       t.liftGhost.style('top'),
       t.liftGhost.style('width'),
     ]).toEqual(['200px', '300px', '60px']);
+    // Back east, still over the Queen's own cell though inside the east hex's snap: no drop yet
+    // (the lift's box is the home); past the midpoint between the two centres the east hex takes it.
+    t.board.fire('pointermove', at(on, 245, 335));
+    expect(t.intents).toHaveLength(1);
+    t.board.fire('pointermove', at(on, 265, 335));
+    expect(t.intents.at(-1)).toEqual({ type: 'drag/over', hex: { q: 1, r: 0 } });
     t.board.fire('pointermove', at(on, 290, 335));
+    expect(t.intents).toHaveLength(2);
     expect(t.intents.at(-1)).toEqual({ type: 'drag/over', hex: { q: 1, r: 0 } });
     t.board.fire('pointerup', at(on, 290, 335));
     expect(t.intents.at(-1)).toEqual({ type: 'drag/end' });
