@@ -9,9 +9,10 @@
 import { describe, expect, test } from 'vitest';
 
 import type { GuestFrame, HostFrame } from '../../web/games/gin-rummy/src/protocol.ts';
-import { GuestSession, type GuestEvents } from '../../web/games/gin-rummy/src/net/guest.ts';
-import { HostSession, type HostEvents } from '../../web/games/gin-rummy/src/net/host.ts';
+import { GuestSession, HostSession } from '../../web/games/gin-rummy/src/net/sessions.ts';
 import type { NetDeps } from '../../web/shared/edge/peer.ts';
+import type { GuestEvents } from '../../web/shared/net/guest.ts';
+import type { HostEvents } from '../../web/shared/net/host.ts';
 import { fakeClock } from '../../web/shared/edge/clock.fake.ts';
 import { fakeBroker } from '../../web/shared/edge/transport.fake.ts';
 import { GIN_PEER_PREFIX } from '../../web/shared/lib/roomCode.ts';
@@ -21,8 +22,8 @@ const CODE = 'KQZM';
 const GUEST_TAGS: ReadonlySet<string> = new Set(['join', 'action']);
 
 type Table = Readonly<{
-  host: HostSession;
-  guest: GuestSession;
+  host: InstanceType<typeof HostSession>;
+  guest: InstanceType<typeof GuestSession>;
   hostGot: unknown[];
   guestGot: unknown[];
   flush: () => number;
@@ -41,7 +42,7 @@ const connectedTable = (): Table => {
   const hostGot: unknown[] = [];
   const guestGot: unknown[] = [];
   const quiet = (): void => undefined;
-  const hostEvents: HostEvents = {
+  const hostEvents: HostEvents<GuestFrame> = {
     status: quiet,
     toast: quiet,
     holdWakeLock: quiet,
@@ -50,7 +51,7 @@ const connectedTable = (): Table => {
     frame: (frame) => hostGot.push(frame),
     guestGone: quiet,
   };
-  const guestEvents: GuestEvents = {
+  const guestEvents: GuestEvents<HostFrame> = {
     status: quiet,
     toast: quiet,
     holdWakeLock: quiet,

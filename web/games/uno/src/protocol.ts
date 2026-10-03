@@ -102,7 +102,7 @@ export const decodeHostFrame = (raw: unknown): Result<HostFrame, DecodeFailure> 
 const seated = (opts: Room, seats: ReadonlyArray<TableSeat>, you: number): RoomWire =>
   opts.seatCount === 2 ? opts : { ...opts, seats, you };
 
-/** The frame sent when a guest's channel opens (net/host.ts's codec). */
+/** The frame sent when a guest's channel opens (net/sessions.ts's codec). */
 export const welcome = (
   myName: string,
   opts: Room,

@@ -25,8 +25,10 @@ import { legalActions } from './src/legal.ts';
 import { ClientSession } from './src/net/client.ts';
 import { HostSession } from './src/net/host.ts';
 import { clientTransport, hostTransport, type PeerDeps } from './src/net/peerjs.ts';
-import { GuestSession as ShellGuestSession } from './src/net/shell/guest.ts';
-import { HostSession as ShellHostSession } from './src/net/shell/host.ts';
+import {
+  GuestSession as ShellGuestSession,
+  HostSession as ShellHostSession,
+} from './src/net/shell/sessions.ts';
 import { isGuestFrame } from './src/protocol.ts';
 import { STORAGE_KEYS, soundEnabled } from './src/storage.ts';
 import { bindHelpFold } from './src/ui/helpFold.ts';

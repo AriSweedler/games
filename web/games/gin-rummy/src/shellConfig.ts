@@ -11,8 +11,8 @@
 // ui/state.ts's before the move; the constants and helpers the tests import are re-exported there.
 import type { ShellGameData } from '../../../shared/ui/shell.ts';
 import { applyAction, createGame, decodeState, viewFor } from './engine/index.ts';
-import { connectingMsg } from './net/guest.ts';
-import { OPENING_MSG, handoffMsg } from './net/host.ts';
+import { connectingMsg } from '../../../shared/net/guest.ts';
+import { OPENING_MSG, handoffMsg } from '../../../shared/net/host.ts';
 import { action, join, lobby, state, toast } from './protocol.ts';
 import { unlocksSandbox } from './sandbox.ts';
 import {

@@ -200,7 +200,7 @@ const seated = (opts: Room, seats: ReadonlyArray<TableSeat>, you: number): RoomW
   opts.seatCount === 2 ? opts : { ...opts, seats, you };
 
 /**
- * The frame sent when a guest's channel opens (the host session's codec, net/host.ts):
+ * The frame sent when a guest's channel opens (the host session's codec, net/sessions.ts):
  * `frames.welcome(myName, opts, seats, you)` of n-seat-sessions.md §7. `seats` is the table as
  * the host knows it at that moment (the newcomer's own row is not yet named: its join follows).
  */

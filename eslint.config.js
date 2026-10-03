@@ -40,9 +40,10 @@ const ALGORITHMS = ['**/*.algorithms.ts'];
 const EDGES = [
   'web/**/main.ts',
   'web/**/app/**/*.ts',
-  // fidice's peerjs.ts is the PeerJS adapter itself: it holds the deferred Peer (step 9); gin's
-  // and backgammon's host.ts/guest.ts are the wrappers over web/shared/net's sessions.
-  'web/games/*/src/net/{host,guest,client,session,peerjs}.ts',
+  // fidice's peerjs.ts is the PeerJS adapter itself: it holds the deferred Peer (step 9); its legacy
+  // host.ts, client.ts and session.ts are the pre-shell edges. A shell game's net/sessions.ts is a
+  // declaration over web/shared/net/sessions.ts and needs no edge rights.
+  'web/games/*/src/net/{host,client,session,peerjs}.ts',
   'web/**/view/vdom.ts',
   'web/shared/edge/**/*.ts',
   // The two-seat sessions (classes over the Peer) and the harness beside them (docs/design/shared-shell.md §4.5).

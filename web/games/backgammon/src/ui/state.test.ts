@@ -17,8 +17,8 @@ import {
   withPosition,
 } from '../engine/index.ts';
 import type { Dice, Seat, State, View } from '../engine/index.ts';
-import { connectingMsg } from '../net/guest.ts';
-import { OPENING_MSG, handoffMsg } from '../net/host.ts';
+import { connectingMsg } from '../../../../shared/net/guest.ts';
+import { OPENING_MSG, handoffMsg } from '../../../../shared/net/host.ts';
 import {
   action as actionFrame,
   lobby,

@@ -76,6 +76,7 @@ import {
   world,
   type World,
 } from './sessions.harness.ts';
+import { sessionsFor } from './sessions.ts';
 
 // ---------------------------------------------------------------------------------------------
 // A fake two-seat protocol: the shapes gin's legacy wire had, with a `size` room payload in place
@@ -1147,5 +1148,103 @@ describe('liveness across the sessions', () => {
     pass(w, 60_000);
     expect(w.since(mark)).toEqual([]);
     expect(w.spy.peers[1]?.conns).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// sessionsFor: the pair a game declares over its protocol (shell-hoist.md §4 K)
+// ---------------------------------------------------------------------------------------------
+
+describe('sessionsFor', () => {
+  const protocol = {
+    decodeGuestFrame,
+    decodeHostFrame,
+    welcome: (ctx: HostContext<Room>) => welcome(ctx.myName, ctx.size),
+    full: (): HostFrame => ({ t: 'full' }),
+    join: (name: string): GuestFrame => ({ t: 'join', name }),
+  };
+  const joinName = (frame: GuestFrame): string | null => (frame.t === 'join' ? frame.name : null);
+  const twoSeat = sessionsFor<GuestFrame, HostFrame, Room>(GAME, protocol);
+  const nSeat = sessionsFor<GuestFrame, HostFrame, Room>(GAME, { ...protocol, joinName });
+
+  test('Host is the shared host session under the game room id: the codec welcome on open, every option but the game passed through', () => {
+    const w = world();
+    const session = new twoSeat.Host(
+      { ...w.deps, read: cell(hostCtx({ size: 75 })).read, events: w.hostEvents },
+      { code: CODE, attempt: 1, resume: false },
+    );
+    expect(session).toBeInstanceOf(HostSession);
+    expect(session.kind).toBe('host');
+    w.broker.flush();
+    expect(w.broker.peers()).toEqual([ROOM]);
+    const guest = party(w, undefined);
+    w.broker.flush();
+    const conn = connectFrom(guest, ROOM);
+    w.broker.flush();
+    expect(guest.received).toEqual([{ t: 'welcome', hostName: 'Ann', size: 75 }]);
+    const mark = w.log.length;
+    conn.send({ t: 'join', name: 'Jeff' });
+    conn.send({ t: 'nonsense' });
+    w.broker.flush();
+    expect(w.since(mark)).toEqual([['frame', { t: 'join', name: 'Jeff' }]]);
+    const third = party(w, undefined);
+    w.broker.flush();
+    connectFrom(third, ROOM);
+    w.broker.flush();
+    // Held until the seated guest is heard again (liveness.ts), then told the room is full.
+    expect(third.received).toEqual([]);
+    conn.send(HEARTBEAT);
+    w.broker.flush();
+    expect(third.received).toEqual([{ t: 'full' }]);
+  });
+
+  test('Guest is the shared guest session into the game room: the codec join on open, decoded host frames reported', async () => {
+    const w = world({ ice: STUN_ONLY, path: 'direct' });
+    const host = hostAnswering(w, 50);
+    w.broker.flush();
+    const session = new twoSeat.Guest(
+      { ...w.deps, read: cell(guestCtx({ myName: 'Zoë' })).read, events: w.guestEvents },
+      { code: CODE, attempt: 1 },
+    );
+    expect(session).toBeInstanceOf(GuestSession);
+    expect(session.kind).toBe('guest');
+    await settle();
+    w.broker.flush();
+    expect(host.received).toEqual([{ t: 'join', name: 'Zoë' }]);
+    expect(w.log.slice(-2)).toEqual([
+      ['frame', { t: 'welcome', hostName: 'Ann', size: 50 }],
+      ['frame', { t: 'lobby', hostName: 'Ann', size: 50 }],
+    ]);
+  });
+
+  test('joinName rides into the host codec only when the game sets one: a returning name is reseated by it, and takes the lowest free seat without it', () => {
+    const rejoinSeat = (sessions: typeof twoSeat): unknown => {
+      const w = world({ seats: true });
+      // Bo takes seat 1 and Cal seat 2; both leave.
+      new sessions.Host(
+        { ...w.deps, read: cell(hostCtx()).read, events: w.hostEvents },
+        { code: CODE, attempt: 1, resume: false, capacity: 3 },
+      );
+      w.broker.flush();
+      const bo = connectFrom(party(w, undefined), ROOM);
+      w.broker.flush();
+      const cal = connectFrom(party(w, undefined), ROOM);
+      w.broker.flush();
+      bo.send({ t: 'join', name: 'Bo' });
+      cal.send({ t: 'join', name: 'Cal' });
+      w.broker.flush();
+      bo.close();
+      cal.close();
+      w.broker.flush();
+      // Cal is back: seat 1 is the lowest free one, seat 2 the one that knew the name.
+      const back = connectFrom(party(w, undefined), ROOM);
+      w.broker.flush();
+      const mark = w.log.length;
+      back.send({ t: 'join', name: 'Cal' });
+      w.broker.flush();
+      return w.since(mark);
+    };
+    expect(rejoinSeat(nSeat)).toEqual([['frame', { t: 'join', name: 'Cal' }, 2]]);
+    expect(rejoinSeat(twoSeat)).toEqual([['frame', { t: 'join', name: 'Cal' }, 1]]);
   });
 });

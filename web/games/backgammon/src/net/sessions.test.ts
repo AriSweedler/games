@@ -17,9 +17,10 @@ import {
   party,
   world,
 } from '../../../../shared/net/sessions.harness.ts';
-import type { GuestFrame, HostFrame } from '../protocol.ts';
-import { CONNECTED_MSG, GuestSession } from './guest.ts';
-import { HostSession, WAITING_MSG, type Room } from './host.ts';
+import { CONNECTED_MSG } from '../../../../shared/net/guest.ts';
+import { WAITING_MSG } from '../../../../shared/net/host.ts';
+import type { GuestFrame, HostFrame, Room } from '../protocol.ts';
+import { GuestSession, HostSession } from './sessions.ts';
 
 /** backgammon-board.md §5.2: prefix `sheshbesh-`, the code upper case. */
 const ROOM = peerIdFor('backgammon', CODE);

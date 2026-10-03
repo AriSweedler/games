@@ -410,21 +410,18 @@ export const joinName = (frame: GuestFrame): string | null =>
   frame.t === 'join' ? frame.name : null;
 `;
 
-const hostTs = (
+const sessionsTs = (
   slug: string,
   title: string,
-): string => `// ${title}'s host session: the shared session (web/shared/net/host.ts) with protocol.ts as its codec
-// and '${slug}' as the table's game, so the peer id is \`${slug}-<CODE>\` (web/shared/lib/roomCode.ts).
-import {
-  HostSession as SharedHostSession,
-  type HostCodec,
-  type HostContext as SharedHostContext,
-  type HostDeps as SharedHostDeps,
-  type HostOptions as SharedHostOptions,
-} from '../../../../shared/net/host.ts';
+): string => `// ${title}'s sessions: the shared pair (web/shared/net/sessions.ts) bound to '${slug}', so the peer
+// id is \`${slug}-<CODE>\` (web/shared/lib/roomCode.ts), with protocol.ts as the codec. One guest
+// seat: the welcome carries the room's one term, two seats.
+import { sessionsFor } from '../../../../shared/net/sessions.ts';
 import {
   decodeGuestFrame,
+  decodeHostFrame,
   full,
+  join,
   joinName,
   welcome,
   type GuestFrame,
@@ -432,51 +429,17 @@ import {
   type Room,
 } from '../protocol.ts';
 
-export { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../../shared/net/host.ts';
-
-export type HostContext = SharedHostContext<Room>;
-export type HostDeps = SharedHostDeps<GuestFrame, Room>;
-export type HostOptions = Omit<SharedHostOptions, 'game'>;
-
-const codec: HostCodec<GuestFrame, HostFrame, Room> = {
-  decode: decodeGuestFrame,
-  welcome: (ctx) => welcome(ctx.myName, { seatCount: 2 }),
-  full,
-  joinName,
-};
-
-export class HostSession extends SharedHostSession<GuestFrame, HostFrame, Room> {
-  constructor(deps: HostDeps, opts: HostOptions) {
-    super(deps, codec, { ...opts, game: '${slug}' });
-  }
-}
-`;
-
-const guestTs = (
-  slug: string,
-  title: string,
-): string => `// ${title}'s guest session: the shared session (web/shared/net/guest.ts) with protocol.ts as its codec
-// and '${slug}' as the table's game, so it connects to \`${slug}-<CODE>\` (web/shared/lib/roomCode.ts).
-import {
-  GuestSession as SharedGuestSession,
-  type GuestCodec,
-  type GuestDeps as SharedGuestDeps,
-  type GuestOptions as SharedGuestOptions,
-} from '../../../../shared/net/guest.ts';
-import { decodeHostFrame, join, type GuestFrame, type HostFrame } from '../protocol.ts';
-
-export { connectingMsg } from '../../../../shared/net/guest.ts';
-
-export type GuestDeps = SharedGuestDeps<HostFrame>;
-export type GuestOptions = Omit<SharedGuestOptions, 'game'>;
-
-const codec: GuestCodec<GuestFrame, HostFrame> = { decode: decodeHostFrame, join };
-
-export class GuestSession extends SharedGuestSession<GuestFrame, HostFrame> {
-  constructor(deps: GuestDeps, opts: GuestOptions) {
-    super(deps, codec, { ...opts, game: '${slug}' });
-  }
-}
+export const { Host: HostSession, Guest: GuestSession } = sessionsFor<GuestFrame, HostFrame, Room>(
+  '${slug}',
+  {
+    decodeGuestFrame,
+    decodeHostFrame,
+    welcome: (ctx) => welcome(ctx.myName, { seatCount: 2 }),
+    full,
+    join,
+    joinName,
+  },
+);
 `;
 
 const storageTs = (
@@ -1430,8 +1393,7 @@ import { browserStore } from '../../shared/edge/storage.ts';
 import { aboutHtml } from '../../shared/ui/glossary.ts';
 import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { legalActions, type Action, type View } from './src/engine/view.ts';
-import { GuestSession } from './src/net/guest.ts';
-import { HostSession } from './src/net/host.ts';
+import { GuestSession, HostSession } from './src/net/sessions.ts';
 import { isGuestFrame } from './src/protocol.ts';
 import { STORAGE_KEYS, soundEnabled } from './src/storage.ts';
 import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
@@ -1919,8 +1881,7 @@ export const generatedFiles = (spec: NewGameSpec): ReadonlyArray<GeneratedFile> 
     { path: `${g}/src/engine/view.ts`, content: viewTs(n.slug, n.title) },
     { path: `${g}/src/engine/view.test.ts`, content: viewTestTs(n.title) },
     { path: `${g}/src/protocol.ts`, content: protocolTs(n.slug, n.title) },
-    { path: `${g}/src/net/host.ts`, content: hostTs(n.slug, n.title) },
-    { path: `${g}/src/net/guest.ts`, content: guestTs(n.slug, n.title) },
+    { path: `${g}/src/net/sessions.ts`, content: sessionsTs(n.slug, n.title) },
     { path: `${g}/src/storage.ts`, content: storageTs(n.slug, n.title) },
     {
       path: `${g}/src/shellConfig.ts`,

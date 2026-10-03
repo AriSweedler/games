@@ -99,7 +99,7 @@ import type {
   To,
   View,
 } from '../engine/types.ts';
-import type { GuestContext } from '../net/guest.ts';
+import type { GuestContext } from '../../../../shared/net/guest.ts';
 import { action as actionFrame } from '../protocol.ts';
 import { BACKGAMMON_SHELL, parseMatchLength } from '../shellConfig.ts';
 import {
