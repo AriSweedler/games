@@ -1009,7 +1009,18 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
   }>;
   table: Readonly<{
     initial: G['Table'];
-    reset: (table: G['Table'], at: TableReset) => G['Table'];
+    /**
+     * The table at each shared reset site (`TableReset`). Absent, the default (`tableReset`): the
+     * initial table with `keeps` carried over where the site starts over, the table as it is
+     * elsewhere; a game whose sites all read that way (uno) spells only `keeps`.
+     */
+    reset?: (table: G['Table'], at: TableReset) => G['Table'];
+    /**
+     * What the default reset carries from the old table into the fresh one at a start, the
+     * handoff, a leave and the host lost: the fields that are a preference of the device, not of
+     * the game (uno's extra names). Absent, nothing.
+     */
+    keeps?: ReadonlyArray<keyof G['Table']>;
     /**
      * The state side of a paint against the view: `prev` is the view it replaces, `ctx` the clock
      * for backgammon's R14 beat, read by the game that needs it and never here (gin's DOM parity
@@ -1168,6 +1179,38 @@ const refuseWith = <G extends ShellTypes>(
   message: string,
   cfg: ShellConfig<G>,
 ): Step<G> => (cfg.table.refuse ?? defaultRefuse)(app, message);
+/**
+ * The reset sites that start the table over (a pass-and-play start, the handoff, a leave, the
+ * host lost) against the ones that keep it (a deal, a view, an applied action, a guest's frame):
+ * the split every game's `reset` drew before the default took it (shell-hoist.md row P).
+ */
+const STARTS_OVER: Readonly<Record<TableReset, boolean>> = {
+  startLocal: true,
+  handoff: true,
+  leave: true,
+  lost: true,
+  deal: false,
+  view: false,
+  applied: false,
+  frame: false,
+};
+export const startsOver = (at: TableReset): boolean => STARTS_OVER[at];
+/**
+ * `table.reset` absent: at a site that starts over, the initial table with `keeps` carried from
+ * the old one; elsewhere the table as it is. Exported for the game that spells one more site over
+ * it (flip7's deal drops its pause).
+ */
+export const tableReset =
+  <T extends object>(initial: T, keeps: ReadonlyArray<keyof T>) =>
+  (table: T, at: TableReset): T =>
+    startsOver(at) ? { ...initial, ...Object.fromEntries(keeps.map((k) => [k, table[k]])) } : table;
+/** `cfg.table.reset(table, at)`, or the default over `cfg.table.initial` and `cfg.table.keeps`. */
+const resetWith = <G extends ShellTypes>(
+  table: G['Table'],
+  at: TableReset,
+  cfg: ShellConfig<G>,
+): G['Table'] =>
+  (cfg.table.reset ?? tableReset(cfg.table.initial, cfg.table.keeps ?? []))(table, at);
 /** `modes.parse` absent: `local` is local and anything else online, shown and stored alike. */
 const defaultModeParse = (raw: string): Readonly<{ shown: PlayMode; stored: PlayMode }> => {
   const mode: PlayMode = raw === 'local' ? 'local' : 'online';
@@ -1624,6 +1667,68 @@ export const fresh = (
   key: string,
 ): Readonly<{ mem: CueMemory; fresh: boolean }> => ({ mem: { key }, fresh: mem.key !== key });
 
+/** A game whose cue memory is the plain `CueMemory` (every game but gin): what `cuesFor` reads. */
+export type CuedTypes = ShellTypes & Readonly<{ Cues: CueMemory }>;
+/**
+ * A game's cue machine as a table (shell-hoist.md row P): `key` names a position, so a re-sent
+ * frame (the same key) plays nothing; `between` gives the cues for the change from one view to the
+ * next (ui/sound.ts `cuesBetween`; flip7's reads the role and fidice's the chair off `app`);
+ * `myTurn` says whether the view is my turn, for the `yourTurn` an online turn landing on my seat
+ * adds. Absent, no turn is announced here (fidice's `cuesBetween` announces its own).
+ */
+export type CueMachine<G extends CuedTypes> = Readonly<{
+  key: (view: G['View']) => string;
+  between: (prev: G['View'], next: G['View'], app: ShellApp<G>) => ReadonlyArray<G['Cue']>;
+  myTurn?: (view: G['View']) => boolean;
+}>;
+/** What one paint plays: the position's key, whether it is new since the last paint, and the cues (none for a repaint or a first view). */
+export type Cued<G extends CuedTypes> = Readonly<{
+  key: string;
+  fresh: boolean;
+  cues: ReadonlyArray<Cue<G>>;
+}>;
+/** The machine run once against `view` and the memory: fresh when the key is new and there is a `prev` to play the change from. */
+export const cuesFor = <G extends CuedTypes>(
+  app: ShellApp<G>,
+  prev: G['View'] | null,
+  view: G['View'],
+  machine: CueMachine<G>,
+): Cued<G> => {
+  const key = machine.key(view);
+  const fresh = prev !== null && key !== app.shell.cues.key;
+  if (!fresh) return { key, fresh, cues: [] };
+  const online = app.shell.role === 'host' || app.shell.role === 'guest';
+  const mine = (v: G['View']): boolean => machine.myTurn?.(v) ?? false;
+  const myTurnNow = online && mine(view) && !mine(prev);
+  return {
+    key,
+    fresh,
+    cues: [...machine.between(prev, view, app), ...(myTurnNow ? (['yourTurn'] as const) : [])],
+  };
+};
+/** The `fx` effect for a cue. */
+export const fx = <C extends string>(cue: C): Readonly<{ type: 'fx'; cue: C }> => ({
+  type: 'fx',
+  cue,
+});
+/**
+ * The `rendered` of the shared shape (uno's and fidice's whole, flip7's first half): the table is
+ * the screen while a view is held, the cues since `prev` play once per position and the memory
+ * is keyed on it. A game with more to do at a paint runs its own over `cuesFor` (hive) or maps
+ * this step (flip7's pause).
+ */
+export const cueStep =
+  <G extends CuedTypes>(machine: CueMachine<G>) =>
+  (app: ShellApp<G>, prev: G['View'] | null): Step<G> => {
+    const view = app.shell.view;
+    if (view === null) return pure(app);
+    const { key, cues } = cuesFor(app, prev, view, machine);
+    return step(
+      withShell(app, { cues: { ...app.shell.cues, key }, screen: 'tableScreen' }),
+      ...cues.map(fx),
+    );
+  };
+
 // ---- the finished game's record ---------------------------------------------------------------
 
 /**
@@ -1728,7 +1833,7 @@ export const broadcast = <G extends ShellTypes>(
     step(
       {
         shell: { ...app.shell, view: cfg.engine.viewFor(game, 0) },
-        table: cfg.table.reset(app.table, 'view'),
+        table: resetWith(app.table, 'view', cfg),
       },
       ...sends,
       { type: 'persist' },
@@ -1753,7 +1858,7 @@ export const hostDispatch = <G extends ShellTypes>(
       ? refuseWith(app, res.error, cfg)
       : step(app, sendTo(cfg.frames.toast(res.error), seat, cfg));
   return broadcast(
-    { shell: { ...app.shell, game: res.value }, table: cfg.table.reset(app.table, 'applied') },
+    { shell: { ...app.shell, game: res.value }, table: resetWith(app.table, 'applied', cfg) },
     ctx,
     cfg,
   );
@@ -1777,7 +1882,7 @@ export const localBroadcast = <G extends ShellTypes>(
     step(
       {
         shell: { ...app.shell, view: cfg.engine.viewFor(game, seat) },
-        table: { ...cfg.table.reset(app.table, 'view'), curtain },
+        table: { ...resetWith(app.table, 'view', cfg), curtain },
       },
       { type: 'persist' },
       ...(curtain !== null && !initial ? [{ type: 'fx', cue: 'yourTurn' } as const] : []),
@@ -1810,7 +1915,7 @@ export const localSeated = <G extends ShellTypes>(
       rotationHintShown: false,
       ...SHEETS_AWAY,
     },
-    table: cfg.table.reset(app.table, 'startLocal'),
+    table: resetWith(app.table, 'startLocal', cfg),
   };
 };
 
@@ -1857,7 +1962,7 @@ const loadPosition = <G extends ShellTypes>(
         rotationHintShown: false,
         ...SHEETS_AWAY,
       },
-      table: cfg.table.reset(app.table, 'startLocal'),
+      table: resetWith(app.table, 'startLocal', cfg),
     },
     true,
     ctx,
@@ -2113,7 +2218,7 @@ const guestFrame = <G extends ShellTypes>(
             oppConnected: true,
             seatedName: named ?? app.shell.seatedName,
           },
-          table: cfg.table.reset(app.table, 'frame'),
+          table: resetWith(app.table, 'frame', cfg),
         },
         app.shell.view,
         ctx,
@@ -2318,7 +2423,7 @@ const handoff = <G extends ShellTypes>(
           rotationHintShown: false,
           ...SHEETS_AWAY,
         },
-        table: cfg.table.reset(app.table, 'handoff'),
+        table: resetWith(app.table, 'handoff', cfg),
       },
       [{ name: guest, connected: false }],
     ),
@@ -2359,7 +2464,7 @@ const leaveFinish = <G extends ShellTypes>(app: ShellApp<G>, cfg: ShellConfig<G>
         // from bringing the rules back over it).
         ...SHEETS_AWAY,
       },
-      table: cfg.table.reset(app.table, 'leave'),
+      table: resetWith(app.table, 'leave', cfg),
     },
     { type: 'clearSave' },
     { type: 'initHome' },
@@ -2688,7 +2793,7 @@ export const reduceShell = <G extends ShellTypes>(
       // The deal is a tap: the Android lock rides it (`lockSideways`), before the table paints.
       return andThen(lockSideways(app, ctx, cfg), (a) =>
         broadcast(
-          { shell: { ...a.shell, game, ...SHEETS_AWAY }, table: cfg.table.reset(a.table, 'deal') },
+          { shell: { ...a.shell, game, ...SHEETS_AWAY }, table: resetWith(a.table, 'deal', cfg) },
           ctx,
           cfg,
         ),
@@ -2706,7 +2811,7 @@ export const reduceShell = <G extends ShellTypes>(
     case 'guest/lost': {
       const lost: ShellApp<G> = {
         shell: { ...s, oppConnected: false, ...SHEETS_AWAY },
-        table: cfg.table.reset(app.table, 'lost'),
+        table: resetWith(app.table, 'lost', cfg),
       };
       const v = lost.shell.view;
       if (v !== null && !cfg.engine.over(v))

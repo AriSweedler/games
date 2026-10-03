@@ -42,6 +42,7 @@ import {
   SHELL_SCREENS,
   andThen as then,
   broadcast,
+  cueStep,
   guestContextOf as shellGuestContextOf,
   hostContextOf as shellHostContextOf,
   initialShell as shellInitial,
@@ -61,6 +62,7 @@ import {
   withShell,
   withTable,
   type Ctx,
+  type CueMachine,
   type Effect as SharedEffect,
   type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
@@ -435,8 +437,6 @@ export type Effect = SharedEffect<Fidice>;
 export type Step = SharedStep<Fidice>;
 export type Context = Ctx;
 
-const fx = (cue: Cue): Effect => ({ type: 'fx', cue });
-
 /** A refused action: the toast; the picker's choice is dropped so the table matches the state. */
 const refuse = (app: App, message: string): Step =>
   step(withTable(app, { picker: EMPTY_PICKER }), toast(message));
@@ -491,23 +491,21 @@ export const cuesBetween = (prev: PublicState, next: PublicState, app: App): Rea
 };
 
 /**
- * The state side of a paint against the view (`cfg.table.rendered`): the table screen shown, the
- * cue memory keyed on the position, the cues new since `prev` once per position (a re-sent frame
- * plays nothing). A view with no `prev` (a resume, a reconnect, `position/load`) paints cold. The
- * clock is not read here (docs/design/fidice-shell-adoption.md §6 lesson (b)).
+ * The paint's cues (the shell's `cueStep`): once per position, `cuesBetween` for the change (it
+ * announces my turn itself, by the chair). A view with no `prev` (a resume, a reconnect,
+ * `position/load`) paints cold.
  */
-const rendered = (app: App, prev: PublicState | null): Step => {
-  const view = app.shell.view;
-  if (view === null) return pure(app);
-  const key = cueKey(view);
-  const fresh = prev !== null && key !== app.shell.cues.key;
-  const cues = fresh ? cuesBetween(prev, view, app) : [];
-  return step(
-    { shell: { ...app.shell, cues: { key }, screen: 'tableScreen' }, table: app.table },
-    ...cues.map(fx),
-    { type: 'scrollTop' },
-  );
-};
+const CUE_MACHINE: CueMachine<Fidice> = { key: cueKey, between: cuesBetween };
+
+/**
+ * The state side of a paint against the view (`cfg.table.rendered`): the shell's cue step, then
+ * the scroll to the top at every paint of a view. The clock is not read here
+ * (docs/design/fidice-shell-adoption.md §6 lesson (b)).
+ */
+const rendered = (app: App, prev: PublicState | null): Step =>
+  app.shell.view === null
+    ? pure(app)
+    : then(cueStep(CUE_MACHINE)(app, prev), (a) => step(a, { type: 'scrollTop' }));
 
 // ---- pass the phone: whose view, and when the curtain rises (plan §7 D8, the legacy `handoffFor`) ----
 

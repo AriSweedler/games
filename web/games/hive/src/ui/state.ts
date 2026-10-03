@@ -26,7 +26,9 @@ import {
   NOT_CONNECTED_MSG,
   andThen as then,
   broadcast,
+  cuesFor,
   errorToast,
+  fx,
   guestContextOf as shellGuestContextOf,
   hostContextOf as shellHostContextOf,
   initialShell as shellInitial,
@@ -37,11 +39,13 @@ import {
   readHome as shellReadHome,
   reduceShell,
   resumeFor as shellResumeFor,
+  startsOver,
   step,
   toast,
   withShell,
   withTable,
   type Ctx,
+  type CueMachine,
   type Effect as SharedEffect,
   type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
@@ -217,8 +221,6 @@ export const initialTable: Table = {
   proposal: null,
 };
 
-const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
-
 /**
  * The table with `picked` in hand (or nothing); a new pick aims at nothing yet, proposes nothing,
  * and dismisses any peek (the pointer may still rest on its badge: `peekShut`).
@@ -281,22 +283,21 @@ export const moveHop = (
 const cueKey = (v: View): string =>
   `${String(v.startedAt)}:${String(turnsOf(v))}:${v.game.turn}:${v.game.result === null ? 'on' : 'over'}`;
 
+/** The paint's cues (the shell's `cuesFor`): once per position, `cuesBetween` for the change, "your turn" when an online turn lands on my seat. */
+const CUE_MACHINE: CueMachine<Hive> = {
+  key: cueKey,
+  between: cuesBetween,
+  myTurn: (v) => turnSeat(v.game) === v.seat,
+};
+
 /**
- * The state side of a paint: the table is the screen while a view is held; the cues come from the
- * change since `prev`, once per position, and "your turn" when an online turn lands on my seat. A
- * new position drops the pick; a new game (its clock) drops the result sheet's memory.
+ * The state side of a paint: the table is the screen while a view is held; the cues are the
+ * machine's. A new position drops the pick; a new game (its clock) drops the result sheet's memory.
  */
 const rendered = (app: App, prev: View | null, ctx: Ctx): Step => {
   const view = app.shell.view;
   if (view === null) return pure(app);
-  const key = cueKey(view);
-  const fresh = prev !== null && key !== app.shell.cues.key;
-  const online = app.shell.role === 'host' || app.shell.role === 'guest';
-  const myTurnNow =
-    online && fresh && turnSeat(view.game) === view.seat && turnSeat(prev.game) !== view.seat;
-  const cues: ReadonlyArray<Cue> = fresh
-    ? [...cuesBetween(prev, view), ...(myTurnNow ? (['yourTurn'] as const) : [])]
-    : [];
+  const { key, fresh, cues } = cuesFor(app, prev, view, CUE_MACHINE);
   // A rematch: its clock, or (on a clock that stood still) the result cleared.
   const newGame =
     prev?.startedAt !== view.startedAt || (prev.game.result !== null && view.game.result === null);
@@ -329,28 +330,11 @@ const rendered = (app: App, prev: View | null, ctx: Ctx): Step => {
   );
 };
 
-const reset = (table: Table, at: TableReset): Table => {
-  switch (at) {
-    case 'startLocal':
-    case 'handoff':
-    case 'leave':
-    case 'lost':
-      return { ...initialTable, motion: table.motion, hints: table.hints };
-    case 'deal':
-    case 'view':
-    case 'applied':
-    case 'frame':
-      return {
-        ...table,
-        picked: null,
-        drag: null,
-        aim: null,
-        proposal: null,
-        peek: null,
-        peekShut: null,
-      };
-  }
-};
+/** A start keeps the two preferences; every other site keeps the table and drops what was picked up. */
+const reset = (table: Table, at: TableReset): Table =>
+  startsOver(at)
+    ? { ...initialTable, motion: table.motion, hints: table.hints }
+    : { ...table, picked: null, drag: null, aim: null, proposal: null, peek: null, peekShut: null };
 
 /**
  * `localBroadcast`'s seat: the actor's view while the game is on, the phone holder's once it is

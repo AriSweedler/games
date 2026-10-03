@@ -249,8 +249,8 @@ describe('what the boot and the sessions read back', () => {
     expect(loaded.app.shell.game?.seats.map((s) => s.name)).toEqual(['Ari', 'Lavi']);
     expect(loaded.app.table.curtain).toBeNull();
     expect(FLIP7.local.revealer(game).seat).toBe(0);
-    expect(FLIP7.table.reset(started.app.table, 'leave')).toEqual(initialTable);
-    expect(FLIP7.table.reset(started.app.table, 'view')).toBe(started.app.table);
+    expect(FLIP7.table.reset?.(started.app.table, 'leave')).toEqual(initialTable);
+    expect(FLIP7.table.reset?.(started.app.table, 'view')).toBe(started.app.table);
   });
 
   test('a flip, a bust and a Flip 7 each cue once; a repaint cues nothing', () => {
