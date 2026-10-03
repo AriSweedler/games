@@ -72,13 +72,12 @@ import {
   type Intent,
 } from './state.ts';
 
-/** The home screen (web/shared/ui/seatedHome.ts): the shell's, two to twelve on both steppers, the third to twelfth names shown with the count (`#moreNames`). */
+/** The home screen (web/shared/ui/seatedHome.ts): the shell's, two to twelve on both steppers, the shared name grid (`#seatNames`) showing one input per seat. */
 const home = seatedHome<Flip7>({
   seats: { min: MIN_SEATS, max: MAX_SEATS },
   localNames: DEFAULT_LOCAL_NAMES,
   allNames: namesOf,
   tabs: HOME_TABS,
-  group: 'moreNames',
 });
 
 export const STATUS_LABEL: Readonly<Record<Status, string>> = {

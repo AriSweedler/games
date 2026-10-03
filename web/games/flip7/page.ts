@@ -1,8 +1,9 @@
 // Flip 7's shell page (docs/design/flip7.md §8): what tools/shell-markup.ts fills
 // web/shared/markup/shell/*.html with to compose ./index.html, which test/dist/shell-markup.test.ts
-// pins byte for byte. The residue here is the head, the two Players steppers (two to twelve), the
-// twelve pass-and-play name inputs, the table (the topbar, the names strip, the round, every seat's
-// line, Hit and Stay, the taker picker, the round's scores) and the endgame screen the shell requires.
+// pins byte for byte. The residue here is the head, the two Players steppers (two to twelve) over
+// the shared name grid (web/shared/markup/seatNames.ts, one input per seat), the table (the topbar,
+// the names strip, the round, every seat's line, Hit and Stay, the taker picker, the round's
+// scores) and the endgame screen the shell requires.
 import { THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
 import {
   type ShellBlocks,
@@ -11,6 +12,7 @@ import {
   type ShellPage,
   endgamePlaceholder,
 } from '../../shared/markup/shell.ts';
+import { seatNamesHtml } from '../../shared/markup/seatNames.ts';
 import { seatedHostFields, stepperHtml } from '../../shared/markup/stepper.ts';
 
 /** Both steppers' bounds and first value: two to twelve players (the owner, 2026-10-02). */
@@ -49,106 +51,7 @@ const blocks: ShellBlocks = {
   hostFields: seatedHostFields(PLAYERS),
   localFields: `            <div class="card-box">
 ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
-              <div class="row">
-                <input
-                  type="text"
-                  id="p1NameInput"
-                  class="grow"
-                  placeholder="Player 1"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p2NameInput"
-                  class="grow"
-                  placeholder="Player 2"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-              </div>
-              <div class="more-names hidden" id="moreNames">
-                <input
-                  type="text"
-                  id="p3NameInput"
-                  class="grow"
-                  placeholder="Player 3"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p4NameInput"
-                  class="grow"
-                  placeholder="Player 4"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p5NameInput"
-                  class="grow"
-                  placeholder="Player 5"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p6NameInput"
-                  class="grow"
-                  placeholder="Player 6"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p7NameInput"
-                  class="grow"
-                  placeholder="Player 7"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p8NameInput"
-                  class="grow"
-                  placeholder="Player 8"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p9NameInput"
-                  class="grow"
-                  placeholder="Player 9"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p10NameInput"
-                  class="grow"
-                  placeholder="Player 10"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p11NameInput"
-                  class="grow"
-                  placeholder="Player 11"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p12NameInput"
-                  class="grow"
-                  placeholder="Player 12"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-              </div>
+${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
             </div>`,
   table: `      <!-- TABLE (docs/design/flip7.md §8): every seat's line, face up, in seat order; mine is
            marked data-you. Hit and Stay show for the seat whose turn it is, the taker picker for the
