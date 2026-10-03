@@ -39,6 +39,7 @@
 // and re-send the lobby to every connected seat; the host's watch toggle sets `opts.watch`.
 import type { Rng } from '../../../../shared/lib/rng.ts';
 import {
+  SHELL_SCREENS,
   andThen as then,
   broadcast,
   guestContextOf as shellGuestContextOf,
@@ -161,14 +162,7 @@ export { DEFAULT_PLAY_MODE, HOME_TABS, type ExtraSeat, type HomeTab, type PlayMo
 // ---- the state ---------------------------------------------------------------------------------
 
 /** The five top-level screens `showScreen` toggles between, and the bot config screen (page.ts `extraScreens`). */
-export const SCREENS = [
-  'homeScreen',
-  'hostWaitScreen',
-  'guestWaitScreen',
-  'tableScreen',
-  'endgameScreen',
-  'configScreen',
-] as const;
+export const SCREENS = [...SHELL_SCREENS, 'configScreen'] as const;
 export type ScreenId = (typeof SCREENS)[number];
 
 /** What the home screen's resume box offers, one per save role (the shared `ShellResume`; fidice adds none). */
@@ -223,7 +217,7 @@ export type Fidice = Readonly<{
   Table: Table;
   Tab: HomeTab;
   Mode: Mode;
-  Screen: ScreenId;
+  Screen: 'configScreen';
   Timer: GameTimer;
   Cue: Cue;
   Cues: CueMemory;

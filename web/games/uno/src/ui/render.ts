@@ -34,12 +34,9 @@ import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
   bindSheets,
-  connDotView,
-  paintConnDot,
-  paintHandoff as paintShellHandoff,
-  paintScreen as paintShellScreen,
   paintSheet,
-  paintWaiting as paintShellWaiting,
+  paintShellChrome,
+  shellButtons,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
 import { COLORS, type Card, type Color } from '../engine/cards.ts';
@@ -47,7 +44,7 @@ import { cardName } from '../engine/engine.ts';
 import type { View } from '../engine/view.ts';
 import { bindHome, paintHome } from './home.ts';
 import { flyCards, planFlights, type Flight } from './motion.ts';
-import { SCREENS, handoffLabel, listNames, type App, type Intent } from './state.ts';
+import { handoffLabel, listNames, type App, type Intent, type Uno } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 
@@ -129,7 +126,6 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   setHtml(requireId(doc, 'seats'), trustedHtml(seatsHtml(v)));
   setText(requireId(doc, 'myName'), nameAt(v, v.seat));
   setText(requireId(doc, 'oppName'), nameAt(v, (v.seat + 1) % Math.max(1, v.names.length)));
-  paintConnDot(doc, 'oppDot', connDotView(app.shell));
   setText(requireId(doc, 'direction'), v.direction === 1 ? '↻' : '↺');
   ensureKeyed(requireId(doc, 'topCard'), v.top.id, () => tileHtml(v.top, null).markup);
   const dot = requireId(doc, 'colorDot');
@@ -183,12 +179,13 @@ const paintOverlays = (doc: DocumentLike, app: App): void => {
 };
 
 export const paint = (doc: PageLike, app: App): void => {
-  paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
-  paintShellWaiting(doc, app.shell);
+  const game = app.shell.role === 'local' ? app.shell.game : null;
+  paintShellChrome(doc, app.shell, {
+    handoff: game !== null && game.game.names.length === 2 ? handoffLabel(game) : null,
+    connDot: 'oppDot',
+  });
   paintHome(doc, app);
   paintCurtain(doc, app);
-  const game = app.shell.role === 'local' ? app.shell.game : null;
-  paintShellHandoff(doc, game !== null && game.game.names.length === 2 ? handoffLabel(game) : null);
   const v = app.shell.view;
   // Planned before the table repaints: my played tile's slot goes with it (ui/motion.ts).
   const flights: ReadonlyArray<Flight> = v === null ? [] : planFlights(doc, v);
@@ -227,11 +224,7 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['callOutBtn', { type: 'act', action: { type: 'callOut' } }],
       ['rsAgainBtn', { type: 'act', action: { type: 'again' } }],
       ['rsLeaveBtn', { type: 'leave/request' }],
-      ['leaveBtn', { type: 'leave/request' }],
-      ['soundBtn', { type: 'sound/toggle' }],
-      ['handoffBtn', { type: 'handoff/click' }],
-      ['rulesBtnGame', { type: 'rules/open' }],
-      ['historyBtn', { type: 'history/open' }],
+      ...shellButtons<Uno>({ rules: { type: 'rules/open' }, history: { type: 'history/open' } }),
     ],
     { skipDisabled: true },
   );

@@ -58,12 +58,9 @@ import { paintRecentGames } from '../../../../shared/ui/recentGames.ts';
 import {
   bindButtons,
   bindSheets,
-  connDotView,
-  paintConnDot,
-  paintHandoff as paintShellHandoff,
-  paintScreen as paintShellScreen,
   paintSheet,
-  paintWaiting as paintShellWaiting,
+  paintShellChrome,
+  shellButtons,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
 import { columnAt, spiderPaths, stackAt, withIntent, type Game } from '../engine/engine.ts';
@@ -89,13 +86,13 @@ import { hopAlong } from './motion.ts';
 import {
   HIVE_HINTS,
   HIVE_MOTION,
-  SCREENS,
   handoffLabel,
   intentOf,
   placeableNow,
   reachable,
   type App,
   type Hints,
+  type Hive,
   type Hop,
   type Intent,
   type Motion,
@@ -448,7 +445,6 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   setText(requireId(doc, 'myName'), nameAt(v, v.seat));
   paintSwatch(doc, 'oppSide', other);
   setText(requireId(doc, 'oppName'), nameAt(v, other));
-  paintConnDot(doc, 'oppDot', connDotView(app.shell));
   const lift = app.table.drag !== null && picked?.kind === 'hex' ? picked.hex : null;
   // The aim a Spider's path is numbered to: a drag's nearest lit hex while one stands, else the hex the pointer is over.
   const aim = app.table.drag !== null ? app.table.drag.over : app.table.aim;
@@ -541,12 +537,13 @@ export const paintHints = (doc: DocumentLike, hints: Hints): void => {
 };
 
 export const paint = (doc: PageLike, app: App): void => {
-  paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
-  paintShellWaiting(doc, app.shell);
-  paintHome(doc, app);
-  // No curtain to paint: the shell composed `#curtainOverlay` hidden and `viewer` never raises it.
   const game = app.shell.role === 'local' ? app.shell.game : null;
-  paintShellHandoff(doc, game === null ? null : handoffLabel(game));
+  paintShellChrome(doc, app.shell, {
+    handoff: game === null ? null : handoffLabel(game),
+    connDot: 'oppDot',
+  });
+  // No curtain to paint: the shell composed `#curtainOverlay` hidden and `viewer` never raises it.
+  paintHome(doc, app);
   const v = app.shell.view;
   if (v !== null) paintTable(doc, app, v);
   paintMotion(doc, app.table.motion);
@@ -650,15 +647,11 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['rsContinueBtn', { type: 'result/continue' }],
       ['rsAgainBtn', { type: 'act', action: { type: 'again' } }],
       ['rsLeaveBtn', { type: 'leave/request' }],
-      ['leaveBtn', { type: 'leave/request' }],
-      ['soundBtn', { type: 'sound/toggle' }],
+      ...shellButtons<Hive>({ rules: { type: 'rules/open' }, history: { type: 'history/open' } }),
       ['motionBtn', { type: 'motion/toggle' }],
       ['hintsBtn', { type: 'hints/toggle' }],
       ['confirmBtn', { type: 'proposal/confirm' }],
       ['cancelBtn', { type: 'proposal/cancel' }],
-      ['handoffBtn', { type: 'handoff/click' }],
-      ['rulesBtnGame', { type: 'rules/open' }],
-      ['historyBtn', { type: 'history/open' }],
     ],
     { skipDisabled: true },
   );

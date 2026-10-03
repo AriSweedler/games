@@ -111,15 +111,6 @@ export {
   type PlayMode,
 };
 
-export const SCREENS = [
-  'homeScreen',
-  'hostWaitScreen',
-  'guestWaitScreen',
-  'tableScreen',
-  'endgameScreen',
-] as const;
-export type ScreenId = (typeof SCREENS)[number];
-
 /** `host/click` and `local/click` carry nothing beyond the names: a game for two has no option (the field is never set). */
 export type Raw = Readonly<{ seats?: never }>;
 
@@ -203,7 +194,7 @@ export type Hive = Readonly<{
   Table: Table;
   Tab: HomeTab;
   Mode: PlayMode;
-  Screen: ScreenId;
+  Screen: never;
   Timer: never;
   Cue: Cue;
   Cues: CueMemory;

@@ -72,15 +72,6 @@ import {
 
 export { EXTRA_SEATS, HOME_TABS, type ExtraSeat, type HomeTab, type PlayMode };
 
-export const SCREENS = [
-  'homeScreen',
-  'hostWaitScreen',
-  'guestWaitScreen',
-  'tableScreen',
-  'endgameScreen',
-] as const;
-export type ScreenId = (typeof SCREENS)[number];
-
 /** The raw values `host/click` and `local/click` carry: the two Players selects and the third to sixth names. */
 export type Raw = Readonly<{
   players?: string;
@@ -159,7 +150,7 @@ export type Flip7 = Readonly<{
   Table: Table;
   Tab: HomeTab;
   Mode: PlayMode;
-  Screen: ScreenId;
+  Screen: never;
   Timer: never;
   Cue: Cue;
   Cues: CueMemory;

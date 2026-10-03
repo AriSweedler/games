@@ -104,11 +104,9 @@ import {
   bindSheets as bindShellSheets,
   connDotClass as shellConnDotClass,
   connDotView,
-  paintConnDot,
-  paintHandoff as paintShellHandoff,
-  paintScreen as paintShellScreen,
   paintSheet,
-  paintWaiting as paintShellWaiting,
+  paintShellChrome,
+  shellButtons,
   showToast as showShellToast,
   type Sheet,
   type ToastMarks,
@@ -121,7 +119,7 @@ import { bindLocal, paintCurtain } from './local.ts';
 import { ABOUT_PARAGRAPHS } from './about.ts';
 import { GLOSSARY } from './glossary.ts';
 import { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
-import { SCREENS, handoffLabel, rollModalOpen, type App, type Intent } from './state.ts';
+import { handoffLabel, rollModalOpen, type App, type Backgammon, type Intent } from './state.ts';
 
 export type { PageLike };
 export type Dispatch = (intent: Intent) => void;
@@ -155,16 +153,6 @@ const paintRules = (doc: DocumentLike, app: App): void => {
   renderAbout(doc, variant);
 };
 
-/** `showScreen(id)`: every screen but `id` gets `hidden`; the table locks the body to the viewport. */
-export const paintScreen = (doc: PageLike, app: App): void => {
-  paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
-};
-
-/** `#roomCode`, `#hostWaitStatus` (+ its pulse), `#startGameBtn`, `#guestWaitStatus` (+ its pulse). */
-export const paintWaiting = (doc: DocumentLike, app: App): void => {
-  paintShellWaiting(doc, app.shell);
-};
-
 /** The hit toast (design §4.9) wears the one warm edge (`#toast.hit`). */
 export const HIT_TOAST_PREFIX = 'Kapará.';
 
@@ -176,15 +164,6 @@ export const toastMarks = (message: string): ToastMarks => ({
 /** `toast(msg)`'s DOM half: the text, the `hit` mark and the `show` class; main.ts keeps the hide timer. */
 export const showToast = (doc: DocumentLike, message: string): void => {
   showShellToast(doc, message, toastMarks(message));
-};
-
-/**
- * `#handoffBtn` (the 🌐 beside the menu button): a pass-and-play game can go on as a hosted room
- * (ui/state.ts `handoff`); the tooltip names who hosts and who joins. Pass-and-play alone shows it.
- */
-export const paintHandoff = (doc: DocumentLike, app: App): void => {
-  const game = app.shell.role === 'local' ? app.shell.game : null;
-  paintShellHandoff(doc, game === null ? null : handoffLabel(game));
 };
 
 // A sheet is an overlay a flag shows; the same flag's intent answers its close button, a tap on
@@ -237,12 +216,11 @@ const paintName = (el: Element, full: string): void => {
   setAttr(el, 'aria-label', full);
 };
 
-const paintOpponent = (doc: DocumentLike, app: App, v: View): void => {
+const paintOpponent = (doc: DocumentLike, v: View): void => {
   paintName(requireId(doc, 'oppName'), v.opp.name);
   // The disc before the name wears the seat's checker (theme.css `.seat-dot[data-seat]`): in
   // pass-and-play the seats swap with the mover, and the disc follows the name.
   setAttr(requireId(doc, 'oppSeatDot'), 'data-seat', String(v.opp.idx));
-  paintConnDot(doc, 'oppDot', connDotView(app.shell));
   setHtml(requireId(doc, 'pipsOpp'), trustedHtml(pipHtml(v.pips[v.opp.idx])));
   // The strip has no id of its own (design §2.1): the opponent's name pulses while they are to move.
   const strip = queryIn(requireId(doc, 'tableScreen'), '.opp-strip');
@@ -722,7 +700,7 @@ const hitPointsOf = (flights: ReadonlyArray<Flight>): ReadonlySet<PointIndex> =>
 
 const paintTable = (doc: DocumentLike, app: App, v: View, hits: ReadonlySet<PointIndex>): void => {
   paintSeat(doc, v);
-  paintOpponent(doc, app, v);
+  paintOpponent(doc, v);
   paintStatus(doc, app, v);
   paintPlaces(doc, v);
   paintHighlights(doc, app, v, hits);
@@ -768,12 +746,14 @@ const paintGame = (doc: PageLike, app: App): void => {
 
 /** Everything, from the App alone. */
 export const paint = (doc: PageLike, app: App): void => {
-  paintScreen(doc, app);
-  paintWaiting(doc, app);
+  const game = app.shell.role === 'local' ? app.shell.game : null;
+  paintShellChrome(doc, app.shell, {
+    handoff: game === null ? null : handoffLabel(game),
+    connDot: 'oppDot',
+  });
   paintHome(doc, app);
   paintRules(doc, app);
   paintCurtain(doc, app);
-  paintHandoff(doc, app);
   paintGame(doc, app);
   paintOverlays(doc, app);
 };
@@ -859,12 +839,11 @@ export const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['nextGameBtn', { type: 'next/click' }],
       ['takeBtn', { type: 'take/click' }],
       ['passBtn', { type: 'pass/click' }],
-      ['leaveBtn', { type: 'leave/request' }],
       ['menuBtn', { type: 'menu/toggle' }],
-      ['soundBtn', { type: 'sound/toggle' }],
-      ['handoffBtn', { type: 'handoff/click' }],
-      ['rulesBtnGame', { type: 'rules/toggle' }],
-      ['historyBtn', { type: 'history/toggle' }],
+      ...shellButtons<Backgammon>({
+        rules: { type: 'rules/toggle' },
+        history: { type: 'history/toggle' },
+      }),
     ],
     { skipDisabled: true },
   );

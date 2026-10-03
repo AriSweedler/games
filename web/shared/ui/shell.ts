@@ -120,14 +120,21 @@ export type PlayersOf<G extends ShellTypes> = [ExtraSeats<G>] extends [never]
   : ReadonlyArray<Player>;
 export type Tab<G extends ShellTypes> = 'play' | 'rules' | G['Tab'];
 export type Mode<G extends ShellTypes> = PlayMode | G['Mode'];
+/**
+ * The five screens every shell page carries (web/shared/markup/shell.ts composes them;
+ * shellPaint.ts `paintShellChrome` toggles them): a game with more spreads this list first
+ * (fidice's `configScreen`, gin's scorer pair) and names only the extra in `ShellTypes.Screen`.
+ */
+export const SHELL_SCREENS = [
+  'homeScreen',
+  'hostWaitScreen',
+  'guestWaitScreen',
+  'tableScreen',
+  'endgameScreen',
+] as const;
+export type ShellScreen = (typeof SHELL_SCREENS)[number];
 /** The five screens every shell page carries, and the game's own. */
-export type ScreenId<G extends ShellTypes> =
-  | 'homeScreen'
-  | 'hostWaitScreen'
-  | 'guestWaitScreen'
-  | 'tableScreen'
-  | 'endgameScreen'
-  | G['Screen'];
+export type ScreenId<G extends ShellTypes> = ShellScreen | G['Screen'];
 export type TimerId<G extends ShellTypes> = 'longPress' | G['Timer'];
 export type Cue<G extends ShellTypes> = 'tap' | 'yourTurn' | G['Cue'];
 /** The game's ephemeral frame, `never` when its bag names none. */

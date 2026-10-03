@@ -182,15 +182,6 @@ export {
 // ---- the state ---------------------------------------------------------------------------------
 
 /** The five top-level screens `showScreen` toggles between. */
-export const SCREENS = [
-  'homeScreen',
-  'hostWaitScreen',
-  'guestWaitScreen',
-  'tableScreen',
-  'endgameScreen',
-] as const;
-export type ScreenId = (typeof SCREENS)[number];
-
 /** What the home screen's resume box offers, one per save role (the shared `ShellResume`; briscola adds none). */
 export type Resume = SharedResume<Briscola>;
 
@@ -237,7 +228,7 @@ export type Briscola = Readonly<{
   Table: Table;
   Tab: HomeTab;
   Mode: PlayMode;
-  Screen: ScreenId;
+  Screen: never;
   Timer: 'settle' | 'tip' | 'intent';
   Cue: Cue;
   Cues: CueMemory;

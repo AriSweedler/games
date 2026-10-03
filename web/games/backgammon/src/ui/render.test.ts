@@ -32,9 +32,7 @@ import {
   matchTitle,
   nextLabel,
   paint,
-  paintScreen,
   paintSeat,
-  paintWaiting,
   recordKind,
   renderAbout,
   renderRules,
@@ -50,7 +48,8 @@ import { GLOSSARY } from './glossary.ts';
 import { name } from './copy.ts';
 import { NAME_CAP } from './copy-budget.ts';
 import { rulesItemsHtml } from './rules.ts';
-import { SCREENS, initialApp, reduce, type App, type HomeSnapshot, type Intent } from './state.ts';
+import { SHELL_SCREENS } from '../../../../shared/ui/shell.ts';
+import { initialApp, reduce, type App, type HomeSnapshot, type Intent } from './state.ts';
 
 import MARKUP from '../../index.html?raw';
 
@@ -103,7 +102,7 @@ const checkers = (p: BackgammonPage, id: string): number =>
       .match(/class="checker/g) ?? []
   ).length;
 const shown = (p: BackgammonPage): ReadonlyArray<string> =>
-  SCREENS.filter((id) => !p.get(id).hidden());
+  SHELL_SCREENS.filter((id) => !p.get(id).hidden());
 const withView = (app: App, v: View): App => ({ ...app, shell: { ...app.shell, view: v } });
 
 describe("the shell painters (gin's names)", () => {
@@ -140,36 +139,27 @@ describe("the shell painters (gin's names)", () => {
     expect(p.get('rulesList').text()).toContain('Crawford');
   });
 
-  test('paintScreen shows one screen and fixes the body at the table', () => {
+  test('paint shows one screen and fixes the body at the table; the waiting room reads the shell', () => {
     const p = page();
-    paintScreen(p.doc, initialApp);
+    paint(p.doc, initialApp);
     expect(shown(p)).toEqual(['homeScreen']);
     expect(p.body.hasClass('fixed-screen')).toBe(false);
-    paintScreen(p.doc, { ...initialApp, shell: { ...initialApp.shell, screen: 'tableScreen' } });
-    expect(shown(p)).toEqual(['tableScreen']);
-    expect(p.body.hasClass('fixed-screen')).toBe(true);
-  });
-
-  test('paintWaiting: the code, both statuses with their pulse, the start button', () => {
-    const p = page();
-    paintWaiting(p.doc, initialApp);
     expect(p.get('roomCode').text()).toBe('----');
     expect(p.get('hostWaitStatus').hasClass('pulse')).toBe(true);
     expect(p.get('startGameBtn').hidden()).toBe(true);
-    paintWaiting(p.doc, {
+    paint(p.doc, {
       ...initialApp,
       shell: {
         ...initialApp.shell,
+        screen: 'hostWaitScreen',
         code: 'KQZM',
         hostStatus: { text: 'Jeff joined! Ready when you are.', pulse: false },
-        guestStatus: { text: 'Connected', pulse: false },
         startGameVisible: true,
       },
     });
+    expect(shown(p)).toEqual(['hostWaitScreen']);
     expect(p.get('roomCode').text()).toBe('KQZM');
-    expect(p.get('hostWaitStatus').text()).toBe('Jeff joined! Ready when you are.');
     expect(p.get('hostWaitStatus').hasClass('pulse')).toBe(false);
-    expect(p.get('guestWaitStatus').text()).toBe('Connected');
     expect(p.get('startGameBtn').hidden()).toBe(false);
   });
 

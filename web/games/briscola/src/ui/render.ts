@@ -70,10 +70,9 @@ import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import {
   bindButtons,
   bindSheets as bindShellSheets,
-  paintHandoff as paintShellHandoff,
-  paintScreen as paintShellScreen,
   paintSheet,
-  paintWaiting as paintShellWaiting,
+  paintShellChrome,
+  shellButtons,
   type Sheet,
 } from '../../../../shared/ui/shellPaint.ts';
 import {
@@ -157,7 +156,6 @@ import { bindDrag } from './dragger.ts';
 import { bindHome, paintHome } from './home.ts';
 import { bindLocal, paintCurtain } from './local.ts';
 import {
-  SCREENS,
   handoffLabel,
   awaitingDraw,
   liveView,
@@ -166,6 +164,7 @@ import {
   seatsDown,
   waitingToDealMsg,
   type App,
+  type Briscola,
   type Intent,
   type Settle,
   type SettleStage,
@@ -180,20 +179,10 @@ export { RULES_SLOT_IDS } from './rules.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 
-/** `showScreen(id)`: every screen but `id` gets `hidden`; the table locks the body to the viewport. */
-export const paintScreen = (doc: PageLike, app: App): void => {
-  paintShellScreen(doc, SCREENS, app.shell.screen, 'tableScreen');
-};
-
-/** `#roomCode`, `#hostWaitStatus` (+ its pulse), `#startGameBtn`, `#guestWaitStatus` (+ its pulse). */
-export const paintWaiting = (doc: DocumentLike, app: App): void => {
-  paintShellWaiting(doc, app.shell);
-};
-
-/** `#handoffBtn` (the 🌐 beside the menu button): a two-seat pass-and-play game can go on as a hosted room (D17); the tooltip names who hosts and who joins. */
-export const paintHandoff = (doc: DocumentLike, app: App): void => {
+/** `#handoffBtn`'s tooltip (the 🌐 beside the menu button): a two-seat pass-and-play game can go on as a hosted room (D17), naming who hosts and who joins; null hides it. */
+const handoffTitle = (app: App): string | null => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
-  paintShellHandoff(doc, game !== null && game.options.seatCount === 2 ? handoffLabel(game) : null);
+  return game !== null && game.options.seatCount === 2 ? handoffLabel(game) : null;
 };
 
 /**
@@ -1181,14 +1170,12 @@ export const paintCardView = (
 export const paint = (doc: PageLike, app: App): void => {
   const pack = packByName(app.table.cardPack);
   const lang = langByName(app.table.lang);
-  paintScreen(doc, app);
-  paintWaiting(doc, app);
+  paintShellChrome(doc, app.shell, { handoff: handoffTitle(app) });
   paintHome(doc, app);
   paintPack(doc, app.table.cardPack);
   // Measured before the table repaints: the played card's slot and the seat's back go with it.
   const plays = playFlights(doc, app);
   paintCurtain(doc, app);
-  paintHandoff(doc, app);
   paintGame(doc, app, pack, lang, plays);
   paintFacePreload(doc, app, pack);
   paintOverlays(doc, app);
@@ -1372,11 +1359,10 @@ export const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
       ['deckBtn', { type: 'deck/open' }],
       ['resultChipBtn', { type: 'result/open' }],
       ['rsReplayBtn', { type: 'replay/click' }],
-      ['leaveBtn', { type: 'leave/request' }],
-      ['soundBtn', { type: 'sound/toggle' }],
-      ['handoffBtn', { type: 'handoff/click' }],
-      ['rulesBtnGame', { type: 'rules/open' }],
-      ['historyBtn', { type: 'history/open' }],
+      ...shellButtons<Briscola>({
+        rules: { type: 'rules/open' },
+        history: { type: 'history/open' },
+      }),
     ],
     { skipDisabled: true },
   );

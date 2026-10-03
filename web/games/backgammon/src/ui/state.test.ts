@@ -44,7 +44,6 @@ import {
   OPPONENT_LEFT_MSG,
   ROOM_FULL_MSG,
   SANDBOX_LOCAL_ONLY_MSG,
-  SCREENS,
   SHAKE_MS,
   SHELL_INTENT_TYPES,
   TUMBLE_MS,
@@ -247,13 +246,6 @@ describe('the initial app', () => {
       noMoveUntil: null,
       lastPainted: null,
     });
-    expect(SCREENS).toEqual([
-      'homeScreen',
-      'hostWaitScreen',
-      'guestWaitScreen',
-      'tableScreen',
-      'endgameScreen',
-    ]);
   });
 
   test("online is the default mode (storage.ts's, as gin's); mode/set switches and remembers it", () => {

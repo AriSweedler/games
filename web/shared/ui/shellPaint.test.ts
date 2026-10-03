@@ -20,6 +20,7 @@ import {
   paintHandoff,
   paintScreen,
   paintSheet,
+  paintShellChrome,
   paintSound,
   paintWaiting,
   renderCopy,
@@ -27,9 +28,12 @@ import {
   seatListHtml,
   seatListKey,
   seatRows,
+  shellButtons,
   showToast,
   type Sheet,
+  type ShellChromeView,
 } from './shellPaint.ts';
+import type { ShellTypes } from './shell.ts';
 
 const SCREENS = ['homeScreen', 'hostWaitScreen', 'tableScreen'] as const;
 
@@ -449,6 +453,130 @@ describe('paintHandoff', () => {
     expect(p.get('handoffBtn').attr('title')).toBe(
       'Continue online: Ari hosts, Jeff joins by invite',
     );
+  });
+});
+
+describe('paintShellChrome', () => {
+  /** A shell at the home with no room and no view; a case overrides what it needs. */
+  const chrome = (over: Partial<ShellChromeView<ShellTypes>>): ShellChromeView<ShellTypes> => ({
+    screen: 'homeScreen',
+    view: null,
+    role: null,
+    oppConnected: false,
+    code: null,
+    hostStatus: { text: 'Opening room…', pulse: true },
+    guestStatus: { text: 'Connecting…', pulse: true },
+    startGameVisible: false,
+    ...over,
+  });
+
+  test('at the home with no view: the home shows, the rooms read the shell, the 🌐 hides, the dot keeps the markup`s class', () => {
+    const p = page();
+    paintShellChrome(p.doc, chrome({ oppConnected: true }), {
+      screens: SCREENS,
+      handoff: null,
+      connDot: 'connDot',
+    });
+    expect(shown(p)).toEqual(['homeScreen']);
+    expect(p.body.hasClass('fixed-screen')).toBe(false);
+    expect(p.get('roomCode').text()).toBe('----');
+    expect(p.get('handoffBtn').hidden()).toBe(true);
+    expect(p.get('connDot').hasClass('off')).toBe(true);
+    expect(p.get('connDot').attr('title')).toBe('Disconnected');
+  });
+
+  test('at the table with a view: the body fixes, the 🌐 wears its tooltip, the dot follows the channel and hides in pass-and-play', () => {
+    const p = page();
+    const hosted = chrome({
+      screen: 'tableScreen',
+      view: {},
+      role: 'host',
+      oppConnected: true,
+      code: 'ABCD',
+    });
+    paintShellChrome(p.doc, hosted, {
+      screens: SCREENS,
+      handoff: 'Continue online: Ari hosts, Jeff joins by invite',
+      connDot: 'connDot',
+    });
+    expect(shown(p)).toEqual(['tableScreen']);
+    expect(p.body.hasClass('fixed-screen')).toBe(true);
+    expect(p.get('roomCode').text()).toBe('ABCD');
+    expect(p.get('handoffBtn').hidden()).toBe(false);
+    expect(p.get('handoffBtn').attr('title')).toBe(
+      'Continue online: Ari hosts, Jeff joins by invite',
+    );
+    expect(p.get('connDot').attr('class')).toBe('conn-dot on');
+    expect(p.get('connDot').attr('title')).toBe('Connected');
+    paintShellChrome(
+      p.doc,
+      { ...hosted, role: 'local' },
+      { screens: SCREENS, handoff: null, connDot: 'connDot' },
+    );
+    expect(p.get('connDot').attr('class')).toBe('conn-dot on hidden');
+    expect(p.get('handoffBtn').hidden()).toBe(true);
+  });
+
+  test('a page without a dot names none and the dot is never looked up; the default screen list is the shell`s five', () => {
+    const p = fakePage(pageEls().filter((el) => el.id !== 'connDot'));
+    expect(() => {
+      paintShellChrome(p.doc, chrome({ view: {}, role: 'host' }), {
+        screens: SCREENS,
+        handoff: null,
+      });
+    }).not.toThrow();
+    expect(() => {
+      paintShellChrome(p.doc, chrome({}), { handoff: null });
+    }).toThrow('missing element #guestWaitScreen');
+  });
+
+  test('a page whose rooms carry more than the shell`s paints them through its own painter, which gets the document and the shell', () => {
+    const p = page();
+    const seen: ShellChromeView<ShellTypes>[] = [];
+    const shell = chrome({ code: 'ABCD' });
+    paintShellChrome(p.doc, shell, {
+      screens: SCREENS,
+      handoff: null,
+      waiting: (doc, s) => {
+        expect(doc).toBe(p.doc);
+        seen.push(s);
+      },
+    });
+    expect(seen).toEqual([shell]);
+    expect(p.get('roomCode').text()).toBe('----');
+  });
+});
+
+describe('shellButtons', () => {
+  test('the five rows every table binds: the shell`s three intents and the game`s two sheet intents (backgammon`s toggles here), in the ids` order', () => {
+    const rows = shellButtons<ShellTypes>({
+      rules: { type: 'rules/toggle' },
+      history: { type: 'history/toggle' },
+    });
+    expect(rows).toEqual([
+      ['leaveBtn', { type: 'leave/request' }],
+      ['soundBtn', { type: 'sound/toggle' }],
+      ['handoffBtn', { type: 'handoff/click' }],
+      ['rulesBtnGame', { type: 'rules/toggle' }],
+      ['historyBtn', { type: 'history/toggle' }],
+    ]);
+    const p = fakePage([
+      ...pageEls(),
+      fakeEl('leaveBtn'),
+      fakeEl('rulesBtnGame'),
+      fakeEl('historyBtn'),
+    ]);
+    const intents: Readonly<{ type: string }>[] = [];
+    bindButtons(
+      p.doc,
+      (i) => {
+        intents.push(i);
+      },
+      rows,
+    );
+    p.get('historyBtn').fire('click');
+    p.get('leaveBtn').fire('click');
+    expect(intents).toEqual([{ type: 'history/toggle' }, { type: 'leave/request' }]);
   });
 });
 

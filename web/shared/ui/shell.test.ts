@@ -36,6 +36,7 @@ import {
   SANDBOX_LOCAL_ONLY_MSG,
   SHELL_EFFECT_TYPES,
   SHELL_INTENT_TYPES,
+  SHELL_SCREENS,
   WAITING_FOR_GUEST_MSG,
   WAITING_RESUME_MS,
   badPositionMsg,
@@ -1071,6 +1072,16 @@ describe('the initial shell and the partitions', () => {
       recentGames: [],
       recorded: null,
     });
+  });
+
+  test('the five screens every shell page carries, in the markup`s order (shellPaint.ts `paintShellChrome` toggles them)', () => {
+    expect(SHELL_SCREENS).toEqual([
+      'homeScreen',
+      'hostWaitScreen',
+      'guestWaitScreen',
+      'tableScreen',
+      'endgameScreen',
+    ]);
   });
 
   test('the 52 shell intents and 31 shell effects are listed once; the guards partition a game`s unions', () => {

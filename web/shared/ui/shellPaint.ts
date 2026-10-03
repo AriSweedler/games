@@ -40,7 +40,16 @@ import {
 import { NAME_MAX } from '../lib/protocol.ts';
 import { RULES_SLOT_IDS } from './glossary.ts';
 import { ensureKeyed } from './keyed.ts';
-import type { Role, SeatState, ShellState, ShellTypes, ToastKind } from './shell.ts';
+import {
+  SHELL_SCREENS,
+  type Intent,
+  type Role,
+  type ScreenId,
+  type SeatState,
+  type ShellState,
+  type ShellTypes,
+  type ToastKind,
+} from './shell.ts';
 
 export type Dispatch<I> = (intent: I) => void;
 
@@ -333,6 +342,39 @@ export const paintConnDot = (doc: DocumentLike, id: string, v: ConnDotView): voi
   setAttr(dot, 'title', v.connected ? 'Connected' : 'Disconnected');
 };
 
+/**
+ * What every game's `paint` spelled before its table (docs/design/shell-call-graph.md §4.4): the
+ * screens, the waiting rooms, the handoff button and the opponent's connection dot, each off
+ * `app.shell` alone. What differs per game is data: the screen list when the page has more than
+ * the shell's five, the handoff tooltip (null hides the button; its two-seat gate is the game's
+ * until the shell's `handoffable` lands), the dot's id (gin and fidice `connDot`, the rest
+ * `oppDot`; a page without one leaves it out), and the rooms' painter when the page's rooms carry
+ * more than the shell's (fidice's computers, ui/waiting.ts). The dot is painted while a view
+ * stands, as the table paints that carried it ran: before the first deal the markup's class holds.
+ */
+export type ShellChrome<G extends ShellTypes> = Readonly<{
+  screens?: ReadonlyArray<ScreenId<G>>;
+  handoff: string | null;
+  connDot?: string;
+  waiting?: (doc: PageLike, shell: ShellChromeView<G>) => void;
+}>;
+
+/** What the chrome reads of `app.shell`: the screen, whether a view stands, the rooms' fields and the dot's two. */
+export type ShellChromeView<G extends ShellTypes> = WaitingView &
+  Pick<ShellState<G>, 'screen' | 'view' | 'role' | 'oppConnected'>;
+
+export const paintShellChrome = <G extends ShellTypes>(
+  doc: PageLike,
+  shell: ShellChromeView<G>,
+  o: ShellChrome<G>,
+): void => {
+  paintScreen(doc, o.screens ?? SHELL_SCREENS, shell.screen, 'tableScreen');
+  (o.waiting ?? paintWaiting)(doc, shell);
+  paintHandoff(doc, o.handoff);
+  if (o.connDot !== undefined && shell.view !== null)
+    paintConnDot(doc, o.connDot, connDotView(shell));
+};
+
 /** A sheet's overlay follows its flag. */
 export const paintSheet = (doc: DocumentLike, overlay: string, open: boolean): void => {
   toggleClass(requireId(doc, overlay), 'hidden', !open);
@@ -517,6 +559,22 @@ export const bindButtons = <I>(
     });
   });
 };
+
+/**
+ * The five rows every table's `bindButtons` carried (docs/design/shell-call-graph.md §4.4): leave,
+ * sound and the handoff dispatch the shell's own intents; the rules and history buttons dispatch
+ * the game's sheet intents until those are the shell's too (shell-hoist.md row F), so the game
+ * names them (backgammon toggles, gin's history says `who`). Spread first into the game's rows.
+ */
+export const shellButtons = <G extends ShellTypes>(
+  sheets: Readonly<{ rules: Intent<G>; history: Intent<G> }>,
+): ButtonIntents<Intent<G>> => [
+  ['leaveBtn', { type: 'leave/request' }],
+  ['soundBtn', { type: 'sound/toggle' }],
+  ['handoffBtn', { type: 'handoff/click' }],
+  ['rulesBtnGame', sheets.rules],
+  ['historyBtn', sheets.history],
+];
 
 /**
  * What a long press dispatches: `press` at pointerdown, one intent or a function of the event
