@@ -14,11 +14,13 @@ import type { Clock } from '../lib/clock.ts';
 import { inviteUrl } from '../lib/invite.ts';
 import type { RecentGame } from '../lib/recentGames.ts';
 import type { Phrase } from '../lib/sound/phrase.ts';
+import type { Result } from '../lib/result.ts';
 import type { Rng } from '../lib/rng.ts';
 import { badSoundFontMsg, isSoundFont, type SoundFontName } from '../lib/sound/fonts.ts';
 import type { GuestEvents } from '../net/guest.ts';
 import type { HostEvents } from '../net/host.ts';
 import { ruleFromHash } from '../ui/glossary.ts';
+import { fillNameInputs, fillP2NameInput, setCodeInput } from '../ui/home.ts';
 import {
   flipped,
   gateOpen,
@@ -49,9 +51,12 @@ import {
   GATE_KEEP_ID,
   paintFlip,
   paintGate,
+  paintSound,
+  renderCopy,
   type ToastMarks,
 } from '../ui/shellPaint.ts';
 import { createTimers, createToaster, type Toast } from '../ui/toast.ts';
+import { realClock } from './clock.ts';
 import { shellFx, type CuePlayer, type CuePlayerDeps } from './cuePlayer.ts';
 import {
   byId,
@@ -88,7 +93,7 @@ import type { NetDeps } from './peer.ts';
 import { shareText, type ShareNavigatorLike } from './share.ts';
 import { createSampleCache } from './sound.ts';
 import { createAudioUnlock, type UnlockDocumentLike, type UnlockNavigatorLike } from './unlock.ts';
-import type { Store } from './storage.ts';
+import { browserStore, type Store } from './storage.ts';
 
 // ---- the invite link ------------------------------------------------------------------------
 
@@ -366,6 +371,33 @@ export type BootPage<G extends BootTypes> = Readonly<{
   clock: Clock;
 }>;
 
+/**
+ * The browser's page for `BootConfig.page`: `document`, `window`, `navigator`, localStorage
+ * (storage.ts `browserStore`) and the real clock, what every main.ts spelled (docs/ARCHITECTURE.md
+ * "Module boundaries": main.ts constructs the adapters). Typed over the bag the edge builds, so a
+ * game whose `Store` is the edge's takes it as is; the boot test passes its fakes instead.
+ */
+export const browserPage = (): BootPage<BootTypes> => ({
+  doc: document,
+  win: window,
+  nav: navigator,
+  store: browserStore(),
+  clock: realClock,
+});
+
+/**
+ * One engine action through the game's reducer, `{ type: 'act', action }`: every game spells this
+ * intent (its `act` case checks the turn and applies the action), so the hook's `act` is the boot's.
+ * `BootConfig` refuses a game whose `Intent` lacks it (`ActsOn`).
+ */
+export type ActIntent<G extends BootTypes> = Readonly<{ type: 'act'; action: G['Action'] }>;
+type ActsOn<G extends BootTypes> =
+  ActIntent<G> extends G['Intent']
+    ? unknown
+    : Readonly<{ "G['Intent'] must include ActIntent<G>: the hook's act dispatches it": never }>;
+/** `bootShell` lets `deps` be left out when `Ex` asks for nothing (`object`, six games); gin's `GinDeps` must be passed. */
+type DepsOf<Ex extends object> = object extends Ex ? unknown : Readonly<{ deps: Ex }>;
+
 /** A session as the boot drives it (web/shared/net): `kind` tells the host from the guest, `send` takes its side's frame (and, for a host, the one seat to send to; every open channel when absent). */
 export type SessionLike<K extends 'host' | 'guest', F> = Readonly<{
   kind: K;
@@ -417,6 +449,7 @@ export type BootCtx<G extends BootTypes, App extends BootApp<G>> = Readonly<{
  * it has beside the shell's (gin's Score Counter and clipboard; backgammon none).
  */
 export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends object> = Readonly<{
+  /** The page's objects (`browserPage()` in a browser; the boot test's fakes). */
   page: BootPage<G>;
   game: Readonly<{
     /** The documented test hook's property on the window: `__gin`, `__backgammon` (tools/games.ts REGISTRY `hook`). */
@@ -428,11 +461,11 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
   }>;
   sound: Readonly<{
     /**
-     * The game's `soundEnabled(store, fallback)` (storage.ts, prefs.ts `soundPref`): the
-     * preference under its own sound key; `fallback` is what no stored preference counts as
-     * (the boot passes `false` on a coarse-pointer device, sound-fonts.md §12).
+     * Whether sound starts on: by default prefs.ts `soundPref.enabled` over `config.prefs.sound`
+     * (a stored `on`/`off` wins; `fallback` is what no stored preference counts as, `false` on a
+     * coarse-pointer device, sound-fonts.md §12); a game may pass its own reader (the boot test logs the fallback).
      */
-    enabled: (store: G['Store'], fallback: boolean) => boolean;
+    enabled?: (store: G['Store'], fallback: boolean) => boolean;
     /** The game's own sound-font key (`STORAGE_KEYS.soundFont`): checked before every home read, named in the console hook's refusal. */
     fontKey: string;
   }>;
@@ -451,18 +484,26 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
   paint: Readonly<{
     paint: (doc: PageLike, app: App) => void;
     bindAll: (doc: PageLike, dispatch: (intent: Intent<G>) => void) => void;
-    paintSound: (doc: DocumentLike, enabled: boolean) => void;
+    /** The speaker button's paint: shellPaint.ts `paintSound` unless the game paints its own. */
+    paintSound?: (doc: DocumentLike, enabled: boolean) => void;
     /** The classes a game puts on the toast for a message (backgammon's `hit`); none for gin. */
     toastMarks?: (message: string) => ToastMarks;
     /**
-     * The three input writes the paint does not own (ui/home.ts): the game's, because gin fills the
-     * Score Counter's inputs too. `isDefault` is the fill's `default` mark (shell.ts), which the
-     * game's fill paints as `data-default` so the input clears on the first tap.
+     * The three input writes the paint does not own: the shell's (web/shared/ui/home.ts
+     * `fillNameInputs`, `fillP2NameInput`, `setCodeInput`) unless the game fills more, as gin fills
+     * the Score Counter's inputs too. `isDefault` is the fill's `default` mark (shell.ts), painted
+     * as `data-default` so the input clears on the first tap.
      */
-    fillName: (doc: DocumentLike, name: string, isDefault: boolean) => void;
-    fillP2Name: (doc: DocumentLike, name: string, isDefault: boolean) => void;
-    setCode: (doc: DocumentLike, value: string) => void;
+    fillName?: (doc: DocumentLike, name: string, isDefault: boolean) => void;
+    fillP2Name?: (doc: DocumentLike, name: string, isDefault: boolean) => void;
+    setCode?: (doc: DocumentLike, value: string) => void;
   }>;
+  /**
+   * The rules' items (ui/rules.ts `rulesItemsHtml()`) and the About copy (glossary.ts
+   * `aboutHtml`), rendered into the page's slots before the game's `hooks.render`
+   * (shellPaint.ts `renderCopy`); absent for a page that renders its own (backgammon's rules sheet).
+   */
+  copy?: Readonly<{ rules: string; about?: string }>;
   /**
    * What the boot reads of the game's shell config (its `ShellConfig` constant, ui/state.ts): the
    * cue table and the `sound` preference the default `fx` plays and persists through.
@@ -470,8 +511,13 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
   config: Readonly<{
     cues: Readonly<{ table: Readonly<Record<Cue<G>, Phrase>> }>;
     prefs: Readonly<{
-      sound: Readonly<{ write: (store: G['Store'], state: 'on' | 'off') => unknown }>;
+      sound: Readonly<{
+        read: (store: G['Store']) => Result<'on' | 'off', unknown>;
+        write: (store: G['Store'], state: 'on' | 'off') => unknown;
+      }>;
     }>;
+    /** The seat range of an N-seat game (shell.ts `ShellConfig.seats`): with it, the sessions are seated (`net.seats`). */
+    seats?: Readonly<{ min: number; max: number }>;
   }>;
   /**
    * The cue player over the boot's deps: cuePlayer.ts `shellFx(config.cues.table, config.prefs.sound)`
@@ -491,13 +537,11 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
      * a `send` of that frame goes out on whichever session is open, host or guest. Absent, no frame is one.
      */
     isEphemeral?: (frame: HostFrameOf<G> | GuestFrameOf<G>) => frame is EphemeralOf<G>;
-    /** A table of more than two seats: the host's `frame`/`guestGone` intents carry the seat (`sessionEvents(deps, { seats: true })`); absent for the two-seat games. */
+    /** A table of more than two seats: the host's `frame`/`guestGone` intents carry the seat (`sessionEvents(deps, { seats: true })`). By default, whether `config.seats` is set. */
     seats?: boolean;
   }>;
   /** The engine's legal actions for a view (the hook's `legal()`). */
   legal: (view: G['View']) => ReadonlyArray<G['Action']>;
-  /** The game's own effect adapters beside the shell's (`Ex`): gin's `scorer` and `copy`; `{}` for backgammon. */
-  deps: Ex;
   /**
    * The game's shell config, for what the boot reads of it (shell.ts `GateConfig`: a `ShellConfig`
    * fits): with `orientation: 'landscape'` the boot watches the two phone predicates into the
@@ -514,10 +558,24 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
     render?: (ctx: BootCtx<G, App>) => void;
     /** After the binders: gin's `scorer.bind()`. */
     bind?: (ctx: BootCtx<G, App>) => void;
-    /** The game's own members on the test hook, beside the shared ones (`act` is one: its intent is the game's). */
+    /** The game's own members on the test hook, after the shared ones (`act`, `view`, `setup` and `legal` among them): uno's `playable`, gin's sandbox. A member spelled here replaces the shared one of that name. */
     hook?: (ctx: BootCtx<G, App>) => Readonly<Record<string, unknown>>;
   }>;
+  /** The game's own effect adapters beside the shell's (`Ex`): gin's `scorer` and `copy`; left out by a game with none (`DepsOf`). */
+  deps?: Ex;
 }>;
+
+/** prefs.ts `soundPref.enabled` over the shell's pref: a stored `on`/`off` wins, else `fallback`. */
+const soundEnabledOf =
+  <St>(pref: Readonly<{ read: (store: St) => Result<'on' | 'off', unknown> }>) =>
+  (store: St, fallback: boolean): boolean => {
+    const stored = pref.read(store);
+    return stored.ok ? stored.value === 'on' : fallback;
+  };
+
+/** The game's `act` intent as the reducer's `Intent<G>`: `ActsOn<G>` has checked the membership the type system cannot see through the bag. */
+const actIntent = <G extends BootTypes>(action: G['Action']): Intent<G> =>
+  ({ type: 'act', action }) as Intent<G>;
 
 /** `SoundDeps.fetchBuffer` (sound.ts) over the page's `fetch`: the bytes, or a rejection naming the status and the URL. */
 export const fetchArrayBuffer =
@@ -541,7 +599,7 @@ export const bootShell = <
   App extends BootApp<G> = ShellApp<G> & BootApp<G>,
   Ex extends object = object,
 >(
-  cfg: BootConfig<G, App, Ex>,
+  cfg: BootConfig<G, App, Ex> & DepsOf<Ex> & ActsOn<G>,
 ): BootCtx<G, App> => {
   const { doc, win, nav, store, clock } = cfg.page;
   // The sound font (docs/design/sound-fonts.md §6): a value the console left in storage that names
@@ -584,7 +642,7 @@ export const bootShell = <
   const coarsePointer = win.matchMedia?.('(pointer: coarse)').matches === true;
   const audio = createAudioCues({
     makeContext: AudioCtor === undefined ? undefined : () => new AudioCtor() as AudioContextLike,
-    enabled: cfg.sound.enabled(store, !coarsePointer),
+    enabled: (cfg.sound.enabled ?? soundEnabledOf(cfg.config.prefs.sound))(store, !coarsePointer),
   });
   // The silent-switch unlock (unlock.ts): run inside the tap that turns sound on, and on the first
   // gesture over a page whose sound is already on.
@@ -605,6 +663,7 @@ export const bootShell = <
   const timers = createTimers<TimerId<G>>(clock);
   /** The legacy `toast(msg, ms)` with its 2.6 s default; a new toast restarts the one hide timer (backgammon's Kapará toast wears `hit`). */
   const toast = createToaster(doc, clock, undefined, cfg.paint.toastMarks);
+  const paintSoundBtn = cfg.paint.paintSound ?? paintSound;
 
   const createFx = cfg.fx ?? shellFx(cfg.config.cues.table, cfg.config.prefs.sound);
   const fx = createFx({
@@ -619,7 +678,7 @@ export const bootShell = <
       // Still inside the speaker button's tap (`toggle` runs synchronously from the click): the
       // one gesture an iPhone lets the media unlock and the context's resume ride on.
       if (enabled) unlock.unlock();
-      cfg.paint.paintSound(doc, enabled);
+      paintSoundBtn(doc, enabled);
     },
   });
 
@@ -671,7 +730,7 @@ export const bootShell = <
     GuestFrameOf<G>,
     HostFrameOf<G>,
     SeatOf<G>
-  >({ dispatch, toast, wakeLock }, { seats: cfg.net.seats === true });
+  >({ dispatch, toast, wakeLock }, { seats: cfg.net.seats ?? cfg.config.seats !== undefined });
 
   const deps: ShellEffectDeps<G> & Ex = {
     store,
@@ -752,19 +811,20 @@ export const bootShell = <
     },
     page: {
       fillName: (name, isDefault) => {
-        cfg.paint.fillName(doc, name, isDefault);
+        (cfg.paint.fillName ?? fillNameInputs)(doc, name, isDefault);
       },
       fillP2Name: (name, isDefault) => {
-        cfg.paint.fillP2Name(doc, name, isDefault);
+        (cfg.paint.fillP2Name ?? fillP2NameInput)(doc, name, isDefault);
       },
       setCode: (value) => {
-        cfg.paint.setCode(doc, value);
+        (cfg.paint.setCode ?? setCodeInput)(doc, value);
       },
     },
     dispatch: (intent) => {
       dispatch(intent);
     },
-    ...cfg.deps,
+    // `DepsOf<Ex>` let `deps` be left out only where `{}` is a whole `Ex`.
+    ...(cfg.deps ?? ({} as Ex)),
   };
 
   const matchMedia = win.matchMedia?.bind(win);
@@ -802,6 +862,7 @@ export const bootShell = <
     applyLayout(doc, win);
   });
   if (probeAsked(win.location.search)) renderProbe(doc, win);
+  if (cfg.copy !== undefined) renderCopy(doc, cfg.copy);
   cfg.hooks?.render?.(ctx);
   cfg.paint.bindAll(doc, dispatch);
   // A tap on jargon in the About copy or in a rule (docs/design/glossary-links.md) shows that rule.
@@ -842,7 +903,7 @@ export const bootShell = <
       if ((doc.fullscreenElement ?? null) === null) dispatch({ type: 'fullscreen/lost' });
     });
   }
-  cfg.paint.paintSound(doc, fx.enabled());
+  paintSoundBtn(doc, fx.enabled());
   // Browsers only let audio start after a user gesture: warm the context on the first tap, and
   // the table's samples in the App's font with it (cuePlayer.ts `warm`), so no phrase waits.
   // The four are the gestures WebKit counts as activation (sound-fonts.md §12): `pointerdown`
@@ -868,7 +929,7 @@ export const bootShell = <
 
   // The test/debug hook (docs/ARCHITECTURE.md "Documented test hooks"): read-only state, actions
   // through the reducer. `app` is a getter so a reader always sees the current record; the game's
-  // own members (`hooks.hook`: gin's sandbox, card back and layoffs, backgammon's `setup`) follow.
+  // own members (`hooks.hook`: gin's sandbox, card back and layoffs, uno's `playable`) follow.
   const hook: Readonly<Record<string, unknown>> = {
     get app(): App {
       return app;
@@ -884,6 +945,16 @@ export const bootShell = <
       dispatch({ type: 'home/init', home: homeSnapshot() });
     },
     fx,
+    /** One engine action through the reducer (`ActIntent`): what every e2e driver plays. */
+    act: (action: G['Action']): void => {
+      dispatch(actIntent<G>(action));
+    },
+    /** My seat's view, null before a game. */
+    view: (): G['View'] | null => app.shell.view,
+    /** A position for e2e and stories: the pass-and-play game's state replaced (shell.ts `position/load`, decoded by the engine). */
+    setup: (state: unknown): void => {
+      dispatch({ type: 'position/load', state });
+    },
     /** The engine's legal actions for my view. */
     legal: (): ReadonlyArray<G['Action']> =>
       app.shell.view === null ? [] : cfg.legal(app.shell.view),

@@ -1,30 +1,28 @@
 // Boot (docs/ARCHITECTURE.md "Module boundaries": main.ts constructs the adapters and injects them;
 // no logic). The first game booted through the shared boot alone (docs/design/briscola.md D18;
-// web/shared/edge/boot.ts `bootShell`, docs/design/shared-shell.md §4.5): the real Transport, the
-// ICE loader, localStorage, the clock, `Math.random` (or the harness's `window.__rng`), Web Audio,
-// vibration and the wake lock, handed to the reducer (src/ui/state.ts) through `runEffect`, to the
-// sessions (src/net) through their deps, and to the paint (src/ui/render.ts). This file passes the
-// page's objects and what is briscola's: its reducer, painters, sessions, cue table, sound keys, the
-// Italian suit sprite the glyph faces `<use>` (inlined once here, so it cannot drift from suits.ts),
-// the card-pack and language-pack guards, the rules and About copy, the stories page's early
-// return, and the members of `window.__briscola` (the documented test hook, D19) beyond the shared
-// ones: `act`, `view`, `events`, `setup`, `cardPack`, `cardPackName`, `lang`, `langName`.
-import { bootShell } from '../../shared/edge/boot.ts';
-import { realClock } from '../../shared/edge/clock.ts';
-import { browserStore, type Store } from '../../shared/edge/storage.ts';
+// web/shared/edge/boot.ts `bootShell`, docs/design/shared-shell.md §4.5): the browser's page
+// (`browserPage`), the real Transport, the ICE loader, `Math.random` (or the harness's
+// `window.__rng`), Web Audio, vibration and the wake lock, handed to the reducer (src/ui/state.ts)
+// through `runEffect`, to the sessions (src/net) through their deps, and to the paint
+// (src/ui/render.ts). This file passes what is briscola's: its reducer, painters, sessions, shell
+// config, sound-font key, the Italian suit sprite the glyph faces `<use>` (inlined once here, so it
+// cannot drift from suits.ts), the card-pack and language-pack guards, the rules and About copy,
+// the stories page's early return, and the members of `window.__briscola` (the documented test
+// hook, D19) beyond the boot's (`act`, `view`, `setup`, `legal` among them): `events`, `cardPack`,
+// `cardPackName`, `lang`, `langName`.
+import { bootShell, browserPage } from '../../shared/edge/boot.ts';
+import type { Store } from '../../shared/edge/storage.ts';
 import { aboutHtml } from '../../shared/ui/glossary.ts';
-import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import { badCardPackMsg, isCardPackFor } from '../../shared/lib/cards/packs.ts';
 import { badLanguageMsg, isLanguagePack } from '../../shared/lib/lang/packs.ts';
 import { SUIT_SPRITE_SVG } from '../../shared/ui/cardFace.ts';
 import IMPACT_SPRITE_SVG from './impact/impact-sprite.svg?raw';
-import { legalActions, type Action, type GameEvent, type View } from './src/engine/index.ts';
+import { legalActions, type GameEvent } from './src/engine/index.ts';
 import { GuestSession, HostSession } from './src/net/sessions.ts';
 import { isEphemeral, isGuestFrame } from './src/protocol.ts';
-import { DECK_KIND, STORAGE_KEYS, soundEnabled } from './src/storage.ts';
+import { DECK_KIND, STORAGE_KEYS } from './src/storage.ts';
 import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
 import { GLOSSARY } from './src/ui/glossary.ts';
-import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
 import { bindAll, paint } from './src/ui/render.ts';
 import { rulesItemsHtml } from './src/ui/rules.ts';
 import {
@@ -75,25 +73,18 @@ const boot = (): void => {
   }
   // The host context is the shell's plus `seats` (the codec's welcome lists the table past two seats), and the seated adapter names each guest frame's seat (n-seat-sessions.md §7).
   bootShell<Briscola, App>({
-    page: { doc: document, win: window, nav: navigator, store: browserStore(), clock: realClock },
+    page: browserPage(),
     // PeerJS log level 0 as the other shell pages (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__briscola', title: 'Briscola', debug: 0 },
-    sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },
+    sound: { fontKey: STORAGE_KEYS.soundFont },
     reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
-    // the shared `paintSound`; the toast wears no marks.
-    paint: {
-      paint,
-      bindAll,
-      paintSound,
-      fillName: fillNameInputs,
-      fillP2Name: fillP2NameInput,
-      setCode: setCodeInput,
-    },
+    paint: { paint, bindAll },
     config: BRISCOLA,
+    // The rules into both slots and the About copy (ui/rules.ts, ui/about.ts).
+    copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
     // `isEphemeral` names the live intent's lane, sent by both sides (briscola-battle.md §4.5).
-    net: { Host: HostSession, Guest: GuestSession, isGuestFrame, isEphemeral, seats: true },
+    net: { Host: HostSession, Guest: GuestSession, isGuestFrame, isEphemeral },
     legal: legalActions,
-    deps: {},
     hooks: {
       home: (store) => {
         dropBadCardPack(store);
@@ -101,29 +92,16 @@ const boot = (): void => {
       },
       // The four Italian suit symbols the glyph faces and the trump badge `<use>`, and the clash's
       // impact frames (impact/impact-sprite.svg, docs/design/briscola-battle.md §3.5), once, before
-      // any paint, so nothing is fetched during play; then the rules into both slots and the About
-      // copy (ui/rules.ts, ui/about.ts).
+      // any paint, so nothing is fetched during play.
       render: () => {
         document.body.insertAdjacentHTML('afterbegin', SUIT_SPRITE_SVG);
         document.body.insertAdjacentHTML('afterbegin', IMPACT_SPRITE_SVG);
-        renderCopy(document, {
-          rules: rulesItemsHtml(),
-          about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY),
-        });
       },
-      // `act` through the reducer; `view` my view; `events` its event stream (the sounds' and the
-      // history's one source); `setup` seats a position for e2e and stories (pass-and-play only: the
-      // shell's `position/load` over the engine's decoder); `cardPack` shows and remembers a pack of
-      // the Italian deck; `lang` names the cards in a language pack and remembers it.
+      // `events` my view's event stream (the sounds' and the history's one source); `cardPack`
+      // shows and remembers a pack of the Italian deck; `lang` names the cards in a language pack
+      // and remembers it.
       hook: ({ app, dispatch }) => ({
-        act: (action: Action) => {
-          dispatch({ type: 'act', action });
-        },
-        view: (): View | null => app().shell.view,
         events: (): ReadonlyArray<GameEvent> => app().shell.view?.events ?? [],
-        setup: (state: unknown) => {
-          dispatch({ type: 'position/load', state });
-        },
         cardPack: (name: string): void => {
           if (!isCardPackFor(DECK_KIND, name)) {
             console.error(badCardPackMsg(STORAGE_KEYS.cardPack, DECK_KIND, name));

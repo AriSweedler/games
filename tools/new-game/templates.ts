@@ -1381,22 +1381,18 @@ const mainTs = (
   title: string,
   hook: string,
 ): string => `// Boot (docs/ARCHITECTURE.md "Module boundaries": main.ts constructs the adapters and injects them;
-// no logic; docs/design/${slug}.md §3). Pass the title through to the shell's hook.
-// no logic). ${title} boots through the shared boot (web/shared/edge/boot.ts \`bootShell\`,
-// docs/design/shared-shell.md §4.5): the real Transport, localStorage, the clock, \`Math.random\` (or
-// the harness's \`window.__rng\`), Web Audio, vibration and the wake lock, handed to the reducer
-// (src/ui/state.ts), the sessions (src/net) and the paint (src/ui/render.ts). The members of
-// \`window.${hook}\` (the documented test hook) beyond the shared ones: \`act\`, \`view\`, \`setup\`, \`legal\`.
-import { bootShell } from '../../shared/edge/boot.ts';
-import { realClock } from '../../shared/edge/clock.ts';
-import { browserStore } from '../../shared/edge/storage.ts';
+// no logic; docs/design/${slug}.md §3). ${title} boots through the shared boot
+// (web/shared/edge/boot.ts \`bootShell\`, docs/design/shared-shell.md §4.5): the browser's page
+// (\`browserPage\`), the real Transport, \`Math.random\` (or the harness's \`window.__rng\`), Web Audio,
+// vibration and the wake lock, handed to the reducer (src/ui/state.ts), the sessions (src/net) and
+// the paint (src/ui/render.ts). \`window.${hook}\` (the documented test hook) is the boot's: \`act\`,
+// \`view\`, \`setup\`, \`legal\` and the shared rest; a game's own members go under \`hooks.hook\`.
+import { bootShell, browserPage } from '../../shared/edge/boot.ts';
 import { aboutHtml } from '../../shared/ui/glossary.ts';
-import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
-import { legalActions, type Action, type View } from './src/engine/view.ts';
+import { legalActions } from './src/engine/view.ts';
 import { GuestSession, HostSession } from './src/net/sessions.ts';
 import { isGuestFrame } from './src/protocol.ts';
-import { STORAGE_KEYS, soundEnabled } from './src/storage.ts';
-import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
+import { STORAGE_KEYS } from './src/storage.ts';
 import { bindAll, paint } from './src/ui/render.ts';
 import { ABOUT_PARAGRAPHS, GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
 import {
@@ -1412,40 +1408,15 @@ import {
 } from './src/ui/state.ts';
 
 bootShell<${pascal}, App>({
-  page: { doc: document, win: window, nav: navigator, store: browserStore(), clock: realClock },
+  page: browserPage(),
   game: { hook: '${hook}', title: '${title.replace(/'/g, "\\'")}', debug: 0 },
-  sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },
+  sound: { fontKey: STORAGE_KEYS.soundFont },
   reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
-  paint: {
-    paint,
-    bindAll,
-    paintSound,
-    fillName: fillNameInputs,
-    fillP2Name: fillP2NameInput,
-    setCode: setCodeInput,
-  },
+  paint: { paint, bindAll },
   config: ${upper},
+  copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
   net: { Host: HostSession, Guest: GuestSession, isGuestFrame },
   legal: legalActions,
-  deps: {},
-  hooks: {
-    render: () => {
-      renderCopy(document, { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) });
-    },
-    hook: ({ app, dispatch }) => ({
-      act: (action: Action) => {
-        dispatch({ type: 'act', action });
-      },
-      view: (): View | null => app().shell.view,
-      setup: (state: unknown) => {
-        dispatch({ type: 'position/load', state });
-      },
-      legal: (): ReadonlyArray<Action> => {
-        const view = app().shell.view;
-        return view === null ? [] : legalActions(view);
-      },
-    }),
-  },
 });
 `;
 

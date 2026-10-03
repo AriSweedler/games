@@ -10,12 +10,11 @@
 // neither the PeerJS CDN <script> nor shared/ice.js). The old path's one new behaviour is the
 // flag read, and `shell` stripped from its share base so an opt-out never rides a `#join=` link
 // (§6 risk 10). M6 (the flip) deletes the old boot, the flag and the node removal.
-import { bootShell } from '../../shared/edge/boot.ts';
+import { bootShell, browserPage } from '../../shared/edge/boot.ts';
 import { realClock } from '../../shared/edge/clock.ts';
 import { browserNetDeps } from '../../shared/edge/netDeps.ts';
 import { browserStore } from '../../shared/edge/storage.ts';
 import { aboutHtml } from '../../shared/ui/glossary.ts';
-import { paintSound, renderCopy } from '../../shared/ui/shellPaint.ts';
 import type { Rng } from '../../shared/lib/rng.ts';
 import { Controller } from './src/app/controller.ts';
 import { browserEffects } from './src/app/effects.ts';
@@ -30,9 +29,8 @@ import {
   HostSession as ShellHostSession,
 } from './src/net/shell/sessions.ts';
 import { isGuestFrame } from './src/protocol.ts';
-import { STORAGE_KEYS, soundEnabled } from './src/storage.ts';
+import { STORAGE_KEYS } from './src/storage.ts';
 import { bindHelpFold } from './src/ui/helpFold.ts';
-import { fillNameInputs, fillP2NameInput, setCodeInput } from './src/ui/home.ts';
 import { GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
 import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
 import { bindAll, paint } from './src/ui/render.ts';
@@ -47,7 +45,6 @@ import {
   type App,
   type Fidice,
 } from './src/ui/state.ts';
-import type { Action, PublicState } from './src/domain/types.ts';
 
 const injectDiceStyles = (): void => {
   const style = document.createElement('style');
@@ -138,29 +135,24 @@ const bootLegacy = (): void => {
 /**
  * The shell path (§4 M4): the shared boot over fidice's reducer, painters, sessions and cue table.
  * The host context is the shell's plus `seats` (the codec's welcome lists the table past two
- * seats), and the seated adapter names each guest frame's seat (n-seat-sessions.md §7).
+ * seats), and the seated adapter names each guest frame's seat (n-seat-sessions.md §7; the boot
+ * seats the sessions off `FIDICE.seats`). `window.__fidice` on this path is the boot's: `act`,
+ * `view`, `setup`, `legal` and the shared rest.
  */
 const bootShellPath = (): void => {
   bootShell<Fidice, App>({
-    page: { doc: document, win: window, nav: navigator, store: browserStore(), clock: realClock },
+    page: browserPage(),
     // PeerJS log level 1 as the legacy page set it (e2e expectPeerOptions pins it, tools/games.ts REGISTRY).
     game: { hook: '__fidice', title: 'Fidice', debug: 1 },
     // The shell's four cues alone until M9 (plan §7 D11); muted by default on a coarse pointer (the boot's fallback).
-    sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },
+    sound: { fontKey: STORAGE_KEYS.soundFont },
     reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
-    // the shared `paintSound`; the toast wears no marks.
-    paint: {
-      paint,
-      bindAll,
-      paintSound,
-      fillName: fillNameInputs,
-      fillP2Name: fillP2NameInput,
-      setCode: setCodeInput,
-    },
+    paint: { paint, bindAll },
     config: FIDICE,
-    net: { Host: ShellHostSession, Guest: ShellGuestSession, isGuestFrame, seats: true },
+    // The rules into both slots and the About copy (ui/rules.ts, ui/about.ts), before the render hook.
+    copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },
+    net: { Host: ShellHostSession, Guest: ShellGuestSession, isGuestFrame },
     legal: legalActions,
-    deps: {},
     hooks: {
       // Before every home read: the legacy page's saved name follows the player onto this path
       // (§6 risk 14), and a bookmarked legacy invite (`#join=CODE`) becomes the shell's
@@ -170,29 +162,13 @@ const bootShellPath = (): void => {
         const url = legacyInviteUrl(location);
         if (url !== null) history.replaceState(null, '', url);
       },
-      // The dice faces' styles (the old boot injects the same), then the rules into both slots and
-      // the About copy (ui/rules.ts, ui/about.ts), once, before any paint; and the steps' help
-      // fold on the table's mount (ui/helpFold.ts: sideways on a phone the theme folds the steps'
-      // paragraphs behind a tap on the step's title).
+      // The dice faces' styles (the old boot injects the same), once, before any paint; and the
+      // steps' help fold on the table's mount (ui/helpFold.ts: sideways on a phone the theme folds
+      // the steps' paragraphs behind a tap on the step's title).
       render: () => {
         injectDiceStyles();
-        renderCopy(document, {
-          rules: rulesItemsHtml(),
-          about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY),
-        });
         bindHelpFold(document);
       },
-      // `act` through the reducer; `view` my view; `setup` seats a position for e2e (pass the
-      // phone only: the shell's `position/load` over the engine's decoder).
-      hook: ({ app, dispatch }) => ({
-        act: (action: Action) => {
-          dispatch({ type: 'act', action });
-        },
-        view: (): PublicState | null => app().shell.view,
-        setup: (state: unknown) => {
-          dispatch({ type: 'position/load', state });
-        },
-      }),
     },
   });
 };

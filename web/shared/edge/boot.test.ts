@@ -37,6 +37,7 @@ import type { CuePlayer } from './cuePlayer.ts';
 import type { NavigatorLike } from './fx.ts';
 import { RULE_FLASH_CLASS } from './glossary.ts';
 import { fakeEl, fakePage, fakeTarget, type FakeEl } from './page.fake.ts';
+import { soundPref } from './prefs.ts';
 import type { ShareNavigatorLike, SharePayload } from './share.ts';
 import { createStore, type Store } from './storage.ts';
 import { err } from '../lib/result.ts';
@@ -377,8 +378,9 @@ describe('sessionEvents', () => {
 type View = Readonly<{ seat: number }>;
 type Action = Readonly<{ move: number }>;
 type OwnEffect = Readonly<{ type: 'own'; tag: string }>;
-/** `step` runs the effects the test queued (`Boot.run`) and changes the App when told to. */
-type OwnIntent = Readonly<{ type: 'step'; change?: boolean }>;
+/** `step` runs the effects the test queued (`Boot.run`) and changes the App when told to; `act` is the boot's own hook member (boot.ts `ActIntent`): a move above 0 steps the App. */
+type OwnIntent =
+  Readonly<{ type: 'step'; change?: boolean }> | Readonly<{ type: 'act'; action: Action }>;
 type Fake = Readonly<{
   Opts: Readonly<{ level: number }>;
   Raw: Readonly<{ level?: string }>;
@@ -528,6 +530,12 @@ type Options = Readonly<{
   lane?: boolean;
   /** The game's own hooks, as gin passes them, over the log so a test can see the order they ran in. */
   hooks?: (log: Log) => NonNullable<BootConfig<Fake, App, Extra>['hooks']>;
+  /** The config spells no `sound.enabled`, no `paint.paintSound` and no fills: the boot's defaults over the page (which then carries the inputs they fill). */
+  defaults?: boolean;
+  /** The config's `copy`: the rules and About markup the boot renders into the page's slots (which the page then carries). */
+  copy?: Readonly<{ rules: string; about?: string }>;
+  /** The config's `seats` (an N-seat game): the sessions are seated without `net.seats` spelled. */
+  seats?: boolean;
   /** The config carries a shell config: with `orientation: 'landscape'` (backgammon), or without it (a game that stays upright). */
   sideways?: boolean;
   /** The shell config spells this orientation outright (`portrait`: UI Sandbox`s mirror; `any`: either way), over `sideways`. */
@@ -598,6 +606,10 @@ const bootPage = (options: Options = {}) => {
       fakeEl('rulesList', { queries: { '#rule-knock': [ruleEl] } }),
       fakeEl('app'),
       overlay,
+      ...(options.copy === undefined ? [] : [fakeEl('rulesOverlayList'), fakeEl('aboutCopy')]),
+      ...(options.defaults === true
+        ? [fakeEl('nameInput'), fakeEl('p1NameInput'), fakeEl('p2NameInput'), fakeEl('codeInput')]
+        : []),
       ...(options.gated === true
         ? [gate, fakeEl('turnGateGoBtn', { classes: ['btn', 'hidden'] }), fakeEl('turnGateKeepBtn')]
         : []),
@@ -845,6 +857,9 @@ const bootPage = (options: Options = {}) => {
         effects: pending.effects,
       };
     }
+    if (intent.type === 'act') {
+      return { app: intent.action.move > 0 ? { ...app, steps: app.steps + 1 } : app, effects: [] };
+    }
     return { app, effects: [] };
   };
   /** Each shell effect the tests queue, against the adapter the boot built for it (shellEffects.ts's cases, the ones a boot adapter answers). */
@@ -898,16 +913,21 @@ const bootPage = (options: Options = {}) => {
       },
     };
   };
-  const cfg: BootConfig<Fake, App, Extra> = {
+  // What `bootShell` takes: the config, with `deps` required since `Extra` asks for an adapter (boot.ts `DepsOf`).
+  const cfg: Parameters<typeof bootShell<Fake, App, Extra>>[0] = {
     page: { doc, win, nav, store, clock },
     game: { hook: '__fake', title: 'Fake', debug: 0 },
     // prefs.ts `soundPref.enabled`: a stored 'on'/'off' wins; otherwise the boot's fallback.
     sound: {
-      enabled: (s, fallback) => {
-        log.fallbacks.push(fallback);
-        const stored = s.readText(SOUND_KEY);
-        return stored.ok ? stored.value === 'on' : fallback;
-      },
+      ...(options.defaults === true
+        ? {}
+        : {
+            enabled: (s, fallback) => {
+              log.fallbacks.push(fallback);
+              const stored = s.readText(SOUND_KEY);
+              return stored.ok ? stored.value === 'on' : fallback;
+            },
+          }),
       fontKey: FONT_KEY,
     },
     reducer: {
@@ -942,22 +962,27 @@ const bootPage = (options: Options = {}) => {
       bindAll: (d) => {
         log.order.push(d === doc ? 'bindAll' : 'bindAll:other document');
       },
-      paintSound: (_doc, enabled) => {
-        log.order.push('paintSound');
-        log.sounds.push(enabled);
-      },
       toastMarks: (message) => ({ hit: message.startsWith('Hit') }),
-      // The default mark (shell.ts `fillName.default`) arrives as the flag; logged as `:default`.
-      fillName: (_doc, name, isDefault) => {
-        log.inputs.push([isDefault ? 'name:default' : 'name', name]);
-      },
-      fillP2Name: (_doc, name, isDefault) => {
-        log.inputs.push([isDefault ? 'p2:default' : 'p2', name]);
-      },
-      setCode: (_doc, value) => {
-        log.inputs.push(['code', value]);
-      },
+      ...(options.defaults === true
+        ? {}
+        : {
+            paintSound: (_doc, enabled) => {
+              log.order.push('paintSound');
+              log.sounds.push(enabled);
+            },
+            // The default mark (shell.ts `fillName.default`) arrives as the flag; logged as `:default`.
+            fillName: (_doc, name, isDefault) => {
+              log.inputs.push([isDefault ? 'name:default' : 'name', name]);
+            },
+            fillP2Name: (_doc, name, isDefault) => {
+              log.inputs.push([isDefault ? 'p2:default' : 'p2', name]);
+            },
+            setCode: (_doc, value) => {
+              log.inputs.push(['code', value]);
+            },
+          }),
     },
+    ...(options.copy === undefined ? {} : { copy: options.copy }),
     ...(options.defaultFx === true ? {} : { fx }),
     config: {
       cues: {
@@ -967,7 +992,8 @@ const bootPage = (options: Options = {}) => {
           ding: { cue: 'good.trick', buzz: 9 },
         },
       },
-      prefs: { sound: { write: (s, state) => s.writeText(SOUND_KEY, state) } },
+      prefs: { sound: soundPref(SOUND_KEY) },
+      ...(options.seats === true ? { seats: { min: 2, max: 4 } } : {}),
     },
     net: {
       Host: class extends FakeHost {
@@ -1310,14 +1336,11 @@ describe('bootShell', () => {
     expect(bare.p.get('app').attr('inert')).toBeNull();
   });
 
-  test("the hook: the shared members, the getter app, the game's own members after them", () => {
+  test("the hook: the shared members (act, view and setup among them), the getter app, the game's own members after them", () => {
     const b = bootPage({
       hooks: () => ({
-        hook: ({ app, dispatch }) => ({
-          act: (action: Action) => {
-            dispatch({ type: 'step', change: action.move > 0 });
-          },
-          view: () => app().shell.view,
+        hook: ({ app }) => ({
+          playable: () => app().shell.view?.seat ?? null,
         }),
       }),
     });
@@ -1329,20 +1352,27 @@ describe('bootShell', () => {
       'showScreen',
       'initHome',
       'fx',
+      'act',
+      'view',
+      'setup',
       'legal',
       'soundFont',
       'soundFontName',
       'recentGames',
-      'act',
-      'view',
+      'playable',
     ]);
     // The finished games, as the shell state holds them (the history sheet's list).
     expect((hook['recentGames'] as () => unknown)()).toEqual([]);
-    // `app` is live: a step that changes the App is seen through it.
+    // `app` is live: an `act` (the boot's: the game's `act` intent) that changes the App is seen through it.
     expect(hook['app']).toBe(b.boot.app());
     (hook['act'] as (a: Action) => void)({ move: 1 });
+    expect(b.log.intents.at(-1)).toEqual({ type: 'act', action: { move: 1 } });
     expect((hook['app'] as App).steps).toBe(1);
     expect(hook['app']).toBe(b.boot.app());
+    // `setup` is the shell's `position/load` over the state handed in.
+    (hook['setup'] as (s: unknown) => void)({ n: 4 });
+    expect(b.log.intents.at(-1)).toEqual({ type: 'position/load', state: { n: 4 } });
+    expect((hook['playable'] as () => unknown)()).toBeNull();
     expect(hook['fx']).toBe(b.boot.fx);
     expect(hook['dispatch']).toBe(b.boot.dispatch);
     // `legal` is the engine's for my view, nothing without one; `render`, `showScreen` and
@@ -1350,12 +1380,71 @@ describe('bootShell', () => {
     expect((hook['legal'] as () => ReadonlyArray<Action>)()).toEqual([]);
     (hook['render'] as () => void)();
     expect((hook['view'] as () => View | null)()).toEqual(VIEW);
+    expect((hook['playable'] as () => unknown)()).toBe(VIEW.seat);
     expect((hook['legal'] as () => ReadonlyArray<Action>)()).toEqual([{ move: 1 }]);
     (hook['showScreen'] as (s: string) => void)('ownScreen');
     (hook['initHome'] as () => void)();
-    expect(seen(b).slice(-4)).toEqual(['step', 'render', 'screen/show', 'home/init']);
+    expect(seen(b).slice(-4)).toEqual(['position/load', 'render', 'screen/show', 'home/init']);
     expect(b.log.intents.at(-2)).toEqual({ type: 'screen/show', screen: 'ownScreen' });
     expect(b.log.intents.at(-1)).toEqual({ type: 'home/init', home: HOME });
+    // A game that spells a shared member's name replaces it in place (gin's `act` before the boot's).
+    const own = bootPage({
+      hooks: () => ({
+        hook: ({ dispatch }) => ({
+          act: (action: Action) => {
+            dispatch({ type: 'step', change: action.move > 0 });
+          },
+        }),
+      }),
+    });
+    expect(Object.keys(own.hook()).indexOf('act')).toBe(Object.keys(hook).indexOf('act'));
+    (own.hook()['act'] as (a: Action) => void)({ move: 1 });
+    expect(own.log.intents.at(-1)).toEqual({ type: 'step', change: true });
+  });
+
+  test("the boot's defaults: the shell's speaker paint, name and code fills and sound reader, the copy into the page's slots before the game renders, and seated sessions off the config's seat range", () => {
+    const b = bootPage({
+      defaults: true,
+      copy: { rules: '<li>r</li>', about: '<p>a</p>' },
+      seats: true,
+      hooks: (log) => ({
+        render: () => {
+          log.order.push('render');
+        },
+      }),
+    });
+    // The speaker button painted by shellPaint.ts `paintSound`, sound on (no stored preference, a desktop).
+    expect(b.p.get('soundBtn').text()).toBe('🔊');
+    expect(b.p.get('soundBtn').attr('aria-pressed')).toBe('true');
+    expect(b.log.order).toEqual(['render', 'bindAll', 'intent:home/init', 'intent:resume/auto']);
+    // The copy in both rules slots and the About slot (`renderCopy`).
+    expect(b.p.get('rulesList').text()).toBe('<li>r</li>');
+    expect(b.p.get('rulesOverlayList').text()).toBe('<li>r</li>');
+    expect(b.p.get('aboutCopy').text()).toBe('<p>a</p>');
+    // The fills: web/shared/ui/home.ts over the page's inputs, the default mark as `data-default`.
+    b.run([
+      { type: 'fillName', name: 'Ari', default: true },
+      { type: 'fillP2Name', name: 'Jeff' },
+      { type: 'setCode', value: 'ABCD' },
+    ]);
+    expect(b.p.get('nameInput').value()).toBe('Ari');
+    expect(b.p.get('p1NameInput').value()).toBe('Ari');
+    expect(b.p.get('p1NameInput').attr('data-default')).not.toBeNull();
+    expect(b.p.get('p2NameInput').value()).toBe('Jeff');
+    expect(b.p.get('p2NameInput').attr('data-default')).toBeNull();
+    expect(b.p.get('codeInput').value()).toBe('ABCD');
+    // The sound reader is prefs.ts `soundPref.enabled` over the config's pref: a stored `off` wins over the desktop's on.
+    const muted = bootPage({ defaults: true, stored: { [SOUND_KEY]: 'off' } });
+    expect(muted.p.get('soundBtn').text()).toBe('🔇');
+    // `config.seats` seats the sessions: the host's frame intent carries the channel's seat; a two-seat config's does not.
+    b.run([{ type: 'startHost', code: 'ABCD', attempt: 1, resume: false }]);
+    const join = { t: 'join', name: 'Jeff' } as const;
+    b.log.hosts[0]?.deps.events.frame(join, 2);
+    expect(b.log.intents.at(-1)).toEqual({ type: 'host/frame', frame: join, seat: 2 });
+    const two = bootPage();
+    two.run([{ type: 'startHost', code: 'ABCD', attempt: 1, resume: false }]);
+    two.log.hosts[0]?.deps.events.frame(join, 2);
+    expect(two.log.intents.at(-1)).toEqual({ type: 'host/frame', frame: join });
   });
 
   test("the sound font hook: a font is dispatched, anything else logged under the page's key and refused", () => {
