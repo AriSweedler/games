@@ -13,24 +13,15 @@ import {
   broadcast,
   cueStep,
   fx,
-  guestContextOf as shellGuestContextOf,
-  hostContextOf as shellHostContextOf,
-  initialShell as shellInitial,
-  isShellIntent,
   localBroadcast,
   pure,
-  readHome as shellReadHome,
-  reduceShell,
-  resumeFor as shellResumeFor,
   step,
   toast,
   withShell,
   type Ctx,
   type CueMachine,
   type Effect as SharedEffect,
-  type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
-  type HostContextOf,
   type Intent as SharedIntent,
   type Resume as SharedResume,
   type ShellApp,
@@ -39,7 +30,8 @@ import {
   type Step as SharedStep,
   type CueMemory,
 } from '../../../../shared/ui/shell.ts';
-import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import { applyAction, viewFor, type Action, type State, type View } from '../engine/view.ts';
 import { action as actionFrame } from '../protocol.ts';
 import { UNO_SHELL } from '../shellConfig.ts';
@@ -49,7 +41,6 @@ import {
   type HomeTab,
   type Opts,
   type PlayMode,
-  type Save,
   type Store,
 } from '../storage.ts';
 import { cuesBetween, type Cue } from './sound.ts';
@@ -153,9 +144,6 @@ export const UNO: ShellConfig<Uno> = {
   home: { ...UNO_SHELL.home, apply: (app) => app },
 };
 
-export const initialShell: Shell = shellInitial(UNO);
-export const initialApp: App = { shell: initialShell, table: initialTable };
-
 /** Pass-and-play: the seat whose turn it is acts (any seat deals again); a new game lowers the curtain for its first player. */
 const localAct = (app: App, action: Action, ctx: Ctx): Step => {
   const game = app.shell.game;
@@ -195,29 +183,18 @@ const act = (app: App, action: Action, ctx: Ctx): Step => {
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step =>
   then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
 
-/** The shell's `local/click` seats two to twelve (its `seatNames` where the click carries none) and deals through `engine.create`. */
-export const reduce = (app: App, intent: Intent, ctx: Ctx): Step =>
-  isShellIntent(intent) ? reduceShell(app, intent, ctx, UNO) : tableIntent(app, intent, ctx);
-
-/** The resume box `initHome` shows, or null (a finished game is not offered). */
-export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(save, UNO);
-
-export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, UNO);
-
-/** The host session's context: the shell's fields, the seat count and the guest seats (net/host.ts `HostContext`). */
-export type HostContext = HostContextOf<Uno>;
-export type GuestContext = GuestContextOf;
-
-export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
-
-export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
+/**
+ * The boot's reducer block (web/shared/ui/shellReducer.ts): the shell's flows over `UNO` (its
+ * `local/click` seats two to twelve, its `seatNames` where the click carries none, and deals
+ * through `engine.create`), the table's one intent; every effect is the shell's (the seat count's
+ * write is its `writeOpts`, a seat name's its `rememberSeatName`).
+ */
+export const reducer = shellReducer(UNO, { intent: tableIntent });
+export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
+  reducer;
+export const initialShell: Shell = initialApp.shell;
 
 export type EffectDeps = ShellEffectDeps<Uno>;
-
-/** Every effect is the shell's (the seat count's write is its `writeOpts`, a seat name's its `rememberSeatName`). */
-export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
-  runShellEffect(app.shell, effect, deps, UNO);
-};
 
 /** The view the table paints: my seat's, or null at home. */
 export const viewOf = (app: App): View | null => app.shell.view;

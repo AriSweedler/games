@@ -17,23 +17,13 @@ import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
 import { GLOSSARY } from './src/ui/glossary.ts';
 import { bindAll, paint } from './src/ui/render.ts';
 import { rulesItemsHtml } from './src/ui/rules.ts';
-import {
-  FLIP7,
-  guestContextOf,
-  hostContextOf,
-  initialApp,
-  readHome,
-  reduce,
-  runEffect,
-  type App,
-  type Flip7,
-} from './src/ui/state.ts';
+import { FLIP7, reducer, type App, type Flip7 } from './src/ui/state.ts';
 
 bootShell<Flip7, App>({
   page: browserPage(),
   game: { hook: '__flip7', title: 'Flip 7', debug: 0 },
   sound: { fontKey: STORAGE_KEYS.soundFont },
-  reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
+  reducer,
   paint: { paint, bindAll },
   config: FLIP7,
   copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },

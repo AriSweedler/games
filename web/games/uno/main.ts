@@ -15,23 +15,13 @@ import { isGuestFrame } from './src/protocol.ts';
 import { STORAGE_KEYS } from './src/storage.ts';
 import { bindAll, paint } from './src/ui/render.ts';
 import { ABOUT_PARAGRAPHS, GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
-import {
-  UNO,
-  guestContextOf,
-  hostContextOf,
-  initialApp,
-  readHome,
-  reduce,
-  runEffect,
-  type App,
-  type Uno,
-} from './src/ui/state.ts';
+import { UNO, reducer, type App, type Uno } from './src/ui/state.ts';
 
 bootShell<Uno, App>({
   page: browserPage(),
   game: { hook: '__uno', title: 'UNO', debug: 0 },
   sound: { fontKey: STORAGE_KEYS.soundFont },
-  reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
+  reducer,
   paint: { paint, bindAll },
   config: UNO,
   copy: { rules: rulesItemsHtml(), about: aboutHtml(ABOUT_PARAGRAPHS, GLOSSARY) },

@@ -11,15 +11,8 @@ import {
   andThen as then,
   broadcast,
   cueStep,
-  guestContextOf as shellGuestContextOf,
-  hostContextOf as shellHostContextOf,
-  initialShell as shellInitial,
-  isShellIntent,
   localBroadcast,
   pure,
-  readHome as shellReadHome,
-  reduceShell,
-  resumeFor as shellResumeFor,
   step,
   startsOver,
   toast,
@@ -28,9 +21,7 @@ import {
   type Ctx,
   type CueMachine,
   type Effect as SharedEffect,
-  type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
-  type HostContextOf,
   type Intent as SharedIntent,
   type Resume as SharedResume,
   type ShellApp,
@@ -40,7 +31,8 @@ import {
   type TableReset,
   type CueMemory,
 } from '../../../../shared/ui/shell.ts';
-import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import {
   actorOf,
   applyAction,
@@ -62,7 +54,6 @@ import {
   type HomeTab,
   type Opts,
   type PlayMode,
-  type Save,
   type Store,
 } from '../storage.ts';
 
@@ -325,34 +316,20 @@ export const FLIP7: ShellConfig<Flip7> = {
   home: { ...FLIP7_SHELL.home, apply: (app) => app },
 };
 
-export const initialShell: Shell = shellInitial(FLIP7);
-export const initialApp: App = { shell: initialShell, table: initialTable };
+/**
+ * The boot's reducer block (web/shared/ui/shellReducer.ts): the shell's flows over `FLIP7` (its
+ * `local/click` seats two to twelve, its `seatNames` where the click carries none, and deals
+ * through `engine.create`), the table's intents; every effect is the shell's (the seat count's
+ * write is its `writeOpts`, a seat name's its `rememberSeatName`).
+ */
+export const reducer = shellReducer(FLIP7, { intent: tableIntent });
+export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
+  reducer;
 
-/** The shell's `local/click` seats two to twelve (its `seatNames` where the click carries none) and deals through `engine.create`. */
-export const reduce = (app: App, intent: Intent, ctx: Ctx): Step => {
-  return isShellIntent(intent)
-    ? reduceShell(app, intent, ctx, FLIP7)
-    : tableIntent(app, intent, ctx);
-};
+export type EffectDeps = ShellEffectDeps<Flip7>;
 
 /** My seat may act on the view now (the paint's buttons). */
 export const myTurn = (app: App): boolean => {
   const view = app.shell.view;
   return view !== null && app.table.curtain === null && app.table.pause === null && isMyTurn(view);
-};
-
-export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(save, FLIP7);
-export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, FLIP7);
-
-export type HostContext = HostContextOf<Flip7>;
-export type GuestContext = GuestContextOf;
-
-export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
-export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
-
-export type EffectDeps = ShellEffectDeps<Flip7>;
-
-/** Every effect is the shell's (the seat count's write is its `writeOpts`, a seat name's its `rememberSeatName`). */
-export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
-  runShellEffect(app.shell, effect, deps, FLIP7);
 };

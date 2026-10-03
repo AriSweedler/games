@@ -34,17 +34,7 @@ import { bindHelpFold } from './src/ui/helpFold.ts';
 import { GLOSSARY, rulesItemsHtml } from './src/ui/rules.ts';
 import { ABOUT_PARAGRAPHS } from './src/ui/about.ts';
 import { bindAll, paint } from './src/ui/render.ts';
-import {
-  FIDICE,
-  guestContextOf,
-  hostContextOf,
-  initialApp,
-  readHome,
-  reduce,
-  runEffect,
-  type App,
-  type Fidice,
-} from './src/ui/state.ts';
+import { FIDICE, reducer, type App, type Fidice } from './src/ui/state.ts';
 
 const injectDiceStyles = (): void => {
   const style = document.createElement('style');
@@ -146,7 +136,7 @@ const bootShellPath = (): void => {
     game: { hook: '__fidice', title: 'Fidice', debug: 1 },
     // The shell's four cues alone until M9 (plan §7 D11); muted by default on a coarse pointer (the boot's fallback).
     sound: { fontKey: STORAGE_KEYS.soundFont },
-    reducer: { initialApp, reduce, runEffect, readHome, hostContextOf, guestContextOf },
+    reducer,
     paint: { paint, bindAll },
     config: FIDICE,
     // The rules into both slots and the About copy (ui/rules.ts, ui/about.ts), before the render hook.

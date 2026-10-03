@@ -25,9 +25,7 @@ import {
   flipped,
   gateOpen,
   playsOrientation,
-  type Ctx,
   type Cue,
-  type Effect,
   type EphemeralOf,
   type FlipConfig,
   type FlipShell,
@@ -46,6 +44,7 @@ import {
   type TimerId,
 } from '../ui/shell.ts';
 import type { ShellEffectDeps } from '../ui/shellEffects.ts';
+import type { ReducerBlock } from '../ui/shellReducer.ts';
 import {
   GATE_GO_ID,
   GATE_KEEP_ID,
@@ -469,18 +468,12 @@ export type BootConfig<G extends BootTypes, App extends BootApp<G>, Ex extends o
     /** The game's own sound-font key (`STORAGE_KEYS.soundFont`): checked before every home read, named in the console hook's refusal. */
     fontKey: string;
   }>;
-  reducer: Readonly<{
-    initialApp: App;
-    reduce: (
-      app: App,
-      intent: Intent<G>,
-      ctx: Ctx,
-    ) => Readonly<{ app: App; effects: ReadonlyArray<Effect<G>> }>;
-    runEffect: (app: App, effect: Effect<G>, deps: ShellEffectDeps<G> & Ex) => void;
-    readHome: (store: G['Store']) => HomeSnapshot<G>;
-    hostContextOf: (app: App) => HostContextOf<G>;
-    guestContextOf: (app: App) => GuestContextOf;
-  }>;
+  /**
+   * The game's reducer over its App: `initialApp`, `reduce`, `runEffect`, `readHome` and the two
+   * session contexts (shellReducer.ts `ReducerBlock`). A shell game passes
+   * `shellReducer(cfg, table)`'s result (`ui/state.ts` `reducer`); the boot test's fake spells its own.
+   */
+  reducer: ReducerBlock<G, App, Ex>;
   paint: Readonly<{
     paint: (doc: PageLike, app: App) => void;
     bindAll: (doc: PageLike, dispatch: (intent: Intent<G>) => void) => void;

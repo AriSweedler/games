@@ -43,18 +43,10 @@ import {
   andThen as then,
   broadcast,
   cueStep,
-  guestContextOf as shellGuestContextOf,
-  hostContextOf as shellHostContextOf,
-  initialShell as shellInitial,
-  isShellEffect,
-  isShellIntent,
   localBroadcast,
   localNamesOf,
   localSeats,
   pure,
-  readHome as shellReadHome,
-  reduceShell,
-  resumeFor as shellResumeFor,
   saveFor as shellSaveFor,
   startLocal,
   step,
@@ -64,9 +56,7 @@ import {
   type Ctx,
   type CueMachine,
   type Effect as SharedEffect,
-  type GuestContextOf,
   type HomeSnapshot as SharedHomeSnapshot,
-  type HostContextOf,
   type Intent as SharedIntent,
   type Player,
   type Resume as SharedResume,
@@ -81,7 +71,8 @@ import {
   type TimerId as SharedTimerId,
   type CueMemory,
 } from '../../../../shared/ui/shell.ts';
-import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
+import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
+import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import { decide, emptyMemories, type Memories } from '../bots/brain.ts';
 import { HOST, apply, bySeat, scheduleAutoNext, stampLog } from '../domain/game.ts';
 import { cleanName } from '../domain/lobby.ts';
@@ -595,9 +586,6 @@ export const FIDICE: ShellConfig<Fidice> = {
   },
 };
 
-export const initialShell: Shell = shellInitial(FIDICE);
-export const initialApp: App = { shell: initialShell, table: initialTable };
-
 // ---- the deal (plan §4 M3, §7 D6, D9, D10) -----------------------------------------------------
 
 /** The table started: the engine's `start` under the HOST actor, its log stamped; the refusal is the engine's sentence. */
@@ -1032,50 +1020,8 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
   }
 };
 
-const reduceInner = (app: App, intent: Intent, ctx: Context): Step => {
-  if (intent.type === 'local/click') return localStart(app, intent, ctx);
-  if (intent.type === 'host/deal') return hostDeal(app, ctx);
-  return isShellIntent(intent)
-    ? reduceShell(app, intent, ctx, FIDICE)
-    : tableIntent(app, intent, ctx);
-};
-
-/** Every intent, then the game loop's timers over the result (the legacy `commit` → `schedule`). */
-export const reduce = (app: App, intent: Intent, ctx: Context): Step =>
-  then(reduceInner(app, intent, ctx), (a) => scheduled(app, a, ctx));
-
-// ---- storage: persist and resume -------------------------------------------------------------
-
-/** The resume box `initHome` shows, or null (a finished game is not offered). */
-export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(save, FIDICE);
-
-/** `persist()`: the save for the current role, or null when there is nothing to save. */
-export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
-
-/** `initHome`'s reads: the names, the tab, mode and terms (defaults when unreadable), the save. */
-export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, FIDICE);
-
-// ---- what the sessions read back ---------------------------------------------------------------
-
-/** The host session's context: the shell's fields, the room's five terms and the guest seats as the shell holds them (net/host.ts `HostContext`). */
-export type HostContext = HostContextOf<Fidice>;
-export type GuestContext = GuestContextOf;
-
-export const hostContextOf = (app: App): HostContext => shellHostContextOf(app.shell);
-
-export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(app.shell);
-
-// ---- running the effects -----------------------------------------------------------------------
-
-/** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); fidice adds none. main.ts constructs the real ones, tests record. */
-export type EffectDeps = ShellEffectDeps<Fidice>;
-
-/** One effect against the adapters; `app` is the state after the step that produced it. Fidice's two first, then the shell's runner. */
-export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
-  if (isShellEffect(effect)) {
-    runShellEffect(app.shell, effect, deps, FIDICE);
-    return;
-  }
+/** Fidice's two effects, the seat names this page alone keeps (the room's terms are the shell's `writeOpts`); the shell's are its runner's. */
+const tableEffect: TableEffectRunner<Fidice> = (_app, effect, deps) => {
   switch (effect.type) {
     case 'rememberPName':
       EXTRA_NAME_PREFS[effect.seat].write(deps.store, effect.name);
@@ -1085,6 +1031,30 @@ export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
       return;
   }
 };
+
+/**
+ * The boot's reducer block (web/shared/ui/shellReducer.ts): fidice's own starts before the shell's
+ * case (the pass-and-play deal, the host's), the shell's flows over `FIDICE` or the table's
+ * intents, then the game loop's timers over every result (the legacy `commit` → `schedule`).
+ */
+export const reducer = shellReducer(FIDICE, {
+  intent: tableIntent,
+  effect: tableEffect,
+  before: (app, intent, ctx) => {
+    if (intent.type === 'local/click') return localStart(app, intent, ctx);
+    return intent.type === 'host/deal' ? hostDeal(app, ctx) : null;
+  },
+  after: (before, s, _intent, ctx) => then(s, (a) => scheduled(before, a, ctx)),
+});
+export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf, guestContextOf } =
+  reducer;
+export const initialShell: Shell = initialApp.shell;
+
+/** `persist()`: the save for the current role, or null when there is nothing to save. */
+export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
+
+/** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); fidice adds none. main.ts constructs the real ones, tests record. */
+export type EffectDeps = ShellEffectDeps<Fidice>;
 
 /** The seeded rng a driver hands the reducer (the hook's `__rng`), named here so the tests spell one type. */
 export type { Rng };
