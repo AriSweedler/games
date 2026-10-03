@@ -30,19 +30,18 @@
 // longer in hand is dropped), and a leave closes the network before the state is reset, so the
 // session's own close still raises the "disconnected" toast the legacy raised.
 import {
-  SHELL_SCREENS,
-  LONG_PRESS_MS,
-  NOT_CONNECTED_MSG,
-  hostDispatch,
+  act as shellAct,
+  andThen as then,
   localBroadcast,
   localNamesOf,
   localPlayers,
   localSeated,
+  LONG_PRESS_MS,
   pure,
   resumeFor as shellResumeFor,
   saveFor as shellSaveFor,
+  SHELL_SCREENS,
   step,
-  andThen as then,
   toast,
   withShell,
   withTable,
@@ -64,7 +63,6 @@ import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import { applyAction, canTakeBack, fitsOnto, idsOf, inPlay } from '../engine/index.ts';
 import { resumeLabel as shellResumeLabel } from '../../../../shared/lib/name.ts';
 import type { Action, Seat, State, View } from '../engine/types.ts';
-import { action as actionFrame } from '../protocol.ts';
 import type { ScorerState } from '../scorer/scores.ts';
 import { GIN_SHELL } from '../shellConfig.ts';
 import {
@@ -406,36 +404,27 @@ const rendered = (app: App, prev: View | null = null): Step => {
   );
 };
 // ---- flows -------------------------------------------------------------------------------------
-/** `localAct(action)`: `ready` is applied for both seats; anything else for the mover. */
-const localAct = (app: App, action: Action, ctx: Context): Step => {
+/** Pass-and-play's `ready`: one phone taps it for both seats, so it is applied for each (a seat already ready is skipped); the next hand's result sheet is shown again. */
+const localReady = (app: App, action: Action, ctx: Context): Step => {
   const game = app.shell.game;
   if (game === null) return pure(app);
-  if (action.type === 'ready') {
-    const r1 = applyAction(game, 0, action, ctx.rng, ctx.now);
-    const g1 = r1.ok ? r1.value : game;
-    const r2 = applyAction(g1, 1, action, ctx.rng, ctx.now);
-    if (!r1.ok && !r2.ok) return refuse(app, r1.error);
-    return localBroadcast(
-      withTable(withShell(app, { game: r2.ok ? r2.value : g1 }), { resultDismissed: false }),
-      false,
-      ctx,
-      GIN,
-    );
-  }
-  const res = applyAction(game, game.turn, action, ctx.rng, ctx.now);
-  if (!res.ok) return refuse(app, res.error);
+  const r1 = applyAction(game, 0, action, ctx.rng, ctx.now);
+  const g1 = r1.ok ? r1.value : game;
+  const r2 = applyAction(g1, 1, action, ctx.rng, ctx.now);
+  if (!r1.ok && !r2.ok) return refuse(app, r1.error);
   return localBroadcast(
-    withTable(withShell(app, { game: res.value }), { resultDismissed: false }),
+    withTable(withShell(app, { game: r2.ok ? r2.value : g1 }), { resultDismissed: false }),
     false,
     ctx,
     GIN,
   );
 };
 /**
- * `act(action)`: a tap, then by role. A draw (the stock, the discard pile, the upcard) first opens
- * the ghost cell for the card, so the ten cards on screen keep their places until the player
- * accepts it (docs/design/gin-draw-ghost-slot.md §3); the stage settles in `rendered` or clears in
- * `refuse`.
+ * `act(action)`: a tap, then the shell's `act` by role (the mover acts on a pass-and-play phone:
+ * `revealer`), but for `ready` on that phone, which is both seats' (`localReady`). A draw (the
+ * stock, the discard pile, the upcard) first opens the ghost cell for the card, so the ten cards
+ * on screen keep their places until the player accepts it (docs/design/gin-draw-ghost-slot.md §3);
+ * the stage settles in `rendered` or clears in `refuse`.
  * A second draw while one is `waiting` (a guest's round trip: the view stays in the draw phase
  * until the host's state frame lands) is ignored, or the host would refuse the duplicate with a
  * toast that clears the stage and collapses the ghost card without the player's accept tap.
@@ -447,21 +436,11 @@ const act = (app: App, action: Action, ctx: Context): Step => {
     from !== null && app.shell.view !== null
       ? withTable(app, { draw: { kind: 'waiting', from } })
       : app;
-  return then(step(held, { type: 'fx', cue: 'tap' }), (a) => {
-    switch (a.shell.role) {
-      case 'local':
-        return localAct(a, action, ctx);
-      case 'host':
-        return hostDispatch(a, 0, action, ctx, GIN);
-      case 'guest':
-      case null:
-        // The legacy tested `app.conn && app.conn.open`; a guest's channel is open exactly while
-        // the host counts as connected (set on open, cleared on close), and no role has no channel.
-        return a.shell.role === 'guest' && a.shell.oppConnected
-          ? step(a, { type: 'send', frame: actionFrame(action) })
-          : refuse(a, NOT_CONNECTED_MSG);
-    }
-  });
+  return then(step(held, { type: 'fx', cue: 'tap' }), (a) =>
+    a.shell.role === 'local' && action.type === 'ready'
+      ? localReady(a, action, ctx)
+      : shellAct(a, action, ctx, GIN),
+  );
 };
 /** The resume box `initHome` showed, in the legacy order of precedence, or null: the Score Counter's session first, then the shell's three save roles. */
 export const resumeFor = (save: Save | null, scorer: ScorerState | null): Resume | null =>

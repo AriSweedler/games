@@ -795,16 +795,13 @@ const stateTs = (
 // The game's end is a pause (AGENT.md "Understand what happened before proceeding"): the result
 // sheet over the table waits for Continue. Pure: the clock and the rng come in through \`Ctx\`.
 import {
-  NOT_CONNECTED_MSG,
+  act as shellAct,
   andThen as then,
-  broadcast,
-  localBroadcast,
   localNamesOf,
   localSeats,
   pure,
   startLocal,
   step,
-  toast,
   withShell,
   withTable,
   type Ctx,
@@ -822,7 +819,6 @@ import {
 import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import {
-  applyAction,
   createState,
   turnSeat,
   viewFor,
@@ -831,7 +827,6 @@ import {
   type State,
   type View,
 } from '../engine/view.ts';
-import { action as actionFrame } from '../protocol.ts';
 import { ${upper}_SHELL } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
@@ -917,8 +912,6 @@ export const initialTable: Table = { curtain: null, pause: null, historyOpen: fa
 
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
-const refuse = (app: App, message: string): Step => step(app, toast(message));
-
 /** The cues for the change from \`prev\` to \`next\`: a pass taken, the game won or lost. */
 export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
   const result = next.game.result;
@@ -996,55 +989,24 @@ const viewer: ShellConfig<${pascal}>['local']['viewer'] = (app, game) => {
   return { seat, curtain };
 };
 
-/** \`curtain/reveal\`: whoever must act lifts the curtain; the shell's \`position/load\` reads the seat to move off this. */
+/** \`curtain/reveal\`: whoever must act lifts the curtain, and acts from this phone (the shell's \`act\`); the shell's \`position/load\` reads the seat to move off this. */
 const revealer: ShellConfig<${pascal}>['local']['revealer'] = (game) => ({
   seat: turnSeat(game.game) ?? 0,
 });
 
+/** Only \`again\` applies to a decided game: it is the new game, and it shows seat 0's view. */
+const newGame: ShellConfig<${pascal}>['local']['newGame'] = (prev) => prev.game.result !== null;
+
 export const ${upper}: ShellConfig<${pascal}> = {
   ...${upper}_SHELL,
   table: { initial: initialTable, reset, rendered },
-  local: { viewer, revealer },
+  local: { viewer, revealer, newGame },
   home: { ...${upper}_SHELL.home, apply: (app) => app },
 };
 
-/** Pass-and-play: the seat whose turn it is acts (either seat may play again); a new game shows seat 0's view. */
-const localAct = (app: App, action: Action, ctx: Ctx): Step => {
-  const game = app.shell.game;
-  if (game === null) return pure(app);
-  const seat = turnSeat(game.game) ?? app.shell.view?.seat ?? 0;
-  const res = applyAction(game, seat, action, ctx.rng, ctx.now);
-  if (!res.ok) return refuse(app, res.error);
-  const fresh = action.type === 'again';
-  return localBroadcast(
-    withShell(app, { game: res.value, revealed: fresh ? null : app.shell.revealed }),
-    false,
-    ctx,
-    ${upper},
-  );
-};
-
-/** \`act(action)\` by role: pass-and-play and the host apply and broadcast; a guest sends one \`action\` frame. */
-const act = (app: App, action: Action, ctx: Ctx): Step => {
-  // Nothing moves while a pause waits for its Continue.
-  if (app.table.pause !== null) return pure(app);
-  switch (app.shell.role) {
-    case 'local':
-      return localAct(app, action, ctx);
-    case 'host': {
-      const game = app.shell.game;
-      if (game === null) return pure(app);
-      const res = applyAction(game, 0, action, ctx.rng, ctx.now);
-      if (!res.ok) return refuse(app, res.error);
-      return broadcast(withShell(app, { game: res.value }), ctx, ${upper});
-    }
-    case 'guest':
-    case null:
-      return app.shell.role === 'guest' && app.shell.oppConnected
-        ? step(app, { type: 'send', frame: actionFrame(action) })
-        : refuse(app, NOT_CONNECTED_MSG);
-  }
-};
+/** \`act(action)\`: the shell's by role (the mover acts on a pass-and-play phone: \`revealer\`), behind the game's one guard: nothing moves while a pause waits for its Continue. */
+const act = (app: App, action: Action, ctx: Ctx): Step =>
+  app.table.pause !== null ? pure(app) : shellAct(app, action, ctx, ${upper});
 
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
   switch (intent.type) {

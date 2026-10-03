@@ -23,21 +23,19 @@
 // does with its curtain off; the game's end is a sheet over the final board whose Continue leaves
 // the board on show. Pure: the clock comes in through `Ctx`; Hive rolls nothing.
 import {
-  NOT_CONNECTED_MSG,
+  act as shellAct,
   andThen as then,
-  broadcast,
   cuesFor,
   errorToast,
   fx,
-  localBroadcast,
   pure,
   startsOver,
   step,
   toast,
-  withShell,
   withTable,
   type Ctx,
   type CueMachine,
+  type CueMemory,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
@@ -47,7 +45,6 @@ import {
   type ShellState,
   type Step as SharedStep,
   type TableReset,
-  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
@@ -65,7 +62,6 @@ import { dedupe, keyOf, sameHex, type Hex } from '../engine/hex.ts';
 import type { Bug, Side } from '../engine/pieces.ts';
 import {
   NOT_YOUR_TURN_MSG,
-  applyAction,
   turnSeat,
   viewFor,
   type Action,
@@ -73,7 +69,6 @@ import {
   type State,
   type View,
 } from '../engine/view.ts';
-import { action as actionFrame } from '../protocol.ts';
 import type { Hop } from './board.ts';
 import { HIVE_SHELL } from '../shellConfig.ts';
 import {
@@ -356,51 +351,28 @@ const escape = (app: App, ctx: Ctx): Step | null => {
   return pure(pick(app, null));
 };
 
+/** Only `again` applies to a decided game: it is the new game, and it shows White's view. */
+const newGame: ShellConfig<Hive>['local']['newGame'] = (prev) => prev.game.result !== null;
+
 export const HIVE: ShellConfig<Hive> = {
   ...HIVE_SHELL,
   table: { initial: initialTable, reset, rendered, refuse, escape },
-  local: { viewer, revealer },
+  // Pass-and-play: the seat whose turn it is acts (`revealer`; either seat may play again).
+  local: { viewer, revealer, newGame },
   home: {
     ...HIVE_SHELL.home,
     apply: (app, home) => withTable(app, { motion: home.motion, hints: home.hints }),
   },
 };
 
-/** Pass-and-play: the seat whose turn it is acts (either seat may play again); a new game shows White's view. */
-const localAct = (app: App, action: Action, ctx: Ctx): Step => {
-  const game = app.shell.game;
-  if (game === null) return pure(app);
-  const seat = turnSeat(game.game) ?? app.shell.view?.seat ?? 0;
-  const res = applyAction(game, seat, action, ctx.now);
-  if (!res.ok) return refuse(app, res.error);
-  const fresh = action.type === 'again';
-  return localBroadcast(
-    withShell(app, { game: res.value, revealed: fresh ? null : app.shell.revealed }),
-    false,
+/** `act(action)`: the shell's by role; a guest puts its picked tile down as it sends (an applied action's reset does it for the other roles). */
+const act = (app: App, action: Action, ctx: Ctx): Step =>
+  shellAct(
+    app.shell.role === 'guest' && app.shell.oppConnected ? pick(app, null) : app,
+    action,
     ctx,
     HIVE,
   );
-};
-
-/** `act(action)` by role: pass-and-play and the host apply and broadcast; a guest sends one `action` frame. */
-const act = (app: App, action: Action, ctx: Ctx): Step => {
-  switch (app.shell.role) {
-    case 'local':
-      return localAct(app, action, ctx);
-    case 'host': {
-      const game = app.shell.game;
-      if (game === null) return pure(app);
-      const res = applyAction(game, 0, action, ctx.now);
-      if (!res.ok) return refuse(app, res.error);
-      return broadcast(withShell(app, { game: res.value }), ctx, HIVE);
-    }
-    case 'guest':
-    case null:
-      return app.shell.role === 'guest' && app.shell.oppConnected
-        ? step(pick(app, null), { type: 'send', frame: actionFrame(action) })
-        : refuse(app, NOT_CONNECTED_MSG);
-  }
-};
 
 /** Where the picked tile may go, off the view: a hand bug's placements, a board tile's moves. */
 export const reachable = (view: View, picked: Picked | null): ReadonlyArray<Hex> => {
