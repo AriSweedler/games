@@ -235,18 +235,6 @@ label {
   background: var(--danger);
 }
 
-/* ---- the home: the third to twelfth names under the shared stepper ---- */
-.more-names {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
-}
-.more-names.hidden,
-.more-names .hidden {
-  display: none;
-}
-
 /* ---- the table ---- */
 #tableScreen {
   display: flex;
