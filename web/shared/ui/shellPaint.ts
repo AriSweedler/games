@@ -27,6 +27,7 @@ import {
   readValue,
   requireId,
   setAttr,
+  setDisabled,
   setHtml,
   setText,
   setValue,
@@ -379,6 +380,40 @@ export const paintShellChrome = <G extends ShellTypes>(
 /** A sheet's overlay follows its flag. */
 export const paintSheet = (doc: DocumentLike, overlay: string, open: boolean): void => {
   toggleClass(requireId(doc, overlay), 'hidden', !open);
+};
+
+/**
+ * The result sheet's live words (docs/design/shell-hoist.md row G; the markup is
+ * web/shared/markup/shell.ts `resultMarkup`): the title; `sub` for a page whose sheet has `#rsSub`;
+ * `score` for `#rsScore`, a line of text (backgammon's match score, hive's note) or rows of markup
+ * rebuilt through the keyed slot only when `key` changes (briscola's sides per game, uno's cards
+ * left); and `primary` where the green button's words and gate follow the room (briscola's and
+ * backgammon's guest waits for the host to deal), by the id the page gave it.
+ */
+export type ResultWords = Readonly<{
+  title: string;
+  sub?: string;
+  score: string | Readonly<{ key: string; html: () => string }>;
+  primary?: Readonly<{ id: string; label: string; disabled: boolean }>;
+}>;
+
+/**
+ * `#resultOverlay` follows `open` (each game's gate: over, and not dismissed, and no curtain up),
+ * and its words are written while the game is over (`words` null before: the markup's "Game over"
+ * stands under a hidden sheet). The four games' `paintResult`s spelled this body over the same ids.
+ */
+export const paintResult = (doc: DocumentLike, open: boolean, words: ResultWords | null): void => {
+  paintSheet(doc, 'resultOverlay', open);
+  if (words === null) return;
+  setText(requireId(doc, 'rsTitle'), words.title);
+  if (words.sub !== undefined) setText(requireId(doc, 'rsSub'), words.sub);
+  const score = requireId(doc, 'rsScore');
+  if (typeof words.score === 'string') setText(score, words.score);
+  else ensureKeyed(score, words.score.key, words.score.html);
+  if (words.primary === undefined) return;
+  const primary = requireId(doc, words.primary.id);
+  setText(primary, words.primary.label);
+  setDisabled(primary, words.primary.disabled);
 };
 
 /**

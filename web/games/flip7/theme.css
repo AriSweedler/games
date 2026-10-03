@@ -205,40 +205,6 @@ label {
 .empty-note.left {
   text-align: left;
 }
-/* The waiting rooms' seat list (shellPaint.ts `paintWaiting`): one row per seat, a dot for its channel. */
-.seat-list {
-  list-style: none;
-  margin: 8px auto 2px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-width: 260px;
-  text-align: left;
-  font-size: 0.92rem;
-}
-.seat-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.seat-list li::before {
-  content: '';
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--accent-dark);
-  flex-shrink: 0;
-}
-.seat-list li[data-connected='false'] {
-  color: var(--muted);
-}
-.seat-list li[data-connected='false']::before {
-  background: var(--muted);
-}
-.seat-list li[data-you] {
-  font-weight: 600;
-}
 #guestSeatName {
   margin-top: 12px;
   padding-top: 12px;

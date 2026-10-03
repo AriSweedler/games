@@ -1261,6 +1261,7 @@ import {
   paintConnDot,
   paintHandoff as paintShellHandoff,
   paintScreen as paintShellScreen,
+  paintResult,
   paintSheet,
   paintWaiting as paintShellWaiting,
   type Sheet,
@@ -1298,11 +1299,7 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   toggleClass(requireId(doc, 'againBtn'), 'hidden', !(over && app.table.pause === null));
   setText(requireId(doc, 'statusText'), statusText(v));
   const pause = app.table.pause;
-  paintSheet(doc, 'resultOverlay', pause !== null);
-  if (pause !== null) {
-    setText(requireId(doc, 'rsTitle'), pause.title);
-    setText(requireId(doc, 'rsNote'), pause.detail);
-  }
+  paintResult(doc, pause !== null, pause === null ? null : { title: pause.title, score: pause.detail });
 };
 
 /** The curtain for the seat the phone goes to (ui/state.ts \`viewer\`): its name and the last note; hidden when no seat waits. */
@@ -1437,6 +1434,7 @@ import {
   type ShellBlocks,
   type ShellCopy,
   type ShellNotes,
+  resultMarkup,
   type ShellPage,
 } from '../../shared/markup/shell.ts';
 
@@ -1540,17 +1538,13 @@ const blocks: ShellBlocks = {
       </div>\`,
   curtainIcon: '',
   curtainExtra: '',
-  sheetsBefore: \`
-    <!-- RESULT (the owner: "understand what happened before proceeding"): the end over the final
-         table; Continue clears the pause, Play again starts anew. -->
-    <div id="resultOverlay" class="overlay hidden">
-      <div class="sheet centered">
-        <div class="sheet-title" id="rsTitle">Game over</div>
-        <p class="result-note" id="rsNote"></p>
-        <button class="btn btn-secondary btn-block" id="rsContinueBtn">Continue</button>
-        <button class="btn btn-ghost btn-block btn-sm" id="rsLeaveBtn">Leave the table</button>
-      </div>
-    </div>\`,
+  result: resultMarkup({
+    note: 'the end over the final table (the owner: "understand what happened before proceeding"); Continue clears the pause, Play again starts anew.',
+    score: 'note',
+    continueBtn: true,
+    secondary: { id: 'rsLeaveBtn', label: 'Leave the table' },
+  }),
+  sheetsBefore: '',
   sheetsAfter: '',
   rulesIcon: '',
 };
@@ -1668,10 +1662,6 @@ label {
   display: flex;
   gap: 8px;
   margin-top: 8px;
-}
-.result-note {
-  color: var(--muted);
-  margin: 6px 0 14px;
 }
 `;
 

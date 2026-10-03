@@ -416,18 +416,6 @@
       </div>
     </div>
 
-    <!-- GAME RESULT (design §5.1): the sheet over the dimmed table, where every game ends; Play again
-         deals anew for the same players (the deal passes to the next seat). -->
-    <div id="resultOverlay" class="overlay hidden">
-      <div class="sheet centered">
-        <div class="sheet-title" id="rsTitle">Game over</div>
-        <div class="sheet-sub" id="rsSub"></div>
-        <div class="score-list" id="rsScore"></div>
-        <button class="btn btn-go btn-block" id="rsReplayBtn">Play again</button>
-        <button class="btn btn-ghost btn-block btn-sm" id="rsPeekBtn">Look at the table</button>
-      </div>
-    </div>
-
     <!-- DECK (the owner, 2026-09-25; gin's discards sheet on the forty, src/ui/deck.ts): the four
          suit rows as chips of the pack, what is gone greyed, my hand greyed too with the toggle. -->
     <div id="deckOverlay" class="overlay hidden">
@@ -439,6 +427,17 @@
           ><input type="checkbox" id="deckIncludeHand" /> Include the cards in my hand</label
         >
         <button class="btn btn-ghost btn-block btn-sm" id="closeDeckBtn">Close</button>
+      </div>
+    </div>
+
+    <!-- RESULT: the sheet over the dimmed table, where every game ends (design §5.1); Play again deals anew for the same players (the deal passes to the next seat). -->
+    <div id="resultOverlay" class="overlay hidden">
+      <div class="sheet centered">
+        <div class="sheet-title" id="rsTitle">Game over</div>
+        <div class="sheet-sub" id="rsSub"></div>
+        <div class="score-list" id="rsScore"></div>
+        <button class="btn btn-go btn-block" id="rsReplayBtn">Play again</button>
+        <button class="btn btn-ghost btn-block btn-sm" id="rsPeekBtn">Look at the table</button>
       </div>
     </div>
 

@@ -17,6 +17,7 @@ import {
   type ShellCopy,
   type ShellNotes,
   type ShellPage,
+  resultMarkup,
 } from '../../shared/markup/shell.ts';
 
 const copy: ShellCopy = {
@@ -461,23 +462,19 @@ const blocks: ShellBlocks = {
   curtainExtra: `        <button class="btn btn-ghost btn-block btn-sm" id="curtainHandoffBtn">
           Continue online
         </button>`,
+  result: resultMarkup({
+    note: 'the sheet over the dimmed board (design §4.11).',
+    sub: true,
+    score: 'line',
+    primary: { id: 'rsNextBtn', label: 'Next game' },
+    secondary: { id: 'rsPeekBtn', label: 'Look at the table' },
+  }),
   sheetsBefore: `${gateMarkup({
     title: 'Turn your phone sideways',
     sub: 'The board lies flat, like a real one. If it stays upright, rotation is locked: swipe down from the top edge and unlock it.',
     goLabel: 'Go sideways',
     keepLabel: 'Play upright',
   })}
-
-    <!-- GAME RESULT (design §4.11): the sheet over the dimmed board. -->
-    <div id="resultOverlay" class="overlay hidden">
-      <div class="sheet centered">
-        <div class="sheet-title" id="rsTitle">Game over</div>
-        <div class="sheet-sub" id="rsSub"></div>
-        <div class="score-line" id="rsScore"></div>
-        <button class="btn btn-go btn-block" id="rsNextBtn">Next game</button>
-        <button class="btn btn-ghost btn-block btn-sm" id="rsPeekBtn">Look at the table</button>
-      </div>
-    </div>
 
     <!-- DOUBLE OFFERED (Western only, design §4.8). -->
     <div id="cubeOverlay" class="overlay hidden">

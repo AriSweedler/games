@@ -665,10 +665,6 @@ label {
   display: flex;
   gap: 8px;
 }
-.result-note {
-  margin: 6px 0 14px;
-  color: var(--muted);
-}
 
 /* ---------- the drag ghost (web/shared/edge/drag.ts; test/dist/drag-ghost.test.ts) ---------- */
 /* The clone of the tile in the air (a tray tile, or the lift over a board tile), fixed on the body

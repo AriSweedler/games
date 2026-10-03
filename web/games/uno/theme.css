@@ -125,9 +125,6 @@ label {
 .sheet .btn-block + .btn-block {
   margin-top: 8px;
 }
-.sheet .score-list + .btn-block {
-  margin-top: 14px;
-}
 .empty-note {
   font-size: 0.88rem;
   padding: 8px 0 0;
@@ -135,40 +132,6 @@ label {
 }
 .empty-note.left {
   text-align: left;
-}
-/* The waiting rooms' seat list (shellPaint.ts `paintWaiting`): one row per seat, a dot for its channel. */
-.seat-list {
-  list-style: none;
-  margin: 8px auto 2px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-width: 260px;
-  text-align: left;
-  font-size: 0.92rem;
-}
-.seat-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.seat-list li::before {
-  content: '';
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--accent-dark);
-  flex-shrink: 0;
-}
-.seat-list li[data-connected='false'] {
-  color: var(--muted);
-}
-.seat-list li[data-connected='false']::before {
-  background: var(--muted);
-}
-.seat-list li[data-you] {
-  font-weight: 600;
 }
 #guestSeatName {
   margin-top: 12px;
@@ -413,23 +376,7 @@ label {
   flex-wrap: wrap;
   gap: 10px;
 }
-.score-list {
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.score-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: var(--card-2);
-  font-size: 0.95rem;
-}
+/* The result sheet's rows are shell.css's (`.score-list .score-row`); the winner's wears the accent ring. */
 .score-row.winner {
   box-shadow: inset 0 0 0 2px var(--accent);
   font-weight: 700;

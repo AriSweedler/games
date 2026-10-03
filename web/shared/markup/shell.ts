@@ -146,8 +146,8 @@ export type ShellBlocks = Readonly<{
    * `#playPanel`'s last child, after the mode panels: gin's fourth card `#homeRecent` (the recent
    * games, or "How it goes" for a fresh player), which fills the band a three-card form leaves under
    * itself on a tall phone (docs/design/space-audit.md §5 "Closed by gin-home-column-bottom"). The
-   * one block a page may leave out: absent it is '', and '' drops the line, so a page without one
-   * composes byte for byte as before.
+   * first block a page may leave out (`result` below is the other): absent it is '', and '' drops
+   * the line, so a page without one composes byte for byte as before.
    */
   homeExtra?: string;
   /**
@@ -179,7 +179,14 @@ export type ShellBlocks = Readonly<{
   curtainIcon: string;
   /** The curtain sheet after `#curtainBtn` (backgammon's `#curtainHandoffBtn`). */
   curtainExtra: string;
-  /** The game's overlays between the curtain and the rules sheet. */
+  /**
+   * The result sheet (docs/design/shell-hoist.md row G; `resultMarkup` below): where a game ends
+   * over its table, placed by sheets.html before the rules sheet. Optional as `homeExtra` is: a
+   * page whose game ends elsewhere (gin's round sheet and endgame, fidice's ladder, Flip 7's panel
+   * in the table) leaves it out, and '' drops the line.
+   */
+  result?: string;
+  /** The game's overlays between the curtain and the result sheet. */
   sheetsBefore: string;
   /** The game's overlays between the history sheet and the toast. */
   sheetsAfter: string;
@@ -266,6 +273,69 @@ export const gateMarkup = (copy: GateCopy): string => `
         <button class="btn btn-ghost btn-block btn-sm" id="turnGateKeepBtn">${copy.keepLabel}</button>
       </div>
     </div>`;
+
+/** One of the result sheet's two buttons: the id the game's render.ts binds and its label. */
+export type ResultButton = Readonly<{ id: string; label: string }>;
+
+/**
+ * What a game's result sheet says of itself (docs/design/shell-hoist.md row G): the one sheet
+ * every game ends on, in the four spellings the games had, now data. `note` is the HTML comment
+ * above it (the design row or the owner's words); `sub` places `#rsSub` under the title (briscola's
+ * score line, backgammon's how-it-ended); `score` is the one element under those, `#rsScore`:
+ * `list`, a `score-list` of `.score-row`s (uno's cards left, briscola's points per side; shell.css),
+ * `line`, backgammon's one `score-line` of text (its theme's), or `note`, hive's muted paragraph
+ * (`result-note`, its theme's); `continueBtn` puts a Continue before the primary (hive: the shell's
+ * `result/dismiss`, the board left on show); `primary` is the green call to action (Play again,
+ * Next game; none on a sheet whose Continue is the one call, the scaffold's) and `secondary` the
+ * ghost under it (Leave the table, Look at the table), each by the id the game binds. The painter
+ * is web/shared/ui/shellPaint.ts `paintResult`.
+ */
+export type ResultSheet = Readonly<{
+  note: string;
+  sub?: true;
+  score: 'list' | 'line' | 'note';
+  continueBtn?: true;
+  primary?: ResultButton;
+  secondary: ResultButton;
+}>;
+
+/** The sheet's fixed ids, in the markup's order (the buttons' are the game's, `ResultSheet`): the overlay, the title, the line under it, the score. Not SHELL_IDS: a page without the sheet carries none. */
+export const RESULT_IDS: ReadonlyArray<string> = ['resultOverlay', 'rsTitle', 'rsSub', 'rsScore'];
+
+/** `#rsScore` per `ResultSheet.score`: the element and its class. */
+const SCORE_MARKUP: Readonly<Record<ResultSheet['score'], string>> = {
+  list: '<div class="score-list" id="rsScore"></div>',
+  line: '<div class="score-line" id="rsScore"></div>',
+  note: '<p class="result-note" id="rsScore"></p>',
+};
+
+/**
+ * The result sheet's block (sheets.html `{{result}}`, before the rules sheet): the comment, then the
+ * overlay with its centred sheet, the title, the optional line under it, the score, the optional
+ * Continue, the green primary and the ghost secondary. Indented as the page's blocks are (four
+ * spaces); a blank line follows it, as one did in every page.
+ */
+export const resultMarkup = (sheet: ResultSheet): string =>
+  [
+    `    <!-- RESULT: ${sheet.note} -->`,
+    '    <div id="resultOverlay" class="overlay hidden">',
+    '      <div class="sheet centered">',
+    '        <div class="sheet-title" id="rsTitle">Game over</div>',
+    ...(sheet.sub === true ? ['        <div class="sheet-sub" id="rsSub"></div>'] : []),
+    `        ${SCORE_MARKUP[sheet.score]}`,
+    ...(sheet.continueBtn === true
+      ? ['        <button class="btn btn-secondary btn-block" id="rsContinueBtn">Continue</button>']
+      : []),
+    ...(sheet.primary === undefined
+      ? []
+      : [
+          `        <button class="btn btn-go btn-block" id="${sheet.primary.id}">${sheet.primary.label}</button>`,
+        ]),
+    `        <button class="btn btn-ghost btn-block btn-sm" id="${sheet.secondary.id}">${sheet.secondary.label}</button>`,
+    '      </div>',
+    '    </div>',
+    '',
+  ].join('\n');
 
 /**
  * The shell ids (web/shared/ui/ids.ts SHELL_IDS) the partials cannot spell, each in the block that
@@ -370,7 +440,7 @@ export const renderShell = (templates: ShellTemplates, page: ShellPage): Result<
   const declared: Values = { ...page.copy, ...page.notes, ...page.look };
   // The composer's own slot beside the page's: page.html's `<body{{bodyAttrs}}>`.
   const slots: Values = { ...declared, bodyAttrs: bodyAttrsOf(page) };
-  const own: Values = { homeExtra: '', ...page.blocks };
+  const own: Values = { homeExtra: '', result: '', ...page.blocks };
   const inner: ReadonlyArray<Inner> = INNER.map((name) => ({
     name,
     filled: fillTemplate(name, templates[name], slots, own),
@@ -381,7 +451,8 @@ export const renderShell = (templates: ShellTemplates, page: ShellPage): Result<
   const whole = fillTemplate('page', templates.page, slots, { ...own, ...placed });
   const all = [...inner.map((one) => one.filled), whole];
   const used = new Set(all.flatMap((f) => f.used));
-  const unused = [...Object.keys(declared), ...Object.keys(own)]
+  // The two optional blocks default to '' here, so only what the page itself declares is checked.
+  const unused = [...Object.keys(declared), ...Object.keys(page.blocks)]
     .filter((name) => !used.has(name))
     .map((name) => `"${name}" is declared by the page but no partial reads it`);
   // A page that plays sideways needs the body slot placed, or its attribute would be lost in silence.

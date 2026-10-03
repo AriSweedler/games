@@ -8,11 +8,13 @@ import { describe, expect, test } from 'vitest';
 import {
   BLOCK_IDS,
   GATE_IDS,
+  RESULT_IDS,
   PARTIALS,
   SCREEN_IDS,
   bodyAttrsOf,
   gateMarkup,
   idsIn,
+  resultMarkup,
   renderShell,
   type ShellBlocks,
   type ShellCopy,
@@ -296,5 +298,60 @@ describe('playing sideways (docs/design/shared-shell.md "Playing sideways")', ()
     expect(markup).toContain('role="dialog"');
     // A block: it starts on its own line and is indented as page.html's blocks are.
     expect(markup.startsWith('\n    <!-- TURN GATE')).toBe(true);
+  });
+
+  test('resultMarkup: the result block with its ids in order (RESULT_IDS, then the buttons the game binds; none a block id), the line, Continue and the primary only when asked, the score element per shape', () => {
+    const sheet = {
+      note: 'the end.',
+      score: 'list',
+      primary: { id: 'rsAgainBtn', label: 'Play again' },
+      secondary: { id: 'rsLeaveBtn', label: 'Leave the table' },
+    } as const;
+    const plain = resultMarkup(sheet);
+    expect(idsIn(plain)).toEqual([
+      'resultOverlay',
+      'rsTitle',
+      'rsScore',
+      'rsAgainBtn',
+      'rsLeaveBtn',
+    ]);
+    expect(plain).toContain('<!-- RESULT: the end. -->');
+    expect(plain).toContain('<div class="sheet-title" id="rsTitle">Game over</div>');
+    expect(plain).toContain('<div class="score-list" id="rsScore"></div>');
+    expect(plain).toContain(
+      '<button class="btn btn-go btn-block" id="rsAgainBtn">Play again</button>',
+    );
+    expect(plain).toContain(
+      '<button class="btn btn-ghost btn-block btn-sm" id="rsLeaveBtn">Leave the table</button>',
+    );
+    expect(plain).not.toContain('rsSub');
+    expect(plain).not.toContain('rsContinueBtn');
+    const full = resultMarkup({ ...sheet, sub: true, score: 'line', continueBtn: true });
+    expect(idsIn(full)).toEqual([...RESULT_IDS, 'rsContinueBtn', 'rsAgainBtn', 'rsLeaveBtn']);
+    expect(full).toContain('<div class="sheet-sub" id="rsSub"></div>');
+    expect(full).toContain('<div class="score-line" id="rsScore"></div>');
+    expect(full).toContain(
+      '<button class="btn btn-secondary btn-block" id="rsContinueBtn">Continue</button>',
+    );
+    const note = resultMarkup({
+      note: sheet.note,
+      score: 'note',
+      continueBtn: true,
+      secondary: sheet.secondary,
+    });
+    expect(note).toContain('<p class="result-note" id="rsScore"></p>');
+    expect(idsIn(note)).toEqual([
+      'resultOverlay',
+      'rsTitle',
+      'rsScore',
+      'rsContinueBtn',
+      'rsLeaveBtn',
+    ]);
+    expect(note).not.toContain('btn-go');
+    // None is a shell id: a page without the sheet carries none (test/dist/shell-ids.test.ts).
+    expect(RESULT_IDS.some((id) => Object.values(BLOCK_IDS).flat().includes(id))).toBe(false);
+    // A block: indented as page.html's blocks are, a blank line after it before the rules sheet.
+    expect(plain.startsWith('    <!-- RESULT')).toBe(true);
+    expect(plain.endsWith('    </div>\n')).toBe(true);
   });
 });

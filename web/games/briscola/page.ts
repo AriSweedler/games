@@ -17,6 +17,7 @@ import {
   type ShellCopy,
   type ShellNotes,
   type ShellPage,
+  resultMarkup,
 } from '../../shared/markup/shell.ts';
 import { stepperHtml } from '../../shared/markup/stepper.ts';
 
@@ -254,6 +255,13 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
   curtainExtra: `        <button class="btn btn-ghost btn-block btn-sm" id="curtainHandoffBtn">
           Continue online
         </button>`,
+  result: resultMarkup({
+    note: 'the sheet over the dimmed table, where every game ends (design §5.1); Play again deals anew for the same players (the deal passes to the next seat).',
+    sub: true,
+    score: 'list',
+    primary: { id: 'rsReplayBtn', label: 'Play again' },
+    secondary: { id: 'rsPeekBtn', label: 'Look at the table' },
+  }),
   sheetsBefore: `
     <!-- CARD VIEW (docs/design/language-packs.md §5): the briscola tapped, shown large with its name
          in the chosen language pack; no game state changes. -->
@@ -262,18 +270,6 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
         <div class="card-view-face" id="cardViewFace"></div>
         <div class="sheet-sub" id="cardViewName"></div>
         <button class="btn btn-primary btn-block" id="closeCardViewBtn">Close</button>
-      </div>
-    </div>
-
-    <!-- GAME RESULT (design §5.1): the sheet over the dimmed table, where every game ends; Play again
-         deals anew for the same players (the deal passes to the next seat). -->
-    <div id="resultOverlay" class="overlay hidden">
-      <div class="sheet centered">
-        <div class="sheet-title" id="rsTitle">Game over</div>
-        <div class="sheet-sub" id="rsSub"></div>
-        <div class="score-list" id="rsScore"></div>
-        <button class="btn btn-go btn-block" id="rsReplayBtn">Play again</button>
-        <button class="btn btn-ghost btn-block btn-sm" id="rsPeekBtn">Look at the table</button>
       </div>
     </div>
 

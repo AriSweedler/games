@@ -18,6 +18,7 @@ import {
   GATE_COPY,
   paintGate,
   paintHandoff,
+  paintResult,
   paintScreen,
   paintSheet,
   paintShellChrome,
@@ -600,6 +601,70 @@ describe('paintShellSheets', () => {
     expect(p.get('rulesOverlay').hidden()).toBe(true);
     expect(p.get('historyOverlay').hidden()).toBe(false);
     expect(p.get('recentGames').text()).toContain('Ann');
+  });
+});
+
+describe('paintResult', () => {
+  const sheet = (): FakePage =>
+    fakePage([
+      fakeEl('resultOverlay', { classes: ['overlay', 'hidden'] }),
+      fakeEl('rsTitle', { text: 'Game over' }),
+      fakeEl('rsSub'),
+      fakeEl('rsScore'),
+      fakeEl('rsNextBtn', { text: 'Next game' }),
+    ]);
+
+  test('the overlay follows open; null words leave the markup`s text; the words write the title, the line, a text score and the primary`s label and gate, each only where given', () => {
+    const p = sheet();
+    paintResult(p.doc, false, null);
+    expect(p.get('resultOverlay').hidden()).toBe(true);
+    expect(p.get('rsTitle').text()).toBe('Game over');
+    paintResult(p.doc, true, {
+      title: 'Ann wins 1 point',
+      sub: 'Bob had 2 checkers left',
+      score: 'Ann 1 – 0 Bob · match to 5',
+      primary: { id: 'rsNextBtn', label: 'Waiting for Bob…', disabled: true },
+    });
+    expect(p.get('resultOverlay').hidden()).toBe(false);
+    expect(p.get('rsTitle').text()).toBe('Ann wins 1 point');
+    expect(p.get('rsSub').text()).toBe('Bob had 2 checkers left');
+    expect(p.get('rsScore').text()).toBe('Ann 1 – 0 Bob · match to 5');
+    expect(p.get('rsNextBtn').text()).toBe('Waiting for Bob…');
+    expect(p.get('rsNextBtn').disabled()).toBe(true);
+    paintResult(p.doc, true, {
+      title: 'Bob wins 2 points',
+      score: 'Ann 1 – 2 Bob',
+      primary: { id: 'rsNextBtn', label: 'Next game', disabled: false },
+    });
+    expect(p.get('rsNextBtn').disabled()).toBe(false);
+    expect(p.get('rsNextBtn').text()).toBe('Next game');
+    // A sheet without a line leaves #rsSub alone; words without a primary leave the button alone.
+    expect(p.get('rsSub').text()).toBe('Bob had 2 checkers left');
+    paintResult(p.doc, false, { title: 'You win!', score: 'Out!' });
+    expect(p.get('resultOverlay').hidden()).toBe(true);
+    expect(p.get('rsNextBtn').text()).toBe('Next game');
+  });
+
+  test('rows of markup are rebuilt through the keyed slot only when the key changes', () => {
+    const p = sheet();
+    const built: string[] = [];
+    const words = (key: string) => ({
+      title: 'Ann wins the game',
+      score: {
+        key,
+        html: (): string => {
+          built.push(key);
+          return `<div class="score-row"><span class="who">Ann</span><span>${key}</span></div>`;
+        },
+      },
+    });
+    paintResult(p.doc, true, words('71'));
+    paintResult(p.doc, true, words('71'));
+    expect(built).toEqual(['71']);
+    expect(p.get('rsScore').text()).toContain('<span>71</span>');
+    paintResult(p.doc, true, words('49'));
+    expect(built).toEqual(['71', '49']);
+    expect(p.get('rsScore').text()).toContain('<span>49</span>');
   });
 });
 

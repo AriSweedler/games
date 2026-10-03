@@ -58,7 +58,7 @@ import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindSheets,
-  paintSheet,
+  paintResult,
   paintShellChrome,
   paintShellSheets,
   type Sheet,
@@ -495,11 +495,11 @@ const paintTable = (doc: DocumentLike, app: App, v: View): void => {
   const over = v.game.result !== null;
   toggleClass(requireId(doc, 'againBtn'), 'hidden', !(over && app.shell.resultDismissed));
   setText(requireId(doc, 'statusText'), statusText(v));
-  paintSheet(doc, 'resultOverlay', over && !app.shell.resultDismissed);
-  if (over) {
-    setText(requireId(doc, 'rsTitle'), resultTitle(v));
-    setText(requireId(doc, 'rsNote'), v.game.note);
-  }
+  paintResult(
+    doc,
+    over && !app.shell.resultDismissed,
+    over ? { title: resultTitle(v), score: v.game.note } : null,
+  );
 };
 
 /**

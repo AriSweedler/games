@@ -70,9 +70,11 @@ import { handoffLabelOf } from '../../../../shared/ui/shell.ts';
 import {
   bindButtons,
   bindSheets as bindShellSheets,
+  paintResult,
   paintSheet,
   paintShellChrome,
   paintShellSheets,
+  type ResultWords,
   type Sheet,
   shellButtons,
 } from '../../../../shared/ui/shellPaint.ts';
@@ -873,22 +875,15 @@ export const replayWaits = (app: App): boolean => app.shell.role === 'guest';
 export const replayLabel = (app: App, v: View): string =>
   replayWaits(app) ? waitingToDealMsg(nameOf(v.players, 0)) : PLAY_AGAIN_LABEL;
 
-/** `#resultOverlay` at `phase 'over'` once the last trick has settled (ui/state.ts `resultOpen`): where every game ends, decided or drawn. */
-const paintResult = (doc: DocumentLike, app: App, v: View): void => {
-  paintSheet(doc, 'resultOverlay', resultOpen(app));
-  if (v.phase !== 'over') return;
-  const text = resultSheetText(v);
-  setText(requireId(doc, 'rsTitle'), text.title);
-  setText(requireId(doc, 'rsSub'), text.sub);
-  ensureKeyed(
-    requireId(doc, 'rsScore'),
-    `${String(v.startedAt)}:${String(v.gameNo)}:${String(v.endedAt)}`,
-    () => sideRowsHtml(v),
-  );
-  const replay = requireId(doc, 'rsReplayBtn');
-  setText(replay, replayLabel(app, v));
-  setDisabled(replay, replayWaits(app));
-};
+/** The sheet's words at `phase 'over'` (shellPaint.ts `paintResult`): the title and its line, the side rows keyed on the game, Play again's live label and gate. */
+export const resultWords = (app: App, v: View): ResultWords => ({
+  ...resultSheetText(v),
+  score: {
+    key: `${String(v.startedAt)}:${String(v.gameNo)}:${String(v.endedAt)}`,
+    html: () => sideRowsHtml(v),
+  },
+  primary: { id: 'rsReplayBtn', label: replayLabel(app, v), disabled: replayWaits(app) },
+});
 
 // ---- the sheets: rules, history ------------------------------------------------------------------------------
 
@@ -1106,7 +1101,8 @@ const paintGame = (
   }
   const b = beatOf(app.table.settle);
   paintTable(doc, app, v, b, pack, lang);
-  paintResult(doc, app, v);
+  // `#resultOverlay` at `phase 'over'` once the last trick has settled (ui/state.ts `resultOpen`): where every game ends, decided or drawn.
+  paintResult(doc, resultOpen(app), v.phase === 'over' ? resultWords(app, v) : null);
   const beat =
     b.trick === null || b.stage === null
       ? null
