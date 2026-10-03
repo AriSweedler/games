@@ -172,7 +172,7 @@ const blocks: ShellBlocks = {
         <div class="board" id="board" aria-label="The board"></div>
         <!-- The proposal (the hints hidden; the owner: "click on the grid where you wanna put them and then
              confirm"): Confirm plays the tile where it was put, or the red toast says why not; Cancel puts it back. -->
-        <div class="controls proposal hidden" id="proposalBar">
+        <div class="proposal-bar hidden" id="proposalBar">
           <button class="btn btn-go grow" id="confirmBtn">Confirm</button>
           <button class="btn btn-ghost grow" id="cancelBtn">Cancel</button>
         </div>

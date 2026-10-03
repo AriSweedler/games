@@ -509,7 +509,9 @@ label {
 .hex.proposed .sheen {
   stroke: none;
 }
-.controls.proposal {
+.proposal-bar {
+  display: flex;
+  gap: 8px;
   margin-top: 6px;
 }
 /* The arc over one hop (ui/motion.ts `carry`: the translate transition carries the hop, this

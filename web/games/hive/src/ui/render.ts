@@ -27,7 +27,7 @@
 // With the hints hidden (`#hintsBtn` 💡, `paintHints`; the owner: "option to not show moves") nothing
 // lights: a pick draws the whole ring as plain cells (`#board.free`, so a drop lands anywhere), the
 // proposed tile is drawn where the player put it (`proposed`, engine.ts `withIntent`) and
-// `#proposalBar` (Confirm, Cancel) shows under the board until the move plays or the tile goes back.
+// `#proposalBar` (`.proposal-bar`: its own rule, not `.controls`, so the goldens' pinned row stays Pass and Resign's) shows under the board until the move plays or the tile goes back.
 import {
   addClass,
   closestFrom,

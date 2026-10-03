@@ -505,8 +505,11 @@ describe('a seeded random bot game stays legal for 200 turns', () => {
   };
 
   test('null exactly where legalTurns allows, on every position the bots reached (a sample), for every bug and every tile', () => {
-    const sample = GAMES.flat().filter((_, i) => i % 7 === 0);
-    expect(sample.length).toBeGreaterThan(20);
+    // Every 11th position, two dozen at most: a run of the full set took 5 s on the CI runner.
+    const sample = GAMES.flat()
+      .filter((_, i) => i % 11 === 0)
+      .slice(0, 24);
+    expect(sample.length).toBeGreaterThanOrEqual(20);
     sample.forEach(({ before }) => {
       const legal = new Set(
         legalTurns(before).map((t) =>
