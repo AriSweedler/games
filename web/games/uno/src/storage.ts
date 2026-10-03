@@ -7,7 +7,6 @@
 import type { Store, StorageError } from '../../../shared/edge/storage.ts';
 import {
   seatedStore,
-  DEFAULT_HOME_TAB,
   DEFAULT_PLAY_MODE,
   HOME_TABS,
   type HomeTab,
@@ -19,7 +18,7 @@ import { SEAT_COUNTS, decodeState, type SeatCount } from './engine/view.ts';
 export type { PlayMode, Store, StorageError };
 
 // The tabs and the stored mode's default are the shell's (prefs.ts); re-exported for ui/state.ts, which may not import prefs.ts's edge.
-export { DEFAULT_HOME_TAB, DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
+export { DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab };
 
 /** The room's terms: how many sit down (the target is the engine's 500). */
 export type Opts = SeatCountOpts<SeatCount>;

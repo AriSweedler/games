@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { createStore, type StorageLike } from '../../../shared/edge/storage.ts';
 import { CARD_PACKS, defaultPackFor, packsFor } from '../../../shared/lib/cards/packs.ts';
+import { DEFAULT_HOME_TAB } from '../../../shared/lib/shellDefaults.ts';
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { createGame } from './engine/index.ts';
 import {
@@ -10,7 +11,6 @@ import {
   DEFAULT_LANG,
   LANGUAGE_PACKS,
   LANG_PREF,
-  DEFAULT_HOME_TAB,
   DEFAULT_OPTS,
   DEFAULT_PLAY_MODE,
   DEFAULT_SOUND_FONT,
