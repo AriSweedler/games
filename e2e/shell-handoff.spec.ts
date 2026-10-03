@@ -146,7 +146,9 @@ SHELL_GAMES.forEach((game) => {
         // online; briscola's first already reads "Pass the phone to".
         await expect(page.locator('#curtainOverlay')).toBeVisible();
         await expect(page.locator('#curtainTitle')).toHaveText(curtainTitle(DEFAULT_NAMES));
-        await expect(page.locator('#curtainOverlay .btn:visible')).toHaveCount(shell.curtainButtons);
+        await expect(page.locator('#curtainOverlay .btn:visible')).toHaveCount(
+          shell.curtainButtons,
+        );
       } else {
         // No curtain (hive): the next seat's table is on show, the offer the table's alone.
         await expect(page.locator('#curtainOverlay')).toBeHidden();

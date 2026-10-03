@@ -60,14 +60,16 @@ export const SNAPSHOT_IDS: ReadonlyArray<string> = [
 
 /**
  * Whitespace runs, the rules slots' ids, the `#handoffBtn` button and the row wrapping it with
- * `#leaveBtn` (the pass-and-play game offered online, which the legacy page never had) and the Score Counter's
- * player inputs (two fixed ones sharing pass-and-play's names, where the legacy grew a list) are
- * the only differences allowed.
+ * `#leaveBtn` (the pass-and-play game offered online, which the legacy page never had), the shell
+ * curtain's hidden `#curtainHandoffBtn` (the same offer under the curtain, which gin never shows) and
+ * the Score Counter's player inputs (two fixed ones sharing pass-and-play's names, where the legacy
+ * grew a list) are the only differences allowed.
  */
 export const normalise = (html: string): string =>
   html
     .replace(/ id="rules(Overlay)?List"/g, '')
     .replace(/<button[^>]*\bid="handoffBtn"[^>]*>[^<]*<\/button>/g, '')
+    .replace(/<button[^>]*\bid="curtainHandoffBtn"[^>]*>[^<]*<\/button>/g, '')
     .replace(
       /<div class="row" style="gap:6px;">(<button[^>]*\bid="leaveBtn"[^>]*>[^<]*<\/button>)<\/div>/g,
       '$1',
