@@ -260,6 +260,14 @@ label {
   background: var(--muted);
   flex-shrink: 0;
 }
+/* The opponent's dot (shellPaint.ts `connDotClass`, painted through `paintShellChrome`): the gold
+   accent-dark when connected, as the lobby's seat dots are; the shell's green would be gin's. */
+.conn-dot.on {
+  background: var(--accent-dark);
+}
+.conn-dot.off {
+  background: var(--danger);
+}
 
 /* ---- the home: the third to twelfth names under the shared stepper ---- */
 .more-names {
