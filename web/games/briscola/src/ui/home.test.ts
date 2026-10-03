@@ -33,7 +33,7 @@ const GONE_IDS = [
 ];
 
 const page = (): BriscolaPage => briscolaPage(MARKUP);
-/** The third and fourth pass-and-play seats' inputs (`#moreNames` shows them from three players). */
+/** The third and fourth pass-and-play seats' inputs (the shell's grid shows each from its seat count on). */
 const EXTRA_NAME_INPUTS: Readonly<Record<2 | 3, string>> = {
   2: seatNameInputId(2),
   3: seatNameInputId(3),
@@ -78,8 +78,9 @@ describe('paintHome', () => {
       expect(MARKUP).not.toContain(`id="${id}"`);
     });
     expect(MARKUP).not.toContain('house-rules');
-    // Two seats: the third and fourth name inputs are put away.
-    expect(p.get('moreNames').hidden()).toBe(true);
+    // Two seats: the third and fourth name inputs are put away, each on its own (no group).
+    expect(MARKUP).not.toContain('moreNames');
+    expect(p.get(EXTRA_NAME_INPUTS[2]).hidden()).toBe(true);
     expect(p.get(EXTRA_NAME_INPUTS[3]).hidden()).toBe(true);
     // One count for both panels: the Online stepper follows the room's too, and its three and four
     // open a table online (docs/design/n-seat-sessions.md §7); + is disabled at four.
@@ -96,7 +97,6 @@ describe('paintHome', () => {
     const p = page();
     paintHome(p.doc, withOpts({ seatCount: 3 }, ['Cara', 'Dan']));
     expect(p.get(LOCAL_PLAYERS).value()).toBe('3');
-    expect(p.get('moreNames').hidden()).toBe(false);
     expect(p.get(EXTRA_NAME_INPUTS[2]).hidden()).toBe(false);
     expect(p.get(EXTRA_NAME_INPUTS[3]).hidden()).toBe(true);
     expect(p.get(EXTRA_NAME_INPUTS[2]).value()).toBe('Cara');

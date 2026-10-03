@@ -193,12 +193,12 @@ Object.entries(VIEWPORTS).forEach(([name, vp]) => {
       await expect(page.locator('#localModeContent')).toBeVisible();
       await expect(page.locator('#localPlayersCount')).toHaveValue('2');
       await expect(page.locator('#localPlayersSel')).toHaveCount(0);
-      await expect(page.locator('#moreNames')).toBeHidden();
+      await expect(page.locator('#moreNames')).toHaveCount(0);
+      await expect(page.locator('#p3NameInput')).toBeHidden();
       await expect(page.locator('#localBtn')).toHaveClass(/\bbtn-go\b/);
       await page.locator('#localPlayersCountInc').click();
       await expect(page.locator('#localPlayersCount')).toHaveValue('3');
       await expect(page.locator('#localPlayersCountNum')).toHaveText('3');
-      await expect(page.locator('#moreNames')).toBeVisible();
       await expect(page.locator('#p3NameInput')).toBeVisible();
       await expect(page.locator('#p4NameInput')).toBeHidden();
       await page.locator('#localPlayersCountInc').click();
@@ -220,7 +220,7 @@ Object.entries(VIEWPORTS).forEach(([name, vp]) => {
       await page.locator('#localPlayersCountDec').click();
       await expect(page.locator('#localPlayersCount')).toHaveValue('2');
       await expect(page.locator('#localPlayersCountDec')).toBeDisabled();
-      await expect(page.locator('#moreNames')).toBeHidden();
+      await expect(page.locator('#p3NameInput')).toBeHidden();
     });
 
     ([2, 3, 4] as const).forEach((n) => {

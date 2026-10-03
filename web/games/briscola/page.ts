@@ -4,10 +4,11 @@
 // the render with the repo's config and the residue here (`blocks`: the head with its two fonts, the
 // table with its three relative seat cells, the stock with the briscola under it, the trick band, the
 // score strip and the three-slot hand; the endgame the shell requires; the result sheet; the two
-// speed selects and the four name inputs) is the committed, formatted bytes, cut out of the
-// page with the blank line each follows; the seat count of each panel is the shell's stepper
-// (web/shared/markup/stepper.ts, two to four, as UNO's); the looks (`look`) are the theme's
-// classes, as backgammon's are. The
+// speed selects) is the committed, formatted bytes, cut out of the page with the blank line each
+// follows; the seat count of each panel is the shell's stepper (web/shared/markup/stepper.ts, two
+// to four, as UNO's) and the four pass-and-play names are the shell's grid
+// (web/shared/markup/seatNames.ts, the third and fourth shown by the count); the looks (`look`)
+// are the theme's classes, as backgammon's are. The
 // table ships the 2-player shape (#seatR2 shown, R1 and R3 hidden) so the page fake and the goldens
 // see a whole table before any paint; the Italian suit sprite (web/shared/ui/cardFace.ts
 // SUIT_SPRITE_SVG) is inlined at boot, not here, so it cannot drift from suits.ts.
@@ -19,6 +20,7 @@ import {
   type ShellPage,
   resultMarkup,
 } from '../../shared/markup/shell.ts';
+import { seatNamesHtml } from '../../shared/markup/seatNames.ts';
 import { stepperHtml } from '../../shared/markup/stepper.ts';
 
 /** The seat count each panel asks for (design §5.8): two to four, the shared − n + stepper (the owner, 2026-10-02: "not a dropdown"). */
@@ -82,42 +84,7 @@ ${stepperHtml({ id: 'localPlayersCount', ...PLAYERS }, '              ')}
                   </select>
                 </div>
               </div>
-              <div class="row">
-                <input
-                  type="text"
-                  id="p1NameInput"
-                  class="grow"
-                  placeholder="Player 1"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p2NameInput"
-                  class="grow"
-                  placeholder="Player 2"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-              </div>
-              <div class="row hidden" id="moreNames">
-                <input
-                  type="text"
-                  id="p3NameInput"
-                  class="grow"
-                  placeholder="Player 3"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-                <input
-                  type="text"
-                  id="p4NameInput"
-                  class="grow"
-                  placeholder="Player 4"
-                  maxlength="20"
-                  autocomplete="off"
-                />
-              </div>
+${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
             </div>`,
   table: `      <!-- TABLE (design §5.2): one DOM for 2, 3 and 4 seats. I sit at the bottom; the other
            seats are relative cells (#seatR1 right, #seatR2 across, #seatR3 left) that seatCells

@@ -2,7 +2,7 @@
 // "Module boundaries": ui/ reaches the document only through the shared DOM edge). The seated
 // games' home is web/shared/ui/seatedHome.ts (the shell's tabs, mode switch, inputs, resume box and
 // buttons; the seat count stepper in each mode panel, two to four; the third and fourth name
-// inputs, shown by the count; the match and the house rules have no controls since 2026-09-25, the
+// inputs of the shell's grid, shown by the count; the match and the house rules have no controls since 2026-09-25, the
 // room's other terms being fixed). This file composes it with what is briscola's alone: the
 // "Battle animations" select of each panel (docs/design/briscola-battle.md §3.7), one stored
 // preference painted into both and dispatched as `speed/set` from either.
@@ -18,13 +18,12 @@ import { seatedHome } from '../../../../shared/ui/seatedHome.ts';
 import { DEFAULT_LOCAL_NAMES } from '../../../../shared/ui/shell.ts';
 import { HOME_TABS, namesOf, type App, type Briscola, type Intent } from './state.ts';
 
-/** The seated home: two to four on both steppers (design §5.8), the third and fourth names under `#moreNames`. */
+/** The seated home: two to four on both steppers (design §5.8), the third and fourth names in the shell's `seatNamesHtml` grid. */
 const home = seatedHome<Briscola>({
   seats: { min: 2, max: 4 },
   localNames: DEFAULT_LOCAL_NAMES,
   allNames: namesOf,
   tabs: HOME_TABS,
-  group: 'moreNames',
 });
 
 export const { readHostOptions, readLocalOptions } = home;

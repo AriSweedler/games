@@ -143,7 +143,7 @@ export const briscolaStartLocal = (
     const [, , p3, p4] = names;
     if (p3 !== undefined) {
       await briscolaSeats(p, 'localPlayersCount', names.length);
-      await expect(p.locator('#moreNames')).toBeVisible();
+      await expect(p.locator('#p3NameInput')).toBeVisible();
       await p.locator('#p3NameInput').fill(p3);
       if (p4 !== undefined) {
         await expect(p.locator('#p4NameInput')).toBeVisible();
