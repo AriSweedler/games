@@ -5,7 +5,7 @@
 // back-then-face turn with `--i` its place in this paint's stagger), the card that busts a seat
 // lands red once its flip has shown it (`.tile.bust-card`) and the seat's line washes grey after
 // (`.seat.busting`), a seat's Flip 7 glows gold (`.seat.flip7-now`), and the round's scores come up
-// a row at a time (`.scores li.reveal`); the pause sheet rises only after the beat
+// a row at a time (`#rsScore .score-row.reveal`); the pause sheet rises only after the beat
 // (`#pauseOverlay`, `--f7-beat-ms`), so what happened is read before Continue is offered.
 //
 // The moments are keyed on the table's diff, never on a repaint: `moments(prev, view)` sets the
@@ -13,7 +13,7 @@
 // ids read back from the DOM, which is exactly what the previous paint drew, so a paint with no new
 // card flips nothing, and the Continue after a bust redraws the same tiles still) and names what is
 // new: the cards no seat showed before, the seats that went from alive to busted or to Flip 7, and
-// the scores panel coming up. A cold paint (a resume, a reconnect, the first deal) finds no seats
+// the result sheet coming up. A cold paint (a resume, a reconnect, the first deal) finds no seats
 // and deals every card in, staggered to a cap, with no bust or bonus moment: nothing just happened.
 //
 // The clock is one table (`DURATIONS`), written on the root as `--f7-*-ms` once at bind
@@ -119,7 +119,7 @@ export type Moments = Readonly<{
   busting: ReadonlySet<number>;
   /** Seats that reached Flip 7 this paint: the gold moment. */
   flip7: ReadonlySet<number>;
-  /** The result panel comes up this paint: its rows reveal one by one. */
+  /** The result sheet comes up this paint: its rows reveal one by one. */
   scores: boolean;
 }>;
 
@@ -187,14 +187,14 @@ const paintedSeat = (el: Element): PaintedSeat | null => {
 /**
  * The table as the last paint left it, read back before this one repaints: every `.seat[data-seat]`
  * under `#seats` (the background grid and the foreground seat alike, by seat index, so a seat that
- * moves to the foreground keeps its cards still) and whether `#result` was up.
+ * moves to the foreground keeps its cards still) and whether the result sheet (`#resultOverlay`) was up.
  */
 export const readPainted = (doc: DocumentLike): Painted => ({
   seats: queryAllIn(requireId(doc, 'seats'), '.seat[data-seat]').flatMap((el) => {
     const s = paintedSeat(el);
     return s === null ? [] : [s];
   }),
-  resultShown: !hasClass(requireId(doc, 'result'), 'hidden'),
+  resultShown: !hasClass(requireId(doc, 'resultOverlay'), 'hidden'),
 });
 
 /** The clock on the root as `--f7-*-ms`, for theme.css: once at bind, from `durationsFor(reducedMotion())`. */

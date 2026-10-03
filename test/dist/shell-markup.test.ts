@@ -16,7 +16,14 @@ import { describe, expect, test } from 'vitest';
 
 import { SHELL_GAMES } from '../../tools/games.ts';
 import { committedPage, composePage, readTemplates } from '../../tools/shell-markup.ts';
-import { BLOCK_IDS, PARTIALS, SCREEN_IDS, idsIn } from '../../web/shared/markup/shell.ts';
+import {
+  BLOCK_IDS,
+  OPT_IN_PARTIAL,
+  PARTIALS,
+  PAUSE_IDS,
+  SCREEN_IDS,
+  idsIn,
+} from '../../web/shared/markup/shell.ts';
 import { SHELL_IDS } from '../../web/shared/ui/ids.ts';
 
 describe('the shell pages are what the partials render', () => {
@@ -24,10 +31,13 @@ describe('the shell pages are what the partials render', () => {
     expect(await composePage(game)).toBe(committedPage(game));
   });
 
-  test('the partials spell every shell id once, the blocks the rest: together, SHELL_IDS', () => {
+  test('the partials spell every shell id once, the blocks the rest: together, SHELL_IDS; the opt-in pause partial spells PAUSE_IDS', () => {
     const templates = readTemplates();
-    const inPartials = PARTIALS.flatMap((name) => idsIn(templates[name]));
+    const inPartials = PARTIALS.filter((name) => name !== OPT_IN_PARTIAL).flatMap((name) =>
+      idsIn(templates[name]),
+    );
     const inBlocks = [...Object.values(BLOCK_IDS).flat(), ...SCREEN_IDS];
     expect([...inPartials, ...inBlocks].sort()).toEqual([...SHELL_IDS].sort());
+    expect(idsIn(templates[OPT_IN_PARTIAL])).toEqual(PAUSE_IDS);
   });
 });

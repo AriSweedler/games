@@ -504,7 +504,7 @@ export const REGISTRY: Readonly<Record<Game, GameSpec>> = {
         'hitBtn',
         'stayBtn',
         'target',
-        'result',
+        'resultOverlay',
         'pauseOverlay',
         'continueBtn',
         'toast',
@@ -715,8 +715,9 @@ export type ConformanceSpec = Readonly<{
    */
   seats: Readonly<{ min: number; max: number }>;
   /**
-   * The `Pause.kind`s the game's ui/state.ts raises (AGENT.md "Understand what happened before
-   * proceeding"), each cleared by `continue/click`; the suite pins each kind against the source.
+   * The pauses the game's ui/state.ts raises through the shell's `table.pause` adapter (AGENT.md
+   * "Understand what happened before proceeding"; the shell's `pause/continue` clears them), each
+   * named by the status or event the adapter reads; the suite pins each against the source.
    * Empty only with a `pauses` gap declared below.
    */
   pauses: ReadonlyArray<string>;
@@ -871,7 +872,7 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
   },
   flip7: {
     seats: { min: 2, max: 12 },
-    pauses: ['bust', 'frozen', 'flip7'],
+    pauses: ['busted', 'frozen', 'flip7'],
     cues: ['flip', 'bust', 'freeze', 'stay', 'deal'],
     cssFloor: 72,
     hides: false,

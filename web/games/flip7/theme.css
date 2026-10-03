@@ -21,7 +21,7 @@
    The motion (src/ui/motion.ts): a dealt card turns face-up where it lies (`.tile.dealt`: its back,
    then its face, `--i` its place in the paint's stagger), the card that busts its seat lands red
    once turned (`.tile.bust-card`) and the line washes grey after (`.seat.busting`), a fresh Flip 7
-   swells gold (`.seat.flip7-now`), the scores come up a row at a time (`.scores li.reveal`), and
+   swells gold (`.seat.flip7-now`), the scores come up a row at a time (`#rsScore .score-row.reveal`), and
    the pause sheet rises only after the beat (`#pauseOverlay`), so what happened is read before
    Continue is offered. Every duration is a `--f7-*-ms` on the root, written by motion.ts
    `writeClock` from its one table so the TS and the CSS agree; the reduced-motion block here
@@ -630,11 +630,11 @@ label {
     opacity: 0;
   }
 }
-/* The round's end: the panel comes up after the beat, its rows one by one. */
-.result:not(.hidden) {
+/* The round's end: the shell's result sheet comes up after the beat, its rows one by one. */
+#resultOverlay:not(.hidden) {
   animation: f7-fade-in 240ms ease-out var(--f7-beat-ms) both;
 }
-.scores li.reveal {
+#rsScore .score-row.reveal {
   animation: f7-row-in var(--f7-row-ms) cubic-bezier(0.2, 0.8, 0.2, 1)
     calc(var(--f7-beat-ms) + var(--i, 0) * var(--f7-row-gap-ms)) both;
 }
@@ -669,8 +669,7 @@ label {
 .btn-primary:hover {
   background: var(--accent-dark);
 }
-.target,
-.result {
+.target {
   background: var(--f7-seat);
   border: 2px solid var(--f7-seat-edge);
   border-radius: var(--radius-inner);
@@ -680,12 +679,10 @@ label {
   gap: 10px;
   text-align: center;
 }
-.target.hidden,
-.result.hidden {
+.target.hidden {
   display: none;
 }
-.target h2,
-.result h2 {
+.target h2 {
   margin: 0;
   font-size: 1.1rem;
 }
@@ -704,20 +701,6 @@ label {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
-}
-.scores {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-.scores li {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 10px;
-  background: rgb(255 255 255 / 6%);
-  border-radius: 8px;
 }
 
 /* Sideways and wide: the background grid takes six across. */

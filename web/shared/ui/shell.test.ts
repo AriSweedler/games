@@ -52,6 +52,7 @@ import {
   guestGoneMsg,
   guestName,
   handoffLabelOf,
+  hostDealsAgainMsg,
   handoffable,
   hostContextOf,
   hostDispatch,
@@ -1117,6 +1118,7 @@ describe('the initial shell and the partitions', () => {
       rulesOpen: false,
       historyOpen: false,
       resultDismissed: false,
+      pause: null,
       cues: { key: null },
       submenuOpen: false,
       longPressed: false,
@@ -1138,9 +1140,9 @@ describe('the initial shell and the partitions', () => {
     ]);
   });
 
-  test('the 61 shell intents and 33 shell effects are listed once; the guards partition a game`s unions', () => {
-    expect(SHELL_INTENT_TYPES).toHaveLength(61);
-    expect(new Set(SHELL_INTENT_TYPES).size).toBe(61);
+  test('the 63 shell intents and 33 shell effects are listed once; the guards partition a game`s unions', () => {
+    expect(SHELL_INTENT_TYPES).toHaveLength(63);
+    expect(new Set(SHELL_INTENT_TYPES).size).toBe(63);
     expect(SHELL_INTENT_TYPES).toContain('seatName/typed');
     expect(SHELL_EFFECT_TYPES).toContain('rememberSeatName');
     expect(SHELL_INTENT_TYPES).toContain('opts/set');
@@ -1357,6 +1359,101 @@ describe('home', () => {
     expect(marks(dropped.app)).toEqual(['dropped']);
     // Nothing of its own up: the shell's order.
     expect(runIn(ctx, lifting, both, { type: 'escape' }).app.shell.historyOpen).toBe(false);
+  });
+
+  // ---- the pause and Play again (shell-hoist.md row H; dry-review-2026-10.md §7 row 13) ----
+
+  test('the pause: raised once by table.pause at a paint, held through the next (no action moves), its Continue or Escape clears it, a deal drops it', () => {
+    const pausing: ShellConfig<Fake> = {
+      ...FAKE,
+      table: {
+        ...FAKE.table,
+        pause: (_app, prev, view) =>
+          prev !== null && view.moves > prev.moves
+            ? { title: `Move ${String(view.moves)}`, detail: 'read it' }
+            : null,
+      },
+    };
+    const phone = runIn(ctx, pausing, initialApp, {
+      type: 'local/click',
+      p1: 'Ann',
+      p2: 'Bob',
+      level: '2',
+    }).app;
+    expect(phone.shell.pause).toBeNull();
+    const moved = act(phone, { type: 'move' }, ctx, pausing);
+    expect(moved.app.shell.pause).toEqual({ title: 'Move 1', detail: 'read it' });
+    // Held: nothing moves, and a repaint raises no second pause over it.
+    expect(act(moved.app, { type: 'move' }, ctx, pausing)).toEqual({ app: moved.app, effects: [] });
+    expect(runIn(ctx, pausing, moved.app, { type: 'render' }).app.shell.pause).toEqual({
+      title: 'Move 1',
+      detail: 'read it',
+    });
+    const on = runIn(ctx, pausing, moved.app, { type: 'pause/continue' });
+    expect(on.app.shell.pause).toBeNull();
+    expect(on.effects).toEqual([]);
+    expect(game(act(on.app, { type: 'move' }, ctx, pausing).app).moves).toBe(2);
+    // Escape is the Continue, before the sheets.
+    const sheeted = withShell(moved.app, { historyOpen: true });
+    const escaped = runIn(ctx, pausing, sheeted, { type: 'escape' }).app.shell;
+    expect(escaped).toMatchObject({ pause: null, historyOpen: true });
+    // A game without the adapter never pauses.
+    expect(act(local(), { type: 'move' }, ctx, FAKE).app.shell.pause).toBeNull();
+  });
+
+  test('again/click: once the game is over, the same seats and terms dealt anew by the phone (the reveal cleared) or the host; nothing before; a guest is told the host deals', () => {
+    // Not over: nothing.
+    expect(run(local(), { type: 'again/click' })).toEqual({ app: local(), effects: [] });
+    const ended = act(local(), { type: 'end' }, ctx, FAKE).app;
+    expect(game(ended).over).toBe(true);
+    const replayed = run(withShell(ended, { revealed: 1, historyOpen: true }), {
+      type: 'again/click',
+    });
+    expect(game(replayed.app)).toMatchObject({
+      over: false,
+      moves: 0,
+      level: 2,
+      players: [
+        { id: 'p1', name: 'Ann' },
+        { id: 'p2', name: 'Bob' },
+      ],
+    });
+    expect(replayed.app.shell).toMatchObject({ revealed: null, historyOpen: false, pause: null });
+    expect(marks(replayed.app)).toContain('deal');
+    expect(kinds(replayed.effects)).toContain('persist');
+    // The host: the room's ids, every seat sent its view.
+    const hostOver = act(hosting(), { type: 'end' }, ctx, FAKE).app;
+    const dealt = run(hostOver, { type: 'again/click' });
+    expect(game(dealt.app)).toMatchObject({
+      over: false,
+      level: 3,
+      players: [
+        { id: 'host', name: 'Ann' },
+        { id: 'guest', name: 'Jeff' },
+      ],
+    });
+    expect(kinds(dealt.effects)).toContain('send');
+    // A guest: the toast names the host (`oppName`; this one heard no welcome, so the word).
+    const guestOver = run(seated(), {
+      type: 'guest/frame',
+      frame: { t: 'state', view: viewFor(over, 1) },
+    }).app;
+    const refused = run(guestOver, { type: 'again/click' });
+    // The table's `refuse` hook (the fake marks it); the view stands.
+    expect(refused.app.shell.view).toBe(guestOver.shell.view);
+    expect(marks(refused.app)).toContain('refused');
+    expect(toasts(refused.effects)).toEqual([['Waiting for the host to deal again.', null]]);
+    expect(hostDealsAgainMsg('Ann')).toBe('Waiting for Ann to deal again.');
+    // A room of four dealt again: the seats past the second are `guest3`, `guest4`.
+    const over4 = act(dealt4(), { type: 'end' }, ctx, FAKE4).app;
+    const again4 = run4(over4, { type: 'again/click' });
+    expect(game4(again4.app)).toMatchObject({ over: false, moves: 0 });
+    expect(game4(again4.app).players.map((p) => p.id)).toEqual([
+      'host',
+      'guest',
+      'guest3',
+      'guest4',
+    ]);
   });
 
   test('the sheets and the result`s dismissal go away with the table at a deal, the host lost and a pass-and-play start', () => {

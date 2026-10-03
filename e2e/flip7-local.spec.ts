@@ -2,7 +2,7 @@
 // composed page. The deal comes off `window.__rng` (a mulberry32 the spec installs before the page
 // boots); the curtain rises once for the first player, then the table follows whoever must act:
 // the opening deal one card each through Hit, then Hit and Stay to the round's end, the scores
-// shown with Next round. The documented hook `window.__flip7` (`view()`, `act()`, `legal()`)
+// on the shell's result sheet with Next round. The documented hook `window.__flip7` (`view()`, `act()`, `legal()`)
 // reads the state back and plays the rest. On `pages` alone: this is about the page.
 import type { Page } from '@playwright/test';
 
@@ -89,10 +89,12 @@ test('a seeded three-seat game on one phone: the curtain once, the opening deal,
     })
     .toBe('roundOver');
   await dismissPause(page);
-  await expect(page.locator('#result')).toBeVisible();
-  await expect(page.locator('#scores li')).toHaveCount(3);
-  await expect(page.locator('#nextRoundBtn')).toBeVisible();
-  await page.locator('#nextRoundBtn').click();
+  await expect(page.locator('#resultOverlay')).toBeVisible();
+  await expect(page.locator('#rsTitle')).toHaveText('Round 1 over');
+  await expect(page.locator('#rsScore .score-row')).toHaveCount(3);
+  await expect(page.locator('#rsNextBtn')).toHaveText('Next round');
+  await page.locator('#rsNextBtn').click();
+  await expect(page.locator('#resultOverlay')).toBeHidden();
   await expect.poll(async () => (await view(page))?.round).toBe(2);
 });
 

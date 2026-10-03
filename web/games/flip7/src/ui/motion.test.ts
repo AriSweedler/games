@@ -201,7 +201,7 @@ describe('the DOM steps', () => {
     const other = seatEl('li1', '1', 'busted', ['n3-1']);
     const unkeyed = fakeEl('li2', { classes: ['seat'], queries: { '.tile': tiles(['x']) } });
     const seats = fakeEl('seats', { queries: { '.seat[data-seat]': [other, mine, unkeyed] } });
-    const result = fakeEl('result', { classes: ['result', 'hidden'] });
+    const result = fakeEl('resultOverlay', { classes: ['overlay', 'hidden'] });
     const page = fakePage([seats, result]);
     expect(readPainted(page.doc)).toEqual({
       seats: [
@@ -210,7 +210,7 @@ describe('the DOM steps', () => {
       ],
       resultShown: false,
     });
-    const shown = fakePage([fakeEl('seats'), fakeEl('result', { classes: ['result'] })]);
+    const shown = fakePage([fakeEl('seats'), fakeEl('resultOverlay', { classes: ['overlay'] })]);
     expect(readPainted(shown.doc)).toEqual({ seats: [], resultShown: true });
   });
 

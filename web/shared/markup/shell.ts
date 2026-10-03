@@ -16,11 +16,13 @@
 import { err, ok, type Result } from '../lib/result.ts';
 import { GUEST_SEAT_NAME, seatListHtml } from './page.ts';
 
-/** The partials, web/shared/markup/shell/<name>.html: the page's skeleton and the five it lays out. */
-export const PARTIALS = ['page', 'home', 'waiting', 'curtain', 'sheets', 'toast'] as const;
+/** The partials, web/shared/markup/shell/<name>.html: the page's skeleton, the five it lays out, and the pause sheet a page opts into (`ShellPage.pause`; sheets.html places it after the result). */
+export const PARTIALS = ['page', 'home', 'waiting', 'curtain', 'sheets', 'toast', 'pause'] as const;
 export type PartialName = (typeof PARTIALS)[number];
 /** The five partials page.html places as blocks, by their names. */
 const INNER = ['home', 'waiting', 'curtain', 'sheets', 'toast'] as const;
+/** The partial a page places only when its game pauses (shell-hoist.md row H): its ids are not SHELL_IDS, as the result sheet's are not. */
+export const OPT_IN_PARTIAL = 'pause' as const;
 export type ShellTemplates = Readonly<Record<PartialName, string>>;
 
 /**
@@ -239,6 +241,13 @@ export type ShellPage = Readonly<{
    */
   seated?: true;
   /**
+   * The game holds a consequential event until Continue (shell-hoist.md row H; flip7's bust, freeze
+   * and Flip 7): sheets.html places the pause partial (`pause.html`: `#pauseOverlay`, `#pauseTitle`,
+   * `#pauseDetail`, `#continueBtn`) after the result sheet, indented as the page's blocks are; the
+   * shell paints and binds it (shellPaint.ts `paintShellSheets`, `bindShellSheets`).
+   */
+  pause?: true;
+  /**
    * The game plays with the phone sideways (its `ShellConfig.orientation`,
    * docs/design/shared-shell.md "Playing sideways"): the composed page's `<body>` carries
    * `data-plays="landscape"`, which scopes shell.css's two-column landscape home and waiting rooms
@@ -340,6 +349,14 @@ export type ResultSheet = Readonly<{
 /** The sheet's fixed ids, in the markup's order (the buttons' are the game's, `ResultSheet`): the overlay, the title, the line under it, the score. Not SHELL_IDS: a page without the sheet carries none. */
 export const RESULT_IDS: ReadonlyArray<string> = ['resultOverlay', 'rsTitle', 'rsSub', 'rsScore'];
 
+/** The pause partial's ids in its order (pause.html; shell-hoist.md row H): the overlay, the title, the line under it, Continue (web/shared/ui/shellPaint.ts paints and binds them). Not SHELL_IDS: a page carries them only with `ShellPage.pause`. */
+export const PAUSE_IDS: ReadonlyArray<string> = [
+  'pauseOverlay',
+  'pauseTitle',
+  'pauseDetail',
+  'continueBtn',
+];
+
 /** `#rsScore` per `ResultSheet.score`: the element and its class. */
 const SCORE_MARKUP: Readonly<Record<ResultSheet['score'], string>> = {
   list: '<div class="score-list" id="rsScore"></div>',
@@ -375,8 +392,15 @@ export const resultMarkup = (sheet: ResultSheet): string =>
     '',
   ].join('\n');
 
-/** Every block as renderShell reads them: the page's over the defaults. */
-type Blocks = Readonly<Required<ShellBlocks>>;
+/** Every block as renderShell reads them: the page's over the defaults, and the pause partial's lines where the page opts in. */
+type Blocks = Readonly<Required<ShellBlocks> & { pause: string }>;
+
+/** A partial's text as a block placed at the sheets' depth (four spaces); blank lines stay bare, and its file's final newline leaves one after it, as the result block has. */
+const indented = (partial: string): string =>
+  partial
+    .split('\n')
+    .map((line) => (line === '' ? line : `    ${line}`))
+    .join('\n');
 
 /** The three blocks a page with `seated: true` gets from the shell: the host's and the guest's seat lists, the guest's name card. */
 const SEATED_BLOCKS: Readonly<Pick<Blocks, 'hostWaitList' | 'guestWaitList' | 'guestSeatName'>> = {
@@ -416,9 +440,9 @@ export const endgamePlaceholder = (ends: string): string =>
     '      </div>',
   ].join('\n');
 
-/** What an extension slot is when the page leaves it out: nothing, but for the endgame screen. */
+/** What an extension slot is when the page leaves it out: nothing, but for the endgame screen (the pause partial is the page's opt-in, `renderShell`). */
 const BLOCK_DEFAULTS: Readonly<
-  Omit<Blocks, 'head' | 'masthead' | 'hostFields' | 'localFields' | 'table'>
+  Omit<Blocks, 'head' | 'masthead' | 'hostFields' | 'localFields' | 'table' | 'pause'>
 > = {
   submenuExtra: '',
   extraTabs: '',
@@ -555,6 +579,7 @@ export const renderShell = (templates: ShellTemplates, page: ShellPage): Result<
     ...BLOCK_DEFAULTS,
     ...(page.seated === true ? SEATED_BLOCKS : {}),
     ...page.blocks,
+    pause: page.pause === true ? indented(templates[OPT_IN_PARTIAL]) : '',
   };
   const inner: ReadonlyArray<Inner> = INNER.map((name) => ({
     name,

@@ -124,15 +124,26 @@ const templates: ShellTemplates = {
   ].join('\n'),
   waiting: '<div id="hostWaitScreen"></div>\n',
   curtain: '<div id="curtainOverlay"></div>\n',
-  sheets: '<div id="rulesOverlay"></div>\n',
+  sheets: '{{pause}}\n<div id="rulesOverlay"></div>\n',
   toast: '<div id="toast"></div>\n',
+  pause: '<!-- P -->\n<div id="pauseOverlay"></div>\n\n<b></b>\n',
 };
 
 const rendered = renderShell(templates, page);
 
 describe('renderShell', () => {
-  test('the six partials are named, page.html first', () => {
-    expect(PARTIALS).toEqual(['page', 'home', 'waiting', 'curtain', 'sheets', 'toast']);
+  test('the seven partials are named, page.html first, the opt-in pause last', () => {
+    expect(PARTIALS).toEqual(['page', 'home', 'waiting', 'curtain', 'sheets', 'toast', 'pause']);
+  });
+
+  test('the pause partial is placed, indented as a block with a blank line after it, only for a page that opts in (ShellPage.pause)', () => {
+    expect(rendered.ok && rendered.value.includes('pauseOverlay')).toBe(false);
+    const paused = renderShell(templates, { ...page, pause: true });
+    expect(paused.ok).toBe(true);
+    if (!paused.ok) return;
+    expect(paused.value).toContain(
+      '    <!-- P -->\n    <div id="pauseOverlay"></div>\n\n    <b></b>\n\n<div id="rulesOverlay"></div>',
+    );
   });
 
   test('slots fill inline, a block line becomes its block, an empty block drops its line', () => {

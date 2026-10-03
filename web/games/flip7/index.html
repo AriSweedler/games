@@ -314,7 +314,7 @@
 
       <!-- TABLE (docs/design/flip7.md §8): every seat's line, face up, in seat order; mine is
            marked data-you. Hit and Stay show for the seat whose turn it is, the taker picker for the
-           seat that flipped an action card, the scores when a round ends. -->
+           seat that flipped an action card; the scores when a round ends are the result sheet's. -->
       <div id="tableScreen" class="hidden">
         <div class="topbar">
           <div class="row tight">
@@ -373,16 +373,10 @@
           <button class="btn btn-primary hidden" id="hitBtn">Hit</button>
           <button class="btn btn-secondary hidden" id="stayBtn">Stay</button>
         </div>
-        <div class="result hidden" id="result">
-          <h2 id="resultTitle">Round over</h2>
-          <ul class="scores" id="scores"></ul>
-          <button class="btn btn-go btn-block hidden" id="nextRoundBtn">Next round</button>
-          <button class="btn btn-go btn-block hidden" id="replayBtn">Play again</button>
-        </div>
       </div>
 
-      <!-- ENDGAME: the shell's fifth screen, which this page never shows: the game ends on the
-           result panel over the table, with Play again. -->
+      <!-- ENDGAME: the shell's fifth screen, which this page never shows: a round and the game end
+           on the result sheet over the table. -->
       <div id="endgameScreen" class="hidden">
         <h1>Game over</h1>
       </div>
@@ -401,9 +395,19 @@
       </div>
     </div>
 
+    <!-- RESULT: a round ends on the scores (the owner, 2026-10-02: understand what happened before proceeding); Next round is the host's deal, Play again the game's once it is over. -->
+    <div id="resultOverlay" class="overlay hidden">
+      <div class="sheet centered">
+        <div class="sheet-title" id="rsTitle">Game over</div>
+        <div class="score-list" id="rsScore"></div>
+        <button class="btn btn-go btn-block" id="rsNextBtn">Next round</button>
+        <button class="btn btn-ghost btn-block btn-sm" id="rsLeaveBtn">Leave the table</button>
+      </div>
+    </div>
+
     <!-- PAUSE (the owner, 2026-10-02: "When you the player bust, you need to confirm before
-         proceeding"): what just happened to a seat (a bust with the card and the points lost, a
-         freeze, a Flip 7), held until Continue; nothing moves on this phone while it is up. -->
+         proceeding"): a consequential event held with its state until Continue (web/shared/ui/shell.ts
+         `ShellState.pause`, the game's `table.pause` adapter); nothing moves on this phone while it is up. -->
     <div id="pauseOverlay" class="overlay hidden">
       <div class="sheet centered pause-sheet">
         <div class="sheet-title" id="pauseTitle">Bust</div>

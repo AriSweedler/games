@@ -111,15 +111,12 @@ const revealer: ShellConfig<Uno>['local']['revealer'] = (game) => ({
   seat: game.game.turn as Seat,
 });
 
-/** Only `again` applies to a won game: it is the new game, and the curtain lowers for its first player. */
-const newGame: ShellConfig<Uno>['local']['newGame'] = (prev) => prev.game.phase.kind === 'gameOver';
-
 export const UNO: ShellConfig<Uno> = {
   ...UNO_SHELL,
   // The shell's reset: a start, the handoff, a leave and the host lost start the table over.
   table: { initial: initialTable, rendered: cueStep(CUE_MACHINE) },
-  // Pass-and-play: the seat whose turn it is acts (`revealer`; any seat deals again).
-  local: { viewer, revealer, newGame },
+  // Pass-and-play: the seat whose turn it is acts (`revealer`); Play again is the shell's `again/click`, which lowers the curtain for the new game's first player.
+  local: { viewer, revealer },
 };
 
 /** The table's one intent: a tap's click, then the shell's `act` by role (the sheets and Escape are the shell's). */

@@ -127,7 +127,7 @@ describe('pass and play', () => {
     expect(over.shell.resultDismissed).toBe(false);
     const seen = run(over, { type: 'result/dismiss' }).app;
     expect(seen.shell.resultDismissed).toBe(true);
-    const again = run(seen, { type: 'act', action: { type: 'again' } }).app;
+    const again = run(seen, { type: 'again/click' }).app;
     expect(again.shell.game?.game.board).toEqual({});
     expect(again.shell.resultDismissed).toBe(false);
     expect(again.table.curtain).toBeNull();

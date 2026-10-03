@@ -2,8 +2,8 @@
 // web/shared/markup/shell/*.html with to compose ./index.html, which test/dist/shell-markup.test.ts
 // pins byte for byte. The residue here is the head, the two Players steppers (two to twelve) over
 // the shared name grid (web/shared/markup/seatNames.ts, one input per seat), the table (the topbar,
-// the names strip, the round, every seat's line, Hit and Stay, the taker picker, the round's
-// scores) and the endgame screen the shell requires.
+// the names strip, the round, every seat's line, Hit and Stay, the taker picker), the result sheet's
+// words and the endgame screen the shell requires; the pause sheet is the shell's partial (`pause`).
 import { THEME_LOOK, headHtml } from '../../shared/markup/page.ts';
 import {
   type ShellBlocks,
@@ -11,6 +11,7 @@ import {
   type ShellNotes,
   type ShellPage,
   endgamePlaceholder,
+  resultMarkup,
 } from '../../shared/markup/shell.ts';
 import { seatNamesHtml } from '../../shared/markup/seatNames.ts';
 import { seatedHostFields, stepperHtml } from '../../shared/markup/stepper.ts';
@@ -56,7 +57,7 @@ ${seatNamesHtml({ max: PLAYERS.max, indent: '              ' })}
             </div>`,
   table: `      <!-- TABLE (docs/design/flip7.md §8): every seat's line, face up, in seat order; mine is
            marked data-you. Hit and Stay show for the seat whose turn it is, the taker picker for the
-           seat that flipped an action card, the scores when a round ends. -->
+           seat that flipped an action card; the scores when a round ends are the result sheet's. -->
       <div id="tableScreen" class="hidden">
 ${topbarHtml({ dot: 'between', titles: { leave: 'Leave', history: 'Recent games' }, indent: '        ' })}
 
@@ -81,25 +82,24 @@ ${topbarHtml({ dot: 'between', titles: { leave: 'Leave', history: 'Recent games'
           <button class="btn btn-primary hidden" id="hitBtn">Hit</button>
           <button class="btn btn-secondary hidden" id="stayBtn">Stay</button>
         </div>
-        <div class="result hidden" id="result">
-          <h2 id="resultTitle">Round over</h2>
-          <ul class="scores" id="scores"></ul>
-          <button class="btn btn-go btn-block hidden" id="nextRoundBtn">Next round</button>
-          <button class="btn btn-go btn-block hidden" id="replayBtn">Play again</button>
-        </div>
       </div>`,
-  endgame: endgamePlaceholder('the game ends on the result panel over the table, with Play again.'),
-  sheetsBefore: `
-    <!-- PAUSE (the owner, 2026-10-02: "When you the player bust, you need to confirm before
-         proceeding"): what just happened to a seat (a bust with the card and the points lost, a
-         freeze, a Flip 7), held until Continue; nothing moves on this phone while it is up. -->
-    <div id="pauseOverlay" class="overlay hidden">
-      <div class="sheet centered pause-sheet">
-        <div class="sheet-title" id="pauseTitle">Bust</div>
-        <div class="sheet-sub" id="pauseDetail"></div>
-        <button class="btn btn-go btn-block" id="continueBtn">Continue</button>
-      </div>
-    </div>`,
+  endgame: endgamePlaceholder('a round and the game end on the result sheet over the table.'),
+  // The round's end and the game's on the shell's sheet: the scores a row a seat, the one primary
+  // Next round (the host's; a guest's is held) until the game is over, then Play again.
+  result: resultMarkup({
+    note: "a round ends on the scores (the owner, 2026-10-02: understand what happened before proceeding); Next round is the host's deal, Play again the game's once it is over.",
+    score: 'list',
+    primary: { id: 'rsNextBtn', label: 'Next round' },
+    secondary: { id: 'rsLeaveBtn', label: 'Leave the table' },
+  }),
 };
 
-export const FLIP7_PAGE: ShellPage = { copy, notes, look: THEME_LOOK, blocks, seated: true };
+/** The pause (`pause: true`, web/shared/markup/shell/pause.html): a bust, a freeze or a Flip 7 held until Continue (ui/state.ts `pauseFor`). */
+export const FLIP7_PAGE: ShellPage = {
+  copy,
+  notes,
+  look: THEME_LOOK,
+  blocks,
+  seated: true,
+  pause: true,
+};

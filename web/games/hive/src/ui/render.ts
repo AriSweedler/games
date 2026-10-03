@@ -630,9 +630,9 @@ const bindTable = (doc: PageLike, dispatch: Dispatch): void => {
     [
       ['passBtn', { type: 'act', action: { type: 'pass' } }],
       ['resignBtn', { type: 'act', action: { type: 'resign' } }],
-      ['againBtn', { type: 'act', action: { type: 'again' } }],
+      ['againBtn', { type: 'again/click' }],
       ['rsContinueBtn', { type: 'result/dismiss' }],
-      ['rsAgainBtn', { type: 'act', action: { type: 'again' } }],
+      ['rsAgainBtn', { type: 'again/click' }],
       ['rsLeaveBtn', { type: 'leave/request' }],
       ...shellButtons<Hive>(),
       ['motionBtn', { type: 'motion/toggle' }],

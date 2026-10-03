@@ -1,0 +1,10 @@
+<!-- PAUSE (the owner, 2026-10-02: "When you the player bust, you need to confirm before
+     proceeding"): a consequential event held with its state until Continue (web/shared/ui/shell.ts
+     `ShellState.pause`, the game's `table.pause` adapter); nothing moves on this phone while it is up. -->
+<div id="pauseOverlay" class="overlay hidden">
+  <div class="sheet centered pause-sheet">
+    <div class="sheet-title" id="pauseTitle">Bust</div>
+    <div class="sheet-sub" id="pauseDetail"></div>
+    <button class="btn btn-go btn-block" id="continueBtn">Continue</button>
+  </div>
+</div>

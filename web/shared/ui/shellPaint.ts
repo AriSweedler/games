@@ -46,6 +46,7 @@ import { paintRecentGames } from './recentGames.ts';
 import {
   SHELL_SCREENS,
   type Intent,
+  type Pause,
   type Role,
   type ScreenId,
   type SeatState,
@@ -434,19 +435,39 @@ export const paintResult = (doc: DocumentLike, open: boolean, words: ResultWords
   setDisabled(primary, words.primary.disabled);
 };
 
+/** The pause's Continue (web/shared/markup/shell/pause.html; its four ids are the markup's PAUSE_IDS): bound where the page carries it. */
+const CONTINUE_ID = 'continueBtn';
+
 /**
- * The shell's two sheets over the table (shell-hoist.md row F): `#rulesOverlay` and
- * `#historyOverlay` follow their flags, and the finished games this device remembers
- * (recentGames.ts) are painted under the history while it is open. The game paints its own
- * sheets after it, and its own log into `#historyList` before it.
+ * The pause over the table (shell-hoist.md row H; `ShellState.pause`; the markup is
+ * web/shared/markup/shell/pause.html): `#pauseOverlay` follows it, its title and detail written
+ * while one is up. A page without the partial paints nothing: only a game whose `table.pause`
+ * raises one carries it (`ShellPage.pause`).
+ */
+const paintPause = (doc: DocumentLike, pause: Pause | null): void => {
+  const overlay = byId(doc, 'pauseOverlay');
+  if (overlay === null) return;
+  toggleClass(overlay, 'hidden', pause === null);
+  if (pause === null) return;
+  setText(requireId(doc, 'pauseTitle'), pause.title);
+  setText(requireId(doc, 'pauseDetail'), pause.detail);
+};
+
+/**
+ * The shell's sheets over the table (shell-hoist.md rows F and H): `#rulesOverlay` and
+ * `#historyOverlay` follow their flags, the finished games this device remembers
+ * (recentGames.ts) are painted under the history while it is open, and the pause (`paintPause`)
+ * where the page has one. The game paints its own sheets after it, and its own log into
+ * `#historyList` before it.
  */
 export const paintShellSheets = (
   doc: DocumentLike,
-  shell: Pick<ShellState<ShellTypes>, 'rulesOpen' | 'historyOpen' | 'recentGames'>,
+  shell: Pick<ShellState<ShellTypes>, 'rulesOpen' | 'historyOpen' | 'recentGames' | 'pause'>,
 ): void => {
   paintSheet(doc, 'rulesOverlay', shell.rulesOpen);
   paintSheet(doc, 'historyOverlay', shell.historyOpen);
   if (shell.historyOpen) paintRecentGames(doc, shell.recentGames);
+  paintPause(doc, shell.pause);
 };
 
 // ---- the turn gate (docs/design/backgammon-landscape.md §5D; docs/design/shared-shell.md "Playing sideways") ----
@@ -617,9 +638,11 @@ export const shellSheets = <G extends ShellTypes>(): ReadonlyArray<Sheet<Intent<
 /**
  * `bindSheets` over the shell's two sheets and the game's own (`extra`: gin's meld and arrange
  * sheets, backgammon's menu, fidice's ladder), with the Escape fallback built in: the shell's
- * `escape` (shell.ts: the history, then the rules, then whatever the game holds up) unless the
- * game names its own (backgammon's die-chip tray, `chip/cancel`). A game cannot leave the
- * fallback out, which is how fidice's Escape came to do nothing with no sheet open (§5.2).
+ * `escape` (shell.ts: the pause's Continue, then the history, then the rules, then whatever the
+ * game holds up) unless the game names its own (backgammon's die-chip tray, `chip/cancel`). A game
+ * cannot leave the fallback out, which is how fidice's Escape came to do nothing with no sheet
+ * open (§5.2). The pause's Continue (`#continueBtn`, `pause/continue`) is bound where the page
+ * carries the partial; its backdrop closes nothing, since the event is to be read.
  */
 export const bindShellSheets = <G extends ShellTypes>(
   doc: PageLike,
@@ -628,6 +651,8 @@ export const bindShellSheets = <G extends ShellTypes>(
   escapeFallback: Intent<G> = { type: 'escape' },
 ): void => {
   bindSheets(doc, [...shellSheets<G>(), ...extra], dispatch, { escapeFallback });
+  if (byId(doc, CONTINUE_ID) !== null)
+    bindButtons<Intent<G>>(doc, dispatch, [[CONTINUE_ID, { type: 'pause/continue' }]]);
 };
 
 /**

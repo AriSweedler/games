@@ -85,9 +85,11 @@ describe('pass the phone', () => {
     });
   });
 
-  test('Play again deals anew once the game is over; not before', () => {
+  test('Play again (the sheet`s primary once the game is over, the shell`s `again`) deals anew for the same seats; before the end the primary is the next round', () => {
     const started = run(initialApp, startThree, { type: 'curtain/reveal' });
-    expect(run(started.app, { type: 'replay/click' }).app).toBe(started.app);
+    // Mid-round the primary is Next round, which the engine refuses: nothing dealt anew.
+    expect(run(started.app, { type: 'next/click' }).app.shell.game?.round).toBe(1);
+    expect(run(started.app, { type: 'again/click' }).app).toBe(started.app);
     const game = started.app.shell.game;
     if (game === null) throw new Error('no game');
     const over: App = {
@@ -98,9 +100,11 @@ describe('pass the phone', () => {
         view: viewFor({ ...game, phase: { kind: 'gameOver', winner: 1 } }, 0),
       },
     };
-    const again = run(over, { type: 'replay/click' });
+    const again = run(over, { type: 'next/click' });
     expect(again.app.shell.game?.round).toBe(1);
     expect(again.app.shell.game?.phase.kind).toBe('turn');
+    expect(again.app.shell.game?.seats.map((s) => s.name)).toEqual(['Ari', 'Lavi', 'Sandro']);
+    expect(again.app.shell.revealed).toBeNull();
   });
 });
 
@@ -125,7 +129,7 @@ describe('online: the host holds the game, a guest sends its moves', () => {
       frame: { t: 'action', action: { type: 'give', seat: 0 } },
     });
     const between = run(seated('guest', { ...game, phase: { kind: 'roundOver' } }, 1), {
-      type: 'nextRound/click',
+      type: 'next/click',
     });
     expect(between.effects).toContainEqual({
       type: 'toast',
@@ -251,8 +255,10 @@ describe('what the boot and the sessions read back', () => {
     expect(loaded.app.shell.game?.seats.map((s) => s.name)).toEqual(['Ari', 'Lavi']);
     expect(loaded.app.table.curtain).toBeNull();
     expect(FLIP7.local.revealer(game).seat).toBe(0);
-    expect(FLIP7.table.reset?.(started.app.table, 'leave')).toEqual(initialTable);
-    expect(FLIP7.table.reset?.(started.app.table, 'view')).toBe(started.app.table);
+    // The reset is the shell's default: a leave starts the table over.
+    expect(run(started.app, { type: 'leave/request' }, { type: 'leave/finish' }).app.table).toEqual(
+      initialTable,
+    );
   });
 
   test('a flip, a bust and a Flip 7 each cue once; a repaint cues nothing', () => {
@@ -336,17 +342,16 @@ describe('the pause: what happened to a seat waits for its Continue', () => {
     };
     const busted = run(local, { type: 'hit/click' });
     expect(busted.app.shell.game?.seats[0]?.status).toBe('busted');
-    expect(busted.app.table.pause).toEqual({
-      seat: 0,
-      kind: 'bust',
+    expect(busted.app.shell.pause).toEqual({
       title: 'Ari busts',
       detail: 'Another 5: 14 points lost this round.',
     });
     expect(myTurn(busted.app)).toBe(false);
-    // Nothing moves while the pause is up.
+    // Nothing moves while the pause is up (the shell's guard); Escape is its Continue.
     expect(run(busted.app, { type: 'hit/click' }).app).toBe(busted.app);
-    const on = run(busted.app, { type: 'continue/click' });
-    expect(on.app.table.pause).toBeNull();
+    expect(run(busted.app, { type: 'escape' }).app.shell.pause).toBeNull();
+    const on = run(busted.app, { type: 'pause/continue' });
+    expect(on.app.shell.pause).toBeNull();
     expect(myTurn(on.app)).toBe(true);
   });
 
@@ -356,9 +361,9 @@ describe('the pause: what happened to a seat waits for its Continue', () => {
       seats: before.seats.map((s, i) => (i === 1 ? ({ ...s, status: 'frozen' } as const) : s)),
     };
     expect(pauseFor(false, viewFor(before, 0), viewFor(after, 0))).toBeNull();
-    expect(pauseFor(false, viewFor(before, 1), viewFor(after, 1))).toMatchObject({
-      kind: 'frozen',
+    expect(pauseFor(false, viewFor(before, 1), viewFor(after, 1))).toEqual({
       title: 'You are frozen',
+      detail: '0 points banked this round.',
     });
     expect(pauseFor(true, null, viewFor(after, 1))).toBeNull();
     const flipped = {
@@ -366,8 +371,6 @@ describe('the pause: what happened to a seat waits for its Continue', () => {
       seats: before.seats.map((s, i) => (i === 2 ? ({ ...s, status: 'flip7' } as const) : s)),
     };
     expect(pauseFor(true, viewFor(before, 0), viewFor(flipped, 0))).toMatchObject({
-      seat: 2,
-      kind: 'flip7',
       title: 'Sandro flips 7!',
     });
   });

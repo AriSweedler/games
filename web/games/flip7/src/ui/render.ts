@@ -3,8 +3,9 @@
 // web/shared/ui/shellPaint.ts's (the screens, the waiting rooms, the sound button, the handoff, the
 // sheets) and seatedHome.ts's; the table is this game's: every seat's line as plain tiles with its
 // status and what it would bank, the seat acting lit, Hit and Stay for the seat whose turn it is,
-// the taker picker for the seat that flipped an action card, and the scores with Next round (the
-// host's) or Play again once a round or the game is over. The anticipation is ui/motion.ts's: the
+// the taker picker for the seat that flipped an action card, and the round's scores on the shell's
+// result sheet with Next round (the host's) or Play again once a round or the game is over; the
+// pause over the table is the shell's (`paintShellSheets`). The anticipation is ui/motion.ts's: the
 // table the last paint left is read back before the seats repaint, and the cards, busts, Flip 7s
 // and scores new to this paint carry the classes theme.css animates (`dealt`, `bust-card`,
 // `busting`, `flip7-now`, `reveal`); the clock they run on is written on the root once at bind.
@@ -34,11 +35,12 @@ import {
   bindButtons,
   bindDelegated,
   bindShellSheets,
-  paintSheet,
+  paintResult,
   paintShellChrome,
   paintShellSheets,
   shellButtons,
   type Dispatch,
+  type ResultWords,
 } from '../../../../shared/ui/shellPaint.ts';
 import { cardName, type Card } from '../engine/cards.ts';
 import { lineScore } from '../engine/engine.ts';
@@ -189,22 +191,36 @@ const paintMine = (el: Element, v: View, m: Moments): void => {
   markMoments(el, v.me, m);
 };
 
-/** The round's scores: a row a seat; the rows come up one by one (`reveal`, `--i`) the paint the panel rises. */
-const paintScores = (el: Element, v: View, reveal: boolean): void => {
-  setHtml(el, {
-    kind: 'safe-html',
-    markup: v.seats
-      .map((seat, i) => {
-        const name = seat.name;
-        const total = String(v.scores[i] ?? 0);
-        return reveal
-          ? safeHtml`<li class="reveal" style="${`--i: ${String(i)}`}"><span>${name}</span><strong>${total}</strong></li>`
-              .markup
-          : safeHtml`<li><span>${name}</span><strong>${total}</strong></li>`.markup;
-      })
-      .join(''),
-  });
-};
+/** The round's scores for `#rsScore` (the shell's `.score-list`): a row a seat; the rows come up one by one (`reveal`, `--i`) the paint the sheet rises. */
+export const scoreRows = (v: View, reveal: boolean): string =>
+  v.seats
+    .map((seat, i) => {
+      const name = seat.name;
+      const total = String(v.scores[i] ?? 0);
+      return reveal
+        ? safeHtml`<div class="score-row reveal" style="${`--i: ${String(i)}`}"><span>${name}</span><strong>${total}</strong></div>`
+            .markup
+        : safeHtml`<div class="score-row"><span>${name}</span><strong>${total}</strong></div>`
+            .markup;
+    })
+    .join('');
+
+/** The result sheet's words at a round's or the game's end: the title, the scores (keyed on the position, so the rows build once), the primary by phase, held for a guest between rounds. */
+export const resultWords = (app: App, v: View, reveal: boolean): ResultWords => ({
+  title:
+    v.phase.kind === 'gameOver'
+      ? `${nameOf(v, v.phase.winner)} wins the game`
+      : `Round ${String(v.round)} over`,
+  score: {
+    key: `${String(v.startedAt)}:${String(v.round)}:${v.phase.kind}`,
+    html: () => scoreRows(v, reveal),
+  },
+  primary: {
+    id: 'rsNextBtn',
+    label: v.phase.kind === 'gameOver' ? 'Play again' : 'Next round',
+    disabled: app.shell.role === 'guest',
+  },
+});
 
 const paintTarget = (doc: DocumentLike, v: View, mine: boolean): void => {
   const panel = requireId(doc, 'target');
@@ -258,34 +274,10 @@ const paintTable = (doc: DocumentLike, app: App): void => {
   setText(hit, local ? `${nameOf(v, v.me)}: Hit` : 'Hit');
   paintTarget(doc, v, mine);
   const over = v.phase.kind === 'roundOver' || v.phase.kind === 'gameOver';
-  toggleClass(requireId(doc, 'result'), 'hidden', !over);
-  if (over) {
-    setText(
-      requireId(doc, 'resultTitle'),
-      v.phase.kind === 'gameOver'
-        ? `${nameOf(v, v.phase.winner)} wins the game`
-        : `Round ${String(v.round)} over`,
-    );
-    paintScores(requireId(doc, 'scores'), v, m.scores);
-  }
-  toggleClass(requireId(doc, 'nextRoundBtn'), 'hidden', v.phase.kind !== 'roundOver' || !mine);
-  toggleClass(
-    requireId(doc, 'replayBtn'),
-    'hidden',
-    v.phase.kind !== 'gameOver' || app.shell.role === 'guest',
-  );
+  paintResult(doc, over, over ? resultWords(app, v, m.scores) : null);
   const wait = local ? '' : waitText(v);
   setText(requireId(doc, 'statusText'), wait === '' ? v.note : wait);
   setText(requireId(doc, 'drawCount'), `Deck · ${String(v.drawCount)}`);
-};
-
-/** The pause over the table: what happened, and Continue. */
-const paintPause = (doc: DocumentLike, app: App): void => {
-  const pause = app.table.pause;
-  paintSheet(doc, 'pauseOverlay', pause !== null);
-  if (pause === null) return;
-  setText(requireId(doc, 'pauseTitle'), pause.title);
-  setText(requireId(doc, 'pauseDetail'), pause.detail);
 };
 
 export const paint = (doc: PageLike, app: App): void => {
@@ -300,7 +292,6 @@ export const paint = (doc: PageLike, app: App): void => {
   home.paintHome(doc, app);
   paintCurtain(doc, app);
   paintTable(doc, app);
-  paintPause(doc, app);
   paintShellSheets(doc, app.shell);
 };
 
@@ -309,14 +300,19 @@ export const bindAll = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
   writeClock(doc, durationsFor(reducedMotion()));
   home.bindHome(doc, dispatch);
   bindCurtain<Flip7>(doc, dispatch);
-  bindButtons(doc, dispatch, [
-    ...shellButtons<Flip7>(),
-    ['hitBtn', { type: 'hit/click' }],
-    ['stayBtn', { type: 'stay/click' }],
-    ['nextRoundBtn', { type: 'nextRound/click' }],
-    ['replayBtn', { type: 'replay/click' }],
-    ['continueBtn', { type: 'continue/click' }],
-  ]);
+  // The result sheet's primary is held (`disabled`) for a guest between rounds: its click dispatches nothing.
+  bindButtons(
+    doc,
+    dispatch,
+    [
+      ...shellButtons<Flip7>(),
+      ['hitBtn', { type: 'hit/click' }],
+      ['stayBtn', { type: 'stay/click' }],
+      ['rsNextBtn', { type: 'next/click' }],
+      ['rsLeaveBtn', { type: 'leave/request' }],
+    ],
+    { skipDisabled: true },
+  );
   bindDelegated<Flip7>(doc, dispatch, [
     {
       id: 'targetSeats',

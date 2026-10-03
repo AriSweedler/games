@@ -19,7 +19,7 @@ One id per rule, as the suite names it in a failure (`<game>: <rule>: <what to f
 | `seat-names`     | The player count is the shared stepper                 | Pass and play shows one name input per seat at the stepper's minimum and at its maximum                                     |
 | `rules-fit`      | The Rules tab fits one phone screen                    | `RULES_ITEMS` exported; at 390x844 the Rules tab neither scrolls the document nor an ancestor of `#rulesList`                |
 | `seats-on-table` | The table shows every seat                             | Two seats by name: `e2e/shell-local.spec.ts`; N seats: the game's own spec (briscola-online, flip7-local)                   |
-| `pauses`         | Understand what happened before proceeding             | The declared `Pause.kind`s are raised in `ui/state.ts` and `continue/click` clears them                                     |
+| `pauses`         | Understand what happened before proceeding             | The declared pauses (the statuses or events) are raised in `ui/state.ts` through the shell's `table.pause` adapter; the shell's `pause/continue` clears them |
 | `cues`           | Every key moment has a sound cue, once                 | `src/ui/sound.ts` spreads `SHELL_CUES` and has a row per declared cue                                                       |
 | `landing`        | The menu                                               | The landing card, the README "Play" row, `assets/splash.svg` and its PNG; no alias shadows the game                         |
 | `tables`         | A new game, step 7                                     | A row in `REGISTRY`, `SHELL`, `ROOM_CODE` and `ids.ts SHELL_GAMES`; `randomCode` and `sanitiseCode` total                   |
@@ -85,8 +85,9 @@ Each is a `gaps` row in `tools/games.ts`; closing one is the fix plus deleting t
   hide nothing (`hides: false`), so the rule does not reach them.
 - `rules-fit` on gin, fidice, backgammon, briscola: cut each `RULES_ITEMS` to the goal, the turn
   and one line per special case (UNO fits in seven, Flip 7 in eight).
-- `pauses` on gin, fidice, backgammon, briscola, UNO, hive: a `pause` in `ui/state.ts` after Flip 7's
-  `pauseFor`, for the events in AGENT.md's table.
+- `pauses` on gin, fidice, backgammon, briscola, UNO, hive: a `table.pause` adapter in `ui/state.ts`
+  after Flip 7's `pauseFor` (the shell holds and paints it, dry-review-2026-10.md §7 row 13), for
+  the events in AGENT.md's table.
 - `cues` on fidice: rows of its own in `src/ui/sound.ts` (M9). Flip 7's table landed in #29 while
   this audit ran; its row declares five of its cues.
 - `home-felt` on UNO (the wordmark's red, 1.85:1 on the felt) and Hive (the amber title, 3.62:1):
