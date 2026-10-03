@@ -13,6 +13,7 @@ import {
   keyOf,
   neighbours,
   ring,
+  route,
   sameHex,
   scale,
   sharedNeighbours,
@@ -122,6 +123,21 @@ describe('walking the hive', () => {
       neighbours(x).filter((n) => line.some((c) => sameHex(c, n)));
     expect(keys([...flood([h(0, 0)], inLine).values()])).toEqual(keys(line));
     expect(flood([h(5, 5)], () => []).size).toBe(1);
+  });
+
+  test('route: the shortest way through the steps given, both ends in it; the start alone to itself; none when cut off', () => {
+    const inLine = (x: Hex): ReadonlyArray<Hex> =>
+      neighbours(x).filter((n) => line.some((c) => sameHex(c, n)));
+    expect(route(h(0, 0), h(2, 0), inLine)).toEqual(line);
+    expect(route(h(2, 0), h(0, 0), inLine)).toEqual([...line].reverse());
+    expect(route(h(1, 0), h(1, 0), inLine)).toEqual([h(1, 0)]);
+    expect(route(h(0, 0), h(5, 5), inLine)).toBeUndefined();
+    // Over the open grid the route is as long as the distance, and each step is one hex.
+    const open = route(h(-2, 1), h(3, -2), neighbours);
+    expect(open).toHaveLength(distance(h(-2, 1), h(3, -2)) + 1);
+    (open ?? []).slice(1).forEach((x, i) => {
+      expect(distance((open ?? [])[i] ?? ORIGIN, x)).toBe(1);
+    });
   });
 
   test('one hive: connected, or not; no tiles is one hive', () => {

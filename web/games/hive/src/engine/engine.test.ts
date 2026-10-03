@@ -14,6 +14,7 @@ import {
   placeableBugs,
   placementHexes,
   queenAt,
+  pathOf,
   spiderPaths,
   stackAt,
   tilesOn,
@@ -36,6 +37,10 @@ import {
 
 const NAMES = { white: 'Ari', black: 'Bea' } as const;
 const h = (q: number, r: number): Hex => ({ q, r });
+const hexOfKey = (key: string): Hex => {
+  const [q = 0, r = 0] = key.split(',').map(Number);
+  return { q, r };
+};
 const keys = (hexes: ReadonlyArray<Hex>): ReadonlyArray<string> => hexes.map(keyOf).sort();
 
 const LETTER: Readonly<Record<string, Bug>> = {
@@ -212,6 +217,50 @@ describe('each bug moves its own way (§4.5-§4.6)', () => {
     expect(spiderPaths({ ...game, turn: 'black' }, h(-1, 0)).size).toBe(0);
     const queenUp = position({ '-1,0': ['wS'], '0,0': ['wA'], '1,0': ['bQ'] });
     expect(spiderPaths(queenUp, h(-1, 0)).size).toBe(0);
+  });
+
+  test('pathOf: the hexes a move walks, from first and to last, for every bug', () => {
+    // A line of three with a white Beetle on the far end's neighbour; White to move.
+    const game = position({
+      '-1,0': ['wS'],
+      '0,0': ['wQ'],
+      '1,0': ['bQ'],
+      '2,0': ['bA'],
+      '0,1': ['wB'],
+      '-1,1': ['wG'],
+      '-2,1': ['wA'],
+    });
+    // The Spider: her three hexes after where she stood.
+    const spider = spiderPaths(game, h(-1, 0));
+    const [spiderTo, spiderPath] = [...spider.entries()][0] ?? ['', []];
+    expect(pathOf(game, h(-1, 0), { ...h(0, 0), ...hexOfKey(spiderTo) }, 'spider')).toEqual([
+      h(-1, 0),
+      ...spiderPath,
+    ]);
+    // The Queen: one step. The Beetle: one step, up onto the Queen (the hop lands on top).
+    expect(pathOf(game, h(0, 0), h(0, -1), 'queen')).toEqual([h(0, 0), h(0, -1)]);
+    expect(legalMoves(game, h(0, 1)).some((x) => sameHex(x, h(0, 0)))).toBe(true);
+    expect(pathOf(game, h(0, 1), h(0, 0), 'beetle')).toEqual([h(0, 1), h(0, 0)]);
+    const climbed = apply(game, move(h(0, 1), h(0, 0)));
+    expect(stackAt(climbed.board, h(0, 0))).toEqual([tile('wQ'), tile('wB')]);
+    // The Grasshopper at (-1,1) jumps the Beetle at (0,1) to (1,1): the hex it crossed between the ends.
+    expect(legalMoves(game, h(-1, 1)).some((x) => sameHex(x, h(1, 1)))).toBe(true);
+    expect(pathOf(game, h(-1, 1), h(1, 1), 'grasshopper')).toEqual([h(-1, 1), h(0, 1), h(1, 1)]);
+    // The Ant walks round the hive: a chain of single steps over empty hexes, the shortest there is.
+    const antTo = h(3, 0);
+    expect(legalMoves(game, h(-2, 1)).some((x) => sameHex(x, antTo))).toBe(true);
+    const ant = pathOf(game, h(-2, 1), antTo, 'ant');
+    expect(ant[0]).toEqual(h(-2, 1));
+    expect(ant[ant.length - 1]).toEqual(antTo);
+    expect(ant.length).toBeGreaterThan(distance(h(-2, 1), antTo));
+    ant.slice(1).forEach((x, i) => {
+      expect(distance(ant[i] ?? ORIGIN, x)).toBe(1);
+      expect(heightAt(game.board, x)).toBe(0);
+    });
+    // No way found (a move the engine refuses): the two ends alone.
+    expect(pathOf(game, h(-2, 1), h(9, 9), 'ant')).toEqual([h(-2, 1), h(9, 9)]);
+    expect(pathOf(game, h(-1, 1), h(2, 2), 'grasshopper')).toEqual([h(-1, 1), h(2, 2)]);
+    expect(pathOf(game, h(-1, 0), h(9, 9), 'spider')).toEqual([h(-1, 0), h(9, 9)]);
   });
 
   test('the Soldier Ant goes anywhere around the hive it can slide to', () => {
@@ -396,6 +445,25 @@ describe('a seeded random bot game stays legal for 200 turns', () => {
       null,
       { kind: 'win', winner: 'white', by: 'surround' },
     ]);
+  });
+
+  test('every move the bots made has a path from where it stood to where it went, one hex a step', () => {
+    const moves = GAMES.flat().filter(({ intent }) => intent.type === 'move');
+    expect(moves.length).toBeGreaterThan(50);
+    moves.forEach(({ before, intent }) => {
+      if (intent.type !== 'move') return;
+      const bug = stackAt(before.board, intent.from).at(-1)?.bug ?? 'queen';
+      const path = pathOf(before, intent.from, intent.to, bug);
+      expect(path[0]).toEqual(intent.from);
+      expect(path[path.length - 1]).toEqual(intent.to);
+      expect(new Set(path.map(keyOf)).size).toBe(path.length);
+      path.slice(1).forEach((x, i) => {
+        expect(distance(path[i] ?? ORIGIN, x)).toBe(1);
+      });
+      if (bug === 'grasshopper') expect(path.length).toBeGreaterThanOrEqual(3);
+      if (bug === 'spider') expect(path).toHaveLength(4);
+      if (bug === 'queen' || bug === 'beetle') expect(path).toHaveLength(2);
+    });
   });
 
   test('every Spider move the bots made had a three-hex path around the hive: spiderPaths ends where legalMoves does', () => {

@@ -385,10 +385,16 @@ const zones = [
       `${GAME_SRC}/view/**`,
     ],
     // prefs.ts is the shell's shared readers and writers over a Store (docs/design/shared-shell.md
-    // §5 A3): a game's storage.ts builds its own from them over the keys it alone names.
-    except: ['**/web/shared/edge/storage.ts', '**/web/shared/edge/prefs.ts'],
+    // §5 A3): a game's storage.ts builds its own from them over the keys it alone names; settings.ts
+    // is the table of every game's per-device options beside it (the owner, 2026-10-02: "the config
+    // options are in browser local storage for now"), read and written the same way.
+    except: [
+      '**/web/shared/edge/storage.ts',
+      '**/web/shared/edge/prefs.ts',
+      '**/web/shared/edge/settings.ts',
+    ],
     message:
-      'storage modules import only web/shared/lib, @shared/edge/storage and @shared/edge/prefs.',
+      'storage modules import only web/shared/lib, @shared/edge/storage, @shared/edge/prefs and @shared/edge/settings.',
   },
 ];
 

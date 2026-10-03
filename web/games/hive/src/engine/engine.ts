@@ -12,12 +12,15 @@ import {
   add,
   canStep,
   dedupe,
+  distance,
   flood,
   hexOf,
   isConnected,
   keyOf,
   neighbours,
+  route,
   sameHex,
+  scale,
   walkEnds,
   walks,
   type Hex,
@@ -225,11 +228,55 @@ export const legalMoves = (game: Game, from: Hex): ReadonlyArray<Hex> => {
  */
 export const spiderPaths = (game: Game, from: Hex): ReadonlyMap<string, ReadonlyArray<Hex>> => {
   const lift = lifted(game, from);
-  if (lift?.tile.bug !== 'spider') return new Map();
-  const paths = walks(from, SPIDER_STEPS, slidesOn(lift.board));
+  return lift?.tile.bug === 'spider' ? spiderWalks(lift.board, from) : new Map();
+};
+
+/** `spiderPaths` over the board with the Spider lifted off `from`, with no gate on whose turn it is. */
+const spiderWalks = (board: Board, from: Hex): ReadonlyMap<string, ReadonlyArray<Hex>> => {
+  const paths = walks(from, SPIDER_STEPS, slidesOn(board));
   const endOf = (path: ReadonlyArray<Hex>): string => keyOf(path[path.length - 1] ?? from);
   const firsts = paths.filter((path, i) => paths.findIndex((p) => endOf(p) === endOf(path)) === i);
   return new Map(firsts.map((path) => [endOf(path), path] as const));
+};
+
+/** The hexes a Grasshopper jumps over from `from` to `to`, a straight line along one of DIRECTIONS; none off a line. */
+const crossed = (from: Hex, to: Hex): ReadonlyArray<Hex> => {
+  const n = distance(from, to);
+  if (n < 2) return [];
+  const d = { q: (to.q - from.q) / n, r: (to.r - from.r) / n };
+  if (!DIRECTIONS.some((dir) => sameHex(dir, d))) return [];
+  return Array.from({ length: n - 1 }, (_, i) => add(from, scale(d, i + 1)));
+};
+
+/**
+ * The hexes a move of `bug` from `from` to `to` walks, `from` first and `to` last, over `game`'s
+ * board with the tile lifted off (the position the move was played from): the Spider's three-hex
+ * path (`spiderPaths`); a Queen's or Beetle's one step (a Beetle's lands on top of whatever is
+ * there); the Ant's shortest slide round the hive (hex.ts `route` over the same slides its reach
+ * uses); the Grasshopper's straight line over every tile it jumps. `[from, to]` when no way is
+ * found (a move the engine would not have allowed), so a caller always has the two ends. The page
+ * crawls the tile along it (ui/motion.ts), one hop a hex.
+ */
+export const pathOf = (game: Game, from: Hex, to: Hex, bug: Bug): ReadonlyArray<Hex> => {
+  const board = liftTop(game.board, from);
+  const ends: ReadonlyArray<Hex> = [from, to];
+  switch (bug) {
+    case 'queen':
+    case 'beetle':
+      return ends;
+    case 'grasshopper':
+      return [from, ...crossed(from, to), to];
+    case 'spider': {
+      const path = spiderWalks(board, from).get(keyOf(to));
+      return path === undefined ? ends : [from, ...path];
+    }
+    case 'ant':
+      return route(from, to, slidesOn(board)) ?? ends;
+    default: {
+      const never: never = bug;
+      return never;
+    }
+  }
 };
 
 /** Every placement and then every move the side to move may make. */

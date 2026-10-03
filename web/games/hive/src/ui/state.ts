@@ -3,8 +3,12 @@
 // (shellConfig.ts `HIVE_SHELL` completed here as `HIVE`), and the table's own intents: a tap on a
 // hand tile shows where it may be placed, a tap on a board tile where it may move, a tap on a lit
 // hex plays; the lit hex the pointer is over is the `aim`, so a picked Spider's path to it reads
-// 1-2-3, and a Spider's move lands as a `hop` the paint plays along that path (the owner: "the
-// spider's moves must show the '1-2-3' when it moves, as a special case"). Every role plays through `act`: pass-and-play and the host apply the action to the
+// 1-2-3, and every move lands as a `hop` the paint crawls along the way it went (the owner: "have
+// them move in little jumps"; `moveHop` reads the move off the last two views, so the far seat's
+// crawls too), the Spider's with her 1-2-3 (the owner: "the spider's moves must show the '1-2-3'
+// when it moves, as a special case"). The tiles' `motion` (crawl or snap) is the device's
+// remembered setting (settings.ts `HIVE_MOTION`): read at boot into the table through the home
+// snapshot, toggled by `motion/toggle`, written back as an effect. Every role plays through `act`: pass-and-play and the host apply the action to the
 // engine and broadcast each seat its view, a guest sends one `action` frame and waits for its
 // view. Pass-and-play raises no curtain (the owner, 2026-10-02: "hive is like backgammon, where
 // you don't need to pass the phone for turns. It's just a game."): nothing is hidden, so both
@@ -46,9 +50,9 @@ import {
   type TableReset,
 } from '../../../../shared/ui/shell.ts';
 import { runShellEffect, type ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
-import { heightAt, occupied, spiderPaths, topAt } from '../engine/engine.ts';
-import { keyOf, sameHex, type Hex } from '../engine/hex.ts';
-import type { Bug } from '../engine/pieces.ts';
+import { heightAt, occupied, pathOf, topAt, type Board } from '../engine/engine.ts';
+import { dedupe, keyOf, sameHex, type Hex } from '../engine/hex.ts';
+import type { Bug, Side } from '../engine/pieces.ts';
 import {
   applyAction,
   createState,
@@ -64,8 +68,12 @@ import type { Hop } from './board.ts';
 import { HIVE_SHELL } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
+  HIVE_MOTION,
   HOME_TABS,
+  nextMotion,
+  writeMotion,
   type HomeTab,
+  type Motion,
   type Opts,
   type PlayMode,
   type Save,
@@ -73,7 +81,16 @@ import {
 } from '../storage.ts';
 import { INITIAL_CUES, type Cue, type CueState } from './sound.ts';
 
-export { DEFAULT_PLAY_MODE, HOME_TABS, INITIAL_CUES, type CueState, type HomeTab, type PlayMode };
+export {
+  DEFAULT_PLAY_MODE,
+  HIVE_MOTION,
+  HOME_TABS,
+  INITIAL_CUES,
+  type CueState,
+  type HomeTab,
+  type Motion,
+  type PlayMode,
+};
 
 export const SCREENS = [
   'homeScreen',
@@ -87,8 +104,8 @@ export type ScreenId = (typeof SCREENS)[number];
 /** `host/click` and `local/click` carry nothing beyond the names: a game for two has no option (the field is never set). */
 export type Raw = Readonly<{ seats?: never }>;
 
-/** `initHome` reads nothing beyond the shell's keys. */
-export type Home = Readonly<{ opts?: never }>;
+/** What `initHome` reads beyond the shell's keys: the tiles' motion (shellConfig.ts `home.read`). */
+export type Home = Readonly<{ motion: Motion }>;
 
 /** What the player has picked up: a bug from the hand, or a tile on the board. */
 export type Picked = Readonly<{ kind: 'hand'; bug: Bug }> | Readonly<{ kind: 'hex'; hex: Hex }>;
@@ -104,6 +121,8 @@ export type Table = Readonly<{
   /** The lit hex the pointer is over (or a drag's nearest), so a picked Spider's path to it reads 1-2-3; null off any. */
   aim: Hex | null;
   hop: Hop | null;
+  /** The tiles' motion, the device's remembered setting: kept through every start and leave. */
+  motion: Motion;
   /** The result sheet's Continue was tapped: the final board stays on show. */
   resultSeen: boolean;
   /** `#historyOverlay` open. */
@@ -124,9 +143,11 @@ export type TableIntent =
   | Readonly<{ type: 'rules/close' }>
   | Readonly<{ type: 'history/open' }>
   | Readonly<{ type: 'history/close' }>
+  | Readonly<{ type: 'motion/toggle' }>
   | Readonly<{ type: 'escape' }>;
 
-export type TableEffect = never;
+/** The tiles' motion into the device's storage (settings.ts `writeSetting`). */
+export type TableEffect = Readonly<{ type: 'motion/write'; motion: Motion }>;
 
 /** Hive's types for the shared shell: two seats, no option, the whole game as every seat's view. */
 export type Hive = Readonly<{
@@ -164,6 +185,7 @@ export const initialTable: Table = {
   drag: null,
   aim: null,
   hop: null,
+  motion: HIVE_MOTION.initial,
   resultSeen: false,
   historyOpen: false,
 };
@@ -191,25 +213,37 @@ export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
 
 const turnsOf = (v: View): number => v.game.turns.white + v.game.turns.black;
 
+/** The hexes whose stack grew (`+1`) or shrank (`-1`) from `prev` to `next`, by one tile. */
+const changed = (prev: Board, next: Board, delta: 1 | -1): ReadonlyArray<Hex> =>
+  dedupe([...occupied(prev), ...occupied(next)]).filter(
+    (h) => heightAt(next, h) - heightAt(prev, h) === delta,
+  );
+
 /**
- * The Spider move from `prev` to `next`: where it stood and its path (engine.ts `spiderPaths` on
- * the position it left, the destination last). Null for any other change: a placement empties no
- * hex, another bug has no three-hex path, and the Spider never stands on a stack (only Beetles
- * climb), so its move is exactly one hex emptied and one filled.
+ * The tile that landed between `prev` and `next`, for the paint to crawl (ui/motion.ts): a move is
+ * exactly one stack shorter by a tile and one taller (a Beetle's climb counts the same way: the
+ * stack it left shrinks, the one it mounts grows), its way engine.ts `pathOf` on the position it
+ * left; a placement is one stack taller and none shorter, its way its hex alone (`from` null: the
+ * tray is its origin). Null for any other change (a pass, a resignation, the same position again).
  */
-export const spiderHop = (
+export const moveHop = (
   prev: View,
   next: View,
-): Readonly<{ from: Hex; path: ReadonlyArray<Hex> }> | null => {
-  const emptied = occupied(prev.game.board).filter((h) => heightAt(next.game.board, h) === 0);
-  const filled = occupied(next.game.board).filter((h) => heightAt(prev.game.board, h) === 0);
-  const [from, ...moreEmptied] = emptied;
-  const [to, ...moreFilled] = filled;
-  if (from === undefined || to === undefined || moreEmptied.length > 0 || moreFilled.length > 0)
-    return null;
-  if (topAt(prev.game.board, from)?.bug !== 'spider') return null;
-  const path = spiderPaths(prev.game, from).get(keyOf(to));
-  return path === undefined ? null : { from, path };
+): Readonly<{ bug: Bug; side: Side; from: Hex | null; path: ReadonlyArray<Hex> }> | null => {
+  const [from, ...moreFrom] = changed(prev.game.board, next.game.board, -1);
+  const [to, ...moreTo] = changed(prev.game.board, next.game.board, 1);
+  if (to === undefined || moreFrom.length > 0 || moreTo.length > 0) return null;
+  const landed = topAt(next.game.board, to);
+  if (landed === undefined) return null;
+  if (from === undefined) return { bug: landed.bug, side: landed.side, from: null, path: [to] };
+  const lifted = topAt(prev.game.board, from);
+  if (lifted === undefined) return null;
+  return {
+    bug: lifted.bug,
+    side: lifted.side,
+    from,
+    path: pathOf(prev.game, from, to, lifted.bug).slice(1),
+  };
 };
 
 /** One key per position, so a re-sent frame plays nothing. */
@@ -235,19 +269,16 @@ const rendered = (app: App, prev: View | null, ctx: Ctx): Step => {
   // A rematch: its clock, or (on a clock that stood still) the result cleared.
   const newGame =
     prev?.startedAt !== view.startedAt || (prev.game.result !== null && view.game.result === null);
-  const moved = fresh && !newGame ? spiderHop(prev, view) : null;
+  const moved = fresh && !newGame ? moveHop(prev, view) : null;
+  const snap = (ctx.reducedMotion ?? false) || app.table.motion === 'snap';
   const table: Table = {
     ...app.table,
     picked: fresh || newGame ? null : app.table.picked,
     drag: newGame ? null : app.table.drag,
     aim: fresh || newGame ? null : app.table.aim,
-    // A Spider's move hops once, on this position; any other fresh position hops nothing.
+    // A tile that landed hops once, on this position; any other fresh position hops nothing.
     hop:
-      moved !== null
-        ? { key, ...moved, reduced: ctx.reducedMotion ?? false }
-        : fresh || newGame
-          ? null
-          : app.table.hop,
+      moved !== null ? { key, ...moved, reduced: snap } : fresh || newGame ? null : app.table.hop,
     resultSeen: newGame ? false : app.table.resultSeen,
   };
   return step(
@@ -262,7 +293,7 @@ const reset = (table: Table, at: TableReset): Table => {
     case 'handoff':
     case 'leave':
     case 'lost':
-      return initialTable;
+      return { ...initialTable, motion: table.motion };
     case 'deal':
     case 'view':
     case 'applied':
@@ -295,7 +326,7 @@ export const HIVE: ShellConfig<Hive> = {
   local: { viewer, revealer },
   home: {
     ...HIVE_SHELL.home,
-    apply: (app) => app,
+    apply: (app, home) => withTable(app, { motion: home.motion }),
     resume: (home) => resumeFor(home.save),
     resumeExtra: pure,
   },
@@ -454,6 +485,10 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       return pure(withTable(app, { historyOpen: true }));
     case 'history/close':
       return pure(withTable(app, { historyOpen: false }));
+    case 'motion/toggle': {
+      const motion = nextMotion(app.table.motion);
+      return step(withTable(app, { motion }), { type: 'motion/write', motion });
+    }
     case 'escape':
       if (app.table.historyOpen) return pure(withTable(app, { historyOpen: false }));
       if (app.shell.rulesOpen) return pure(withShell(app, { rulesOpen: false }));
@@ -487,9 +522,10 @@ export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(ap
 
 export type EffectDeps = ShellEffectDeps<Hive>;
 
-/** One effect against the adapters: the shell's runner (the table has none of its own). */
+/** One effect against the adapters: the shell's runner, or the table's one write (the tiles' motion). */
 export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
   if (isShellEffect(effect)) runShellEffect(app.shell, effect, deps, HIVE);
+  else writeMotion(deps.store, effect.motion);
 };
 
 /** The view the table paints: my seat's, or null at home. */

@@ -1,21 +1,38 @@
 import { describe, expect, test } from 'vitest';
 
 import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
+import { createStore, type StorageLike } from '../../../../shared/edge/storage.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
 import { ORIGIN, keyOf, sameHex, type Hex } from '../engine/hex.ts';
 import {
   cuesBetween,
   handoffLabel,
-  spiderHop,
   initialApp,
+  moveHop,
   placeableNow,
   reachable,
+  readHome,
   reduce,
   resumeLabel,
+  runEffect,
   viewOf,
   type App,
+  type EffectDeps,
   type Intent,
 } from './state.ts';
+
+const fakeStorage = (): StorageLike => {
+  const map = new Map<string, string>();
+  return {
+    getItem: (k) => map.get(k) ?? null,
+    setItem: (k, v) => {
+      map.set(k, v);
+    },
+    removeItem: (k) => {
+      map.delete(k);
+    },
+  };
+};
 
 const ctx = { rng: mulberry32(7), now: () => NOW };
 const run = runIntents(reduce, ctx);
@@ -243,7 +260,7 @@ describe("the Spider's 1-2-3 (the owner: it must show when the Spider moves)", (
     expect(run(app, { type: 'aim/hex', hex: null }).app).toBe(app);
   });
 
-  test('a Spider’s move lands as a hop: its three hexes, keyed on the position; any other move hops nothing', () => {
+  test('a Spider’s move lands as a hop: its three hexes, keyed on the position; the Ant’s next move hops its own way', () => {
     const app = placed();
     const picked = run(app, { type: 'tap/hex', hex: SPIDER }).app;
     const view = viewOf(picked);
@@ -271,8 +288,10 @@ describe("the Spider's 1-2-3 (the owner: it must show when the Spider moves)", (
       { type: 'tap/hex', hex: h(2, 0) },
       { type: 'tap/hex', hex: antTo },
     ).app;
-    expect(antMoved.table.hop).toBeNull();
-    // Under reduced motion the hop says so, for one step instead of three.
+    expect(antMoved.table.hop).toMatchObject({ bug: 'ant', from: h(2, 0) });
+    expect(antMoved.table.hop?.path[antMoved.table.hop.path.length - 1]).toEqual(antTo);
+    expect(antMoved.table.hop?.key).not.toBe(hop.key);
+    // Under reduced motion the hop says so: the tile snaps.
     const reduced = runIntents(reduce, { ...ctx, reducedMotion: true })(picked, {
       type: 'tap/hex',
       hex: to,
@@ -281,7 +300,7 @@ describe("the Spider's 1-2-3 (the owner: it must show when the Spider moves)", (
     expect(reduced.table.hop?.path).toEqual(hop.path);
   });
 
-  test('spiderHop reads the move off two views: the one hex emptied, the one filled, and the path between', () => {
+  test('moveHop reads the move off two views: the stack shortened, the one grown, and the way between', () => {
     const app = placed();
     const before = viewOf(app);
     if (before === null) throw new Error('no view');
@@ -289,14 +308,108 @@ describe("the Spider's 1-2-3 (the owner: it must show when the Spider moves)", (
     if (to === undefined) throw new Error('no move');
     const after = viewOf(run(app, { type: 'act', action: { type: 'move', from: SPIDER, to } }).app);
     if (after === null) throw new Error('no view');
-    const hop = spiderHop(before, after);
-    expect(hop?.from).toEqual(SPIDER);
+    const hop = moveHop(before, after);
+    expect(hop).toMatchObject({ bug: 'spider', side: 'white', from: SPIDER });
+    expect(hop?.path).toHaveLength(3);
     expect(hop?.path.map(keyOf)).toContain(keyOf(to));
-    expect(spiderHop(before, before)).toBeNull();
+    expect(moveHop(before, before)).toBeNull();
+    // A placement: the tray is its origin (no `from`), its way its hex alone.
     const placedMore = viewOf(
       run(app, { type: 'act', action: { type: 'place', bug: 'ant', to: h(-2, 1) } }).app,
     );
     if (placedMore === null) throw new Error('no view');
-    expect(spiderHop(before, placedMore)).toBeNull();
+    expect(moveHop(before, placedMore)).toEqual({
+      bug: 'ant',
+      side: 'white',
+      from: null,
+      path: [h(-2, 1)],
+    });
+    // A resignation changes no stack: nothing hops.
+    const resigned = viewOf(run(app, { type: 'act', action: { type: 'resign' } }).app);
+    if (resigned === null) throw new Error('no view');
+    expect(moveHop(before, resigned)).toBeNull();
+  });
+});
+
+describe("every tile crawls (the owner: 'have them move in little jumps'), unless the player snaps them", () => {
+  const h = (q: number, r: number): Hex => ({ q, r });
+  /** Both Queens down, White's Ant a leaf at (-1,0), White to move. */
+  const placed = (): App =>
+    run(
+      started(),
+      { type: 'act', action: { type: 'place', bug: 'queen', to: ORIGIN } },
+      { type: 'act', action: { type: 'place', bug: 'queen', to: h(1, 0) } },
+      { type: 'act', action: { type: 'place', bug: 'ant', to: h(-1, 0) } },
+      { type: 'act', action: { type: 'place', bug: 'spider', to: h(2, 0) } },
+    ).app;
+
+  test('a placement lands as a hop from the tray; an Ant’s move as one hop a hex of its way', () => {
+    const start = run(started(), {
+      type: 'act',
+      action: { type: 'place', bug: 'queen', to: ORIGIN },
+    }).app;
+    expect(start.table.hop).toMatchObject({
+      bug: 'queen',
+      side: 'white',
+      from: null,
+      path: [ORIGIN],
+      reduced: false,
+    });
+    const app = placed();
+    const view = viewOf(app);
+    if (view === null) throw new Error('no view');
+    const far = view.movable.find((m) => sameHex(m.from, h(-1, 0)))?.to.find((x) => x.q > 1);
+    if (far === undefined) throw new Error('the Ant cannot slide far');
+    const moved = run(app, { type: 'act', action: { type: 'move', from: h(-1, 0), to: far } }).app;
+    const hop = moved.table.hop;
+    if (hop === null) throw new Error('no hop');
+    expect(hop.bug).toBe('ant');
+    expect(hop.from).toEqual(h(-1, 0));
+    expect(hop.path.length).toBeGreaterThan(1);
+    expect(hop.path[hop.path.length - 1]).toEqual(far);
+    expect(hop.reduced).toBe(false);
+  });
+
+  test('the motion setting: crawl by default, read at boot from the device, toggled with a write, kept through a start and a leave', () => {
+    expect(initialApp.table.motion).toBe('crawl');
+    const home = readHome(createStore(fakeStorage()));
+    expect(home.motion).toBe('crawl');
+    const booted = run(initialApp, { type: 'home/init', home: { ...home, motion: 'snap' } }).app;
+    expect(booted.table.motion).toBe('snap');
+    const startedSnap = run(booted, localClick).app;
+    expect(startedSnap.table.motion).toBe('snap');
+    const toggled = run(startedSnap, { type: 'motion/toggle' });
+    expect(toggled.app.table.motion).toBe('crawl');
+    expect(toggled.effects).toEqual([{ type: 'motion/write', motion: 'crawl' }]);
+    const back = run(toggled.app, { type: 'motion/toggle' });
+    expect(back.app.table.motion).toBe('snap');
+    expect(back.effects).toEqual([{ type: 'motion/write', motion: 'snap' }]);
+    const left = run(back.app, { type: 'leave/confirmed' }, { type: 'leave/finish' }).app;
+    expect(left.table.motion).toBe('snap');
+    expect(left.table.hop).toBeNull();
+  });
+
+  test('under snap (or reduced motion) a hop says so, and the paint carries nothing', () => {
+    const app = placed();
+    const snapped = run(app, { type: 'motion/toggle' }).app;
+    const landed = run(snapped, {
+      type: 'act',
+      action: { type: 'place', bug: 'beetle', to: h(-2, 1) },
+    }).app;
+    expect(landed.table.hop?.reduced).toBe(true);
+    const reduced = runIntents(reduce, { ...ctx, reducedMotion: true })(app, {
+      type: 'act',
+      action: { type: 'place', bug: 'beetle', to: h(-2, 1) },
+    }).app;
+    expect(reduced.table.hop?.reduced).toBe(true);
+  });
+
+  test('the write effect reaches the store through runEffect', () => {
+    const store = createStore(fakeStorage());
+    runEffect(initialApp, { type: 'motion/write', motion: 'snap' }, {
+      store,
+    } as unknown as EffectDeps);
+    expect(store.readText('hive_motion')).toEqual({ ok: true, value: 'snap' });
+    expect(readHome(store).motion).toBe('snap');
   });
 });
