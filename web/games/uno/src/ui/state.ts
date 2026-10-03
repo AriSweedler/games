@@ -366,30 +366,5 @@ export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
 export const viewOf = (app: App): View | null => app.shell.view;
 export { viewFor };
 
-/** "Ann", "Ann and Cara", "Ann, Cara and Dan". */
-export const listNames = (names: ReadonlyArray<string>): string =>
-  names.length <= 1
-    ? (names[0] ?? '')
-    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`;
-
-/** The resume box's players: "Ann vs Bob" at two (the shell's form), the list past two. */
-export const seatNamesText = (names: ReadonlyArray<string>): string =>
-  names.length <= 2 ? names.join(' vs ') : listNames(names);
-
-/** `#handoffBtn`'s offer: seat 0 hosts, seat 1 joins by invite. */
-export const handoffLabel = (game: State): string =>
-  `Continue online: ${game.game.names[0] ?? ''} hosts, ${game.game.names[1] ?? ''} joins by invite`;
-
-/** The resume box's line for an offer. */
-export const resumeLabel = (resume: Resume): string => {
-  switch (resume.kind) {
-    case 'local':
-      return `Resume pass & play: ${seatNamesText(resume.game.game.names)}`;
-    case 'host':
-      return resume.handoff && resume.game !== null
-        ? handoffLabel(resume.game)
-        : `Resume hosting room ${resume.code}`;
-    case 'guest':
-      return `Rejoin room ${resume.code}`;
-  }
-};
+/** The seats' names in order: the shell's labels read them (web/shared/lib/name.ts `handoffLabel`, `resumeLabel`). */
+export const namesOf = (game: State): ReadonlyArray<string> => game.game.names;

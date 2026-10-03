@@ -6,7 +6,6 @@ import { mulberry32 } from '../../../../shared/lib/rng.ts';
 import { ORIGIN, keyOf, sameHex, type Hex } from '../engine/hex.ts';
 import {
   cuesBetween,
-  handoffLabel,
   initialApp,
   intentOf,
   moveHop,
@@ -14,13 +13,18 @@ import {
   reachable,
   readHome,
   reduce,
-  resumeLabel,
+  namesOf,
+  type Resume,
   runEffect,
   viewOf,
   type App,
   type EffectDeps,
   type Intent,
 } from './state.ts';
+import { handoffLabel, resumeLabel as sharedResumeLabel } from '../../../../shared/lib/name.ts';
+
+/** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
+const resumeLabel = (resume: Resume): string => sharedResumeLabel(resume, namesOf);
 
 const fakeStorage = (): StorageLike => {
   const map = new Map<string, string>();
@@ -149,7 +153,7 @@ describe('pass and play', () => {
     const app = started();
     const game = app.shell.game;
     if (game === null) throw new Error('no game');
-    expect(handoffLabel(game)).toBe('Continue online: Ann hosts, Bob joins by invite');
+    expect(handoffLabel(namesOf(game))).toBe('Continue online: Ann hosts, Bob joins by invite');
     expect(resumeLabel({ kind: 'local', game })).toBe('Resume pass & play: Ann vs Bob');
     expect(resumeLabel({ kind: 'host', code: 'KQZM', handoff: false, game: null } as never)).toBe(
       'Resume hosting room KQZM',

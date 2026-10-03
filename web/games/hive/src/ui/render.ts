@@ -82,12 +82,13 @@ import {
 import { bugHtml } from './bugs.ts';
 import { bindDrag } from './dragger.ts';
 import { bindHome, paintHome } from './home.ts';
+import { handoffLabel } from '../../../../shared/lib/name.ts';
 import { hopAlong } from './motion.ts';
 import {
   HIVE_HINTS,
   HIVE_MOTION,
-  handoffLabel,
   intentOf,
+  namesOf,
   placeableNow,
   reachable,
   type App,
@@ -539,7 +540,7 @@ export const paintHints = (doc: DocumentLike, hints: Hints): void => {
 export const paint = (doc: PageLike, app: App): void => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
   paintShellChrome(doc, app.shell, {
-    handoff: game === null ? null : handoffLabel(game),
+    handoff: game === null ? null : handoffLabel(namesOf(game)),
     connDot: 'oppDot',
   });
   // No curtain to paint: the shell composed `#curtainOverlay` hidden and `viewer` never raises it.

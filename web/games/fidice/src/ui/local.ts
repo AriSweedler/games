@@ -15,6 +15,7 @@ import {
 } from '../../../../shared/ui/curtain.ts';
 import type { PublicState, Seat } from '../domain/types.ts';
 import { engineSeatOf } from '../shellConfig.ts';
+import { listNames } from '../../../../shared/lib/name.ts';
 import type { App, Intent } from './state.ts';
 
 export type CurtainText = ShellCurtainText;
@@ -23,12 +24,6 @@ export type CurtainText = ShellCurtainText;
 export const REVEAL_LABEL = 'Lift the cup';
 /** `#curtainLast` before any table talk. */
 export const FRESH_ROLL_MSG = 'A fresh roll waits under the cup.';
-
-/** "Ann", "Ann and Cara", "Ann, Cara and Dan". */
-export const listNames = (names: ReadonlyArray<string>): string =>
-  names.length <= 1
-    ? (names[0] ?? '')
-    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`;
 
 /** `#curtainSub`: every other human at the table, told to look away; the computers need no telling. */
 export const lookAwayText = (v: PublicState, incoming: Seat): string => {

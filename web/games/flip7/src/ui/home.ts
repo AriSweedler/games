@@ -24,11 +24,12 @@ import { localNameFor } from '../../../../shared/ui/shell.ts';
 import { bindStepper, paintStepper, type StepperSpec } from '../../../../shared/ui/stepper.ts';
 import { MAX_SEATS, MIN_SEATS } from '../engine/index.ts';
 import { LOCAL_NAMES } from '../shellConfig.ts';
+import { resumeLabel } from '../../../../shared/lib/name.ts';
 import {
   EXTRA_SEATS,
   HOME_TABS,
   type ExtraSeat,
-  resumeLabel,
+  namesOf,
   type App,
   type Flip7,
   type Intent,
@@ -75,7 +76,11 @@ const paintOptions = (doc: DocumentLike, app: App): void => {
 };
 
 export const paintHome = (doc: DocumentLike, app: App): void => {
-  paintHomeShell(doc, homeView(app.shell, resumeLabel), { tabs: HOME_TABS, modes: PLAY_MODES });
+  paintHomeShell(
+    doc,
+    homeView(app.shell, (resume) => resumeLabel(resume, namesOf)),
+    { tabs: HOME_TABS, modes: PLAY_MODES },
+  );
   paintOptions(doc, app);
 };
 

@@ -31,16 +31,16 @@ import {
 } from '../../../../shared/ui/home.ts';
 import { ROOM_CODE } from '../../../../shared/lib/roomCode.ts';
 import { difficultyOfChoice } from '../bots/registry.ts';
-import type { State } from '../domain/types.ts';
+import { resumeLabel } from '../../../../shared/lib/name.ts';
 import {
   HOME_TABS,
+  namesOf,
   type App,
   type ExtraSeat,
   type Fidice,
   type Intent,
   type Mode,
   type Raw,
-  type Resume,
 } from './state.ts';
 
 /** The shell's helpers, kept under their gin names for main.ts and the tests. */
@@ -122,30 +122,6 @@ export const readLocalOptions = (doc: DocumentLike): Raw => ({
   ...extraName(doc, 5),
 });
 
-/** "Ann vs Bob"; "Ann, Bob and Cara" past two. */
-export const seatNames = (names: ReadonlyArray<string>): string =>
-  names.length <= 2
-    ? names.join(' vs ')
-    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`;
-
-/** `#handoffBtn`'s tooltip and a handed-off room's resume offer (two humans, plan §7 D8): seat 0 hosts, seat 1 joins by invite. */
-export const handoffLabel = (game: State): string =>
-  `Continue online: ${game.players[0]?.name ?? ''} hosts, ${game.players[1]?.name ?? ''} joins by invite`;
-
-/** `#resumeBtn`'s label for a resume offer (the shell fixture's three forms at two seats). */
-export const resumeLabel = (resume: Resume): string => {
-  switch (resume.kind) {
-    case 'local':
-      return `Resume pass & play: ${seatNames(resume.game.players.map((p) => p.name))}`;
-    case 'host':
-      return resume.handoff && resume.game !== null
-        ? handoffLabel(resume.game)
-        : `Resume hosting room ${resume.code}`;
-    case 'guest':
-      return `Rejoin room ${resume.code}`;
-  }
-};
-
 /**
  * The room's terms into the host card's selects (written only when they differ, so an open select
  * is left alone); the difficulty select follows the strategy when a difficulty means it, and is
@@ -192,7 +168,11 @@ const paintLocalPanel = (doc: DocumentLike, app: App): void => {
 /** The tabs and panels, the play mode, the submenu's `force-open` and the resume box; then the host card's terms and the pass-the-phone panel. */
 export const paintHome = (doc: DocumentLike, app: App): void => {
   setAttr(requireId(doc, 'codeInput'), 'maxlength', String(CODE_LENGTH));
-  paintHomeShell(doc, homeView(app.shell, resumeLabel), { tabs: HOME_TABS, modes: PANEL_MODES });
+  paintHomeShell(
+    doc,
+    homeView(app.shell, (resume) => resumeLabel(resume, namesOf)),
+    { tabs: HOME_TABS, modes: PANEL_MODES },
+  );
   paintOptions(doc, app);
   paintLocalPanel(doc, app);
 };

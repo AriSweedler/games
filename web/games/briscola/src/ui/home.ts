@@ -38,9 +38,10 @@ import {
 import { localNameFor } from '../../../../shared/ui/shell.ts';
 import { bindStepper, paintStepper, type StepperSpec } from '../../../../shared/ui/stepper.ts';
 import { LOCAL_NAMES } from '../shellConfig.ts';
+import { resumeLabel } from '../../../../shared/lib/name.ts';
 import {
   HOME_TABS,
-  resumeLabel,
+  namesOf,
   type App,
   type Briscola,
   type ExtraSeat,
@@ -121,7 +122,11 @@ export const SPEED_SELECTS: ReadonlyArray<string> = ['speedSel', 'localSpeedSel'
 
 /** The tabs and panels, the play mode, the submenu's `force-open`, and the resume box; then the seat count and the extra names. */
 export const paintHome = (doc: DocumentLike, app: App): void => {
-  paintHomeShell(doc, homeView(app.shell, resumeLabel), { tabs: HOME_TABS, modes: PLAY_MODES });
+  paintHomeShell(
+    doc,
+    homeView(app.shell, (resume) => resumeLabel(resume, namesOf)),
+    { tabs: HOME_TABS, modes: PLAY_MODES },
+  );
   paintOptions(doc, app);
 };
 

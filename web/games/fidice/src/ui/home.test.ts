@@ -10,14 +10,16 @@ import {
   bindHome,
   fillNameInputs,
   fillP2NameInput,
-  handoffLabel,
   paintHome,
   readHostOptions,
   readLocalOptions,
-  resumeLabel,
-  seatNames,
   setCodeInput,
 } from './home.ts';
+import {
+  handoffLabel,
+  resumeLabel as sharedResumeLabel,
+  versusOrList,
+} from '../../../../shared/lib/name.ts';
 import { must } from '../../../../../test/shared/engine-helpers.ts';
 import { newGame } from '../domain/game.ts';
 import { makeHuman, seatPlayer } from '../domain/lobby.ts';
@@ -26,11 +28,15 @@ import { fidicePage, type FidicePage } from './page.fake.ts';
 import {
   DEFAULT_OPTS,
   initialApp,
+  namesOf,
   type App,
   type Intent,
   type Mode,
   type Resume,
 } from './state.ts';
+
+/** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
+const resumeLabel = (resume: Resume): string => sharedResumeLabel(resume, namesOf);
 
 import MARKUP from '../../index.html?raw';
 
@@ -97,16 +103,16 @@ describe('the readers', () => {
 });
 
 describe('the labels', () => {
-  test('seatNames, handoffLabel and resumeLabel in their forms', () => {
-    expect(seatNames(['Ann', 'Bob'])).toBe('Ann vs Bob');
-    expect(seatNames(['Ann', 'Bob', 'Cara'])).toBe('Ann, Bob and Cara');
+  test('versusOrList, handoffLabel and resumeLabel in their forms', () => {
+    expect(versusOrList(['Ann', 'Bob'])).toBe('Ann vs Bob');
+    expect(versusOrList(['Ann', 'Bob', 'Cara'])).toBe('Ann, Bob and Cara');
     const game: State = must(
       seatPlayer(
         must(seatPlayer(newGame('ABCDE', 0), makeHuman('host', 'Ann', 0))),
         makeHuman('guest', 'Bob', 0),
       ),
     );
-    expect(handoffLabel(game)).toBe('Continue online: Ann hosts, Bob joins by invite');
+    expect(handoffLabel(namesOf(game))).toBe('Continue online: Ann hosts, Bob joins by invite');
     expect(resumeLabel({ kind: 'local', game })).toBe('Resume pass & play: Ann vs Bob');
     expect(resumeLabel({ kind: 'guest', code: 'ABCDE', myName: 'Bob' })).toBe('Rejoin room ABCDE');
     const host: Resume = {
@@ -120,7 +126,7 @@ describe('the labels', () => {
       at: null,
     };
     expect(resumeLabel(host)).toBe('Resume hosting room ABCDE');
-    expect(resumeLabel({ ...host, game, handoff: true })).toBe(handoffLabel(game));
+    expect(resumeLabel({ ...host, game, handoff: true })).toBe(handoffLabel(namesOf(game)));
     expect(resumeLabel({ ...host, game: null, handoff: true })).toBe('Resume hosting room ABCDE');
   });
 });

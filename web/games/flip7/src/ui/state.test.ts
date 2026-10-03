@@ -11,18 +11,22 @@ import {
   guestContextOf,
   hostContextOf,
   initialApp,
-  listNames,
+  namesOf,
   myTurn,
   pauseFor,
   readHome,
   reduce,
-  resumeLabel,
+  type Resume,
   runEffect,
   waitingToDealMsg,
   type App,
   type EffectDeps,
   type Intent,
 } from './state.ts';
+import { listNames, resumeLabel as sharedResumeLabel } from '../../../../shared/lib/name.ts';
+
+/** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
+const resumeLabel = (resume: Resume): string => sharedResumeLabel(resume, namesOf);
 
 const ctx = { rng: mulberry32(5), now: () => NOW };
 const run = runIntents(reduce, ctx);

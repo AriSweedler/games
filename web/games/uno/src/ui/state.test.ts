@@ -10,21 +10,28 @@ import { STORAGE_KEYS } from '../storage.ts';
 import {
   cuesBetween,
   guestContextOf,
-  handoffLabel,
   hostContextOf,
   initialApp,
   initialShell,
   initialTable,
-  listNames,
+  namesOf,
   readHome,
   reduce,
-  resumeLabel,
+  type Resume,
   runEffect,
   viewOf,
   type App,
   type EffectDeps,
   type Intent,
 } from './state.ts';
+import {
+  handoffLabel,
+  listNames,
+  resumeLabel as sharedResumeLabel,
+} from '../../../../shared/lib/name.ts';
+
+/** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
+const resumeLabel = (resume: Resume): string => sharedResumeLabel(resume, namesOf);
 
 const ctx = { rng: mulberry32(7), now: () => NOW };
 const run = runIntents(reduce, ctx);
@@ -364,7 +371,9 @@ describe('the labels', () => {
     expect(listNames([])).toBe('');
     expect(listNames(['Ann'])).toBe('Ann');
     expect(listNames(['Ann', 'Bob', 'Cy'])).toBe('Ann, Bob and Cy');
-    expect(handoffLabel(position())).toBe('Continue online: Ann hosts, Bob joins by invite');
+    expect(handoffLabel(namesOf(position()))).toBe(
+      'Continue online: Ann hosts, Bob joins by invite',
+    );
     expect(resumeLabel({ kind: 'local', game: position() })).toBe(
       'Resume pass & play: Ann, Bob and Cy',
     );

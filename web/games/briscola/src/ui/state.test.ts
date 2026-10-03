@@ -72,7 +72,6 @@ import {
   cuesBetween,
   guestContextOf,
   guestGoneMsg,
-  handoffLabel,
   hostContextOf,
   hostLeftMsg,
   initialApp,
@@ -80,7 +79,7 @@ import {
   continuedEvents,
   intentOf,
   joinedMsg,
-  listNames,
+  namesOf,
   liveView,
   pausedMsg,
   nextStage,
@@ -90,10 +89,9 @@ import {
   reduce,
   resultOpen,
   resumeFor,
-  resumeLabel,
+  type Resume,
   runEffect,
   saveFor,
-  seatNames,
   seatPlayers,
   awaitingDraw,
   seatsDown,
@@ -111,6 +109,15 @@ import {
   type SettleStage,
   type Step,
 } from './state.ts';
+import {
+  handoffLabel,
+  listNames,
+  resumeLabel as sharedResumeLabel,
+  versusOrList,
+} from '../../../../shared/lib/name.ts';
+
+/** The shell's resume label over this game's seats (web/shared/lib/name.ts). */
+const resumeLabel = (resume: Resume): string => sharedResumeLabel(resume, namesOf);
 
 const ctx = { rng: mulberry32(7), now: () => NOW };
 
@@ -420,7 +427,9 @@ describe('pass and play: seating two, three and four', () => {
     expect(two.app.shell.role).toBe('host');
     expect(two.app.shell.handoff).toBe(true);
     expect(two.app.shell.screen).toBe('hostWaitScreen');
-    expect(handoffLabel(game(two.app))).toBe('Continue online: Ann hosts, Bob joins by invite');
+    expect(handoffLabel(namesOf(game(two.app)))).toBe(
+      'Continue online: Ann hosts, Bob joins by invite',
+    );
   });
 });
 
@@ -1145,7 +1154,7 @@ describe('resume, storage and what the sessions read back', () => {
         handoff: true,
         at: null,
       }),
-    ).toBe(handoffLabel(two));
+    ).toBe(handoffLabel(namesOf(two)));
     expect(resumeLabel({ kind: 'guest', code: 'ABCD', myName: 'Jeff' })).toBe('Rejoin room ABCD');
     expect(
       resumeFor({
@@ -1168,8 +1177,8 @@ describe('resume, storage and what the sessions read back', () => {
     ).app;
     expect(game(resumed)).toEqual(three);
     expect(resumed.table.curtain).toBe(three.turn);
-    expect(seatNames(['Ann'])).toBe('Ann');
-    expect(seatNames(['Ann', 'Bob', 'Cara', 'Dan'])).toBe('Ann, Bob, Cara and Dan');
+    expect(versusOrList(['Ann'])).toBe('Ann');
+    expect(versusOrList(['Ann', 'Bob', 'Cara', 'Dan'])).toBe('Ann, Bob, Cara and Dan');
     expect(seatPlayers(2, [])).toEqual([
       { id: 'p1', name: 'Player 1' },
       { id: 'p2', name: 'Player 2' },

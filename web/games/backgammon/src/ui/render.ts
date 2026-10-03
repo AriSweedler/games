@@ -119,7 +119,8 @@ import { bindLocal, paintCurtain } from './local.ts';
 import { ABOUT_PARAGRAPHS } from './about.ts';
 import { GLOSSARY } from './glossary.ts';
 import { RULES_SLOT_IDS, rulesItemsHtml } from './rules.ts';
-import { handoffLabel, rollModalOpen, type App, type Backgammon, type Intent } from './state.ts';
+import { handoffLabel } from '../../../../shared/lib/name.ts';
+import { namesOf, rollModalOpen, type App, type Backgammon, type Intent } from './state.ts';
 
 export type { PageLike };
 export type Dispatch = (intent: Intent) => void;
@@ -748,7 +749,7 @@ const paintGame = (doc: PageLike, app: App): void => {
 export const paint = (doc: PageLike, app: App): void => {
   const game = app.shell.role === 'local' ? app.shell.game : null;
   paintShellChrome(doc, app.shell, {
-    handoff: game === null ? null : handoffLabel(game),
+    handoff: game === null ? null : handoffLabel(namesOf(game)),
     connDot: 'oppDot',
   });
   paintHome(doc, app);

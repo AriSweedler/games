@@ -13,7 +13,6 @@ import {
   bindLocal,
   curtainText,
   lastLineText,
-  listNames,
   lookAwayText,
   paintCurtain,
 } from './local.ts';
@@ -59,13 +58,6 @@ const table = (): PublicState => {
 };
 
 describe('the curtain copy', () => {
-  test('listNames: one, two, three', () => {
-    expect(listNames(['Ann'])).toBe('Ann');
-    expect(listNames(['Ann', 'Bob'])).toBe('Ann and Bob');
-    expect(listNames(['Ann', 'Bob', 'Cara'])).toBe('Ann, Bob and Cara');
-    expect(listNames([])).toBe('');
-  });
-
   test('the incoming player is named; the other humans look away, the computers need no telling; the last line is the table talk`s or the fresh roll', () => {
     const v = table();
     expect(curtainText(v, 1)).toEqual({

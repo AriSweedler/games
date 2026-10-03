@@ -7,9 +7,10 @@ import {
   paintHomeShell,
   shellIntents,
 } from '../../../../shared/ui/home.ts';
+import { resumeLabel } from '../../../../shared/lib/name.ts';
 import {
   HOME_TABS,
-  resumeLabel,
+  namesOf,
   type App,
   type Hive,
   type Intent,
@@ -25,7 +26,11 @@ const noOptions = (): Raw => ({});
 
 /** The tabs and panels, the play mode, the submenu and the resume box. */
 export const paintHome = (doc: DocumentLike, app: App): void => {
-  paintHomeShell(doc, homeView(app.shell, resumeLabel), { tabs: HOME_TABS, modes: PLAY_MODES });
+  paintHomeShell(
+    doc,
+    homeView(app.shell, (resume) => resumeLabel(resume, namesOf)),
+    { tabs: HOME_TABS, modes: PLAY_MODES },
+  );
 };
 
 /** Every control of the home screen and the two waiting screens. */
