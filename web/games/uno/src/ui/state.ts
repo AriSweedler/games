@@ -8,18 +8,14 @@
 // empty hand wins, and Play again deals the same seats anew. Pure: the shuffles and the clock come
 // in through `Ctx`.
 import {
-  NOT_CONNECTED_MSG,
+  act,
   andThen as then,
-  broadcast,
   cueStep,
   fx,
-  localBroadcast,
-  pure,
   step,
-  toast,
-  withShell,
   type Ctx,
   type CueMachine,
+  type CueMemory,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
@@ -28,12 +24,10 @@ import {
   type ShellConfig,
   type ShellState,
   type Step as SharedStep,
-  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
-import { applyAction, viewFor, type Action, type State, type View } from '../engine/view.ts';
-import { action as actionFrame } from '../protocol.ts';
+import { viewFor, type Action, type State, type View } from '../engine/view.ts';
 import { UNO_SHELL } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
@@ -101,8 +95,6 @@ export type HomeSnapshot = SharedHomeSnapshot<Uno>;
 
 export const initialTable: Table = { curtain: null };
 
-const refuse = (app: App, message: string): Step => step(app, toast(message));
-
 /**
  * The paint's cues (the shell's `cueStep`): one key per position, so a re-sent frame plays
  * nothing; sound.ts `cuesBetween` for the change (the card's kind, the penalty, the deal); "your
@@ -136,52 +128,21 @@ const revealer: ShellConfig<Uno>['local']['revealer'] = (game) => ({
   seat: game.game.turn as Seat,
 });
 
+/** Only `again` applies to a won game: it is the new game, and the curtain lowers for its first player. */
+const newGame: ShellConfig<Uno>['local']['newGame'] = (prev) => prev.game.phase.kind === 'gameOver';
+
 export const UNO: ShellConfig<Uno> = {
   ...UNO_SHELL,
   // The shell's reset: a start, the handoff, a leave and the host lost start the table over.
   table: { initial: initialTable, rendered: cueStep(CUE_MACHINE) },
-  local: { viewer, revealer },
+  // Pass-and-play: the seat whose turn it is acts (`revealer`; any seat deals again).
+  local: { viewer, revealer, newGame },
   home: { ...UNO_SHELL.home, apply: (app) => app },
 };
 
-/** Pass-and-play: the seat whose turn it is acts (any seat deals again); a new game lowers the curtain for its first player. */
-const localAct = (app: App, action: Action, ctx: Ctx): Step => {
-  const game = app.shell.game;
-  if (game === null) return pure(app);
-  const res = applyAction(game, game.game.turn, action, ctx.rng, ctx.now);
-  if (!res.ok) return refuse(app, res.error);
-  const fresh = action.type === 'again';
-  return localBroadcast(
-    withShell(app, { game: res.value, revealed: fresh ? null : app.shell.revealed }),
-    false,
-    ctx,
-    UNO,
-  );
-};
-
-/** `act(action)` by role: pass-and-play and the host apply and broadcast; a guest sends one `action` frame. */
-const act = (app: App, action: Action, ctx: Ctx): Step => {
-  switch (app.shell.role) {
-    case 'local':
-      return localAct(app, action, ctx);
-    case 'host': {
-      const game = app.shell.game;
-      if (game === null) return pure(app);
-      const res = applyAction(game, 0, action, ctx.rng, ctx.now);
-      if (!res.ok) return refuse(app, res.error);
-      return broadcast(withShell(app, { game: res.value }), ctx, UNO);
-    }
-    case 'guest':
-    case null:
-      return app.shell.role === 'guest' && app.shell.oppConnected
-        ? step(app, { type: 'send', frame: actionFrame(action) })
-        : refuse(app, NOT_CONNECTED_MSG);
-  }
-};
-
-/** The table's one intent: a tap's click, then the action by role (the sheets and Escape are the shell's). */
+/** The table's one intent: a tap's click, then the shell's `act` by role (the sheets and Escape are the shell's). */
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step =>
-  then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
+  then(step(app, fx('tap')), (a) => act(a, intent.action, ctx, UNO));
 
 /**
  * The boot's reducer block (web/shared/ui/shellReducer.ts): the shell's flows over `UNO` (its

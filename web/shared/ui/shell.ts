@@ -42,7 +42,7 @@ import {
 } from '../lib/json.ts';
 import { handoffLabel } from '../lib/name.ts';
 import { appendCapped, outcomeFor, type RecentGame } from '../lib/recentGames.ts';
-import type { Result } from '../lib/result.ts';
+import { ok, type Result } from '../lib/result.ts';
 import type { Rng } from '../lib/rng.ts';
 import { randomCode, sanitiseCode, validateCode, type Game } from '../lib/roomCode.ts';
 import { DEFAULT_SOUND_FONT, type SoundFontName } from '../lib/sound/fonts.ts';
@@ -1036,7 +1036,7 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
     rendered: (app: ShellApp<G>, prev: G['View'] | null, ctx: Ctx) => Step<G>;
     /**
      * A refused action: the toast, and whatever the table drops (gin a waiting draw stage,
-     * backgammon its taps, hive its pick). Absent, the toast alone (`defaultRefuse`): a table with
+     * backgammon its taps, hive its pick). Absent, the toast alone (`refuse`): a table with
      * nothing picked up to drop (uno, flip7) leaves it out.
      */
     refuse?: (app: ShellApp<G>, message: string) => Step<G>;
@@ -1067,10 +1067,20 @@ export type ShellConfig<G extends ShellTypes> = Readonly<{
       curtain: SeatOf<G> | null;
       effects?: ReadonlyArray<Effect<G>>;
     }>;
-    /** `curtain/reveal`: the seat that lifts the curtain and what it is told (backgammon's hits against it; absent, nothing). */
+    /**
+     * `curtain/reveal`: the seat that lifts the curtain and what it is told (backgammon's hits
+     * against it; absent, nothing). Its seat is also who acts from this phone (`act`): the actor
+     * while the game is on, whoever holds the phone between rounds.
+     */
     revealer: (
       game: G['State'],
     ) => Readonly<{ seat: SeatOf<G>; effects?: ReadonlyArray<Effect<G>> }>;
+    /**
+     * An applied action began a new game (uno's and hive's `again`, the next game of a briscola or
+     * backgammon match): `act` clears the reveal, so the curtain names the new game's starter even
+     * when the seat that tapped it is the one to begin. Absent, a reveal outlives every action.
+     */
+    newGame?: (prev: G['State'], next: G['State']) => boolean;
     /**
      * The seat a pass-and-play view is for (backgammon `view.me.idx`): who is looking at the
      * phone while the curtain is down, what `flipped` reads to turn the table for seat 1. A game
@@ -1176,15 +1186,18 @@ export const errorToast = (
 
 // ---- the config's defaults: the body every game but one spelled (shell-call-graph.md §4.3) --------
 
-/** `table.refuse` absent: the toast alone; the table has nothing picked up to drop. */
-const defaultRefuse = <G extends ShellTypes>(app: ShellApp<G>, message: string): Step<G> =>
+/**
+ * A refused action, `table.refuse` absent: the toast alone; the table has nothing picked up to
+ * drop. Exported for the game whose own guard refuses before `act` (flip7's guest between rounds).
+ */
+export const refuse = <G extends ShellTypes>(app: ShellApp<G>, message: string): Step<G> =>
   step(app, toast(message));
 /** `cfg.table.refuse(app, message)`, or the default. */
 const refuseWith = <G extends ShellTypes>(
   app: ShellApp<G>,
   message: string,
   cfg: ShellConfig<G>,
-): Step<G> => (cfg.table.refuse ?? defaultRefuse)(app, message);
+): Step<G> => (cfg.table.refuse ?? refuse)(app, message);
 /**
  * The reset sites that start the table over (a pass-and-play start, the handoff, a leave, the
  * host lost) against the ones that keep it (a deal, a view, an applied action, a guest's frame):
@@ -1848,6 +1861,30 @@ export const broadcast = <G extends ShellTypes>(
   );
 };
 
+/** `actions` applied for `seat` in order, the first refusal ending the chain (backgammon's move chain; every other game's chain is one action). */
+const applyAll = <G extends ShellTypes>(
+  game: G['State'],
+  seat: SeatOf<G>,
+  actions: ReadonlyArray<G['Action']>,
+  ctx: Ctx,
+  cfg: ShellConfig<G>,
+): Result<G['State'], string> =>
+  actions.reduce<Result<G['State'], string>>(
+    (r, a) => (r.ok ? cfg.engine.apply(r.value, seat, a, ctx.rng, ctx.now) : r),
+    ok(game),
+  );
+
+/** The App after `game` was applied: the new state, the table reset for it (`applied`), and the shell's `revealed` as given. */
+const applied = <G extends ShellTypes>(
+  app: ShellApp<G>,
+  game: G['State'],
+  revealed: SeatOf<G> | null,
+  cfg: ShellConfig<G>,
+): ShellApp<G> => ({
+  shell: { ...app.shell, game, revealed },
+  table: resetWith(app.table, 'applied', cfg),
+});
+
 /** `dispatch(seat, action)`, host only: apply, or refuse to the mover (a toast frame to the guest); then broadcast. */
 export const hostDispatch = <G extends ShellTypes>(
   app: ShellApp<G>,
@@ -1863,11 +1900,7 @@ export const hostDispatch = <G extends ShellTypes>(
     return seat === 0
       ? refuseWith(app, res.error, cfg)
       : step(app, sendTo(cfg.frames.toast(res.error), seat, cfg));
-  return broadcast(
-    { shell: { ...app.shell, game: res.value }, table: resetWith(app.table, 'applied', cfg) },
-    ctx,
-    cfg,
-  );
+  return broadcast(applied(app, res.value, app.shell.revealed, cfg), ctx, cfg);
 };
 
 /**
@@ -1897,6 +1930,62 @@ export const localBroadcast = <G extends ShellTypes>(
     (a) => painted(a, prev, ctx, cfg),
   );
 };
+
+/**
+ * `actAll(actions)` by role (docs/design/dry-review-2026-10.md §2.6: the switch every game's
+ * `tableIntent` carried): on a pass-and-play phone the chain is applied for the seat that would
+ * lift the curtain (`cfg.local.revealer`: the actor, or whoever holds the phone between rounds),
+ * the reveal cleared when a new game began (`cfg.local.newGame`), then `localBroadcast`; the host
+ * applies it for seat 0 and broadcasts once; a connected guest sends one `action` frame per
+ * action, in order (the host applies them one by one); a guest without its host, or no role at
+ * all, hears `NOT_CONNECTED_MSG`. A refusal is the table's `refuse` hook (`refuseWith`). What a
+ * game guards before the shell acts stays its own (flip7's pause, gin's draw stage).
+ */
+export const actAll = <G extends ShellTypes>(
+  app: ShellApp<G>,
+  actions: ReadonlyArray<G['Action']>,
+  ctx: Ctx,
+  cfg: ShellConfig<G>,
+): Step<G> => {
+  const game = app.shell.game;
+  switch (app.shell.role) {
+    case 'local': {
+      if (game === null) return pure(app);
+      const res = applyAll(game, cfg.local.revealer(game).seat, actions, ctx, cfg);
+      if (!res.ok) return refuseWith(app, res.error, cfg);
+      const fresh = cfg.local.newGame?.(game, res.value) ?? false;
+      return localBroadcast(
+        applied(app, res.value, fresh ? null : app.shell.revealed, cfg),
+        false,
+        ctx,
+        cfg,
+      );
+    }
+    case 'host': {
+      if (game === null) return pure(app);
+      const res = applyAll(game, 0, actions, ctx, cfg);
+      if (!res.ok) return refuseWith(app, res.error, cfg);
+      return broadcast(applied(app, res.value, app.shell.revealed, cfg), ctx, cfg);
+    }
+    case 'guest':
+    case null:
+      // A guest's channel is open exactly while the host counts as connected; no role has no channel.
+      return app.shell.role === 'guest' && app.shell.oppConnected
+        ? step(
+            app,
+            ...actions.map((a): Effect<G> => ({ type: 'send', frame: cfg.frames.action(a) })),
+          )
+        : refuseWith(app, NOT_CONNECTED_MSG, cfg);
+  }
+};
+
+/** `act(action)`: `actAll` over the one action every game but backgammon commits at a time. */
+export const act = <G extends ShellTypes>(
+  app: ShellApp<G>,
+  action: G['Action'],
+  ctx: Ctx,
+  cfg: ShellConfig<G>,
+): Step<G> => actAll(app, [action], ctx, cfg);
 
 /** The shell seated for pass-and-play with `game` and the table reset for it: what `startLocal` broadcasts (gin's sandbox seats its hand-made melds in between). */
 export const localSeated = <G extends ShellTypes>(

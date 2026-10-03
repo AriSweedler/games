@@ -40,20 +40,22 @@
 // back in the App's font, once per view (`cues.key`), so a re-sent frame plays nothing; the card
 // laid and the turn chime stay `fx` rows of the table.
 import {
-  GONE_TOAST_MS,
-  NOT_CONNECTED_MSG,
-  SANDBOX_LOCAL_ONLY_MSG,
+  act,
   andThen as then,
   badPositionMsg,
   broadcast,
+  GONE_TOAST_MS,
+  INITIAL_CUE_MEMORY,
   localBroadcast,
   pure,
+  SANDBOX_LOCAL_ONLY_MSG,
   saveFor as shellSaveFor,
   step,
   toast,
   withShell,
   withTable,
   type Ctx,
+  type CueMemory,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
@@ -66,8 +68,6 @@ import {
   type Step as SharedStep,
   type TableReset,
   type TimerId as SharedTimerId,
-  INITIAL_CUE_MEMORY,
-  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
@@ -75,15 +75,7 @@ import { eventEffects } from '../../../../shared/ui/eventEffects.ts';
 import { isCardPackFor } from '../../../../shared/lib/cards/packs.ts';
 import { isLanguagePack, type LanguagePackName } from '../../../../shared/lib/lang/packs.ts';
 import { listNames } from '../../../../shared/lib/name.ts';
-import {
-  HAND_SIZE,
-  actorOf,
-  applyAction,
-  cardById,
-  nameOf,
-  replayGame,
-  viewFor,
-} from '../engine/index.ts';
+import { HAND_SIZE, actorOf, cardById, nameOf, replayGame, viewFor } from '../engine/index.ts';
 import type {
   Action,
   Cards,
@@ -96,7 +88,6 @@ import type {
   View,
 } from '../engine/index.ts';
 import {
-  action as actionFrame,
   intent as intentFrame,
   toast as toastFrame,
   type IntentFrame,
@@ -799,44 +790,9 @@ const drawTap = (app: App, ctx: Context): Step => {
 
 // ---- acting -----------------------------------------------------------------------------------
 
-/** `localAct(action)`: applied for the actor (`next` for whoever taps it); a new game clears the reveal so the curtain names its leader. */
-const localAct = (app: App, action: Action, ctx: Context): Step => {
-  const game = app.shell.game;
-  if (game === null) return pure(app);
-  const res = applyAction(game, actorOf(game) ?? game.turn, action, ctx.rng, ctx.now);
-  if (!res.ok) return refuse(app, res.error);
-  const fresh = res.value.gameNo !== game.gameNo;
-  return localBroadcast(
-    withShell(app, { game: res.value, revealed: fresh ? null : app.shell.revealed }),
-    false,
-    ctx,
-    BRISCOLA,
-  );
-};
-
-/** `act(action)` by role: pass-and-play and the host apply and broadcast; the guest sends one `action` frame. */
-const act = (app: App, action: Action, ctx: Context): Step => {
-  switch (app.shell.role) {
-    case 'local':
-      return localAct(app, action, ctx);
-    case 'host': {
-      const game = app.shell.game;
-      if (game === null) return pure(app);
-      const res = applyAction(game, 0, action, ctx.rng, ctx.now);
-      if (!res.ok) return refuse(app, res.error);
-      return broadcast(withShell(app, { game: res.value }), ctx, BRISCOLA);
-    }
-    case 'guest':
-    case null:
-      return app.shell.role === 'guest' && app.shell.oppConnected
-        ? step(app, { type: 'send', frame: actionFrame(action) })
-        : refuse(app, NOT_CONNECTED_MSG);
-  }
-};
-
-/** A card committed from a tap, the button or a drop: the lift and the drag are dropped first. */
+/** A card committed from a tap, the button or a drop: the lift and the drag are dropped first, then the shell's `act` by role. */
 const commit = (app: App, cardId: string, ctx: Context): Step =>
-  act(withTable(app, { selected: null, drag: null }), { type: 'play', cardId }, ctx);
+  act(withTable(app, { selected: null, drag: null }), { type: 'play', cardId }, ctx, BRISCOLA);
 
 /** Play again after a decided game: a fresh deal for the same players and terms, the deal passed to the next seat (`replayGame`); the guest waits for the host's. */
 const replayDecided = (app: App, game: State, ctx: Context): Step => {
@@ -887,6 +843,10 @@ const revealer: ShellConfig<Briscola>['local']['revealer'] = (game) => ({
   seat: actorOf(game) ?? game.turn,
 });
 
+/** `next` dealt the match's next game: the reveal is cleared so the curtain names its leader. */
+const newGame: ShellConfig<Briscola>['local']['newGame'] = (prev, next) =>
+  next.gameNo !== prev.gameNo;
+
 /** What a game leaves behind when it is left, lost or handed off: the table's memory; the card pack, the language and the speed stay. */
 const tableCleared = (table: Table): Table => ({
   ...initialTable,
@@ -915,7 +875,7 @@ const replay = (app: App, ctx: Context): Step => {
   const over = app.shell.view;
   if (over?.phase !== 'over') return pure(app);
   if (app.shell.role === 'guest') return refuse(app, waitingToDealMsg(nameOf(over.players, 0)));
-  if (!over.matchOver) return act(app, { type: 'next' }, ctx);
+  if (!over.matchOver) return act(app, { type: 'next' }, ctx, BRISCOLA);
   const game = app.shell.game;
   return game === null ? pure(app) : replayDecided(app, game, ctx);
 };
@@ -949,7 +909,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
   const v = liveView(app);
   switch (intent.type) {
     case 'act':
-      return act(app, intent.action, ctx);
+      return act(app, intent.action, ctx, BRISCOLA);
     case 'card/tap':
       return cardTap(app, intent.cardId, ctx);
     case 'play/click':
@@ -980,7 +940,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
       // The trump card tapped while my draw waits for it (the last card, the trick's last drawer): the draw's tap.
       if (awaitingDraw(t.settle)) return drawTap(app, ctx);
       // The trump card tapped: the exchange while it is offered (D24); otherwise a closer look at it.
-      if (v?.canExchange === true) return act(app, { type: 'exchange' }, ctx);
+      if (v?.canExchange === true) return act(app, { type: 'exchange' }, ctx, BRISCOLA);
       const shown = app.shell.view;
       return shown?.trumpOnTable !== true
         ? pure(app)
@@ -1217,7 +1177,7 @@ const reset = (table: Table, at: TableReset): Table => {
 export const BRISCOLA: ShellConfig<Briscola> = {
   ...BRISCOLA_SHELL,
   table: { initial: initialTable, reset, rendered, refuse, ephemeral, escape },
-  local: { viewer, revealer },
+  local: { viewer, revealer, newGame },
   home: {
     ...BRISCOLA_SHELL.home,
     apply: (app, home) => ({

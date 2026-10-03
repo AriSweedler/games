@@ -39,6 +39,8 @@ import {
   SHELL_SCREENS,
   WAITING_FOR_GUEST_MSG,
   WAITING_RESUME_MS,
+  act,
+  actAll,
   badPositionMsg,
   broadcast,
   cueStep,
@@ -55,6 +57,7 @@ import {
   hostContextOf,
   hostDispatch,
   initialShell,
+  NOT_CONNECTED_MSG,
   isShellEffect,
   isShellIntent,
   joinedMsg,
@@ -68,6 +71,7 @@ import {
   playsOrientation,
   pure,
   readHome,
+  refuse,
   rotationHintMsg,
   reduceShell,
   resumeFor,
@@ -1700,6 +1704,71 @@ describe('hosting', () => {
       effects: [],
     });
     expect(broadcast(initialApp, ctx, FAKE)).toEqual({ app: initialApp, effects: [] });
+  });
+
+  test('act by role: pass-and-play applies for the revealer`s seat and hands the phone on, a new game clears the reveal; the host is hostDispatch; a connected guest sends one frame per action; a guest without its host, or no role, hears NOT_CONNECTED_MSG', () => {
+    // Pass-and-play: Ann (seat 0, the revealer's seat) moves; the curtain comes up for Bob with the chime.
+    const phone = withShell(local(), { revealed: 0 });
+    const moved = act(phone, { type: 'move' }, ctx, FAKE);
+    expect(game(moved.app)).toMatchObject({ moves: 1, turn: 1 });
+    expect(moved.app.shell).toMatchObject({ revealed: 0, view: viewFor(game(moved.app), 1) });
+    expect(moved.app.table.curtain).toBe(1);
+    expect(marks(moved.app).slice(-3)).toEqual(['applied', 'view', `rendered:prev@${String(NOW)}`]);
+    expect(kinds(moved.effects)).toEqual(['persist', 'fx', 'ownFx', 'fx', 'scrollTop']);
+    // A chain is applied in order for the one seat and broadcast once (FAKE's `end` keeps the turn, so a move may follow it); a refusal in it applies nothing.
+    const twice = actAll(phone, [{ type: 'end' }, { type: 'move' }], ctx, FAKE);
+    expect(game(twice.app)).toMatchObject({ over: true, moves: 1, turn: 1 });
+    expect(kinds(twice.effects).filter((k) => k === 'persist')).toHaveLength(1);
+    const broken = actAll(phone, [{ type: 'end' }, { type: 'bad' }], ctx, FAKE);
+    expect(game(broken.app)).toBe(game(phone));
+    expect(marks(broken.app).at(-1)).toBe('refused');
+    expect(broken.effects).toEqual([{ type: 'toast', message: 'Not your turn.', ms: null }]);
+    // The first refusal ends the chain: what follows it is never applied.
+    expect(actAll(phone, [{ type: 'bad' }, { type: 'move' }], ctx, FAKE)).toEqual(broken);
+    // The game says this action began a new game: the reveal is cleared, so the curtain names the starter even when it is the seat that tapped.
+    const AGAIN: ShellConfig<Fake> = { ...FAKE, local: { ...FAKE.local, newGame: () => true } };
+    expect(act(phone, { type: 'move' }, ctx, AGAIN).app.shell.revealed).toBeNull();
+    // The host: the shell's hostDispatch for seat 0, refusal included.
+    const host = hosting();
+    expect(act(host, { type: 'move' }, ctx, FAKE)).toEqual(
+      hostDispatch(host, 0, { type: 'move' }, ctx, FAKE),
+    );
+    expect(act(host, { type: 'bad' }, ctx, FAKE)).toEqual(
+      hostDispatch(host, 0, { type: 'bad' }, ctx, FAKE),
+    );
+    // A connected guest: one `action` frame per action, in order; nothing changes until the host's view lands.
+    const guest = seated();
+    expect(act(guest, { type: 'move' }, ctx, FAKE)).toEqual({
+      app: guest,
+      effects: [{ type: 'send', frame: { t: 'action', action: { type: 'move' } } }],
+    });
+    expect(kinds(actAll(guest, [{ type: 'move' }, { type: 'end' }], ctx, FAKE).effects)).toEqual([
+      'send',
+      'send',
+    ]);
+    // Without the host, or at home with no role: the refuse hook with the shell's message.
+    const alone = withShell(guest, { oppConnected: false });
+    expect(act(alone, { type: 'move' }, ctx, FAKE)).toEqual({
+      app: { ...alone, table: { ...alone.table, marks: [...alone.table.marks, 'refused'] } },
+      effects: [{ type: 'toast', message: NOT_CONNECTED_MSG, ms: null }],
+    });
+    expect(toasts(act(initialApp, { type: 'move' }, ctx, FAKE).effects)).toEqual([
+      [NOT_CONNECTED_MSG, null],
+    ]);
+    // No game under a seated role: nothing to apply.
+    expect(act(withShell(initialApp, { role: 'local' }), { type: 'move' }, ctx, FAKE)).toEqual({
+      app: withShell(initialApp, { role: 'local' }),
+      effects: [],
+    });
+    expect(act(withShell(initialApp, { role: 'host' }), { type: 'move' }, ctx, FAKE)).toEqual({
+      app: withShell(initialApp, { role: 'host' }),
+      effects: [],
+    });
+    // The default refuse, exported for a game's own guard: the toast alone.
+    expect(refuse(initialApp, 'Wait.')).toEqual({
+      app: initialApp,
+      effects: [{ type: 'toast', message: 'Wait.', ms: null }],
+    });
   });
 
   test('a rejoin mid-game renames seat 1 and broadcasts; the handoff is over; the wait screen`s line, hidden under the table, names the newcomer too', () => {

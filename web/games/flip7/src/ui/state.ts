@@ -7,19 +7,19 @@
 // sent its view after each move. On one phone the curtain rises once, for the first player; after
 // it the table follows whoever must act (nothing is hidden, so the phone just goes round).
 import {
-  NOT_CONNECTED_MSG,
+  act as shellAct,
   andThen as then,
   broadcast,
   cueStep,
   localBroadcast,
   pure,
-  step,
+  refuse,
   startsOver,
-  toast,
   withShell,
   withTable,
   type Ctx,
   type CueMachine,
+  type CueMemory,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
@@ -29,13 +29,11 @@ import {
   type ShellState,
   type Step as SharedStep,
   type TableReset,
-  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import type { ShellEffectDeps } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import {
   actorOf,
-  applyAction,
   createGame,
   isMyTurn,
   nameOf,
@@ -44,7 +42,6 @@ import {
   type Status,
   type View,
 } from '../engine/index.ts';
-import { action as actionFrame } from '../protocol.ts';
 import { FLIP7_BONUS, cardName, scoreLine } from '../engine/cards.ts';
 import { FLIP7_SHELL, asSeat } from '../shellConfig.ts';
 import { cueKey, cuesBetween, type Cue } from './sound.ts';
@@ -216,8 +213,6 @@ const rendered = (app: App, prev: View | null): Step => {
   );
 };
 
-const refuse = (app: App, message: string): Step => step(app, toast(message));
-
 /** Pass-and-play: the actor's view (the host's between rounds is anybody's: the phone holder's); the curtain once, for the first player. */
 const viewer: ShellConfig<Flip7>['local']['viewer'] = (app, game) => {
   const actor = actorOf(game);
@@ -226,44 +221,23 @@ const viewer: ShellConfig<Flip7>['local']['viewer'] = (app, game) => {
   return { seat, curtain };
 };
 
+/** On one phone the action is the actor's (between rounds, whoever holds the phone deals): the shell's `act` reads this seat. */
 const revealer: ShellConfig<Flip7>['local']['revealer'] = (game) => ({
   seat: asSeat(actorOf(game) ?? 0),
 });
 
 // ---- the table's reducer ---------------------------------------------------------------------
 
-/** On one phone the action is the actor's (between rounds, whoever holds the phone deals). */
-const localAct = (app: App, action: Action, ctx: Ctx): Step => {
-  const game = app.shell.game;
-  if (game === null) return pure(app);
-  const res = applyAction(game, actorOf(game) ?? 0, action, ctx.rng);
-  if (!res.ok) return refuse(app, res.error);
-  return localBroadcast(withShell(app, { game: res.value }), false, ctx, FLIP7);
-};
-
+/**
+ * `act(action)`: the shell's by role, behind flip7's two guards: nothing moves on this phone while
+ * a pause waits for its Continue, and a guest between rounds waits for the host to deal.
+ */
 const act = (app: App, action: Action, ctx: Ctx): Step => {
-  // Nothing moves on this phone while a pause waits for its Continue.
   if (app.table.pause !== null) return pure(app);
-  switch (app.shell.role) {
-    case 'local':
-      return localAct(app, action, ctx);
-    case 'host': {
-      const game = app.shell.game;
-      if (game === null) return pure(app);
-      const res = applyAction(game, 0, action, ctx.rng);
-      if (!res.ok) return refuse(app, res.error);
-      return broadcast(withShell(app, { game: res.value }), ctx, FLIP7);
-    }
-    case 'guest':
-    case null: {
-      const view = app.shell.view;
-      if (view?.phase.kind === 'roundOver' && app.shell.role === 'guest')
-        return refuse(app, waitingToDealMsg(nameOf(view, 0)));
-      return app.shell.role === 'guest' && app.shell.oppConnected
-        ? step(app, { type: 'send', frame: actionFrame(action) })
-        : refuse(app, NOT_CONNECTED_MSG);
-    }
-  }
+  const view = app.shell.view;
+  if (app.shell.role === 'guest' && view?.phase.kind === 'roundOver')
+    return refuse(app, waitingToDealMsg(nameOf(view, 0)));
+  return shellAct(app, action, ctx, FLIP7);
 };
 
 /** Play again once the game is over: a fresh deal for the same seats (host or phone); a guest waits. */

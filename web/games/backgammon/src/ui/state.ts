@@ -32,11 +32,11 @@
 // this (`sourcesOf`, `effectiveSelection`, `targetsOf`) live in ui/board.ts, so the discs on the
 // board and the reducer's commits come from one computation.
 import {
-  GONE_TOAST_MS,
-  NOT_CONNECTED_MSG,
+  actAll,
   andThen as then,
   broadcast,
   fresh as freshKey,
+  GONE_TOAST_MS,
   localBroadcast,
   localNamesOf,
   localPlayers,
@@ -49,27 +49,26 @@ import {
   withShell,
   withTable,
   type Ctx,
+  type CueMemory,
   type Effect as SharedEffect,
   type HomeSnapshot as SharedHomeSnapshot,
   type Intent as SharedIntent,
   type Resume as SharedResume,
+  type Role,
+  type ScreenId,
   type ShellApp,
   type ShellConfig,
   type ShellIntent as SharedShellIntent,
-  type Role,
-  type ScreenId,
   type ShellState,
   type Step as SharedStep,
   type TableReset,
   type TimerId as SharedTimerId,
-  type CueMemory,
 } from '../../../../shared/ui/shell.ts';
 import type { ShellEffectDeps, TableEffectRunner } from '../../../../shared/ui/shellEffects.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
-import { ok, type Result } from '../../../../shared/lib/result.ts';
+
 import {
   actorOf,
-  applyAction,
   canEndTurn,
   createGame,
   moveTo,
@@ -89,7 +88,6 @@ import type {
   To,
   View,
 } from '../engine/types.ts';
-import { action as actionFrame } from '../protocol.ts';
 import { BACKGAMMON_SHELL } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
@@ -522,65 +520,17 @@ const rendered = (app: App, prev: View | null, ctx: Context): Step => {
   );
 };
 
-/** Apply `actions` in order for `seat`, stopping at the first refusal. */
-const applyAll = (
-  game: State,
-  seat: Seat,
-  actions: ReadonlyArray<Action>,
-  ctx: Context,
-): Result<State, string> =>
-  actions.reduce<Result<State, string>>(
-    (r, a) => (r.ok ? applyAction(r.value, seat, a, ctx.rng, ctx.now) : r),
-    ok(game),
-  );
-
-/** `localAct(action)`: applied for the actor (`next` for whoever taps it). */
-const localAct = (app: App, actions: ReadonlyArray<Action>, ctx: Context): Step => {
-  const game = app.shell.game;
-  if (game === null) return pure(app);
-  const res = applyAll(game, actorOf(game) ?? game.turn, actions, ctx);
-  if (!res.ok) return refuse(app, res.error);
-  // A new game of the match: whoever tapped "Next game" may not be its starter, so the curtain names them.
-  const fresh = res.value.gameNo !== game.gameNo;
-  return localBroadcast(
-    withShell(app, { game: res.value, revealed: fresh ? null : app.shell.revealed }),
-    false,
-    ctx,
-    BACKGAMMON,
-  );
-};
-
 /**
- * `act(action)` by role (design §4.2 "Commit"): pass-and-play and the host apply the actions in
- * order and broadcast once; the guest sends one `action` frame per action, in order (the host
- * applies them one by one and broadcasts after each).
+ * A chain committed from a tap, a chip or a drop (design §4.2 "Commit"): the tray, the source and
+ * the forced die are dropped first, then the shell's `actAll` by role (pass-and-play and the host
+ * apply the moves in order and broadcast once; the guest sends one frame per move).
  */
-const act = (app: App, actions: ReadonlyArray<Action>, ctx: Context): Step => {
-  switch (app.shell.role) {
-    case 'local':
-      return localAct(app, actions, ctx);
-    case 'host': {
-      const game = app.shell.game;
-      if (game === null) return pure(app);
-      const res = applyAll(game, 0, actions, ctx);
-      if (!res.ok) return refuse(app, res.error);
-      return broadcast(withShell(app, { game: res.value }), ctx, BACKGAMMON);
-    }
-    case 'guest':
-    case null:
-      // A guest's channel is open exactly while the host counts as connected; no role has no channel.
-      return app.shell.role === 'guest' && app.shell.oppConnected
-        ? step(app, ...actions.map((a): Effect => ({ type: 'send', frame: actionFrame(a) })))
-        : refuse(app, NOT_CONNECTED_MSG);
-  }
-};
-
-/** A chain committed from a tap, a chip or a drop: the tray, the source and the forced die are dropped first. */
 const commit = (app: App, moves: ReadonlyArray<Move>, ctx: Context): Step =>
-  act(
+  actAll(
     withTable(app, { selected: null, picked: null, pending: null, drag: null }),
     moves.map((m): Action => ({ type: 'move', from: m.from, to: m.to, die: m.die })),
     ctx,
+    BACKGAMMON,
   );
 /** A new match with the same players and options (`#nextGameBtn` "Rematch"); the guest waits for the host's. */
 const rematch = (app: App, game: State, ctx: Context): Step => {
@@ -742,7 +692,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
   const t = app.table;
   switch (intent.type) {
     case 'act':
-      return act(app, [intent.action], ctx);
+      return actAll(app, [intent.action], ctx, BACKGAMMON);
     case 'point/tap':
       return pointTap(app, intent.point, ctx);
     case 'bar/tap':
@@ -771,25 +721,31 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
             then(lockSideways(app, ctx, BACKGAMMON), (locked) =>
               step(withTable(locked, { rolling: true }), TUMBLE_TIMER),
             ),
-            (a) => act(a, [{ type: 'roll' }], ctx),
+            (a) => actAll(a, [{ type: 'roll' }], ctx, BACKGAMMON),
           )
         : pure(app);
     case 'undo/click':
-      return v?.canUndo === true ? act(app, [{ type: 'undo' }], ctx) : pure(app);
+      return v?.canUndo === true ? actAll(app, [{ type: 'undo' }], ctx, BACKGAMMON) : pure(app);
     case 'done/click':
       // Design §1 "Turn end": End turn flips the held turn (pass-and-play); nowhere else is it on offer.
-      return v !== null && canEndTurn(v) ? act(app, [{ type: 'done' }], ctx) : pure(app);
+      return v !== null && canEndTurn(v)
+        ? actAll(app, [{ type: 'done' }], ctx, BACKGAMMON)
+        : pure(app);
     case 'double/click':
-      return v?.canDouble === true ? act(app, [{ type: 'double' }], ctx) : pure(app);
+      return v?.canDouble === true ? actAll(app, [{ type: 'double' }], ctx, BACKGAMMON) : pure(app);
     case 'take/click':
-      return v?.phase === 'cubeOffered' ? act(app, [{ type: 'take' }], ctx) : pure(app);
+      return v?.phase === 'cubeOffered'
+        ? actAll(app, [{ type: 'take' }], ctx, BACKGAMMON)
+        : pure(app);
     case 'pass/click':
-      return v?.phase === 'cubeOffered' ? act(app, [{ type: 'pass' }], ctx) : pure(app);
+      return v?.phase === 'cubeOffered'
+        ? actAll(app, [{ type: 'pass' }], ctx, BACKGAMMON)
+        : pure(app);
     case 'next/click': {
       // Either seat may start the next game (the engine takes `next` from both), so not `liveView`.
       const over = app.shell.view;
       if (over?.phase !== 'over') return pure(app);
-      if (!over.matchOver) return act(app, [{ type: 'next' }], ctx);
+      if (!over.matchOver) return actAll(app, [{ type: 'next' }], ctx, BACKGAMMON);
       const game = app.shell.game;
       return game === null ? pure(app) : rematch(app, game, ctx);
     }
@@ -894,6 +850,10 @@ const revealer: ShellConfig<Backgammon>['local']['revealer'] = (game) => {
   return { seat, effects: handedHits(game, seat) };
 };
 
+/** `next` began a new game of the match: whoever tapped it may not be its starter, so the reveal is cleared and the curtain names them. */
+const newGame: ShellConfig<Backgammon>['local']['newGame'] = (prev, next) =>
+  next.gameNo !== prev.gameNo;
+
 /** The seat a view is for: who holds the phone while the curtain is down (the shell's `flipped` turns the table when it is seat 1). */
 const holder: NonNullable<ShellConfig<Backgammon>['local']['holder']> = (view) => view.me.idx;
 
@@ -901,7 +861,7 @@ const holder: NonNullable<ShellConfig<Backgammon>['local']['holder']> = (view) =
 export const BACKGAMMON: ShellConfig<Backgammon> = {
   ...BACKGAMMON_SHELL,
   table: { initial: initialTable, reset, rendered, refuse },
-  local: { viewer, revealer, holder },
+  local: { viewer, revealer, holder, newGame },
   home: {
     ...BACKGAMMON_SHELL.home,
     apply: (app, home) => ({
