@@ -23,7 +23,6 @@ import {
   step,
   toast,
   withShell,
-  withTable,
   type Ctx,
   type Effect as SharedEffect,
   type GuestContextOf,
@@ -220,12 +219,9 @@ const act = (app: App, action: Action, ctx: Ctx): Step => {
   }
 };
 
-const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
-  switch (intent.type) {
-    case 'act':
-      return then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
-  }
-};
+/** The table's one intent: a tap's click, then the action by role (the sheets and Escape are the shell's). */
+const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step =>
+  then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
 
 /** The seat count the current game or offer is played at (the handoff is a two-seat room). */
 const seatCountOf = (app: App): number => {
