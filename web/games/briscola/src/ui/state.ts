@@ -965,13 +965,12 @@ const viewer: ShellConfig<Briscola>['local']['viewer'] = (app, game) => {
   const settling = prev !== null && trickResolvedBetween(prev, viewFor(game, holder)) !== null;
   const seat: Seat = actor === null || settling ? holder : actor;
   const curtain = actor !== null && !settling && app.shell.revealed !== seat ? seat : null;
-  return { seat, curtain, effects: [] };
+  return { seat, curtain };
 };
 
 /** `curtain/reveal`: whoever must act lifts the curtain. */
 const revealer: ShellConfig<Briscola>['local']['revealer'] = (game) => ({
   seat: actorOf(game) ?? game.turn,
-  effects: [],
 });
 
 /** What a game leaves behind when it is left, lost or handed off: the table's memory; the card pack, the language and the names stay. */
@@ -1343,8 +1342,6 @@ export const BRISCOLA: ShellConfig<Briscola> = {
         extraNames: { 2: home.p3Name, 3: home.p4Name },
       },
     }),
-    resume: (home) => resumeFor(home.save),
-    resumeExtra: pure,
   },
 };
 

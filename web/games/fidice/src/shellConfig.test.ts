@@ -90,20 +90,23 @@ describe('the copy', () => {
   });
 
   test('the play mode: local and online stored; solo and watch shown only (plan §7 D9); anything else online', () => {
-    expect(FIDICE_SHELL.modes.parse('local', initialShell)).toEqual({
+    expect(FIDICE_SHELL.modes.parse?.('local', initialShell)).toEqual({
       shown: 'local',
       stored: 'local',
     });
-    expect(FIDICE_SHELL.modes.parse('online', initialShell)).toEqual({
+    expect(FIDICE_SHELL.modes.parse?.('online', initialShell)).toEqual({
       shown: 'online',
       stored: 'online',
     });
-    expect(FIDICE_SHELL.modes.parse('solo', initialShell)).toEqual({ shown: 'solo', stored: null });
-    expect(FIDICE_SHELL.modes.parse('watch', initialShell)).toEqual({
+    expect(FIDICE_SHELL.modes.parse?.('solo', initialShell)).toEqual({
+      shown: 'solo',
+      stored: null,
+    });
+    expect(FIDICE_SHELL.modes.parse?.('watch', initialShell)).toEqual({
       shown: 'watch',
       stored: null,
     });
-    expect(FIDICE_SHELL.modes.parse('sandbox', initialShell)).toEqual({
+    expect(FIDICE_SHELL.modes.parse?.('sandbox', initialShell)).toEqual({
       shown: 'online',
       stored: 'online',
     });

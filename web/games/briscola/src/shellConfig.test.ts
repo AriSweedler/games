@@ -28,7 +28,6 @@ import {
 } from './shellConfig.ts';
 import { lobby, welcome } from './protocol.ts';
 import { DEFAULT_CARD_PACK, SHELL_STORE, STORAGE_KEYS } from './storage.ts';
-import { initialShell } from './ui/state.ts';
 
 const NOW = 1_700_000_000_000;
 const PAIR: Players = [
@@ -64,19 +63,8 @@ describe('the copy', () => {
     expect(BRISCOLA_SHELL.prefs).toBe(SHELL_STORE);
   });
 
-  test('the play mode: local or online, anything else online', () => {
-    expect(BRISCOLA_SHELL.modes.parse('local', initialShell)).toEqual({
-      shown: 'local',
-      stored: 'local',
-    });
-    expect(BRISCOLA_SHELL.modes.parse('online', initialShell)).toEqual({
-      shown: 'online',
-      stored: 'online',
-    });
-    expect(BRISCOLA_SHELL.modes.parse('sandbox', initialShell)).toEqual({
-      shown: 'online',
-      stored: 'online',
-    });
+  test('the play mode: the shell`s default (local or online, anything else online; shell.test.ts)', () => {
+    expect(BRISCOLA_SHELL.modes).toEqual({ default: 'online' });
   });
 });
 

@@ -318,12 +318,11 @@ const viewer: ShellConfig<Flip7>['local']['viewer'] = (app, game) => {
   const actor = actorOf(game);
   const seat = asSeat(actor ?? app.shell.view?.me ?? 0);
   const curtain = app.shell.revealed === null && actor !== null ? seat : null;
-  return { seat, curtain, effects: [] };
+  return { seat, curtain };
 };
 
 const revealer: ShellConfig<Flip7>['local']['revealer'] = (game) => ({
   seat: asSeat(actorOf(game) ?? 0),
-  effects: [],
 });
 
 // ---- the table's reducer ---------------------------------------------------------------------
@@ -444,7 +443,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
 /** Flip 7's shell config: shellConfig.ts's half completed with the table hooks and the home snapshot's own part. */
 export const FLIP7: ShellConfig<Flip7> = {
   ...FLIP7_SHELL,
-  table: { initial: initialTable, reset, rendered, refuse },
+  table: { initial: initialTable, reset, rendered },
   local: { viewer, revealer },
   home: {
     ...FLIP7_SHELL.home,
@@ -452,8 +451,6 @@ export const FLIP7: ShellConfig<Flip7> = {
       shell: { ...app.shell, opts: home.opts },
       table: { ...app.table, extraNames: home.extraNames },
     }),
-    resume: (home) => resumeFor(home.save),
-    resumeExtra: pure,
   },
 };
 

@@ -562,7 +562,6 @@ import {
   DEFAULT_PLAY_MODE,
   HOME_TABS,
   SHELL_STORE,
-  type PlayMode,
 } from './storage.ts';
 import { CUES } from './ui/sound.ts';
 import type { ${pascal} } from './ui/state.ts';
@@ -578,13 +577,7 @@ export const ${upper}_SHELL: ShellGameData<${pascal}> = {
   names: { default: DEFAULT_NAME },
   localNames: LOCAL_NAMES,
   tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
-  modes: {
-    default: DEFAULT_PLAY_MODE,
-    parse: (raw) => {
-      const mode: PlayMode = raw === 'local' ? 'local' : 'online';
-      return { shown: mode, stored: mode };
-    },
-  },
+  modes: { default: DEFAULT_PLAY_MODE },
   copy: {
     leaveLocal: LEAVE_LOCAL_MSG,
     leaveOnline: LEAVE_ONLINE_MSG,
@@ -647,11 +640,8 @@ describe('the shell config', () => {
     expect(${upper}_SHELL.copy.hostRoom('Ann', { seatCount: 2 }, 2, 2)).toBe(
       'Connected — waiting for Ann to start',
     );
-    expect(${upper}_SHELL.modes.parse('local', {} as never)).toEqual({
-      shown: 'local',
-      stored: 'local',
-    });
-    expect(${upper}_SHELL.modes.parse('x', {} as never)).toEqual({ shown: 'online', stored: 'online' });
+    // The play mode is the shell's default (local or online; shell.test.ts).
+    expect(${upper}_SHELL.modes).toEqual({ default: 'online' });
     expect(${upper}_SHELL.opts.parse({}, { seatCount: 2 })).toEqual({ seatCount: 2 });
   });
 
@@ -1050,25 +1040,19 @@ const viewer: ShellConfig<${pascal}>['local']['viewer'] = (app, game) => {
   const holder: Seat = app.shell.view?.seat ?? app.shell.revealed ?? 0;
   const seat = actor ?? holder;
   const curtain = ${hidden ? 'actor !== null && app.shell.revealed !== seat ? seat : null' : 'null'};
-  return { seat, curtain, effects: [] };
+  return { seat, curtain };
 };
 
 /** \`curtain/reveal\`: whoever must act lifts the curtain; the shell's \`position/load\` reads the seat to move off this. */
 const revealer: ShellConfig<${pascal}>['local']['revealer'] = (game) => ({
   seat: turnSeat(game.game) ?? 0,
-  effects: [],
 });
 
 export const ${upper}: ShellConfig<${pascal}> = {
   ...${upper}_SHELL,
-  table: { initial: initialTable, reset, rendered, refuse },
+  table: { initial: initialTable, reset, rendered },
   local: { viewer, revealer },
-  home: {
-    ...${upper}_SHELL.home,
-    apply: (app) => app,
-    resume: (home) => resumeFor(home.save),
-    resumeExtra: pure,
-  },
+  home: { ...${upper}_SHELL.home, apply: (app) => app },
 };
 
 export const initialShell: Shell = shellInitial(${upper});

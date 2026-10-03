@@ -2384,7 +2384,6 @@ describe('the ephemeral lane (docs/design/briscola-battle.md §4.5)', () => {
       initial: FAKE.table.initial,
       reset: FAKE.table.reset,
       rendered: FAKE.table.rendered,
-      refuse: FAKE.table.refuse,
     },
   };
   const frame: IntentFrame = { t: 'intent', slot: 2 };
@@ -3969,5 +3968,87 @@ describe("playing upright: `orientation: 'portrait'` is the mirror of sideways, 
     expect(locks(any.effects)).toEqual([]);
     expect(toasts(any.effects)).toEqual([]);
     expect(gateOpen(any.app.shell, ANY)).toBe(false);
+  });
+});
+
+describe('the config`s defaults (shell-call-graph.md §4.3): what every game but one spelled, the shell now supplies', () => {
+  /** FAKE with every optional hook left out: no `refuse`, no `modes.parse`, no `home.resume`/`resumeExtra`, no own effects on the viewer or the revealer. */
+  const PLAIN: ShellConfig<Fake> = {
+    ...FAKE,
+    modes: { default: FAKE.modes.default },
+    table: { initial: FAKE.table.initial, reset: FAKE.table.reset, rendered: FAKE.table.rendered },
+    local: {
+      viewer: (app, g) => ({
+        seat: g.turn,
+        curtain: !g.over && app.shell.revealed !== g.turn ? g.turn : null,
+      }),
+      revealer: (g) => ({ seat: g.turn }),
+    },
+    home: { read: FAKE.home.read, apply: FAKE.home.apply },
+  };
+  const plain = (app: App, ...intents: ReadonlyArray<FakeIntent>): FakeStep =>
+    runIn(ctx, PLAIN, app, ...intents);
+
+  test('refuse: the toast alone, nothing dropped from the table, at the host and at a guest', () => {
+    const hosting = plain(
+      initialApp,
+      { type: 'home/init', home },
+      { type: 'host/click', name: 'Ann', level: '3' },
+      { type: 'host/frame', frame: { t: 'join', name: 'Jeff' } },
+      { type: 'host/deal' },
+    ).app;
+    const refused = hostDispatch(hosting, 0, { type: 'bad' }, ctx, PLAIN);
+    expect(refused).toEqual({
+      app: hosting,
+      effects: [{ type: 'toast', message: 'Not your turn.', ms: null }],
+    });
+    expect(marks(refused.app)).not.toContain('refused');
+    const joined = plain(initialApp, { type: 'join/click', name: 'Jo', code: 'ABCD' }).app;
+    expect(plain(joined, { type: 'guest/frame', frame: { t: 'toast', msg: 'No.' } })).toEqual({
+      app: joined,
+      effects: [{ type: 'toast', message: 'No.', ms: null }],
+    });
+  });
+
+  test('modes.parse: local is local, anything else online, shown and stored alike (no mode is ignored)', () => {
+    expect(plain(initialApp, { type: 'mode/set', mode: 'local' })).toEqual({
+      app: withShell(initialApp, { playMode: 'local' }),
+      effects: [{ type: 'writePlayMode', mode: 'local' }],
+    });
+    const open = withShell(initialApp, { p1Name: 'open' });
+    expect(plain(open, { type: 'mode/set', mode: 'secret' })).toEqual({
+      app: withShell(open, { playMode: 'online' }),
+      effects: [{ type: 'writePlayMode', mode: 'online' }],
+    });
+  });
+
+  test('home.resume: the shell`s offers off the save and nothing else; resumeExtra: an unknown offer does nothing', () => {
+    const save = { role: 'local', game: dealt } as const;
+    expect(
+      plain(initialApp, { type: 'home/init', home: { ...home, save } }).app.shell.resume,
+    ).toEqual(resumeFor(save, PLAIN));
+    // FAKE's own gold offer is not PLAIN's.
+    expect(
+      plain(initialApp, { type: 'home/init', home: { ...home, colour: 'gold' } }).app.shell.resume,
+    ).toBeNull();
+    const extra = withShell(initialApp, { resume: { kind: 'extra', note: 'gold' } });
+    expect(plain(extra, { type: 'resume/click' })).toEqual({ app: extra, effects: [] });
+  });
+
+  test('viewer and revealer without effects: the broadcast and the reveal carry the shell`s alone', () => {
+    const start = plain(initialApp, { type: 'local/click', p1: 'Ann', p2: 'Bob', level: '2' });
+    expect(start.app.table.curtain).toBe(0);
+    expect(start.effects).toEqual([
+      { type: 'wakeLock', hold: true },
+      { type: 'persist' },
+      { type: 'scrollTop' },
+    ]);
+    const revealed = plain(start.app, { type: 'curtain/reveal' });
+    expect(revealed.app.shell.revealed).toBe(0);
+    expect(revealed.effects).toEqual([
+      { type: 'fx', cue: 'tap' },
+      { type: 'persist' },
+      { type: 'scrollTop' },
+    ]);
   });
 });

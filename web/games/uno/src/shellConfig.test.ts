@@ -27,11 +27,8 @@ describe('the options and the seats', () => {
     expect(UNO_SHELL.opts.capacity?.({ seatCount: 3 })).toBe(3);
     expect(UNO_SHELL.opts.pick({ seatCount: 4 })).toEqual({ seatCount: 4 });
     expect(seatNames(3, [{ id: 'p1', name: 'Ann' }])).toEqual(['Ann', 'Player 2', 'Player 3']);
-    expect(UNO_SHELL.modes.parse('local', {} as never)).toEqual({
-      shown: 'local',
-      stored: 'local',
-    });
-    expect(UNO_SHELL.modes.parse('x', {} as never)).toEqual({ shown: 'online', stored: 'online' });
+    // The play mode is the shell's default (local or online; shell.test.ts).
+    expect(UNO_SHELL.modes).toEqual({ default: 'online' });
   });
 
   test('the engine adapters: the deal over the seated list, the names, a rename, the result', () => {

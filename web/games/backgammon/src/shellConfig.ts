@@ -37,7 +37,6 @@ import {
   readCurtainMode,
   readMatchLength,
   readVariant,
-  type PlayMode,
 } from './storage.ts';
 import { CUES } from './ui/sound.ts';
 import type { Backgammon } from './ui/state.ts';
@@ -69,13 +68,7 @@ export const BACKGAMMON_SHELL: ShellGameData<Backgammon> = {
   names: { default: DEFAULT_NAME },
   localNames: LOCAL_NAMES,
   tabs: { list: HOME_TABS, default: DEFAULT_HOME_TAB },
-  modes: {
-    default: DEFAULT_PLAY_MODE,
-    parse: (raw) => {
-      const mode: PlayMode = raw === 'local' ? 'local' : 'online';
-      return { shown: mode, stored: mode };
-    },
-  },
+  modes: { default: DEFAULT_PLAY_MODE },
   copy: {
     leaveLocal: LEAVE_LOCAL_MSG,
     leaveOnline: LEAVE_ONLINE_MSG,

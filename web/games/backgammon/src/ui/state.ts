@@ -983,8 +983,6 @@ export const BACKGAMMON: ShellConfig<Backgammon> = {
       shell: { ...app.shell, opts: { matchLength: home.matchLength, variant: home.variant } },
       table: { ...app.table, curtainMode: home.curtainMode },
     }),
-    resume: (home) => resumeFor(home.save),
-    resumeExtra: pure,
   },
 };
 
