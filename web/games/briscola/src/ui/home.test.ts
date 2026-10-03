@@ -1,29 +1,18 @@
 // No jsdom here (docs/ARCHITECTURE.md "Testing pyramid"): the home screen runs against the page
 // fake built from the page's own markup (ui/page.fake.ts over web/games/briscola/index.html). The
 // seat count is the shell's stepper (web/shared/ui/stepper.ts): its hidden field ships `value="2"`,
-// which the fake reads, and a test taps − and + as a player would.
+// which the fake reads, and a test taps − and + as a player would. The shell's input writes and
+// pure helpers are pinned where they live (web/shared/ui/home.test.ts, seatedHome.test.ts); this
+// suite holds the composed home against briscola's own markup.
 import { describe, expect, test } from 'vitest';
 
 import { fakeTarget } from '../../../../shared/edge/page.fake.ts';
-import {
-  EXTRA_NAME_INPUTS,
-  LOCAL_PLAYERS,
-  ONLINE_PLAYERS,
-  bindHome,
-  blocksCodeInput,
-  fillNameInputs,
-  fillP2NameInput,
-  inviteUrl,
-  paintHome,
-  readHostOptions,
-  readLocalOptions,
-  setCodeInput,
-  tabButtonId,
-} from './home.ts';
+import { seatNameInputId } from '../../../../shared/markup/seatNames.ts';
+import { stepperIds } from '../../../../shared/markup/stepper.ts';
+import { LOCAL_PLAYERS, ONLINE_PLAYERS } from '../../../../shared/ui/seatedHome.ts';
+import { bindHome, paintHome, readHostOptions, readLocalOptions } from './home.ts';
 import { briscolaPage, type BriscolaPage } from './page.fake.ts';
 import { DEFAULT_OPTS, initialApp, type App, type Intent } from './state.ts';
-
-import { stepperIds } from '../../../../shared/markup/stepper.ts';
 
 import MARKUP from '../../index.html?raw';
 
@@ -44,6 +33,11 @@ const GONE_IDS = [
 ];
 
 const page = (): BriscolaPage => briscolaPage(MARKUP);
+/** The third and fourth pass-and-play seats' inputs (`#moreNames` shows them from three players). */
+const EXTRA_NAME_INPUTS: Readonly<Record<2 | 3, string>> = {
+  2: seatNameInputId(2),
+  3: seatNameInputId(3),
+};
 /** Type into an input as the player would. */
 const type = (p: BriscolaPage, id: string, value: string): void => {
   const input = p.get(id).el as HTMLInputElement;
@@ -64,45 +58,6 @@ const recorder = (): Readonly<{ intents: Intent[]; dispatch: (i: Intent) => void
   const intents: Intent[] = [];
   return { intents, dispatch: (i) => intents.push(i) };
 };
-
-describe('the input writes the reducer raises as effects', () => {
-  test('fillNameInputs writes both first-name inputs, fillP2NameInput the second seat, setCodeInput the code', () => {
-    const p = page();
-    fillNameInputs(p.doc, 'Ann');
-    expect(p.get('nameInput').value()).toBe('Ann');
-    expect(p.get('p1NameInput').value()).toBe('Ann');
-    expect(p.get('p2NameInput').value()).toBe('');
-    fillP2NameInput(p.doc, 'Bob');
-    expect(p.get('p2NameInput').value()).toBe('Bob');
-    expect(p.get('p1NameInput').value()).toBe('Ann');
-    setCodeInput(p.doc, 'AB');
-    expect(p.get('codeInput').value()).toBe('AB');
-    // The shell's default fill marks its inputs for the first-tap clear; a plain fill unmarks.
-    fillNameInputs(p.doc, 'Ari', true);
-    fillP2NameInput(p.doc, 'Lavi', true);
-    ['nameInput', 'p1NameInput', 'p2NameInput'].forEach((id) => {
-      expect(p.get(id).attr('data-default'), id).toBe('1');
-    });
-    fillP2NameInput(p.doc, 'Bob');
-    expect(p.get('p2NameInput').attr('data-default')).toBeNull();
-    expect(p.get('p1NameInput').attr('data-default')).toBe('1');
-  });
-});
-
-describe('pure helpers', () => {
-  test('inviteUrl, tabButtonId and blocksCodeInput are the shared shell helpers', () => {
-    expect(inviteUrl('KQZM', 'https://games.sweedler.com/briscola/')).toBe(
-      'https://games.sweedler.com/briscola/?join=KQZM',
-    );
-    expect((['play', 'rules', 'about'] as const).map(tabButtonId)).toEqual([
-      'tabPlayBtn',
-      'tabRulesBtn',
-      'tabAboutBtn',
-    ]);
-    expect(blocksCodeInput('insertReplacementText', null)).toBe(true);
-    expect(blocksCodeInput('insertText', 'a')).toBe(false);
-  });
-});
 
 describe('paintHome', () => {
   test('tabs, panels, the play mode, the resume box, and the room controls from the App', () => {

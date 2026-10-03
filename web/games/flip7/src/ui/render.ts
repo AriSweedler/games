@@ -1,7 +1,7 @@
 // The paint (docs/design/flip7.md §8): the App onto the composed shell page (page.ts) through the
 // DOM edge, after every intent, and the controls bound to intents. The shell's halves are
 // web/shared/ui/shellPaint.ts's (the screens, the waiting rooms, the sound button, the handoff, the
-// sheets) and ui/home.ts's; the table is this game's: every seat's line as plain tiles with its
+// sheets) and seatedHome.ts's; the table is this game's: every seat's line as plain tiles with its
 // status and what it would bank, the seat acting lit, Hit and Stay for the seat whose turn it is,
 // the taker picker for the seat that flipped an action card, and the scores with Next round (the
 // host's) or Play again once a round or the game is over. The anticipation is ui/motion.ts's: the
@@ -42,8 +42,15 @@ import {
 } from '../../../../shared/ui/shellPaint.ts';
 import { cardName, type Card } from '../engine/cards.ts';
 import { lineScore } from '../engine/engine.ts';
-import { actorOf, nameOf, type Seat, type Status, type View } from '../engine/index.ts';
-import { bindHome, paintHome } from './home.ts';
+import {
+  MAX_SEATS,
+  MIN_SEATS,
+  actorOf,
+  nameOf,
+  type Seat,
+  type Status,
+  type View,
+} from '../engine/index.ts';
 import {
   NO_MOMENTS,
   durationsFor,
@@ -53,10 +60,27 @@ import {
   type Moments,
 } from './motion.ts';
 import { listNames } from '../../../../shared/lib/name.ts';
-import { FLIP7, myTurn, waitingToDealMsg, type App, type Flip7, type Intent } from './state.ts';
+import { seatedHome } from '../../../../shared/ui/seatedHome.ts';
+import { LOCAL_NAMES } from '../shellConfig.ts';
+import {
+  FLIP7,
+  HOME_TABS,
+  myTurn,
+  namesOf,
+  waitingToDealMsg,
+  type App,
+  type Flip7,
+  type Intent,
+} from './state.ts';
 
-export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
-export { fillNameInputs, fillP2NameInput, setCodeInput } from './home.ts';
+/** The home screen (web/shared/ui/seatedHome.ts): the shell's, two to twelve on both steppers, the third to twelfth names shown with the count (`#moreNames`). */
+const home = seatedHome<Flip7>({
+  seats: { min: MIN_SEATS, max: MAX_SEATS },
+  localNames: LOCAL_NAMES,
+  allNames: namesOf,
+  tabs: HOME_TABS,
+  group: 'moreNames',
+});
 
 export const STATUS_LABEL: Readonly<Record<Status, string>> = {
   active: '',
@@ -279,7 +303,7 @@ export const paint = (doc: PageLike, app: App): void => {
       others: listNames(v.seats.filter((_, i) => i !== v.me).map((s) => s.name)),
     }),
   });
-  paintHome(doc, app);
+  home.paintHome(doc, app);
   paintCurtain(doc, app);
   paintTable(doc, app);
   paintPause(doc, app);
@@ -289,7 +313,7 @@ export const paint = (doc: PageLike, app: App): void => {
 export const bindAll = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
   // The animations' clock, once: the design's numbers, or the reduced-motion stills.
   writeClock(doc, durationsFor(reducedMotion()));
-  bindHome(doc, dispatch);
+  home.bindHome(doc, dispatch);
   bindCurtain<Flip7>(doc, dispatch);
   bindButtons(doc, dispatch, [
     ['curtainHandoffBtn', { type: 'handoff/click' }],

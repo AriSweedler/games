@@ -176,11 +176,7 @@ import {
 export type { PageLike };
 export type Dispatch = (intent: Intent) => void;
 
-export { RULES_SLOT_IDS } from './rules.ts';
-
 // ---- the shell (web/shared/ui/shellPaint.ts, each over the App's shell slice) ---------------------
-
-export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 
 /**
  * Whether a seat's channel is up, as this device knows it (n-seat-sessions.md §7): the host reads

@@ -638,52 +638,33 @@ const homeTs = (
   slug: string,
   pascal: string,
 ): string => `// The home screen's game half (docs/design/${slug}.md §3): the shared shell's tabs, modes, inputs and
-// resume box (web/shared/ui/home.ts) and nothing of this page's own: a game for two has no option.
+// resume box (web/shared/ui/home.ts) and nothing of this page's own: a game for two has no option
+// (a game with a seat range composes web/shared/ui/seatedHome.ts instead, as the three seated games
+// do). The input writes the reducer raises (the names, the code) are the boot's defaults.
 import type { DocumentLike, PageLike } from '../../../../shared/edge/dom.ts';
 import {
   bindHomeShell,
-  fillInputs,
+  homeView,
   paintHomeShell,
   shellIntents,
-  type HomeView,
 } from '../../../../shared/ui/home.ts';
 import {
   HOME_TABS,
   resumeLabel,
   type App,
-  type HomeTab,
   type Intent,
   type PlayMode,
   type Raw,
   type ${pascal},
 } from './state.ts';
 
-export { setCodeInput } from '../../../../shared/ui/home.ts';
-
-/** The first player's name into the online name and pass-and-play's first seat. */
-export const fillNameInputs = (doc: DocumentLike, name: string, isDefault = false): void => {
-  fillInputs(doc, ['nameInput', 'p1NameInput'], name, isDefault);
-};
-
-/** The second player's name into pass-and-play's second seat. */
-export const fillP2NameInput = (doc: DocumentLike, name: string, isDefault = false): void => {
-  fillInputs(doc, ['p2NameInput'], name, isDefault);
-};
-
 const PLAY_MODES: ReadonlyArray<PlayMode> = ['online', 'local'];
 
 const noOptions = (): Raw => ({});
 
-const homeView = (app: App): HomeView<HomeTab> => ({
-  homeTab: app.shell.homeTab,
-  playMode: app.shell.playMode,
-  submenuOpen: app.shell.submenuOpen,
-  resumeLabel: app.shell.resume === null ? null : resumeLabel(app.shell.resume),
-});
-
 /** The tabs and panels, the play mode, the submenu and the resume box. */
 export const paintHome = (doc: DocumentLike, app: App): void => {
-  paintHomeShell(doc, homeView(app), { tabs: HOME_TABS, modes: PLAY_MODES });
+  paintHomeShell(doc, homeView(app.shell, resumeLabel), { tabs: HOME_TABS, modes: PLAY_MODES });
 };
 
 /** Every control of the home screen and the two waiting screens. */

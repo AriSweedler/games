@@ -14,8 +14,9 @@ import { appendHtml, requireId, trustedHtml, type PageLike } from '../../../../s
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
 import { SUIT_SPRITE_SVG } from '../../../../shared/ui/cardFace.ts';
 import IMPACT_SPRITE_SVG from '../../impact/impact-sprite.svg?raw';
+import { showToast } from '../../../../shared/ui/shellPaint.ts';
 import { STORIES_IDS, bootStories, type StoriesDeps } from '../../../../shared/ui/stories.ts';
-import { bindAll, paint, showToast } from '../ui/render.ts';
+import { bindAll, paint } from '../ui/render.ts';
 import { reduce, type App, type Effect, type Intent, type TimerId } from '../ui/state.ts';
 import { EPOCH, SEED, STORIES, storyById, type Story } from './catalogue.ts';
 

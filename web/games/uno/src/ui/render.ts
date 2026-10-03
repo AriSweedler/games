@@ -47,12 +47,19 @@ import {
 import { COLORS, type Card, type Color } from '../engine/cards.ts';
 import { cardName } from '../engine/engine.ts';
 import type { View } from '../engine/view.ts';
-import { bindHome, paintHome } from './home.ts';
 import { flyCards, planFlights, type Flight } from './motion.ts';
 import { listNames } from '../../../../shared/lib/name.ts';
-import { UNO, type App, type Intent, type Uno } from './state.ts';
+import { seatedHome } from '../../../../shared/ui/seatedHome.ts';
+import { LOCAL_NAMES, MAX_SEATS, MIN_SEATS } from '../shellConfig.ts';
+import { HOME_TABS, UNO, namesOf, type App, type Intent, type Uno } from './state.ts';
 
-export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
+/** The home screen (web/shared/ui/seatedHome.ts): the shell's, two to twelve on both steppers, one name input per seat. */
+const home = seatedHome<Uno>({
+  seats: { min: MIN_SEATS, max: MAX_SEATS },
+  localNames: LOCAL_NAMES,
+  allNames: namesOf,
+  tabs: HOME_TABS,
+});
 
 /** The glyph on a tile: the digit, or the symbol of the action. */
 export const glyphOf = (card: Card): string => {
@@ -185,7 +192,7 @@ export const paint = (doc: PageLike, app: App): void => {
       others: nameAt(v, (v.seat + 1) % Math.max(1, v.names.length)),
     }),
   });
-  paintHome(doc, app);
+  home.paintHome(doc, app);
   paintCurtain(doc, app);
   const v = app.shell.view;
   // Planned before the table repaints: my played tile's slot goes with it (ui/motion.ts).
@@ -232,7 +239,7 @@ const bindTable = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
 
 /** Every control of the page (home, curtain, table, sheets), once, at boot. */
 export const bindAll = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
-  bindHome(doc, dispatch);
+  home.bindHome(doc, dispatch);
   bindCurtain<Uno>(doc, dispatch);
   bindTable(doc, dispatch);
   bindShellSheets<Uno>(doc, dispatch);
