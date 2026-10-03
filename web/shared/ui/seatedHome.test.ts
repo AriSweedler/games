@@ -1,6 +1,6 @@
 // The seated home over a fake page (docs/design/shared-shell.md §4.1: "over a FAKE_GAME and
 // dom.fake/page.fake"): the shell's ids, two steppers for two to five seats, the third to fifth
-// name inputs under one group. briscola's ui/home.test.ts runs the composed home against its own
+// name inputs of the shell's grid. briscola's ui/home.test.ts runs the composed home against its own
 // markup; this suite is what holds the shared row at 100 (tools/ci/suites.ts).
 import { describe, expect, test } from 'vitest';
 
@@ -28,15 +28,13 @@ type SeatedIntent = Intent<Seated>;
 const TABS = ['play', 'rules', 'about'] as const;
 const MODES = ['online', 'local'] as const;
 const SEATS = { min: 2, max: 5 } as const;
-/** A page built with `seatNamesHtml`: no group around the extra inputs. */
-const UNGROUPED: SeatedHomeSpec<Seated> = {
+/** A page built with `seatNamesHtml`: each extra input hides on its own, no group around them. */
+const SPEC: SeatedHomeSpec<Seated> = {
   seats: SEATS,
   localNames: ['Ari', 'Lavi', 'Sandro'],
   allNames: (game) => game.players.map((p) => p.name),
   tabs: TABS,
 };
-/** A page with the extra inputs under `#moreNames` (flip7's, briscola's). */
-const SPEC: SeatedHomeSpec<Seated> = { ...UNGROUPED, group: 'moreNames' };
 const P3 = seatNameInputId(2);
 const P4 = seatNameInputId(3);
 const P5 = seatNameInputId(4);
@@ -95,7 +93,6 @@ const seatedPage = (): FakePage => {
     ...submenuButtons,
     ...stepper(ONLINE_PLAYERS),
     ...stepper(LOCAL_PLAYERS),
-    fakeEl('moreNames', { classes: ['row', 'hidden'] }),
     ...[P3, P4, P5].map((id) => fakeEl(id, { classes: ['grow', 'hidden'] })),
   ]);
 };
@@ -130,7 +127,7 @@ const recorder = (): Readonly<{
 };
 
 describe('paintHome', () => {
-  test('the shell, both steppers at the one count, the group and the extra names shown from three', () => {
+  test('the shell, both steppers at the one count, the extra names shown from three', () => {
     const p = seatedPage();
     const home = seatedHome(SPEC);
     home.paintHome(p.doc, app(2));
@@ -145,12 +142,10 @@ describe('paintHome', () => {
       expect(p.get(stepperIds(id).dec).disabled()).toBe(true);
       expect(p.get(stepperIds(id).inc).disabled()).toBe(false);
     });
-    expect(p.get('moreNames').hasClass('hidden')).toBe(true);
     expect(p.get(P3).hasClass('hidden')).toBe(true);
-    // Three seats: the group opens, the third input shows its default marked for the first-tap
-    // clear, the fourth (remembered) is unmarked but still put away.
+    // Three seats: the third input shows its default marked for the first-tap clear, the fourth
+    // (remembered) is unmarked but still put away.
     home.paintHome(p.doc, app(3, [null, 'Dan']));
-    expect(p.get('moreNames').hasClass('hidden')).toBe(false);
     expect(p.get(P3).hasClass('hidden')).toBe(false);
     expect(p.get(P3).value()).toBe('Sandro');
     expect(p.get(P3).attr(DEFAULT_MARK)).toBe('1');
@@ -168,10 +163,9 @@ describe('paintHome', () => {
     expect(p.get(P5).value()).toBe('Player 5');
   });
 
-  test('a page built with seatNamesHtml names no group: each input hides on its own', () => {
+  test('each input hides on its own: four seats show the third and fourth, the fifth stays away', () => {
     const p = seatedPage();
-    seatedHome(UNGROUPED).paintHome(p.doc, app(4));
-    expect(p.get('moreNames').hasClass('hidden')).toBe(true);
+    seatedHome(SPEC).paintHome(p.doc, app(4));
     expect(p.get(P3).hasClass('hidden')).toBe(false);
     expect(p.get(P4).hasClass('hidden')).toBe(false);
     expect(p.get(P5).hasClass('hidden')).toBe(true);

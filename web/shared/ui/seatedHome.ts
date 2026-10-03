@@ -5,19 +5,14 @@
 // seat-count steppers a page places in its Online card and its pass-and-play twin
 // (web/shared/markup/stepper.ts, web/shared/ui/stepper.ts; the owner, 2026-10-02: "a number with
 // - and + buttons on the side") and the pass-and-play names past the shell's two, one input per
-// seat the stepper allows (web/shared/ui/seatNames.ts). Both start buttons carry the raw values
-// along (`SeatedRaw`, the keys a seated game's `opts.parse` reads), each tap on − or + remembers
+// seat the stepper allows, each hiding on its own past the count (web/shared/ui/seatNames.ts over
+// the grid every seated page places with web/shared/markup/seatNames.ts). Both start buttons carry
+// the raw values along (`SeatedRaw`, the keys a seated game's `opts.parse` reads), each tap on − or + remembers
 // the count at once (`opts/set`), so the hidden field and the room agree before Start, and each
 // keystroke on a third seat on is the shell's `seatName/typed`, painted back from the shell's
 // memory (`seatNames`) so the paint never overwrites what is being typed. A game with more on its
 // home screen (briscola's speed selects) calls the four and paints and binds its own beside them.
-import {
-  readValue,
-  requireId,
-  toggleClass,
-  type DocumentLike,
-  type PageLike,
-} from '../edge/dom.ts';
+import { readValue, requireId, type DocumentLike, type PageLike } from '../edge/dom.ts';
 import { resumeLabel } from '../lib/name.ts';
 import type { SeatedRaw } from './seatCopy.ts';
 import { bindHomeShell, homeView, paintHomeShell, shellIntents, type HomeSlice } from './home.ts';
@@ -57,11 +52,6 @@ export type SeatedHomeSpec<G extends SeatedTypes> = Readonly<{
   /** Every player's name off a saved game, in seat order, for the resume offer's label. */
   allNames: (game: G['State']) => ReadonlyArray<string>;
   tabs: ReadonlyArray<Tab<G>>;
-  /**
-   * The element wrapping the third seat's input on, shown from three seats (`#moreNames`); a page
-   * built with `seatNamesHtml` has none, each input hiding on its own (`paintSeatNames`).
-   */
-  group?: string;
 }>;
 
 /**
@@ -115,7 +105,6 @@ export const seatedHome = <G extends SeatedTypes>(spec: SeatedHomeSpec<G>): Seat
       counters.forEach((c) => {
         paintStepper(doc, c.spec, n);
       });
-      if (spec.group !== undefined) toggleClass(requireId(doc, spec.group), 'hidden', n < 3);
       paintSeatNames(doc, names, n, app.shell.seatNames);
     },
     bindHome: (doc, dispatch) => {
