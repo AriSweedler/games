@@ -1481,10 +1481,9 @@ import {
   runEffect,
   type App,
   type ${pascal},
-  type HostContext,
 } from './src/ui/state.ts';
 
-bootShell<${pascal}, App, object, HostContext>({
+bootShell<${pascal}, App>({
   page: { doc: document, win: window, nav: navigator, store: browserStore(), clock: realClock },
   game: { hook: '${hook}', title: '${title.replace(/'/g, "\\'")}', debug: 0 },
   sound: { enabled: soundEnabled, fontKey: STORAGE_KEYS.soundFont },
