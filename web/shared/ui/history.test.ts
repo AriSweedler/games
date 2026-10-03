@@ -9,13 +9,7 @@ import { setAttr } from '../edge/dom.ts';
 import { fakeEl, fakePage, type FakePage } from '../edge/page.fake.ts';
 import type { EventCopy, GameEvent } from '../lib/events.ts';
 import { HISTORY_IDS } from './ids.ts';
-import {
-  historyHtml,
-  historyKey,
-  historyRowHtml,
-  paintHistory,
-  scrollHistoryToEnd,
-} from './history.ts';
+import { historyHtml, historyKey, historyRowHtml, paintHistory } from './history.ts';
 
 /** A stream in the words of a made-up game: nothing here is a shared vocabulary. */
 type Ev = GameEvent<'deal' | 'trick' | 'result', Readonly<{ points: number }>>;
@@ -204,19 +198,5 @@ describe('paintHistory', () => {
     expect(p.get(HISTORY_IDS.list).text()).toBe(
       '<div class="empty-note">Nothing has happened yet.</div>',
     );
-  });
-});
-
-describe('scrollHistoryToEnd', () => {
-  test('scrolls the last row into view, and nothing when the list has none', () => {
-    const last = fakeEl('lastRow');
-    const withRows = fakePage([
-      fakeEl(HISTORY_IDS.list, { queries: { 'details.history-row:last-of-type': [last] } }),
-    ]);
-    scrollHistoryToEnd(withRows.doc, HISTORY_IDS.list);
-    expect(last.scrolledInto()).toBe(1);
-    const empty = page();
-    scrollHistoryToEnd(empty.doc, HISTORY_IDS.list);
-    expect(last.scrolledInto()).toBe(1);
   });
 });

@@ -10,7 +10,7 @@
 export type SeatNamesMarkup = Readonly<{ max: number; indent?: string }>;
 
 /** The grid's id. */
-export const SEAT_NAMES_ID = 'seatNames';
+const SEAT_NAMES_ID = 'seatNames';
 
 /** The input of seat `seat` (0-based): `p1NameInput` … `p12NameInput`. */
 export const seatNameInputId = (seat: number): string => `p${String(seat + 1)}NameInput`;

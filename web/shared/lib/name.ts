@@ -23,7 +23,7 @@ export const listNames = (names: ReadonlyArray<string>): string =>
     : `${names.slice(0, -1).join(', ')} and ${names.slice(-1).join('')}`;
 
 /** "Ann vs Bob" at two (the shell specs' shape), `listNames` past two: the resume box's players. */
-export const versusOrList = (names: ReadonlyArray<string>): string =>
+const versusOrList = (names: ReadonlyArray<string>): string =>
   names.length <= 2 ? names.join(' vs ') : listNames(names);
 
 /** `#handoffBtn`'s tooltip and a handed-off room's resume offer: seat 0 keeps this device and hosts, seat 1 joins through the invite. */

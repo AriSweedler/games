@@ -17,17 +17,17 @@ import { HISTORY_IDS } from './ids.ts';
 import { ensureKeyed } from './keyed.ts';
 
 /** The section's heading. */
-export const RECENT_GAMES_TITLE = 'Recent games';
+const RECENT_GAMES_TITLE = 'Recent games';
 
 /** The one letter each line ends with: the outcome from the user's seat. */
-export const OUTCOME_MARKS: Readonly<Record<Outcome, string>> = { win: 'W', loss: 'L', draw: 'D' };
+const OUTCOME_MARKS: Readonly<Record<Outcome, string>> = { win: 'W', loss: 'L', draw: 'D' };
 
 /** The local date and time a game ended, in the device's locale ("Sep 25, 2026, 2:41 PM"). */
-export const formatWhen = (at: number): string =>
+const formatWhen = (at: number): string =>
   new Date(at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 /** The key a painted list is built under: how many games and the newest clock, `-` for none. */
-export const recentGamesKey = (games: ReadonlyArray<RecentGame>): string => {
+const recentGamesKey = (games: ReadonlyArray<RecentGame>): string => {
   const newest = games[0];
   return newest === undefined ? '-' : `${String(games.length)}:${String(newest.at)}`;
 };
@@ -37,7 +37,7 @@ export const recentGamesKey = (games: ReadonlyArray<RecentGame>): string => {
  * (seat order, so the first is the device's user in pass-and-play and the host online), the
  * score and the mark. No `</div>` inside (the gin DOM-parity oracle drops the slot up to its first).
  */
-export const recentGameHtml = (game: RecentGame): SafeHtml =>
+const recentGameHtml = (game: RecentGame): SafeHtml =>
   safeHtml`<li class="recent-game" data-outcome="${game.outcome}" data-mode="${game.mode}"><span class="recent-game-when">${formatWhen(game.at)}</span><span class="recent-game-players">${game.players.join(' · ')}</span><span class="recent-game-score">${game.score}</span><span class="recent-game-outcome">${OUTCOME_MARKS[game.outcome]}</span></li>`;
 
 /** The whole section: the heading and one line per game, newest first; nothing for no games. */

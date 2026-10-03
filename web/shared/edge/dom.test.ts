@@ -8,7 +8,6 @@ import {
   bodyPoint,
   bodySpace,
   byId,
-  childCount,
   clear,
   closestFrom,
   dataOf,
@@ -199,12 +198,11 @@ describe('setters', () => {
     expect(f.children).toEqual([]);
   });
 
-  test('appendHtml adds after the last child; removeElement and childCount (over page.fake.ts)', () => {
+  test('appendHtml adds after the last child; removeElement (over page.fake.ts)', () => {
     const row = fakeEl('row');
     const list = fakeEl('list', { text: '<p>a</p>', children: [row] });
     appendHtml(list.el, safeHtml`<p>${'b'}</p>`);
     expect(list.text()).toBe('<p>a</p><p>b</p>');
-    expect(childCount(list.el)).toBe(1);
     expect(row.removed()).toBe(false);
     removeElement(row.el);
     expect(row.removed()).toBe(true);

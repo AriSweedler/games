@@ -97,7 +97,7 @@ export const FULL_CLOSE_MS = 300;
 /** Errors and refusals are toasted for this long. */
 export const ERROR_TOAST_MS = 5000;
 /** Seats at a table when `HostOptions.capacity` is not given: the host and one guest. */
-export const DEFAULT_CAPACITY = 2;
+const DEFAULT_CAPACITY = 2;
 
 export const OPENING_MSG = 'Opening room…';
 export const WAITING_MSG = 'Waiting for your opponent to join…';
