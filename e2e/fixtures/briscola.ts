@@ -51,16 +51,16 @@ import {
   type Frame,
   type Viewport,
 } from './geometry.ts';
-import {
-  TABLE_FULL_MSG,
-  hostRoomMsg,
-  waitingMsg,
-} from '../../web/games/briscola/src/shellConfig.ts';
+import { WAITING_MSG } from '../../web/shared/net/host.ts';
+import { TABLE_FULL_MSG, seatedCopy } from '../../web/shared/ui/seatCopy.ts';
 import { DEFAULT_NAMES, reveal, roomCode, startLocal, type Names } from './shell.ts';
 import { BROKER_TIMEOUT, WEBRTC_TIMEOUT } from './timeouts.ts';
 
 export type { Viewport, Names };
 export { DEFAULT_NAMES };
+
+/** Briscola's N-seat copy as its shellConfig.ts spreads it: the shell's forms, dealt. */
+const SEAT_COPY = seatedCopy({ verb: 'deal', waitingAtTwo: WAITING_MSG });
 
 /** The seats of a pass-and-play game, two to four names (the inputs take 20 characters). */
 export type LocalNames =
@@ -1021,7 +1021,7 @@ const at = <T>(list: ReadonlyArray<T>, i: number, what: string): T => {
  * Open a table for `n` as `name`: the Online panel's seat count, the battle beat off (each device's
  * own preference, docs/design/briscola-battle.md §3.7; a spec of forty plays cannot wait 1.5 s a
  * trick), Open a table; resolves with the code once the broker has confirmed the room (the waiting
- * copy names the count, shellConfig.ts `waitingMsg`).
+ * copy names the count, web/shared/ui/seatCopy.ts `waiting`).
  */
 export const briscolaHostTable = async (
   page: Page,
@@ -1034,7 +1034,7 @@ export const briscolaHostTable = async (
   await page.locator('#speedSel').selectOption('off');
   await page.locator('#hostBtn').click();
   await expect(page.locator('#hostWaitScreen')).toBeVisible();
-  await expect(page.locator('#hostWaitStatus')).toContainText(waitingMsg(n), {
+  await expect(page.locator('#hostWaitStatus')).toContainText(SEAT_COPY.waiting(n), {
     timeout: BROKER_TIMEOUT,
   });
   return roomCode(page, 'briscola');
@@ -1051,7 +1051,7 @@ const sitDown = async (page: Page, name: string, code: string): Promise<void> =>
   await expect(page.locator('#guestWaitScreen')).toBeVisible();
 };
 
-/** Sit down at the table by code as `name`; resolves once the host's frame names the room (its count is whatever is seated then; `hostRoomMsg`). */
+/** Sit down at the table by code as `name`; resolves once the host's frame names the room (its count is whatever is seated then; seatCopy.ts `hostRoom`). */
 export const briscolaJoinTable = async (page: Page, name: string, code: string): Promise<void> => {
   await sitDown(page, name, code);
   await expect(page.locator('#guestWaitStatus')).toContainText('Connected —', {
@@ -1068,8 +1068,9 @@ export const briscolaRefused = async (page: Page, name: string, code: string): P
   await expect(page.locator('#tableScreen')).toBeHidden();
 };
 
-/** The guests' status once the table is full: the host's name and the count (shellConfig.ts `hostRoomMsg`). */
-export const tableFullStatus = (n: SeatCount): string => hostRoomMsg(TABLE_NAMES[0], n, n);
+/** The guests' status once the table is full: the host's name and the count (seatCopy.ts `hostRoom`, dealt). */
+export const tableFullStatus = (n: SeatCount): string =>
+  SEAT_COPY.hostRoom(TABLE_NAMES[0], {}, n, n);
 
 /** One row of a waiting room's seat list as shown: the seat, whether its channel is up, whether it is the viewer's own. */
 export type SeatShown = readonly [seat: number, connected: boolean, you: boolean];

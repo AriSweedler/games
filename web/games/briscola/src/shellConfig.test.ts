@@ -2,8 +2,8 @@
 // (shellConfig.ts): the seat count parser off raw inputs with its fallback and the fixed terms
 // under the engine's normalisation, `pickOpts` over a hostile frame, the copy, the mode parser, the engine adapters
 // over a pair and over three seats (create, apply, viewFor, over, finished, names, renameGuest by
-// seat, decodeState), the N-seat table and its copy forms (docs/design/n-seat-sessions.md §7: the
-// two-seat string at a table of two, the count past) and the home read over a store (defaults when
+// seat, decodeState), the N-seat table and the shell's copy forms wired to it (the forms themselves
+// are web/shared/ui/seatCopy.test.ts's) and the home read over a store (defaults when
 // unreadable, the pack and the extra names when set). The table hooks that complete it are
 // ui/state.test.ts's.
 import { describe, expect, test } from 'vitest';
@@ -11,12 +11,8 @@ import { describe, expect, test } from 'vitest';
 import { createStore, type StorageLike } from '../../../shared/edge/storage.ts';
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { WAITING_MSG } from '../../../shared/net/host.ts';
-import {
-  OPPONENT_LEFT_MSG,
-  WAITING_FOR_GUEST_MSG,
-  guestGoneMsg,
-  joinedMsg,
-} from '../../../shared/ui/shell.ts';
+import { TABLE_FULL_MSG } from '../../../shared/ui/seatCopy.ts';
+import { OPPONENT_LEFT_MSG, WAITING_FOR_GUEST_MSG, joinedMsg } from '../../../shared/ui/shell.ts';
 import { applyAction, viewFor, type GameOptions, type Players } from './engine/index.ts';
 import {
   BRISCOLA_SHELL,
@@ -25,19 +21,10 @@ import {
   LEAVE_LOCAL_MSG,
   LEAVE_ONLINE_MSG,
   ONE_GAME,
-  TABLE_FULL_MSG,
   TABLE_TERMS,
-  emptySeatName,
-  hostRoomMsg,
-  joinedText,
-  notEnoughMsg,
   parseOpts,
-  parseSeatCount,
   pickOpts,
-  seatGoneMsg,
-  seatLeftMsg,
   seatPlayers,
-  waitingMsg,
 } from './shellConfig.ts';
 import { lobby, welcome } from './protocol.ts';
 import { DEFAULT_CARD_PACK, SHELL_STORE, STORAGE_KEYS } from './storage.ts';
@@ -65,10 +52,11 @@ const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => 
 
 describe('the copy', () => {
   test('the guest status, the leave confirms (a game, never a match), the default name', () => {
-    expect(hostRoomMsg('Ann')).toBe('Connected — waiting for Ann to deal');
     expect(LEAVE_LOCAL_MSG).toBe('End this game? The score will be cleared.');
     expect(LEAVE_ONLINE_MSG).toBe('Leave this game? The table will close.');
-    expect(BRISCOLA_SHELL.copy.hostRoom('Bob', DEFAULT_OPTS, 2, 2)).toBe(hostRoomMsg('Bob'));
+    expect(BRISCOLA_SHELL.copy.hostRoom('Bob', DEFAULT_OPTS, 2, 2)).toBe(
+      'Connected — waiting for Bob to deal',
+    );
     expect(BRISCOLA_SHELL.copy.leaveLocal).toBe(LEAVE_LOCAL_MSG);
     expect(BRISCOLA_SHELL.copy.leaveOnline).toBe(LEAVE_ONLINE_MSG);
     expect(BRISCOLA_SHELL.names.default).toBe(DEFAULT_NAME);
@@ -119,28 +107,17 @@ describe('the table (docs/design/n-seat-sessions.md §7)', () => {
     });
   });
 
-  test('the N-seat copy is the shell`s two-seat string at a table of two, and counts past it', () => {
+  test('the N-seat copy is the shell`s (web/shared/ui/seatCopy.ts), dealt: the two-seat string at a table of two, the count past', () => {
     const { copy } = BRISCOLA_SHELL;
     expect(copy.waiting?.(2)).toBe(WAITING_MSG);
-    expect(waitingMsg(3)).toBe('Waiting for 2 players to join');
-    expect(waitingMsg(4)).toBe('Waiting for 3 players to join');
+    expect(copy.waiting?.(3)).toBe('Waiting for 2 players to join');
     expect(copy.joined?.('Bob', ['Bob'], 0)).toBe(joinedMsg('Bob'));
-    expect(joinedText('Bob', 2)).toBe('Bob joined! Waiting for 2 more.');
-    expect(joinedText('Cara', 1)).toBe('Cara joined! Waiting for 1 more.');
     expect(copy.seatLeft?.('Bob', 1, 1, 2)).toBe(OPPONENT_LEFT_MSG);
-    expect(seatLeftMsg('Bob', 1, 2, 3)).toBe('Bob left. 2 of 3 seated.');
-    expect(seatLeftMsg(null, 2, 3, 4)).toBe('Seat 3 left. 3 of 4 seated.');
-    expect(emptySeatName(0)).toBe('Seat 1');
-    expect(copy.guestGone?.('Bob', 'ABCD', 1)).toBe(guestGoneMsg('Bob', 'ABCD'));
-    expect(seatGoneMsg(null, 'ABCD', 2)).toBe(guestGoneMsg('Seat 3', 'ABCD'));
     expect(copy.notEnough?.(1, 2)).toBe(WAITING_FOR_GUEST_MSG);
-    expect(notEnoughMsg(2, 3)).toBe('2 of 3 seated — waiting for 1 more.');
-    expect(notEnoughMsg(2, 4)).toBe('2 of 4 seated — waiting for 2 more.');
     expect(copy.roomFull).toBe(TABLE_FULL_MSG);
     expect(copy.hostRoom('Ann', DEFAULT_OPTS, 3, 4)).toBe(
       'Connected — 3 of 4 seated · waiting for Ann to deal',
     );
-    expect(hostRoomMsg('Ann', 2, 3)).toBe('Connected — 2 of 3 seated · waiting for Ann to deal');
   });
 
   test('seatPlayers: the engine`s tuple for the count, a missing seat named by its number; create deals to the list the shell seated', () => {
@@ -170,9 +147,6 @@ describe('the table (docs/design/n-seat-sessions.md §7)', () => {
 
 describe('the option parsers', () => {
   test("the seat count is one of the engine's, else the fallback; the fixed terms are one game on the engine's defaults", () => {
-    expect(parseSeatCount('3', 2)).toBe(3);
-    expect(parseSeatCount('9', 2)).toBe(2);
-    expect(parseSeatCount(undefined, 4)).toBe(4);
     expect(ONE_GAME).toBe(1);
     expect(TABLE_TERMS).toEqual({ gamesToWin: 1 });
     expect(DEFAULT_OPTS).toEqual({

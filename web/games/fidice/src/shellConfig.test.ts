@@ -1,6 +1,6 @@
 // The half of the shell config spelled from the engine, the protocol and storage alone
-// (shellConfig.ts): the option parsers off raw inputs with their fallbacks, the copy and its N-seat
-// forms (the two-seat string at a table of two, the count past), the mode parser (Solo and Watch
+// (shellConfig.ts): the option parsers off raw inputs with their fallbacks, the copy and fidice's
+// own two N-seat forms over the shell's (web/shared/ui/seatCopy.test.ts), the mode parser (Solo and Watch
 // shown, never stored), the table (one to six, never fixed, the session's capacity the chairs), the
 // seating (the host first or standing, the connected guests, the computers; the ids that meet the
 // engine's chairs), the engine adapters (apply for a shell seat, viewFor's redaction, over,
@@ -10,7 +10,8 @@ import { describe, expect, test } from 'vitest';
 import { createStore, type StorageLike } from '../../../shared/edge/storage.ts';
 import { mulberry32 } from '../../../shared/lib/rng.ts';
 import { WAITING_MSG } from '../../../shared/net/host.ts';
-import { OPPONENT_LEFT_MSG, guestGoneMsg, joinedMsg } from '../../../shared/ui/shell.ts';
+import { TABLE_FULL_MSG } from '../../../shared/ui/seatCopy.ts';
+import { joinedMsg } from '../../../shared/ui/shell.ts';
 import { HOST, apply } from './domain/game.ts';
 import { lobby } from './protocol.ts';
 import {
@@ -21,16 +22,12 @@ import {
   LEAVE_ONLINE_MSG,
   NEED_PLAYERS_MSG,
   NOT_SEATED_MSG,
-  TABLE_FULL_MSG,
   actorFor,
   engineSeatOf,
-  hostRoomMsg,
   joinedText,
   parseOpts,
   pickOpts,
-  seatGoneMsg,
   seatId,
-  seatLeftMsg,
   seatTable,
   shellSeatOf,
   waitingMsg,
@@ -62,9 +59,12 @@ const fakeStorage = (): StorageLike & Readonly<{ map: Map<string, string> }> => 
 
 describe('the copy', () => {
   test('the guest status, the leave confirms, the default name, the id and the store', () => {
-    expect(hostRoomMsg('Ann')).toBe('Connected — waiting for Ann to start');
-    expect(hostRoomMsg('Ann', 3, 6)).toBe('Connected — 3 of 6 seated · waiting for Ann to start');
-    expect(FIDICE_SHELL.copy.hostRoom('Bob', DEFAULT_OPTS, 2, 2)).toBe(hostRoomMsg('Bob'));
+    expect(FIDICE_SHELL.copy.hostRoom('Bob', DEFAULT_OPTS, 2, 2)).toBe(
+      'Connected — waiting for Bob to start',
+    );
+    expect(FIDICE_SHELL.copy.hostRoom('Ann', DEFAULT_OPTS, 3, 6)).toBe(
+      'Connected — 3 of 6 seated · waiting for Ann to start',
+    );
     expect(FIDICE_SHELL.copy.leaveLocal).toBe(LEAVE_LOCAL_MSG);
     expect(FIDICE_SHELL.copy.leaveOnline).toBe(LEAVE_ONLINE_MSG);
     expect(FIDICE_SHELL.names.default).toBe(DEFAULT_NAME);
@@ -83,10 +83,7 @@ describe('the copy', () => {
     expect(joinedText('Bo', 2, 2)).toBe(joinedMsg('Bo'));
     expect(joinedText('Bo', 2, 6)).toBe('Bo joined! 2 of 6 seated — start when ready.');
     expect(FIDICE_SHELL.copy.joined?.('Bo', ['Bo'], 4)).toBe(joinedText('Bo', 2, 6));
-    expect(seatLeftMsg('Bo', 1, 1, 2)).toBe(OPPONENT_LEFT_MSG);
-    expect(seatLeftMsg(null, 3, 2, 6)).toBe('Seat 4 left. 2 of 6 seated.');
-    expect(seatGoneMsg('Bo', 'ABCDE', 1)).toBe(guestGoneMsg('Bo', 'ABCDE'));
-    expect(seatGoneMsg(null, 'ABCDE', 2)).toBe(guestGoneMsg('Seat 3', 'ABCDE'));
+    expect(FIDICE_SHELL.copy.seatLeft?.(null, 3, 2, 6)).toBe('Seat 4 left. 2 of 6 seated.');
     expect(FIDICE_SHELL.copy.notEnough?.(1, 1)).toBe(NEED_PLAYERS_MSG);
     expect(NEED_PLAYERS_MSG).toBe('Need at least 2 players.');
     expect(FIDICE_SHELL.copy.roomFull).toBe(TABLE_FULL_MSG);

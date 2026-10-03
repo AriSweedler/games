@@ -149,7 +149,6 @@ export {
   DEFAULT_NAME,
   LEAVE_LOCAL_MSG,
   LEAVE_ONLINE_MSG,
-  hostRoomMsg,
   parseMatchLength,
   parseVariant,
 } from '../shellConfig.ts';

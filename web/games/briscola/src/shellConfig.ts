@@ -2,7 +2,7 @@
 // (docs/design/briscola.md §5.8; docs/design/shared-shell.md §4.3): the id the table codes are made
 // for, the default host name, the tabs, the two stored modes, the copy the shared flows paint (the
 // two leave confirms, the guest's status once the host has answered, the sessions' three status
-// strings the shell paints before a session speaks, and the N-seat forms below), the option codec
+// strings the shell paints before a session speaks, and the shell's N-seat forms, dealt), the option codec
 // (`GameOptions`, the room's six terms: the host save's own fields, the welcome frame's, the resume
 // offer's; the home screen sets the seat count alone, the rest are the fixed `TABLE_TERMS`, and the
 // whole is normalised as the engine normalises a room), the engine adapters, the frame builders,
@@ -17,17 +17,11 @@
 // then every guest seat in order) through `seatPlayers`, `renameGuest` renames the seat a rejoin
 // names, and `frames.lobby` takes the table and the receiver's seat, which protocol.ts puts on the
 // wire past two seats and leaves off at two (PR-4's corpus). The welcome is the session codec's
-// (net/host.ts), not a frame the shell sends. Every N-seat copy form is the shell's two-seat
-// string at a table of two, so the two-seat pins and specs read what they read.
-import {
-  OPPONENT_LEFT_MSG,
-  WAITING_FOR_GUEST_MSG,
-  guestGoneMsg,
-  joinedMsg,
-  type Player,
-  type ShellGameData,
-  INITIAL_CUE_MEMORY,
-} from '../../../shared/ui/shell.ts';
+// (net/host.ts), not a frame the shell sends. The N-seat copy is web/shared/ui/seatCopy.ts's
+// (shell-hoist.md §4 B): the shell's two-seat string at a table of two, so the two-seat pins and
+// specs read what they read.
+import { parseSeatCount, seatedCopy } from '../../../shared/ui/seatCopy.ts';
+import { INITIAL_CUE_MEMORY, type Player, type ShellGameData } from '../../../shared/ui/shell.ts';
 import { connectingMsg } from '../../../shared/net/guest.ts';
 import { OPENING_MSG, WAITING_MSG, handoffMsg } from '../../../shared/net/host.ts';
 import {
@@ -78,50 +72,7 @@ export const LOCAL_NAMES: ReadonlyArray<string> = ['Ari', 'Lavi', 'Sandro', 'Gra
 export const LEAVE_LOCAL_MSG = 'End this game? The score will be cleared.';
 export const LEAVE_ONLINE_MSG = 'Leave this game? The table will close.';
 
-// ---- the N-seat copy (n-seat-sessions.md §7; the two-seat string at a table of two) ------------
-
-/** "Seat 3": a seat nobody has named yet, numbered as the waiting room lists it (the host is Seat 1). */
-export const emptySeatName = (seat: number): string => `Seat ${String(seat + 1)}`;
-/**
- * `#guestWaitStatus` once the host's welcome or lobby frame names the room (tools/games.ts SHELL
- * `hostAnswered` pins the two-seat shape); past two seats the count rides in front.
- */
-export const hostRoomMsg = (hostName: string, seated = 2, capacity = 2): string =>
-  capacity === 2
-    ? `Connected — waiting for ${hostName} to deal`
-    : `Connected — ${String(seated)} of ${String(capacity)} seated · waiting for ${hostName} to deal`;
-/** `#hostWaitStatus` while the room waits with no hand dealt (`HostOptions.waiting`): the session's line at two, the count past. */
-export const waitingMsg = (capacity: number): string =>
-  capacity === 2 ? WAITING_MSG : `Waiting for ${String(capacity - 1)} players to join`;
-/** `#hostWaitStatus` after a join: the shell's line once the table is full, else how many are still to come. */
-export const joinedText = (name: string, remaining: number): string =>
-  remaining === 0 ? joinedMsg(name) : `${name} joined! Waiting for ${String(remaining)} more.`;
-/** A seat that left the lobby: the shell's line at two seats; past two, who left and the count. */
-export const seatLeftMsg = (
-  name: string | null,
-  seat: number,
-  seated: number,
-  capacity: number,
-): string =>
-  capacity === 2
-    ? OPPONENT_LEFT_MSG
-    : `${name ?? emptySeatName(seat)} left. ${String(seated)} of ${String(capacity)} seated.`;
-/** A seat's channel down mid-game: the shell's toast, the seat's player named (or its number, for a seat never named). */
-export const seatGoneMsg = (name: string | null, code: string | null, seat: number): string =>
-  guestGoneMsg(name ?? emptySeatName(seat), code);
-/** `#startGameBtn` below a full table: the shell's line at two seats, else the count. */
-export const notEnoughMsg = (seated: number, min: number): string =>
-  min === 2
-    ? WAITING_FOR_GUEST_MSG
-    : `${String(seated)} of ${String(min)} seated — waiting for ${String(min - seated)} more.`;
-/** A spare peer at a full table; the `full` frame carries no count, so the line names none. */
-export const TABLE_FULL_MSG = 'That table is full.';
-
 // ---- the options and the seats -----------------------------------------------------------------
-
-/** A seat count from a select's raw value (`"3"`), else `fallback`. */
-export const parseSeatCount = (raw: string | undefined, fallback: SeatCount): SeatCount =>
-  SEAT_COUNTS.find((n) => String(n) === raw) ?? fallback;
 
 /**
  * The room's terms off the raw inputs (`Raw`): the seat count from the Online select or its
@@ -131,7 +82,10 @@ export const parseSeatCount = (raw: string | undefined, fallback: SeatCount): Se
  * normalises a room (E15, E16).
  */
 export const parseOpts = (raw: Raw, current: GameOptions): GameOptions =>
-  normaliseOptions(parseSeatCount(raw.players ?? raw.localPlayers, current.seatCount), TABLE_TERMS);
+  normaliseOptions(
+    parseSeatCount(SEAT_COUNTS, raw.players ?? raw.localPlayers, current.seatCount),
+    TABLE_TERMS,
+  );
 
 /** The six option fields alone off a record that carries them (a welcome frame, a save, an offer), normalised. */
 export const pickOpts = (from: GameOptions): GameOptions =>
@@ -174,18 +128,12 @@ export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
     },
   },
   copy: {
+    ...seatedCopy({ verb: 'deal', waitingAtTwo: WAITING_MSG }),
     leaveLocal: LEAVE_LOCAL_MSG,
     leaveOnline: LEAVE_ONLINE_MSG,
     opening: OPENING_MSG,
     connecting: connectingMsg,
     handoff: handoffMsg,
-    hostRoom: (hostName, _opts, seated, capacity) => hostRoomMsg(hostName, seated, capacity),
-    waiting: waitingMsg,
-    joined: (name, _names, remaining) => joinedText(name, remaining),
-    seatLeft: seatLeftMsg,
-    guestGone: seatGoneMsg,
-    roomFull: TABLE_FULL_MSG,
-    notEnough: notEnoughMsg,
   },
   /** Two, three or four at a table, fixed when the room opens (`opts.capacity`, n-seat-sessions.md D2) and started full (`fixed`). */
   seats: { min: 2, max: 4, fixed: true },

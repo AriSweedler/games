@@ -116,7 +116,8 @@ import {
   type IntentMode,
   type IntentSlot,
 } from '../protocol.ts';
-import { BRISCOLA_SHELL, emptySeatName, parseOpts, seatPlayers } from '../shellConfig.ts';
+import { emptySeatName } from '../../../../shared/ui/seatCopy.ts';
+import { BRISCOLA_SHELL, parseOpts, seatPlayers } from '../shellConfig.ts';
 import { DURATIONS, drawRunMs, drawSpan, durationsFor, freezeMsFor, stageMs } from './beat.ts';
 import { TEMPO_SCALE, variantOf, type Variant } from './variant.ts';
 import {
@@ -163,19 +164,10 @@ export {
   LEAVE_LOCAL_MSG,
   LEAVE_ONLINE_MSG,
   ONE_GAME,
-  TABLE_FULL_MSG,
   TABLE_TERMS,
-  emptySeatName,
-  hostRoomMsg,
-  joinedText,
-  notEnoughMsg,
   parseOpts,
-  parseSeatCount,
   pickOpts,
-  seatGoneMsg,
-  seatLeftMsg,
   seatPlayers,
-  waitingMsg,
 } from '../shellConfig.ts';
 // ui/home.ts paints the tabs and modes from the lists storage.ts decodes; ui/ may not import storage.ts.
 export {

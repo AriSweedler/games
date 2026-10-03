@@ -1,47 +1,27 @@
 import { describe, expect, test } from 'vitest';
 
 import { mulberry32 } from '../../../shared/lib/rng.ts';
-import { OPPONENT_LEFT_MSG, WAITING_FOR_GUEST_MSG } from '../../../shared/ui/shell.ts';
 import { WAITING_MSG } from '../../../shared/net/host.ts';
 import { createState, viewFor } from './engine/view.ts';
-import {
-  UNO_SHELL,
-  emptySeatName,
-  hostRoomMsg,
-  joinedText,
-  notEnoughMsg,
-  parseOpts,
-  parseSeatCount,
-  seatGoneMsg,
-  seatLeftMsg,
-  seatNames,
-  waitingMsg,
-} from './shellConfig.ts';
+import { UNO_SHELL, parseOpts, seatNames } from './shellConfig.ts';
 
-describe('the N-seat copy: the shell’s string at two seats', () => {
-  test('each form at two and past two', () => {
-    expect(hostRoomMsg('Ann')).toBe('Connected — waiting for Ann to deal');
-    expect(hostRoomMsg('Ann', 2, 4)).toBe('Connected — 2 of 4 seated · waiting for Ann to deal');
-    expect(waitingMsg(2)).toBe(WAITING_MSG);
-    expect(waitingMsg(4)).toBe('Waiting for 3 players to join');
-    expect(joinedText('Bob', 1)).toBe('Bob joined! Waiting for 1 more.');
-    expect(joinedText('Bob', 0)).toContain('Bob joined!');
-    expect(seatLeftMsg('Bob', 1, 1, 2)).toBe(OPPONENT_LEFT_MSG);
-    expect(seatLeftMsg(null, 2, 2, 3)).toBe('Seat 3 left. 2 of 3 seated.');
-    expect(seatGoneMsg(null, 'KQZM', 1)).toContain(emptySeatName(1));
-    expect(notEnoughMsg(1, 2)).toBe(WAITING_FOR_GUEST_MSG);
-    expect(notEnoughMsg(2, 3)).toBe('2 of 3 seated — waiting for 1 more.');
-    expect(UNO_SHELL.copy.hostRoom('Ann', { seatCount: 3 }, 2, 3)).toBe(hostRoomMsg('Ann', 2, 3));
-    expect(UNO_SHELL.copy.joined?.('Bob', ['Bob'], 0)).toBe(joinedText('Bob', 0));
+describe('the N-seat copy is the shell’s (web/shared/ui/seatCopy.ts), dealt', () => {
+  test('the forms are wired in, the verb is deal', () => {
+    expect(UNO_SHELL.copy.hostRoom('Ann', { seatCount: 2 }, 2, 2)).toBe(
+      'Connected — waiting for Ann to deal',
+    );
+    expect(UNO_SHELL.copy.hostRoom('Ann', { seatCount: 4 }, 2, 4)).toBe(
+      'Connected — 2 of 4 seated · waiting for Ann to deal',
+    );
+    expect(UNO_SHELL.copy.waiting?.(2)).toBe(WAITING_MSG);
+    expect(UNO_SHELL.copy.joined?.('Bob', ['Bob'], 1)).toBe('Bob joined! Waiting for 1 more.');
   });
 });
 
 describe('the options and the seats', () => {
-  test('a count off either select, else the current one', () => {
-    expect(parseSeatCount('3', 2)).toBe(3);
-    expect(parseSeatCount('12', 2)).toBe(12);
-    expect(parseSeatCount('13', 2)).toBe(2);
-    expect(parseSeatCount(undefined, 4)).toBe(4);
+  test('a count off either stepper, else the current one', () => {
+    expect(parseOpts({ players: '12' }, { seatCount: 2 })).toEqual({ seatCount: 12 });
+    expect(parseOpts({ players: '13' }, { seatCount: 2 })).toEqual({ seatCount: 2 });
     expect(parseOpts({ localPlayers: '4' }, { seatCount: 2 })).toEqual({ seatCount: 4 });
     expect(parseOpts({}, { seatCount: 3 })).toEqual({ seatCount: 3 });
     expect(UNO_SHELL.opts.capacity?.({ seatCount: 3 })).toBe(3);
