@@ -207,6 +207,16 @@ Object.entries(VIEWPORTS).forEach(([name, vp]) => {
       await expect(page.locator('#p4NameInput')).toBeVisible();
       await expect(page.locator('#playersCount')).toHaveValue('4');
       await page.locator('#localPlayersCountDec').click();
+      await expect(page.locator('#localPlayersCount')).toHaveValue('3');
+      // The count survives a reload: the shell remembers the room's terms (shell-call-graph.md
+      // §4.6 `prefs.opts`), under the game's own key.
+      await page.reload();
+      await expect(page.locator('#homeScreen h1')).toHaveText('Briscola');
+      await expect(page.locator('#playersCount')).toHaveValue('3');
+      await page.locator('#playModeSwitch .mode-btn[data-mode="local"]').click();
+      await expect(page.locator('#localPlayersCount')).toHaveValue('3');
+      await expect(page.locator('#localPlayersCountNum')).toHaveText('3');
+      await expect(page.locator('#p3NameInput')).toBeVisible();
       await page.locator('#localPlayersCountDec').click();
       await expect(page.locator('#localPlayersCount')).toHaveValue('2');
       await expect(page.locator('#localPlayersCountDec')).toBeDisabled();

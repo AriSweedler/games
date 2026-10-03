@@ -233,8 +233,10 @@ describe('what the boot and the sessions read back', () => {
     expect(home.opts).toEqual({ seatCount: 4 });
     expect(home.extraNames).toEqual({ ...NO_EXTRA_NAMES, 4: 'Noa' });
     const applied = FLIP7.home.apply(initialApp, home);
-    expect(applied.shell.opts).toEqual({ seatCount: 4 });
     expect(applied.table.extraNames[4]).toBe('Noa');
+    // The seat count is the shell's (`prefs.opts`): `home/init` sets it, the game's apply leaves the shell alone.
+    expect(applied.shell).toBe(initialApp.shell);
+    expect(run(initialApp, { type: 'home/init', home }).app.shell.opts).toEqual({ seatCount: 4 });
     // The resume box is the shell's off the save: none saved, none offered.
     expect(run(initialApp, { type: 'home/init', home }).app.shell.resume).toBeNull();
     const started = run(initialApp, startThree, { type: 'curtain/reveal' });

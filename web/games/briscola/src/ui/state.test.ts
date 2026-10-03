@@ -268,7 +268,7 @@ describe('the initial app', () => {
       mirror: [null, null, null, null],
       budget: [null, null, null, null],
     });
-    expect(SHELL_INTENT_TYPES).toHaveLength(52);
+    expect(SHELL_INTENT_TYPES).toHaveLength(53);
     expect(EMPTY_SLOTS).toEqual([null, null, null]);
   });
 });

@@ -132,7 +132,6 @@ import {
   isSpeed,
   writeCardPack,
   writeLang,
-  writeOpts,
   writeSpeed,
   type CardPack,
   type Speed,
@@ -202,9 +201,8 @@ export type Raw = Readonly<{
 /** The seats beyond the shell's two: the third and fourth players (D1). */
 export type ExtraSeat = 2 | 3;
 
-/** What `initHome` reads beyond the shell's keys: the room options, the card pack, the language pack, the third and fourth names. */
+/** What `initHome` reads beyond the shell's keys: the card pack, the language pack, the speed, the third and fourth names (the room options are the shell's `prefs.opts`). */
 export type Home = Readonly<{
-  opts: GameOptions;
   cardPack: CardPack;
   lang: LanguagePackName;
   /** `briscola_speed`: the battle beat's speed. */
@@ -435,8 +433,6 @@ export type TableIntent =
   | Readonly<{ type: 'settle/elapsed' }>
   /** `#stock`, my awaiting slot or the felt tapped while my draw waits (§3.1 DRAW): my back flies and flips; dropped at any other moment. */
   | Readonly<{ type: 'draw/tap' }>
-  /** The seat count changed on the home screen: the raw values, parsed against the current room and remembered. */
-  | Readonly<{ type: 'opts/set'; raw: Raw }>
   /** `#p3NameInput` / `#p4NameInput` typed: remembered under its key. */
   | Readonly<{ type: 'pname/typed'; seat: ExtraSeat; value: string }>
   /** The hook's `cardPack(name)`: a pack that draws the Italian deck is shown from now on and remembered; anything else is ignored. */
@@ -470,9 +466,8 @@ export type ShellIntent = SharedShellIntent<Briscola>;
 
 export type TimerId = SharedTimerId<Briscola>;
 
-/** Briscola's own effects, handled by `runEffect` before the shared runner: the four preferences this page alone keeps. */
+/** Briscola's own effects, handled by `runEffect` before the shared runner: the four preferences this page alone keeps (the room options are the shell's `writeOpts`). */
 export type TableEffect =
-  | Readonly<{ type: 'writeOpts'; opts: GameOptions }>
   | Readonly<{ type: 'rememberPName'; seat: ExtraSeat; name: string }>
   | Readonly<{ type: 'writeCardPack'; pack: CardPack }>
   | Readonly<{ type: 'writeLang'; name: LanguagePackName }>
@@ -1065,10 +1060,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
       return settleElapsed(app, ctx);
     case 'draw/tap':
       return drawTap(app, ctx);
-    case 'opts/set': {
-      const opts = parseOpts(intent.raw, app.shell.opts);
-      return step(withShell(app, { opts }), { type: 'writeOpts', opts });
-    }
     case 'pname/typed':
       return step(
         withTable(app, { extraNames: { ...t.extraNames, [intent.seat]: intent.value } }),
@@ -1297,7 +1288,7 @@ export const BRISCOLA: ShellConfig<Briscola> = {
   home: {
     ...BRISCOLA_SHELL.home,
     apply: (app, home) => ({
-      shell: { ...app.shell, opts: home.opts },
+      shell: app.shell,
       table: {
         ...app.table,
         cardPack: home.cardPack,
@@ -1397,12 +1388,9 @@ const reduceInner = (app: App, intent: Intent, ctx: Context): Step => {
         seat: intent.seat ?? 1,
       });
   }
-  if (!isShellIntent(intent)) return tableIntent(app, intent, ctx);
-  const shell = reduceShell(app, intent, ctx, BRISCOLA);
-  // The room's options are remembered as the table opens.
-  return intent.type === 'host/click'
-    ? then(shell, (a) => step(a, { type: 'writeOpts', opts: a.shell.opts }))
-    : shell;
+  return isShellIntent(intent)
+    ? reduceShell(app, intent, ctx, BRISCOLA)
+    : tableIntent(app, intent, ctx);
 };
 
 /** Every intent, then the live intent mirror's sender over the result (§4.2). */
@@ -1445,9 +1433,6 @@ export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
     return;
   }
   switch (effect.type) {
-    case 'writeOpts':
-      writeOpts(deps.store, effect.opts);
-      return;
     case 'rememberPName':
       EXTRA_NAME_PREFS[effect.seat].write(deps.store, effect.name);
       return;

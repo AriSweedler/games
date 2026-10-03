@@ -111,7 +111,6 @@ import {
   DEFAULT_PLAY_MODE,
   EXTRA_NAME_PREFS,
   HOME_TABS,
-  writeOpts,
   type ExtraSeat,
   type HomeTab,
   type Opts,
@@ -191,9 +190,8 @@ export type Raw = Readonly<{
 export type ExtraMode = 'solo' | 'watch';
 export type Mode = PlayMode | ExtraMode;
 
-/** What `initHome` reads beyond the shell's keys: the host card's last terms and the third to sixth names. */
+/** What `initHome` reads beyond the shell's keys: the third to sixth names (the host card's last terms are the shell's `prefs.opts`). */
 export type Home = Readonly<{
-  opts: Opts;
   extraNames: Readonly<Record<ExtraSeat, string | null>>;
 }>;
 
@@ -374,8 +372,6 @@ export type TableIntent =
   | Readonly<{ type: 'bots/rename'; index: number; name: string }>
   | Readonly<{ type: 'bots/config'; choice: string }>
   | Readonly<{ type: 'watch/toggle'; on: boolean }>
-  /** The host card's selects changed: the raw values, parsed against the current room and remembered. */
-  | Readonly<{ type: 'opts/set'; raw: Raw }>
   /** `#p3NameInput`..`#p6NameInput` typed: remembered under its key. */
   | Readonly<{ type: 'pname/typed'; seat: ExtraSeat; value: string }>
   /** `#removeLocalBtn`: the seat's input goes and its key is forgotten (`#addLocalBtn` is a `pname/typed` of the empty string). */
@@ -419,7 +415,6 @@ export const TABLE_INTENT_TYPES = [
   'bots/rename',
   'bots/config',
   'watch/toggle',
-  'opts/set',
   'pname/typed',
   'pname/drop',
   'bot/step',
@@ -440,16 +435,13 @@ export type ShellIntent = SharedShellIntent<Fidice>;
 
 export type TimerId = SharedTimerId<Fidice>;
 
-/** Fidice's own effects, handled by `runEffect` before the shared runner: the two preferences this page alone keeps. */
+/** Fidice's own effects, handled by `runEffect` before the shared runner: the seat names this page alone keeps (the room's terms are the shell's `writeOpts`). */
 export type TableEffect =
-  | Readonly<{ type: 'writeOpts'; opts: Opts }>
   | Readonly<{ type: 'rememberPName'; seat: ExtraSeat; name: string }>
   | Readonly<{ type: 'forgetPName'; seat: ExtraSeat }>;
-export const TABLE_EFFECT_TYPES = [
-  'writeOpts',
-  'rememberPName',
-  'forgetPName',
-] as const satisfies ReadonlyArray<TableEffect['type']>;
+export const TABLE_EFFECT_TYPES = ['rememberPName', 'forgetPName'] as const satisfies ReadonlyArray<
+  TableEffect['type']
+>;
 
 export type Effect = SharedEffect<Fidice>;
 export type Step = SharedStep<Fidice>;
@@ -611,7 +603,7 @@ export const FIDICE: ShellConfig<Fidice> = {
   home: {
     ...FIDICE_SHELL.home,
     apply: (app, home) => ({
-      shell: { ...app.shell, opts: home.opts },
+      shell: app.shell,
       table: { ...app.table, extraNames: home.extraNames },
     }),
   },
@@ -1057,10 +1049,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
         : pure(app);
     case 'watch/toggle':
       return atWaitingRoom(app) ? roomTerms(app, { ...s.opts, watch: intent.on }) : pure(app);
-    case 'opts/set': {
-      const opts = parseOpts(intent.raw, s.opts);
-      return step(withShell(app, { opts }), { type: 'writeOpts', opts });
-    }
     case 'pname/typed':
       return step(
         withTable(app, { extraNames: { ...t.extraNames, [intent.seat]: intent.value } }),
@@ -1083,12 +1071,9 @@ const reduceInner = (app: App, intent: Intent, ctx: Context): Step => {
   if (intent.type === 'host/deal') return hostDeal(app, ctx);
   // The handoff is a two-seat room (plan §7 D8): offered for two humans and no computer.
   if (intent.type === 'handoff/click' && !handoffable(app)) return pure(app);
-  if (!isShellIntent(intent)) return tableIntent(app, intent, ctx);
-  const shell = reduceShell(app, intent, ctx, FIDICE);
-  // The room's terms are remembered as the table opens.
-  return intent.type === 'host/click'
-    ? then(shell, (a) => step(a, { type: 'writeOpts', opts: a.shell.opts }))
-    : shell;
+  return isShellIntent(intent)
+    ? reduceShell(app, intent, ctx, FIDICE)
+    : tableIntent(app, intent, ctx);
 };
 
 /** Every intent, then the game loop's timers over the result (the legacy `commit` → `schedule`). */
@@ -1128,9 +1113,6 @@ export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
     return;
   }
   switch (effect.type) {
-    case 'writeOpts':
-      writeOpts(deps.store, effect.opts);
-      return;
     case 'rememberPName':
       EXTRA_NAME_PREFS[effect.seat].write(deps.store, effect.name);
       return;

@@ -58,7 +58,6 @@ import {
   EXTRA_NAME_PREFS,
   EXTRA_SEATS,
   HOME_TABS,
-  writeOpts,
   type HomeTab,
   type Opts,
   type PlayMode,
@@ -84,8 +83,8 @@ export type Raw = Readonly<{
 export type ExtraNames = ReadonlyArray<string | null>;
 export const NO_EXTRA_NAMES: ExtraNames = EXTRA_SEATS.map(() => null);
 
-/** What `initHome` reads beyond the shell's keys: the remembered seat count and the third to twelfth names. */
-export type Home = Readonly<{ opts: Opts; extraNames: ExtraNames }>;
+/** What `initHome` reads beyond the shell's keys: the third to twelfth names (the seat count is the shell's `prefs.opts`). */
+export type Home = Readonly<{ extraNames: ExtraNames }>;
 
 export type Table = Readonly<{
   /** The pass-and-play seat the curtain names, or null (the shell writes it, `local.viewer`). */
@@ -98,7 +97,6 @@ export type Table = Readonly<{
 
 export type TableIntent =
   | Readonly<{ type: 'act'; action: Action }>
-  | Readonly<{ type: 'opts/set'; raw: Raw }>
   | Readonly<{ type: 'pname/typed'; seat: number; value: string }>
   | Readonly<{ type: 'rules/open' }>
   | Readonly<{ type: 'rules/close' }>
@@ -106,9 +104,7 @@ export type TableIntent =
   | Readonly<{ type: 'history/close' }>
   | Readonly<{ type: 'escape' }>;
 
-export type TableEffect =
-  | Readonly<{ type: 'writeOpts'; opts: Opts }>
-  | Readonly<{ type: 'rememberPName'; seat: number; name: string }>;
+export type TableEffect = Readonly<{ type: 'rememberPName'; seat: number; name: string }>;
 
 /** UNO's types for the shared shell: two to four seats, the seat count as the room's terms. */
 export type Uno = Readonly<{
@@ -222,7 +218,7 @@ export const UNO: ShellConfig<Uno> = {
   home: {
     ...UNO_SHELL.home,
     apply: (app, home) => ({
-      shell: { ...app.shell, opts: home.opts },
+      shell: app.shell,
       table: { ...app.table, extraNames: home.extraNames },
     }),
   },
@@ -270,10 +266,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
   switch (intent.type) {
     case 'act':
       return then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
-    case 'opts/set': {
-      const opts = parseOpts(intent.raw, app.shell.opts);
-      return step(withShell(app, { opts }), { type: 'writeOpts', opts });
-    }
     case 'pname/typed':
       return step(
         withTable(app, {
@@ -328,11 +320,7 @@ const localStart = (
 export const reduce = (app: App, intent: Intent, ctx: Ctx): Step => {
   if (intent.type === 'local/click') return localStart(app, intent, ctx);
   if (intent.type === 'handoff/click' && seatCountOf(app) !== 2) return pure(app);
-  if (!isShellIntent(intent)) return tableIntent(app, intent, ctx);
-  const shell = reduceShell(app, intent, ctx, UNO);
-  return intent.type === 'host/click'
-    ? then(shell, (a) => step(a, { type: 'writeOpts', opts: a.shell.opts }))
-    : shell;
+  return isShellIntent(intent) ? reduceShell(app, intent, ctx, UNO) : tableIntent(app, intent, ctx);
 };
 
 /** The resume box `initHome` shows, or null (a finished game is not offered). */
@@ -350,20 +338,13 @@ export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(ap
 
 export type EffectDeps = ShellEffectDeps<Uno>;
 
-/** One effect against the adapters: the seat count's write, a seat name's, then the shell's runner. */
+/** One effect against the adapters: a seat name's write, then the shell's runner (the seat count's is the shell's `writeOpts`). */
 export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
   if (isShellEffect(effect)) {
     runShellEffect(app.shell, effect, deps, UNO);
     return;
   }
-  switch (effect.type) {
-    case 'writeOpts':
-      writeOpts(deps.store, effect.opts);
-      return;
-    case 'rememberPName':
-      EXTRA_NAME_PREFS[effect.seat - 2]?.write(deps.store, effect.name);
-      return;
-  }
+  EXTRA_NAME_PREFS[effect.seat - 2]?.write(deps.store, effect.name);
 };
 
 /** The view the table paints: my seat's, or null at home. */

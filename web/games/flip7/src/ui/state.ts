@@ -61,7 +61,6 @@ import {
   EXTRA_NAME_PREFS,
   EXTRA_SEATS,
   HOME_TABS,
-  writeOpts,
   type ExtraSeat,
   type HomeTab,
   type Opts,
@@ -94,8 +93,8 @@ export const NO_EXTRA_NAMES: ExtraNames = {
   11: null,
 };
 
-/** What `initHome` reads beyond the shell's keys: the seat count and the third to sixth names. */
-export type Home = Readonly<{ opts: Opts; extraNames: ExtraNames }>;
+/** What `initHome` reads beyond the shell's keys: the third to sixth names (the seat count is the shell's `prefs.opts`). */
+export type Home = Readonly<{ extraNames: ExtraNames }>;
 
 /**
  * What just happened to a seat, held on this phone until its Continue (the owner, 2026-10-02: "When
@@ -128,7 +127,6 @@ export type TableIntent =
   | Readonly<{ type: 'give/click'; seat: number }>
   | Readonly<{ type: 'nextRound/click' }>
   | Readonly<{ type: 'replay/click' }>
-  | Readonly<{ type: 'opts/set'; raw: Raw }>
   | Readonly<{ type: 'continue/click' }>
   | Readonly<{ type: 'pname/typed'; seat: ExtraSeat; value: string }>
   | Readonly<{ type: 'rules/open' }>
@@ -137,9 +135,7 @@ export type TableIntent =
   | Readonly<{ type: 'history/close' }>
   | Readonly<{ type: 'escape' }>;
 
-export type TableEffect =
-  | Readonly<{ type: 'writeOpts'; opts: Opts }>
-  | Readonly<{ type: 'rememberPName'; seat: ExtraSeat; name: string }>;
+export type TableEffect = Readonly<{ type: 'rememberPName'; seat: ExtraSeat; name: string }>;
 
 /** Flip 7's types for the shared shell (`ShellTypes`). */
 export type Flip7 = Readonly<{
@@ -375,10 +371,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step => {
       return act(app, { type: 'nextRound' }, ctx);
     case 'replay/click':
       return replay(app, ctx);
-    case 'opts/set': {
-      const opts = parseOpts(intent.raw, app.shell.opts);
-      return step(withShell(app, { opts }), { type: 'writeOpts', opts });
-    }
     case 'continue/click':
       return pure(withTable(app, { pause: null }));
     case 'pname/typed':
@@ -415,7 +407,7 @@ export const FLIP7: ShellConfig<Flip7> = {
   home: {
     ...FLIP7_SHELL.home,
     apply: (app, home) => ({
-      shell: { ...app.shell, opts: home.opts },
+      shell: app.shell,
       table: { ...app.table, extraNames: home.extraNames },
     }),
   },
@@ -433,11 +425,9 @@ export const reduce = (app: App, intent: Intent, ctx: Ctx): Step => {
     app.shell.game.seats.length !== 2
   )
     return pure(app);
-  if (!isShellIntent(intent)) return tableIntent(app, intent, ctx);
-  const shell = reduceShell(app, intent, ctx, FLIP7);
-  return intent.type === 'host/click'
-    ? then(shell, (a) => step(a, { type: 'writeOpts', opts: a.shell.opts }))
-    : shell;
+  return isShellIntent(intent)
+    ? reduceShell(app, intent, ctx, FLIP7)
+    : tableIntent(app, intent, ctx);
 };
 
 /** My seat may act on the view now (the paint's buttons). */
@@ -462,12 +452,5 @@ export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
     runShellEffect(app.shell, effect, deps, FLIP7);
     return;
   }
-  switch (effect.type) {
-    case 'writeOpts':
-      writeOpts(deps.store, effect.opts);
-      return;
-    case 'rememberPName':
-      EXTRA_NAME_PREFS[effect.seat].write(deps.store, effect.name);
-      return;
-  }
+  EXTRA_NAME_PREFS[effect.seat].write(deps.store, effect.name);
 };

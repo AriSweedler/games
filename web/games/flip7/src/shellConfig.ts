@@ -31,6 +31,7 @@ import {
   HOME_TABS,
   SHELL_STORE,
   readOpts,
+  writeOpts,
   type ExtraSeat,
   type Opts,
 } from './storage.ts';
@@ -107,7 +108,6 @@ export const FLIP7_SHELL: ShellGameData<Flip7> = {
   cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   home: {
     read: (store) => ({
-      opts: readOpts(store),
       extraNames: Object.fromEntries(
         EXTRA_SEATS.map((seat) => {
           const name = EXTRA_NAME_PREFS[seat].read(store);
@@ -116,5 +116,6 @@ export const FLIP7_SHELL: ShellGameData<Flip7> = {
       ) as Record<ExtraSeat, string | null>,
     }),
   },
-  prefs: SHELL_STORE,
+  // The seat count is the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key.
+  prefs: { ...SHELL_STORE, opts: { read: readOpts, write: writeOpts } },
 };

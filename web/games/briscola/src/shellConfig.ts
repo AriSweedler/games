@@ -53,6 +53,7 @@ import {
   readOpts,
   readP3Name,
   readP4Name,
+  writeOpts,
 } from './storage.ts';
 import { CUES } from './ui/sound.ts';
 import type { Briscola, Raw } from './ui/state.ts';
@@ -178,7 +179,6 @@ export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
       const p4 = readP4Name(store);
       const speed = readSpeed(store);
       return {
-        opts: readOpts(store),
         cardPack: pack.ok ? pack.value : DEFAULT_CARD_PACK,
         lang: LANG_PREF.orDefault(store),
         speed: speed.ok ? speed.value : DEFAULT_SPEED,
@@ -187,5 +187,6 @@ export const BRISCOLA_SHELL: ShellGameData<Briscola> = {
       };
     },
   },
-  prefs: SHELL_STORE,
+  // The room options are the shell's remembered terms (`opts/set`, `writeOpts`), under this game's `players` key.
+  prefs: { ...SHELL_STORE, opts: { read: readOpts, write: writeOpts } },
 };

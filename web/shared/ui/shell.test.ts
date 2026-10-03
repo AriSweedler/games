@@ -174,6 +174,7 @@ const KEYS = {
   sound: 'fake_sound',
   recentGames: 'fake_recentGames',
   colour: 'fake_colour',
+  level: 'fake_level',
 } as const;
 const TABS = ['play', 'rules', 'about'] as const;
 
@@ -393,6 +394,7 @@ const home: Snapshot = {
   flipTable: false,
   save: null,
   recentGames: [],
+  opts: null,
   colour: 'green',
 };
 
@@ -1084,9 +1086,10 @@ describe('the initial shell and the partitions', () => {
     ]);
   });
 
-  test('the 52 shell intents and 31 shell effects are listed once; the guards partition a game`s unions', () => {
-    expect(SHELL_INTENT_TYPES).toHaveLength(52);
-    expect(new Set(SHELL_INTENT_TYPES).size).toBe(52);
+  test('the 53 shell intents and 32 shell effects are listed once; the guards partition a game`s unions', () => {
+    expect(SHELL_INTENT_TYPES).toHaveLength(53);
+    expect(new Set(SHELL_INTENT_TYPES).size).toBe(53);
+    expect(SHELL_INTENT_TYPES).toContain('opts/set');
     expect(SHELL_INTENT_TYPES).toContain('flip/set');
     expect(SHELL_INTENT_TYPES).toContain('name/rename');
     expect(SHELL_INTENT_TYPES).toContain('viewport/portrait');
@@ -1098,8 +1101,9 @@ describe('the initial shell and the partitions', () => {
     expect(SHELL_INTENT_TYPES).toContain('curtain/reveal');
     expect(SHELL_INTENT_TYPES).toContain('position/load');
     expect(SHELL_INTENT_TYPES).toContain('persist');
-    expect(SHELL_EFFECT_TYPES).toHaveLength(31);
-    expect(new Set(SHELL_EFFECT_TYPES).size).toBe(31);
+    expect(SHELL_EFFECT_TYPES).toHaveLength(32);
+    expect(new Set(SHELL_EFFECT_TYPES).size).toBe(32);
+    expect(SHELL_EFFECT_TYPES).toContain('writeOpts');
     expect(SHELL_EFFECT_TYPES).toContain('writeFlip');
     expect(SHELL_EFFECT_TYPES).toContain('orientationLock');
     expect(SHELL_EFFECT_TYPES).toContain('phrases');
@@ -3013,6 +3017,7 @@ describe('storage and what the sessions read back', () => {
       flipTable: false,
       save: { role: 'guest', code: 'KQZM', myName: 'Jeff' },
       recentGames: [RECORD],
+      opts: null,
       colour: 'red',
     });
     store.set(KEYS.homeTab, 'settings');
@@ -4061,5 +4066,85 @@ describe('the config`s defaults (shell-call-graph.md §4.3): what every game but
       { type: 'persist' },
       { type: 'scrollTop' },
     ]);
+  });
+});
+
+describe("the room's terms remembered by the shell (shell-call-graph.md §4.6): `opts/set`, `writeOpts`, `prefs.opts`", () => {
+  /** FAKE whose prefs hold the terms: the level under its own key, read to the default when missing or not a number. */
+  const REMEMBERING: ShellConfig<Fake> = {
+    ...FAKE,
+    prefs: {
+      ...FAKE.prefs,
+      opts: {
+        read: (store) => {
+          const level = Number(store.get(KEYS.level));
+          return Number.isInteger(level) && level > 0 ? { level } : FAKE.opts.initial;
+        },
+        write: (store, opts) => store.set(KEYS.level, String(opts.level)),
+      },
+    },
+  };
+  const remembering = (app: App, ...intents: ReadonlyArray<FakeIntent>): FakeStep =>
+    runIn(ctx, REMEMBERING, app, ...intents);
+
+  test('opts/set parses the raw values onto the shell`s terms; the write follows for a game whose prefs hold them, nothing for one that forgets', () => {
+    expect(remembering(initialApp, { type: 'opts/set', raw: { level: '4' } })).toEqual({
+      app: withShell(initialApp, { opts: { level: 4 } }),
+      effects: [{ type: 'writeOpts', opts: { level: 4 } }],
+    });
+    // A missing value keeps the current term (the game's `parse` rule), still remembered.
+    expect(remembering(initialApp, { type: 'opts/set', raw: { level: '' } })).toEqual({
+      app: initialApp,
+      effects: [{ type: 'writeOpts', opts: { level: 1 } }],
+    });
+    expect(run(initialApp, { type: 'opts/set', raw: { level: '4' } })).toEqual({
+      app: withShell(initialApp, { opts: { level: 4 } }),
+      effects: [],
+    });
+  });
+
+  test('host/click and local/click end with the write of the terms they set, after their own effects; FAKE`s end as they did', () => {
+    const hosted = remembering(initialApp, { type: 'host/click', name: 'Ann', level: '3' });
+    expect(hosted.effects.at(-1)).toEqual({ type: 'writeOpts', opts: { level: 3 } });
+    expect(kinds(hosted.effects).slice(0, -1)).toEqual(
+      kinds(run(initialApp, { type: 'host/click', name: 'Ann', level: '3' }).effects),
+    );
+    const dealt = remembering(initialApp, {
+      type: 'local/click',
+      p1: 'Ann',
+      p2: 'Bob',
+      level: '2',
+    });
+    expect(dealt.effects.at(-1)).toEqual({ type: 'writeOpts', opts: { level: 2 } });
+    expect(kinds(dealt.effects).slice(0, -1)).toEqual(
+      kinds(run(initialApp, { type: 'local/click', p1: 'Ann', p2: 'Bob', level: '2' }).effects),
+    );
+    expect(
+      kinds(run(initialApp, { type: 'host/click', name: 'Ann', level: '3' }).effects),
+    ).not.toContain('writeOpts');
+  });
+
+  test('readHome reads the terms through the pref (its default when the key is missing), null without one; home/init applies them and keeps the current ones at null', () => {
+    const store: Store = new Map();
+    expect(readHome(store, REMEMBERING).opts).toEqual({ level: 1 });
+    store.set(KEYS.level, '5');
+    expect(readHome(store, REMEMBERING).opts).toEqual({ level: 5 });
+    expect(readHome(store, FAKE).opts).toBeNull();
+    const at7 = withShell(initialApp, { opts: { level: 7 } });
+    expect(
+      remembering(at7, { type: 'home/init', home: { ...home, opts: { level: 5 } } }).app.shell.opts,
+    ).toEqual({
+      level: 5,
+    });
+    expect(run(at7, { type: 'home/init', home }).app.shell.opts).toEqual({ level: 7 });
+  });
+
+  test('the writeOpts effect writes through the pref; without one it is a no-op', () => {
+    const store: Store = new Map();
+    const deps = { store } as unknown as ShellEffectDeps<Fake>;
+    runShellEffect(initialApp.shell, { type: 'writeOpts', opts: { level: 6 } }, deps, REMEMBERING);
+    expect(store.get(KEYS.level)).toBe('6');
+    runShellEffect(initialApp.shell, { type: 'writeOpts', opts: { level: 2 } }, deps, FAKE);
+    expect(store.get(KEYS.level)).toBe('6');
   });
 });

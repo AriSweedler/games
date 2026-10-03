@@ -446,6 +446,7 @@ const HOME: HomeSnapshot<Fake> = {
   flipTable: false,
   save: null,
   recentGames: [],
+  opts: null,
   extra: 'x',
 };
 const VIEW: View = { seat: 1 };

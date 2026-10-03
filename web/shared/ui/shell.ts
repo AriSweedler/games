@@ -217,6 +217,8 @@ export type HomeSnapshot<G extends ShellTypes> = Readonly<{
   save: Save<G> | null;
   /** The finished games this device remembers, newest first (web/shared/lib/recentGames.ts). */
   recentGames: ReadonlyArray<RecentGame>;
+  /** The room's terms as remembered (`cfg.prefs.opts`); null for a game that forgets them (gin, hive), whose shell keeps its current ones. */
+  opts: G['Opts'] | null;
 }> &
   G['Home'];
 
@@ -399,6 +401,8 @@ export type ShellIntent<G extends ShellTypes> =
   | Readonly<{ type: 'rules/show'; rule: string }>
   /** `setPlayMode(mode)`: decoded by `cfg.modes.parse` (`local`, else `online`; gin's `sandbox` while unlocked). */
   | Readonly<{ type: 'mode/set'; mode: string }>
+  /** An option control changed (a seat-count stepper, a select): the raw values parsed by `cfg.opts.parse` onto the shell's terms, and remembered through `cfg.prefs.opts` when the game keeps them. */
+  | Readonly<{ type: 'opts/set'; raw: G['Raw'] }>
   /** `#hostBtn`: the raw name and the raw option values (`G['Raw']`), parsed by `cfg.opts.parse`. */
   | (Readonly<{ type: 'host/click'; name: string }> & G['Raw'])
   /** `#joinBtn`: the raw input values. */
@@ -524,6 +528,7 @@ export const SHELL_INTENT_TYPES = [
   'tab/set',
   'rules/show',
   'mode/set',
+  'opts/set',
   'host/click',
   'join/click',
   'local/click',
@@ -593,6 +598,8 @@ export type ShellEffect<G extends ShellTypes> =
   | Readonly<{ type: 'writeSoundFont'; font: SoundFontName }>
   /** The far seat's flip into the game's `flipTable` key (`on`/`off`). */
   | Readonly<{ type: 'writeFlip'; on: boolean }>
+  /** The room's terms through `cfg.prefs.opts` (`opts/set`, and after `host/click`/`local/click`); emitted only for a game whose prefs hold them. */
+  | Readonly<{ type: 'writeOpts'; opts: G['Opts'] }>
   /**
    * A game just ended on this device (the owner, 2026-09-25: "after a game is finished (either
    * online or pass-and-play) the datetime & score should be recorded, including the victor"):
@@ -670,6 +677,7 @@ export const SHELL_EFFECT_TYPES = [
   'writePlayMode',
   'writeSoundFont',
   'writeFlip',
+  'writeOpts',
   'recordGame',
   'revealRule',
   'toast',
@@ -742,6 +750,16 @@ export type Pref<St, T> = Readonly<{
   write: (store: St, value: T) => unknown;
 }>;
 
+/**
+ * The room's terms over the game's store (`ShellPrefs.opts`): `read` fills the game's defaults
+ * where a key is missing or unreadable (so `readHome` never sees a failure), `write` stores every
+ * term under its own key (a game's `writeOpts` as it was).
+ */
+export type OptsPref<St, T> = Readonly<{
+  read: (store: St) => T;
+  write: (store: St, opts: T) => unknown;
+}>;
+
 /** The finished games over the game's store (prefs.ts `RecentGamesPref` fits): the list or [], and one record put first. */
 export type RecentGamesPref<St> = Readonly<{
   read: (store: St) => ReadonlyArray<RecentGame>;
@@ -760,6 +778,8 @@ export type ShellPrefs<G extends ShellTypes> = Readonly<{
   /** The far seat's flip (prefs.ts `FLIP_STATES`): `readHome` reads it as a boolean, `writeFlip` writes it. */
   flipTable: Pref<G['Store'], FlipState>;
   recentGames: RecentGamesPref<G['Store']>;
+  /** The room's terms remembered across reloads (the seat-count steppers, backgammon's two selects); absent, the game forgets them (gin, hive). */
+  opts?: OptsPref<G['Store'], G['Opts']>;
   save: Readonly<{
     readSave: (store: G['Store']) => Result<Save<G>, unknown>;
     writeSave: (store: G['Store'], save: Save<G>) => unknown;
@@ -2095,6 +2115,16 @@ const setHomeTab = <G extends ShellTypes>(
 };
 
 /**
+ * The room's terms remembered after a step that set them (`opts/set`, `host/click`,
+ * `local/click`): the `writeOpts` effect after the step's own, for a game whose prefs hold the
+ * terms; a game without the pref (gin, hive) gets the step as it was.
+ */
+const rememberOpts = <G extends ShellTypes>(s: Step<G>, cfg: ShellConfig<G>): Step<G> =>
+  cfg.prefs.opts === undefined
+    ? s
+    : andThen(s, (a) => step(a, { type: 'writeOpts', opts: a.shell.opts }));
+
+/**
  * `initHome()` over a storage snapshot: the saved names, or the game's defaults where none is
  * saved (`localNamesOf`, marked `default` so the page clears them on the first tap), go into the
  * name inputs (effects, so the paint never fights the player's typing; the shell's state keeps
@@ -2121,6 +2151,7 @@ const initHome = <G extends ShellTypes>(
               soundFont: home.soundFont,
               flipForFar: home.flipTable,
               recentGames: home.recentGames,
+              opts: home.opts ?? a.shell.opts,
             }),
             home,
           ),
@@ -2342,20 +2373,25 @@ export const reduceShell = <G extends ShellTypes>(
           : [{ type: 'writePlayMode', mode: parsed.stored } as const]),
       );
     }
+    case 'opts/set':
+      return rememberOpts(pure(withShell(app, { opts: cfg.opts.parse(intent.raw, s.opts) })), cfg);
     case 'host/click':
-      return startHost(
-        withSeats(
-          withShell(app, {
-            myName: nameOr(intent.name, cfg.names.default),
-            opts: cfg.opts.parse(intent, s.opts),
-            game: null,
-            view: null,
-          }),
-          // A fresh room: no seat named (`startHost` opens the capacity the terms name).
-          [],
+      return rememberOpts(
+        startHost(
+          withSeats(
+            withShell(app, {
+              myName: nameOr(intent.name, cfg.names.default),
+              opts: cfg.opts.parse(intent, s.opts),
+              game: null,
+              view: null,
+            }),
+            // A fresh room: no seat named (`startHost` opens the capacity the terms name).
+            [],
+          ),
+          null,
+          ctx,
+          cfg,
         ),
-        null,
-        ctx,
         cfg,
       );
     case 'join/click': {
@@ -2374,7 +2410,7 @@ export const reduceShell = <G extends ShellTypes>(
         ctx.rng,
         ctx.now,
       );
-      return startLocal(withShell(app, { opts }), game, ctx, cfg);
+      return rememberOpts(startLocal(withShell(app, { opts }), game, ctx, cfg), cfg);
     }
     case 'resume/click': {
       // Resume is a tap: the Android lock re-enters on it (a reload left fullscreen behind).
@@ -2735,6 +2771,7 @@ export const readHome = <G extends ShellTypes>(
     flipTable: flip.ok && flip.value === 'on',
     save: save.ok ? save.value : null,
     recentGames: cfg.prefs.recentGames.read(store),
+    opts: cfg.prefs.opts === undefined ? null : cfg.prefs.opts.read(store),
     ...cfg.home.read(store),
   };
 };

@@ -37,6 +37,8 @@ import {
   readCurtainMode,
   readMatchLength,
   readVariant,
+  writeMatchLength,
+  writeVariant,
 } from './storage.ts';
 import { CUES } from './ui/sound.ts';
 import type { Backgammon } from './ui/state.ts';
@@ -50,9 +52,9 @@ export const DEFAULT_NAME = 'Ari';
 export const LOCAL_NAMES: readonly [string, string] = ['Ari', 'Ethan'];
 export const LEAVE_LOCAL_MSG = 'End this match? The score will be cleared.';
 export const LEAVE_ONLINE_MSG = 'Leave this match? The room will close.';
-/** A match length from a select's raw value: one of MATCH_LENGTHS, else `fallback`. */
-export const parseMatchLength = (raw: string | number | undefined, fallback: number): number => {
-  const n = typeof raw === 'number' ? raw : parseInt(raw ?? '', 10);
+/** A match length from a select's raw value (the shell's `opts/set` and the start buttons carry strings alone): one of MATCH_LENGTHS, else `fallback`. */
+export const parseMatchLength = (raw: string | undefined, fallback: number): number => {
+  const n = parseInt(raw ?? '', 10);
   return MATCH_LENGTHS.includes(n) ? n : fallback;
 };
 
@@ -79,7 +81,7 @@ export const BACKGAMMON_SHELL: ShellGameData<Backgammon> = {
   },
   opts: {
     initial: { matchLength: DEFAULT_MATCH_LENGTH, variant: DEFAULT_VARIANT },
-    // The match length and variant are the shell's (set by the selects' `variant/set`/`matchLength/set`), unless the binder passes the raw select values along.
+    // The match length and variant are the shell's (set by the selects' `opts/set`), unless the binder passes the raw select values along.
     parse: (raw, current) => ({
       matchLength: parseMatchLength(raw.matchLength, current.matchLength),
       variant: parseVariant(raw.variant, current.variant),
@@ -116,17 +118,28 @@ export const BACKGAMMON_SHELL: ShellGameData<Backgammon> = {
   frames: { lobby, state, toast, action, join },
   cues: { initial: INITIAL_CUE_MEMORY, table: CUES },
   home: {
-    // This page's own keys: the options and the curtain mode (defaults when unreadable).
+    // This page's own key: the curtain mode (the default when unreadable).
     read: (store) => {
-      const variant = readVariant(store);
-      const length = readMatchLength(store);
       const curtain = readCurtainMode(store);
-      return {
-        variant: variant.ok ? variant.value : DEFAULT_VARIANT,
-        matchLength: length.ok ? length.value : DEFAULT_MATCH_LENGTH,
-        curtainMode: curtain.ok ? curtain.value : DEFAULT_CURTAIN_MODE,
-      };
+      return { curtainMode: curtain.ok ? curtain.value : DEFAULT_CURTAIN_MODE };
     },
   },
-  prefs: SHELL_STORE,
+  prefs: {
+    ...SHELL_STORE,
+    // The options the shell remembers (`opts/set`, `writeOpts`): the two selects under their own keys, each read to its default.
+    opts: {
+      read: (store) => {
+        const variant = readVariant(store);
+        const length = readMatchLength(store);
+        return {
+          matchLength: length.ok ? length.value : DEFAULT_MATCH_LENGTH,
+          variant: variant.ok ? variant.value : DEFAULT_VARIANT,
+        };
+      },
+      write: (store, opts) => {
+        writeVariant(store, opts.variant);
+        writeMatchLength(store, opts.matchLength);
+      },
+    },
+  },
 };

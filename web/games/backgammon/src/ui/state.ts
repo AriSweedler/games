@@ -80,7 +80,6 @@ import {
   applyAction,
   canEndTurn,
   createGame,
-  isShippedVariant,
   moveTo,
   otherSeat,
   rulesOf,
@@ -94,20 +93,17 @@ import type {
   PlayedMove,
   PointIndex,
   Seat,
-  ShippedVariant,
   State,
   To,
   View,
 } from '../engine/types.ts';
 import type { GuestContext } from '../../../../shared/net/guest.ts';
 import { action as actionFrame } from '../protocol.ts';
-import { BACKGAMMON_SHELL, parseMatchLength } from '../shellConfig.ts';
+import { BACKGAMMON_SHELL } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
   HOME_TABS,
   writeCurtainMode,
-  writeMatchLength,
-  writeVariant,
   type CurtainMode,
   type HomeTab,
   type HostExtra,
@@ -193,7 +189,7 @@ export type Backgammon = Readonly<{
   Cue: Cue;
   Cues: CueMemory;
   Resume: never;
-  Home: Readonly<{ variant: ShippedVariant; matchLength: number; curtainMode: CurtainMode }>;
+  Home: Readonly<{ curtainMode: CurtainMode }>;
   Intent: TableIntent;
   Effect: TableEffect;
   Store: Store;
@@ -287,19 +283,15 @@ export const hitMsg = (byName: string, ownPoints: ReadonlyArray<number>): string
 };
 // ---- intents -----------------------------------------------------------------------------------
 
-/** What `initHome` reads from storage, in one snapshot (`readHome`): the shell's keys and backgammon's (`Backgammon['Home']`: the options and the curtain mode). */
+/** What `initHome` reads from storage, in one snapshot (`readHome`): the shell's keys (the options among them, `prefs.opts`) and backgammon's (`Backgammon['Home']`: the curtain mode). */
 export type HomeSnapshot = SharedHomeSnapshot<Backgammon>;
 
 /**
- * The table's half of `Intent` (design §4.1), and the two option selects: backgammon's own, after
- * the shell's 44 (web/shared/ui/shell.ts `ShellIntent`; `setup(state)` is its `position/load`
- * since dry-round-2.md F5).
+ * The table's half of `Intent` (design §4.1): backgammon's own, after the shell's (web/shared/ui/
+ * shell.ts `ShellIntent`; the two option selects are its `opts/set`; `setup(state)` is its
+ * `position/load` since dry-round-2.md F5).
  */
 export type TableIntent =
-  /** `#variantSel` / `#localVariantSel`: a shipped variant is remembered; anything else is ignored. */
-  | Readonly<{ type: 'variant/set'; variant: string }>
-  /** `#matchLengthSel` / `#localMatchLengthSel`: one of MATCH_LENGTHS is remembered; anything else is ignored. */
-  | Readonly<{ type: 'matchLength/set'; length: number | string }>
   // ---- the table (design §4.1) ----
   /** `act(action)`: every role (the hook, and the buttons below resolve to it). */
   | Readonly<{ type: 'act'; action: Action }>
@@ -353,11 +345,8 @@ export type ShellIntent = SharedShellIntent<Backgammon>;
 
 export type TimerId = SharedTimerId<Backgammon>;
 
-/** Backgammon's own effects, handled by `runEffect` before the shared runner: the three preferences the home screen and the menu remember. */
-export type TableEffect =
-  | Readonly<{ type: 'writeVariant'; variant: ShippedVariant }>
-  | Readonly<{ type: 'writeMatchLength'; length: number }>
-  | Readonly<{ type: 'writeCurtainMode'; mode: CurtainMode }>;
+/** Backgammon's own effect, handled by `runEffect` before the shared runner: the curtain mode the menu remembers (the options are the shell's `writeOpts`). */
+export type TableEffect = Readonly<{ type: 'writeCurtainMode'; mode: CurtainMode }>;
 
 export type Effect = SharedEffect<Backgammon>;
 
@@ -767,23 +756,6 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Context): Step => {
   const v = liveView(app);
   const t = app.table;
   switch (intent.type) {
-    // ---- the two option selects: backgammon's own, into the shell's `opts` ----
-    case 'variant/set':
-      return isShippedVariant(intent.variant)
-        ? step(withShell(app, { opts: { ...app.shell.opts, variant: intent.variant } }), {
-            type: 'writeVariant',
-            variant: intent.variant,
-          })
-        : pure(app);
-    case 'matchLength/set': {
-      const length = parseMatchLength(intent.length, 0);
-      return length === 0
-        ? pure(app)
-        : step(withShell(app, { opts: { ...app.shell.opts, matchLength: length } }), {
-            type: 'writeMatchLength',
-            length,
-          });
-    }
     case 'act':
       return act(app, [intent.action], ctx);
     case 'point/tap':
@@ -956,7 +928,7 @@ export const BACKGAMMON: ShellConfig<Backgammon> = {
   home: {
     ...BACKGAMMON_SHELL.home,
     apply: (app, home) => ({
-      shell: { ...app.shell, opts: { matchLength: home.matchLength, variant: home.variant } },
+      shell: app.shell,
       table: { ...app.table, curtainMode: home.curtainMode },
     }),
   },
@@ -1026,7 +998,7 @@ export const resumeFor = (save: Save | null): Resume | null => shellResumeFor(sa
 /** `persist()`: the save for the current role, or null when there is nothing to save. */
 export const saveFor = (app: App): Save | null => shellSaveFor(app.shell);
 
-/** `initHome`'s reads: the names, the tab, mode and options (defaults when unreadable), the save. */
+/** `initHome`'s reads: the names, the tab, mode and options (defaults when unreadable), the curtain mode, the save. */
 export const readHome = (store: Store): HomeSnapshot => shellReadHome(store, BACKGAMMON);
 
 // ---- what the sessions read back ---------------------------------------------------------------
@@ -1040,21 +1012,11 @@ export const guestContextOf = (app: App): GuestContext => shellGuestContextOf(ap
 /** The adapters an effect reaches: the shell's (web/shared/ui/shellEffects.ts); backgammon adds none. main.ts constructs the real ones, tests record. */
 export type EffectDeps = ShellEffectDeps<Backgammon>;
 
-/** One effect against the adapters; `app` is the state after the step that produced it. Backgammon's three first, then the shell's runner. */
+/** One effect against the adapters; `app` is the state after the step that produced it. Backgammon's own first, then the shell's runner. */
 export const runEffect = (app: App, effect: Effect, deps: EffectDeps): void => {
   if (isShellEffect(effect)) {
     runShellEffect(app.shell, effect, deps, BACKGAMMON);
     return;
   }
-  switch (effect.type) {
-    case 'writeVariant':
-      writeVariant(deps.store, effect.variant);
-      return;
-    case 'writeMatchLength':
-      writeMatchLength(deps.store, effect.length);
-      return;
-    case 'writeCurtainMode':
-      writeCurtainMode(deps.store, effect.mode);
-      return;
-  }
+  writeCurtainMode(deps.store, effect.mode);
 };
