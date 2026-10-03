@@ -4,15 +4,16 @@
 import { describe, expect, test } from 'vitest';
 
 import { fakeEl, fakeTarget } from '../../../../shared/edge/page.fake.ts';
+import { seatListKey, seatRows } from '../../../../shared/ui/shellPaint.ts';
 import { choiceLabel } from '../bots/registry.ts';
 import { fidicePage } from './page.fake.ts';
 import {
   bindWaiting,
+  botListKey,
   botPlaceholder,
   botRowHtml,
   botRows,
   paintWaiting,
-  roomListKey,
   type RoomView,
   type WaitingIntent,
 } from './waiting.ts';
@@ -76,7 +77,8 @@ describe('paintWaiting', () => {
     expect(p.get('hostWaitStatus').hasClass('pulse')).toBe(true);
     expect(p.get('startGameBtn').hidden()).toBe(false);
     const list = p.get('seatList');
-    expect(list.attr('data-key')).toBe(roomListKey(v));
+    const key = `${seatListKey(seatRows(v))}|${botListKey(v)}`;
+    expect(list.attr('data-key')).toBe(key);
     expect(list.text()).toContain('Ann · host · you');
     expect(list.text()).toContain('>Bob<');
     expect(list.text()).toContain('Seat 3 · empty');
@@ -84,12 +86,45 @@ describe('paintWaiting', () => {
     expect(list.text()).toContain('value="Rex"');
     expect(list.text()).toContain('data-bot-remove data-bot="1"');
     const guestList = p.get('guestSeatList');
-    expect(guestList.attr('data-key')).toBe(roomListKey(v));
+    expect(guestList.attr('data-key')).toBe(key);
     expect(guestList.text()).toContain('Rex · computer');
     expect(guestList.text()).not.toContain('data-bot-remove');
     expect(p.get('watchCb').checked()).toBe(false);
     paintWaiting(p.doc, room({ watch: true }));
     expect(p.get('watchCb').checked()).toBe(true);
+  });
+
+  test('a rename typed into a computer`s row survives a status paint; a computer added, renamed by the room or a seat taken rebuilds the rows', () => {
+    const p = fidicePage(MARKUP);
+    const v = room();
+    paintWaiting(p.doc, v);
+    const list = p.get('seatList');
+    // The host types into the second computer's input: the fake records a later write on the list.
+    list.el.insertAdjacentHTML('beforeend', '<typed>');
+    paintWaiting(p.doc, { ...v, hostStatus: { text: 'One more…', pulse: false }, watch: true });
+    expect(list.text()).toContain('<typed>');
+    expect(p.get('hostWaitStatus').text()).toBe('One more…');
+    expect(p.get('watchCb').checked()).toBe(true);
+    paintWaiting(p.doc, { ...v, bots: 3 });
+    expect(list.text()).not.toContain('<typed>');
+    expect(list.text()).toContain('data-bot="2"');
+    list.el.insertAdjacentHTML('beforeend', '<typed>');
+    paintWaiting(p.doc, { ...v, bots: 3, botNames: ['Rex', 'Ivy', null] });
+    expect(list.text()).toContain('value="Ivy"');
+    expect(list.text()).not.toContain('<typed>');
+    paintWaiting(p.doc, {
+      ...v,
+      bots: 3,
+      botNames: ['Rex', 'Ivy', null],
+      seats: [
+        { name: 'Bob', connected: true },
+        { name: 'Cy', connected: true },
+      ],
+    });
+    expect(list.text()).toContain('>Cy<');
+    expect(list.text()).toContain('data-seat="3" data-bot="0"');
+    expect(botListKey(v)).toBe(`${JSON.stringify(botRows(v))}|host`);
+    expect(botListKey({ ...v, host: false })).toContain('|guest');
   });
 
   test('a guest`s room (the host`s name from oppName) lists the computers without controls; a room not yet open lists nothing', () => {

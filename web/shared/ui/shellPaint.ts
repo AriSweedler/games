@@ -226,14 +226,29 @@ const paintGuestName = (doc: DocumentLike, w: WaitingView): void => {
 };
 
 /**
+ * Rows a game lists under the shell's seats in each seat list (fidice's computers,
+ * web/games/fidice/src/ui/waiting.ts): `html` builds their markup, placed after the shell's rows
+ * (`rows`: the humans', so a game's row continues their `data-seat` numbering; `listId`: which
+ * list, so the host's `#seatList` alone carries controls), and `key` is what they depend on. The
+ * slot's key is the seats' and `key` joined, so the list is rebuilt only when a seat or the game's
+ * rows change: a rename input in one of them survives every other paint mid-typing, which a
+ * second keyed rebuild of the same `<ul>` in the game could not give it.
+ */
+export type ExtraRows = Readonly<{
+  key: string;
+  html: (rows: ReadonlyArray<SeatRow>, listId: string) => string;
+}>;
+
+/**
  * `#roomCode`, `#hostWaitStatus` (+ its pulse), `#startGameBtn`, `#guestWaitStatus` (+ its pulse);
  * the name card (`paintGuestName`: `#guestSeatName` with its box and note, hidden while the host
  * has not answered) when the page carries it (backgammon's and briscola's `guestSeatName` block;
  * gin's page leaves it out for its DOM parity oracle); and the seat lists (`SEAT_LIST_IDS`), each
  * rebuilt through the keyed slot from the shell's seats when the page carries it (an N-seat game's;
- * gin's and backgammon's pages carry neither).
+ * gin's and backgammon's pages carry neither), with the game's own rows under them when it hands
+ * `extra` (`ExtraRows`); without it the key and the markup are the seats' alone.
  */
-export const paintWaiting = (doc: DocumentLike, w: WaitingView): void => {
+export const paintWaiting = (doc: DocumentLike, w: WaitingView, extra?: ExtraRows): void => {
   setText(requireId(doc, 'roomCode'), w.code ?? '----');
   const hostStatus = requireId(doc, 'hostWaitStatus');
   setText(hostStatus, w.hostStatus.text);
@@ -249,8 +264,11 @@ export const paintWaiting = (doc: DocumentLike, w: WaitingView): void => {
   });
   if (lists.length === 0) return;
   const rows = seatRows(w);
+  const key = extra === undefined ? seatListKey(rows) : `${seatListKey(rows)}|${extra.key}`;
+  const markup = (list: Element): string =>
+    extra === undefined ? seatListHtml(rows) : seatListHtml(rows) + extra.html(rows, list.id);
   lists.forEach((list) => {
-    ensureKeyed(list, seatListKey(rows), () => seatListHtml(rows));
+    ensureKeyed(list, key, () => markup(list));
   });
 };
 

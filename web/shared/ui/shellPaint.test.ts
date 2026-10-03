@@ -395,6 +395,72 @@ describe('paintWaiting', () => {
   });
 });
 
+describe('paintWaiting extra rows', () => {
+  const waiting = {
+    code: 'ABCD',
+    hostStatus: { text: 'Waiting…', pulse: true },
+    guestStatus: { text: 'Connecting…', pulse: true },
+    startGameVisible: false,
+    seats: [{ name: 'Bo', connected: true }],
+    mySeat: 0,
+    role: 'host' as const,
+    myName: 'Ann',
+  };
+  const rows = seatRows(waiting);
+
+  test('the game`s rows go after the seats on each list, built with the humans` rows and the list`s id; the key is the seats` and the game`s joined', () => {
+    const p = fakePage([...pageEls(), fakeEl('seatList'), fakeEl('guestSeatList')]);
+    const built: string[] = [];
+    const extra = {
+      key: 'bots:1',
+      html: (humans: ReadonlyArray<(typeof rows)[number]>, listId: string): string => {
+        built.push(listId);
+        return `<li data-seat="${String(humans.length)}">Computer 1 on ${listId}</li>`;
+      },
+    };
+    paintWaiting(p.doc, waiting, extra);
+    expect(built).toEqual(['seatList', 'guestSeatList']);
+    expect(p.get('seatList').text()).toBe(
+      `${seatListHtml(rows)}<li data-seat="2">Computer 1 on seatList</li>`,
+    );
+    expect(p.get('guestSeatList').text()).toBe(
+      `${seatListHtml(rows)}<li data-seat="2">Computer 1 on guestSeatList</li>`,
+    );
+    expect(p.get('seatList').attr('data-key')).toBe(`${seatListKey(rows)}|bots:1`);
+  });
+
+  test('a paint under the same seats and key leaves the lists as they stand (a rename mid-typing survives); a new key, or a new seat, rebuilds', () => {
+    const p = fakePage([...pageEls(), fakeEl('seatList'), fakeEl('guestSeatList')]);
+    const builds: string[] = [];
+    const extra = (key: string) => ({
+      key,
+      html: (): string => {
+        builds.push(key);
+        return '<li><input data-bot-name></li>';
+      },
+    });
+    paintWaiting(p.doc, waiting, extra('a'));
+    expect(builds).toEqual(['a', 'a']);
+    // The player types into the row's input: the fake records a later write on the list.
+    const list = p.get('seatList').el;
+    list.insertAdjacentHTML('beforeend', '<typed>');
+    paintWaiting(
+      p.doc,
+      { ...waiting, hostStatus: { text: 'One more…', pulse: false } },
+      extra('a'),
+    );
+    expect(builds).toEqual(['a', 'a']);
+    expect(p.get('seatList').text()).toContain('<typed>');
+    expect(p.get('hostWaitStatus').text()).toBe('One more…');
+    paintWaiting(p.doc, waiting, extra('b'));
+    expect(builds).toEqual(['a', 'a', 'b', 'b']);
+    expect(p.get('seatList').text()).not.toContain('<typed>');
+    paintWaiting(p.doc, { ...waiting, seats: [{ name: 'Cy', connected: true }] }, extra('b'));
+    expect(builds).toEqual(['a', 'a', 'b', 'b', 'b', 'b']);
+    expect(p.get('seatList').text()).toContain('>Cy<');
+  });
+});
+
 describe('showToast / hideToast', () => {
   test('write the text and flip the show class; the text stays when hidden', () => {
     const p = page();

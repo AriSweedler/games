@@ -4,13 +4,13 @@
 // (src/view/screens/lobby.ts) under the humans: the room's computers listed after the seats, each
 // with its name (the waiting room's, or `Computer N` until the deal names it from the pool), the
 // one strategy every computer plays (D7), and for the host a rename input, a strategy button and a
-// remove button; `#btnAddBot` adds one and `#watchCb` stands the host up (D6). The shared painter
-// would rebuild the lists from the seats alone, so it is handed a page without them and the lists
-// are painted here through the same keyed slot, keyed on the humans and the computers together.
+// remove button; `#btnAddBot` adds one and `#watchCb` stands the host up (D6). The computers go
+// to the shared painter as its extra rows (`ExtraRows`: their markup after the humans' rows and
+// the key they depend on), so the one keyed slot holds both lists and a rename mid-typing
+// survives a status paint (docs/design/dry-review-2026-10.md §7 row 15's follow-up).
 // Not a reducer module: it reads small views and dispatches its own intent shapes, which ui/state.ts
 // spells the same (eslint.config.js: only render, home and local import the reducer).
 import {
-  byId,
   closestFrom,
   dataOf,
   escapeHtml,
@@ -24,13 +24,8 @@ import {
   type Element,
   type PageLike,
 } from '../../../../shared/edge/dom.ts';
-import { ensureKeyed } from '../../../../shared/ui/keyed.ts';
 import {
-  SEAT_LIST_IDS,
   paintWaiting as paintShellWaiting,
-  seatListHtml,
-  seatListKey,
-  seatRows,
   type WaitingView,
 } from '../../../../shared/ui/shellPaint.ts';
 import { choiceLabel } from '../bots/registry.ts';
@@ -74,33 +69,23 @@ export const botRowHtml = (row: BotRow, seat: number, controls: boolean): string
   return `<li data-seat="${String(seat)}" data-bot="${String(row.index)}" data-connected="true">${body}</li>`;
 };
 
-/** The key the lists rebuild on: the humans' rows and the computers' as painted. */
-export const roomListKey = (v: RoomView): string =>
-  `${seatListKey(seatRows(v))}|${JSON.stringify(botRows(v))}|${v.host ? 'host' : 'guest'}`;
+/** What the computers' rows depend on beside the humans' (the shell keys those): the rows as painted and whether this device hosts, since the host's rows carry the controls. */
+export const botListKey = (v: BotsView): string =>
+  `${JSON.stringify(botRows(v))}|${v.host ? 'host' : 'guest'}`;
 
 /**
- * `#roomCode`, the two statuses and `#startGameBtn` through the shared painter (over a page without
- * the seat lists), then the lists: the humans' rows, the computers under them (the host's with
- * controls on `#seatList` alone), the watch box as the room has it.
+ * `#roomCode`, the two statuses, `#startGameBtn` and the seat lists through the shared painter,
+ * the computers as its extra rows under the humans (the host's with controls on `#seatList` alone),
+ * then the watch box as the room has it.
  */
 export const paintWaiting = (doc: DocumentLike, v: RoomView): void => {
-  paintShellWaiting(
-    { getElementById: (id) => (SEAT_LIST_IDS.includes(id) ? null : doc.getElementById(id)) },
-    v,
-  );
-  const humans = seatRows(v);
   const bots = botRows(v);
-  const key = roomListKey(v);
-  SEAT_LIST_IDS.forEach((id) => {
-    const list = byId(doc, id);
-    if (list === null) return;
-    const controls = v.host && id === 'seatList';
-    ensureKeyed(list, key, () =>
-      [
-        seatListHtml(humans),
-        ...bots.map((row, i) => botRowHtml(row, humans.length + i, controls)),
-      ].join(''),
-    );
+  paintShellWaiting(doc, v, {
+    key: botListKey(v),
+    html: (humans, listId) =>
+      bots
+        .map((row, i) => botRowHtml(row, humans.length + i, v.host && listId === 'seatList'))
+        .join(''),
   });
   setChecked(requireId(doc, 'watchCb'), v.watch);
 };
