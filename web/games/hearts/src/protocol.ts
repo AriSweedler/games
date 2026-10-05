@@ -1,62 +1,45 @@
-// The Hearts wire codecs (docs/design/hearts.md §3): the frames a host and its guest exchange over
-// the PeerJS data channel, web/shared/lib/protocol.ts's two-seat skeleton over this engine's
+// The Hearts wire codecs (docs/design/hearts.md §7): the frames a host and its guests exchange over
+// the PeerJS data channels, web/shared/lib/seatedProtocol.ts's N-seat skeleton over this engine's
 // decoders (the trust boundary, docs/ARCHITECTURE.md "Module boundaries"). The room carries one
-// term after `hostName`, the seat count, always 2.
-import { literal } from '../../../shared/lib/json.ts';
-import {
-  twoSeatProtocol,
-  type ActionFrame as SharedActionFrame,
-  type Frame as SharedFrame,
-  type GuestFrame as SharedGuestFrame,
-  type HostFrame as SharedHostFrame,
-  type LobbyFrame as SharedLobbyFrame,
-  type StateFrame as SharedStateFrame,
-  type WelcomeFrame as SharedWelcomeFrame,
+// term after `hostName`, the seat count, three or four.
+import { literal, type Shape } from '../../../shared/lib/json.ts';
+import type {
+  GuestFrame as SharedGuestFrame,
+  HostFrame as SharedHostFrame,
+  LobbyFrame as SharedLobbyFrame,
+  WelcomeFrame as SharedWelcomeFrame,
 } from '../../../shared/lib/protocol.ts';
-import { decodeAction, decodeView, type Action, type View } from './engine/view.ts';
+import { seatedProtocol, type SeatedRoom } from '../../../shared/lib/seatedProtocol.ts';
+import { SEAT_COUNTS, decodeAction, decodeView, type Action, type View } from './engine/view.ts';
 
-export {
-  DEFAULT_GUEST_NAME,
-  NAME_MAX,
-  TOAST_MAX,
-  WIRE_TAGS,
-  guestNameFor,
-  isGuestFrame,
-  type DecodeFailure,
-  type FullFrame,
-  type JoinFrame,
-  type ToastFrame,
-  type WireTag,
-} from '../../../shared/lib/protocol.ts';
+export type { TableSeat } from '../../../shared/lib/seatedProtocol.ts';
 
-/** The room after `hostName`: two seats, always. */
-const room = { seatCount: literal(2) };
-export type Room = Readonly<{ seatCount: 2 }>;
+/** The room's terms: the seat count alone. */
+const options = { seatCount: literal(...SEAT_COUNTS) };
+export type Room = Shape<typeof options>;
+type RoomWire = SeatedRoom<Room>;
 
-export type ActionFrame = SharedActionFrame<Action>;
 export type GuestFrame = SharedGuestFrame<Action>;
-export type WelcomeFrame = SharedWelcomeFrame<Room>;
-export type LobbyFrame = SharedLobbyFrame<Room>;
-export type StateFrame = SharedStateFrame<View>;
-export type HostFrame = SharedHostFrame<View, Room>;
-export type Frame = SharedFrame<Action, View, Room>;
+export type HostFrame = SharedHostFrame<View, RoomWire>;
+export type WelcomeFrame = SharedWelcomeFrame<RoomWire>;
+export type LobbyFrame = SharedLobbyFrame<RoomWire>;
 
-/** The protocol whole: what the shell sends from (shellConfig.ts `frames`). */
-export const PROTOCOL = twoSeatProtocol({ decodeAction, decodeView, room });
-
+/** The protocol whole: what the sessions take (web/shared/net/sessions.ts `seatedSessions`). */
+export const PROTOCOL = seatedProtocol({
+  decodeAction,
+  decodeView,
+  options,
+  seatCounts: SEAT_COUNTS,
+});
 export const {
-  decodeFrame,
   decodeGuestFrame,
   decodeHostFrame,
   join,
   action,
+  welcome,
+  lobby,
   full,
   toast,
   state,
-  welcome,
-  lobby,
+  joinName,
 } = PROTOCOL;
-
-/** The name a join carries (the session reseats a same-named rejoin), null for an action. */
-export const joinName = (frame: GuestFrame): string | null =>
-  frame.t === 'join' ? frame.name : null;

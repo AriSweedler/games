@@ -26,31 +26,32 @@ import {
   paintShellSheets,
   type Dispatch,
 } from '../../../../shared/ui/shellPaint.ts';
-import { turnSeat, type Seat, type View } from '../engine/view.ts';
+import { type Seat, type View } from '../engine/view.ts';
 import { bindHome, paintHome } from './home.ts';
 import { HEARTS, endWords, type App, type Intent, type Hearts } from './state.ts';
 
 export { hideToast, showToast } from '../../../../shared/ui/shellPaint.ts';
 
-const nameAt = (v: View, seat: Seat): string => v.names[seat];
+const nameAt = (v: View, seat: Seat): string => v.names[seat] ?? '';
 
 /** The status line: the engine's note of what just happened, then whose turn (or the end). */
 export const statusText = (v: View): string => {
-  const turn = turnSeat(v.game);
-  if (turn === null) return v.game.note;
+  const turn = v.turn;
+  if (turn === null) return v.note;
   const whose = turn === v.seat ? 'Your turn' : `${nameAt(v, turn)}’s turn`;
-  return `${v.game.note} ${whose}.`.trim();
+  return `${v.note} ${whose}.`.trim();
 };
 
 const paintTable = (doc: DocumentLike, app: App, v: View): void => {
-  const turn = turnSeat(v.game);
-  const mine = turn === v.seat;
-  const over = v.game.result !== null;
+  const mine = v.turn === v.seat;
+  const over = v.phase === 'gameOver';
+  // The scaffold's two buttons until the table row paints the hand: Pass is "Next hand" between hands, Resign is unused.
+  const between = v.phase === 'handOver';
   toggleClass(requireId(doc, 'board'), 'turn', mine);
-  toggleClass(requireId(doc, 'passBtn'), 'hidden', !mine);
-  setDisabled(requireId(doc, 'passBtn'), !mine);
-  toggleClass(requireId(doc, 'resignBtn'), 'hidden', !mine);
-  setDisabled(requireId(doc, 'resignBtn'), !mine);
+  toggleClass(requireId(doc, 'passBtn'), 'hidden', !between);
+  setDisabled(requireId(doc, 'passBtn'), !between);
+  toggleClass(requireId(doc, 'resignBtn'), 'hidden', true);
+  setDisabled(requireId(doc, 'resignBtn'), true);
   toggleClass(requireId(doc, 'againBtn'), 'hidden', !(over && app.shell.pause === null));
   setText(requireId(doc, 'statusText'), statusText(v));
   // The end's words on the result sheet once its pause (the shell's) was read.
@@ -70,7 +71,7 @@ const paintCurtain = (doc: DocumentLike, app: App): void => {
     doc,
     seat === null || v === null
       ? null
-      : shellCurtainText({ to: nameAt(v, seat), sub: '', last: v.game.note }),
+      : shellCurtainText({ to: nameAt(v, seat), sub: '', last: v.note }),
     handoffLabelOf(app.shell, HEARTS) !== null,
   );
 };
@@ -85,7 +86,10 @@ export const paint = (doc: PageLike, app: App): void => {
   paintShellChrome(doc, app.shell, {
     handoff: handoffLabelOf(app.shell, HEARTS),
     connDot: 'oppDot',
-    names: (v) => ({ me: nameAt(v, v.seat), others: nameAt(v, v.seat === 0 ? 1 : 0) }),
+    names: (v) => ({
+      me: nameAt(v, v.seat),
+      others: v.names.filter((_, i) => i !== v.seat).join(', '),
+    }),
   });
   paintHome(doc, app);
   const v = app.shell.view;
@@ -99,8 +103,7 @@ const bindTable = (doc: PageLike, dispatch: Dispatch<Intent>): void => {
     doc,
     dispatch,
     [
-      ['passBtn', { type: 'act', action: { type: 'pass' } }],
-      ['resignBtn', { type: 'act', action: { type: 'resign' } }],
+      ['passBtn', { type: 'act', action: { type: 'nextHand' } }],
       ['againBtn', { type: 'again/click' }],
       ['rsAgainBtn', { type: 'again/click' }],
       ['rsLeaveBtn', { type: 'leave/request' }],

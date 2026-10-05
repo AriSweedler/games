@@ -20,9 +20,9 @@ export const requireView = async (page: Page): Promise<View> => {
   return view;
 };
 
-/** What every seat's table agrees on: the game's clock, whose turn, the turns taken, the result. */
+/** What every seat's table agrees on: the game's clock, the hand, whose turn, every count, the scores, the phase. */
 export const heartsKey = (v: View | null): string =>
-  v === null ? 'none' : JSON.stringify([v.startedAt, v.game.turn, v.game.turns, v.game.result]);
+  v === null ? 'none' : JSON.stringify([v.startedAt, v.round, v.turn, v.counts, v.scores, v.phase]);
 
 export const heartsSnapshot = async (page: Page): Promise<string> =>
   heartsKey(await readView(page));
@@ -45,10 +45,10 @@ export const heartsAct = async (page: Page, action: Action): Promise<void> => {
 
 /** The seat holding the phone plays its first legal action; resolves once the turn is the other seat's (or the game is over). */
 export const heartsPlayTurn = async (page: Page): Promise<void> => {
-  const { game } = await requireView(page);
+  const { turn } = await requireView(page);
   const legal = await page.evaluate<ReadonlyArray<Action>>('window.__hearts.legal()');
   const first = legal[0];
-  if (first === undefined) throw new Error(`hearts: seat ${String(game.turn)} has nothing to play`);
+  if (first === undefined) throw new Error(`hearts: seat ${String(turn)} has nothing to play`);
   await heartsAct(page, first);
-  await expect.poll(async () => (await requireView(page)).game.turn).not.toBe(game.turn);
+  await expect.poll(async () => (await requireView(page)).turn).not.toBe(turn);
 };

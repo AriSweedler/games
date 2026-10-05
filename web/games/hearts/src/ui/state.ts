@@ -2,7 +2,7 @@
 // flows (the home screen, the waiting rooms, the leave, the resume) over this game's config
 // (shellConfig.ts `HEARTS_SHELL` completed here as `HEARTS`), and the table's own intents. Every role
 // plays through `act`: pass-and-play and the host apply the action to the engine and broadcast each
-// seat its view, a guest sends one `action` frame and waits for its view. Pass-and-play raises the curtain on every change of turn: a seat holds something the other must not see (AGENT.md "Hidden hands").
+// seat its view, a guest sends one `action` frame and waits for its view. Pass-and-play raises the curtain on every change of actor: a seat holds a hand the others must not see (AGENT.md "Hidden hands").
 // The game's end is a pause (AGENT.md "Understand what happened before proceeding"): the shell's
 // pause sheet holds the table until Continue (`table.pause` below), then the result sheet offers
 // Play again (the shell's `again/click`). Pure: the clock and the rng come in through `Ctx`.
@@ -26,15 +26,9 @@ import {
   type TableReset,
 } from '../../../../shared/ui/shell.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
-import {
-  turnSeat,
-  viewFor,
-  type Action,
-  type Seat,
-  type State,
-  type View,
-} from '../engine/view.ts';
-import { HEARTS_SHELL } from '../shellConfig.ts';
+import type { SeatedRaw } from '../../../../shared/ui/seatCopy.ts';
+import { turnSeat, viewFor, type Action, type State, type View } from '../engine/view.ts';
+import { HEARTS_SHELL, asSeat } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
   HOME_TABS,
@@ -47,8 +41,8 @@ import type { Cue } from './sound.ts';
 
 export { DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab, type PlayMode };
 
-/** `host/click` and `local/click` carry nothing beyond the names: a game for two has no option. */
-export type Raw = Readonly<{ seats?: never }>;
+/** The raw values `host/click` and `local/click` carry: the seated home's (the two Players steppers; the third and fourth names ride as the shell's `names`). */
+export type Raw = SeatedRaw;
 
 /** `initHome` reads nothing beyond the shell's keys. */
 export type Home = Readonly<{ opts?: never }>;
@@ -56,15 +50,19 @@ export type Home = Readonly<{ opts?: never }>;
 /** The table's own state: the curtain seat alone (the sheets, the pause and the result are the shell's, `ShellState`). */
 export type Table = Readonly<{
   /** The shell's pass-and-play curtain seat (`ShellTypes.Table`; the shell writes it from `local.viewer`). */
-  curtain: Seat | null;
+  curtain: HeartsSeat | null;
 }>;
+
+/** The seats past the shell's two: the third and the fourth (the shell's `SeatOf<Hearts>` adds its own two). */
+export type ExtraSeat = 2 | 3;
+export type HeartsSeat = 0 | 1 | ExtraSeat;
 
 /** The table's one intent: a play; the sheets (`rules/*`, `history/*`, `escape`) are the shell's intents. */
 export type TableIntent = Readonly<{ type: 'act'; action: Action }>;
 
 export type TableEffect = never;
 
-/** Hearts's types for the shared shell (`GameTypes` over what it names; the rest are the shell's defaults): two seats, no option, the whole game as every seat's view. */
+/** Hearts's types for the shared shell (`GameTypes` over what it names; the rest are the shell's defaults): three or four seats, each with its own view. */
 export type Hearts = GameTypes<{
   Opts: Opts;
   Raw: Raw;
@@ -77,7 +75,7 @@ export type Hearts = GameTypes<{
   Intent: TableIntent;
   Effect: TableEffect;
   Store: Store;
-  Seat: never;
+  Seat: ExtraSeat;
 }>;
 
 export type Shell = ShellState<Hearts>;
@@ -92,36 +90,33 @@ export const initialTable: Table = { curtain: null };
 
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
-/** The cues for the change from `prev` to `next`: a pass taken, the game won or lost. */
+const cardsOut = (view: View): number => view.counts.reduce((sum, n) => sum + n, 0);
+
+/** The cues for the change from `prev` to `next`: a card played (the scaffold's `pass` cue until the polish row names its own), the game won or lost. */
 export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
-  const result = next.game.result;
-  if (result !== null && prev.game.result === null) {
-    if (result.kind === 'draw') return [];
-    return [result.winner === next.seat ? 'win' : 'lose'];
+  if (next.phase === 'gameOver' && prev.phase !== 'gameOver') {
+    return [next.winners.includes(next.seat) ? 'win' : 'lose'];
   }
-  return next.game.turns > prev.game.turns ? ['pass'] : [];
+  return cardsOut(next) < cardsOut(prev) ? ['pass'] : [];
 };
 
 /** The end's words: who won (or a draw) and how it came, for the pause and the result sheet alike. */
 export const endWords = (view: View): Pause | null => {
-  const result = view.game.result;
-  if (result === null) return null;
-  const title =
-    result.kind === 'draw'
-      ? 'A draw'
-      : result.winner === view.seat
-        ? 'You win!'
-        : `${view.names[result.winner]} wins!`;
-  return { title, detail: view.game.note };
+  if (view.phase !== 'gameOver') return null;
+  const title = view.winners.includes(view.seat)
+    ? 'You win!'
+    : `${view.winners.map((w) => view.names[w] ?? '').join(' and ')} wins!`;
+  const scores = view.names.map((n, i) => `${n} ${String(view.scores[i] ?? 0)}`).join(', ');
+  return { title, detail: scores };
 };
 
 /** The shell's `table.pause` adapter (AGENT.md "Understand what happened before proceeding"): the pause a new view raises against the one it replaces: the end, with how it came; a cold paint raises none. */
 export const pauseFor = (prev: View | null, next: View): Pause | null =>
-  prev?.game.result !== null ? null : endWords(next);
+  prev === null || prev.phase === 'gameOver' ? null : endWords(next);
 
 /** One key per position, so a re-sent frame plays nothing. */
 const cueKey = (v: View): string =>
-  `${String(v.startedAt)}:${String(v.game.turns)}:${String(v.game.turn)}:${v.game.result === null ? 'on' : 'over'}`;
+  `${String(v.startedAt)}:${String(v.round)}:${String(cardsOut(v))}:${String(v.turn)}:${v.phase === 'gameOver' ? 'over' : 'on'}`;
 
 /**
  * The state side of a paint: the table is the screen while a view is held; the cues come from the
@@ -134,8 +129,7 @@ const rendered = (app: App, prev: View | null): Step => {
   const key = cueKey(view);
   const fresh = prev !== null && key !== app.shell.cues.key;
   const online = app.shell.role === 'host' || app.shell.role === 'guest';
-  const myTurnNow =
-    online && fresh && turnSeat(view.game) === view.seat && turnSeat(prev.game) !== view.seat;
+  const myTurnNow = online && fresh && view.turn === view.seat && prev.turn !== view.seat;
   const cues: ReadonlyArray<Cue> = fresh
     ? [...cuesBetween(prev, view), ...(myTurnNow ? (['yourTurn'] as const) : [])]
     : [];
@@ -163,15 +157,15 @@ const reset = (table: Table, at: TableReset): Table => {
  */
 const viewer: ShellConfig<Hearts>['local']['viewer'] = (app, game) => {
   const actor = turnSeat(game.game);
-  const holder: Seat = app.shell.view?.seat ?? app.shell.revealed ?? 0;
-  const seat = actor ?? holder;
+  const holder: HeartsSeat = asSeat(app.shell.view?.seat ?? app.shell.revealed ?? 0);
+  const seat = actor === null ? holder : asSeat(actor);
   const curtain = actor !== null && app.shell.revealed !== seat ? seat : null;
   return { seat, curtain };
 };
 
 /** `curtain/reveal`: whoever must act lifts the curtain, and acts from this phone (the shell's `act`); the shell's `position/load` reads the seat to move off this. */
 const revealer: ShellConfig<Hearts>['local']['revealer'] = (game) => ({
-  seat: turnSeat(game.game) ?? 0,
+  seat: asSeat(turnSeat(game.game) ?? 0),
 });
 
 export const HEARTS: ShellConfig<Hearts> = {
@@ -196,7 +190,7 @@ const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step =>
 /**
  * The boot's reducer block (web/shared/ui/shellReducer.ts): the shell's flows over `HEARTS` and
  * the table's intents; every effect is the shell's (the table has none of its own). The
- * pass-and-play start is the shell's `local/click` (the two names through its `localSeats` rule
+ * pass-and-play start is the shell's `local/click` (three or four names through its `localSeats` rule
  * with this game's defaults, then `engine.create`): a game writes its own only where the start
  * depends on something the shell cannot see (docs/design/fidice-shell-adoption.md §9).
  */
@@ -210,15 +204,15 @@ export const { initialApp, reduce, runEffect, readHome, resumeFor, hostContextOf
 export const viewOf = (app: App): View | null => app.shell.view;
 export { viewFor };
 
-/** `#handoffBtn`'s offer: seat 0 hosts, seat 1 joins by invite. */
+/** `#handoffBtn`'s offer: seat 0 hosts, the others join by invite. */
 export const handoffLabel = (game: State): string =>
-  `Continue online: ${game.game.names[0]} hosts, ${game.game.names[1]} joins by invite`;
+  `Continue online: ${game.game.names[0] ?? ''} hosts, ${game.game.names.slice(1).join(', ')} join by invite`;
 
 /** The resume box's line for an offer. */
 export const resumeLabel = (resume: Resume): string => {
   switch (resume.kind) {
     case 'local':
-      return `Resume pass & play: ${resume.game.game.names[0]} vs ${resume.game.game.names[1]}`;
+      return `Resume pass & play: ${resume.game.game.names.join(', ')}`;
     case 'host':
       return resume.handoff && resume.game !== null
         ? handoffLabel(resume.game)

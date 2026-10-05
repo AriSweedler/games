@@ -18,7 +18,7 @@ test('pass, resign, continue at a phone', async ({ phone, project }) => {
   await expect(page).toHaveTitle('Hearts');
   await expect(page.locator('#myName')).toHaveText(NAMES[0]);
   await expect(page.locator('#oppName')).toHaveText(NAMES[1]);
-  expect(await requireView(page)).toMatchObject({ seat: 0, game: { turn: 0, turns: 0 } });
+  expect(await requireView(page)).toMatchObject({ seat: 0, turn: 0, round: 1 });
 
   await page.locator('#passBtn').click();
   await expect(page.locator('#curtainOverlay')).toBeVisible();
@@ -34,5 +34,5 @@ test('pass, resign, continue at a phone', async ({ phone, project }) => {
   await expect(page.locator('#resultOverlay')).toBeVisible();
   await expect(page.locator('#rsTitle')).toHaveText(`${NAMES[0]} wins!`);
   await expect(page.locator('#againBtn')).toBeVisible();
-  expect((await requireView(page)).game.result).toEqual({ kind: 'win', winner: 0, by: 'resign' });
+  expect((await requireView(page)).phase).toBe('gameOver');
 });
