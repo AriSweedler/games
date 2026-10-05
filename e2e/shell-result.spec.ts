@@ -27,7 +27,14 @@ import { flip7RigBust } from './fixtures/flip7.ts';
 import { PHONE } from './fixtures/geometry.ts';
 import { requireView as hiveView } from './fixtures/hive.ts';
 import { gamePath } from './fixtures/player.ts';
-import { DEFAULT_NAMES, reveal, revealIf, startLocal } from './fixtures/shell.ts';
+import {
+  DEFAULT_NAMES,
+  TWO_SEAT_ONLY,
+  reveal,
+  revealIf,
+  seatsTwo,
+  startLocal,
+} from './fixtures/shell.ts';
 import { expect, test } from './fixtures/two-players.ts';
 import { requireView as unoView, unoPosition, unoSetup } from './fixtures/uno.ts';
 
@@ -123,6 +130,7 @@ const ROUTES: Readonly<Record<ShellGame, (page: Page) => Promise<string>>> = {
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
+    test.skip(!seatsTwo(game), TWO_SEAT_ONLY);
     test('Leave the table from the finished game: the home comes back with no sheet over it and answers a tap', async ({
       player,
       project,

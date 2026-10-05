@@ -959,6 +959,11 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
         rule: 'seat-names',
         followUp: 'one name input per seat the stepper counts, with the stepper (above)',
       },
+      {
+        rule: 'home-felt',
+        followUp:
+          "the title's blue (rgb(108, 140, 213)) is 2.46:1 on the felt's first stop rgb(31, 90, 58) (2026-10-05): a lighter ink for the h1, 4.5:1 or better (hearts-polish)",
+      },
     ],
   },
 };

@@ -22,7 +22,7 @@ import type { Browser, Page, TestInfo } from '@playwright/test';
 import { SHELL, SHELL_GAMES, type ShellGame } from '../tools/games.ts';
 import { HB_MS } from '../web/shared/net/liveness.ts';
 import { newPlayer, openGame, type Player } from './fixtures/player.ts';
-import { ONLINE_NAMES } from './fixtures/shell.ts';
+import { ONLINE_NAMES, TWO_SEAT_ONLY, seatsTwo } from './fixtures/shell.ts';
 import { SHELL_DRIVERS, connect } from './fixtures/online-games.ts';
 import type { Project } from './fixtures/site.ts';
 import { LIVENESS_TIMEOUT, WEBRTC_TIMEOUT } from './fixtures/timeouts.ts';
@@ -136,6 +136,7 @@ const seated = async (shell: Shell, host: Player, back: Player): Promise<void> =
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
+    test.skip(!seatsTwo(game), TWO_SEAT_ONLY);
     const shell = shellOf(game);
     const { dot } = shell;
 

@@ -17,13 +17,14 @@ import { peerIdFor } from '../web/shared/lib/roomCode.ts';
 import { SHELL_DRIVERS, connect } from './fixtures/online-games.ts';
 import { expectPeerOptions, openGame, type GameHooks } from './fixtures/player.ts';
 import { RELAY_TOAST, expectRelayPath, skipWithoutRelay } from './fixtures/relay.ts';
-import { ONLINE_NAMES } from './fixtures/shell.ts';
+import { ONLINE_NAMES, TWO_SEAT_ONLY, seatsTwo } from './fixtures/shell.ts';
 import { expect, hostRoom, test } from './fixtures/two-players.ts';
 
 const RELAY_GAME: GameHooks = { relay: true, ice: 'turn' };
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
+    test.skip(!seatsTwo(game), TWO_SEAT_ONLY);
     const spec = REGISTRY[game];
     const driver = SHELL_DRIVERS[game];
 

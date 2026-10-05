@@ -13,12 +13,14 @@ import { DESKTOP, PHONE, type Viewport } from './fixtures/geometry.ts';
 import {
   DEFAULT_MARK,
   DEFAULT_NAMES,
+  TWO_SEAT_ONLY,
   firstPlayer,
   hasCurtain,
   localNames,
   readPref,
   readSave,
   reveal,
+  seatsTwo,
   startLocal,
 } from './fixtures/shell.ts';
 import { SHELL_DRIVERS } from './fixtures/online-games.ts';
@@ -29,6 +31,7 @@ const VIEWPORTS: Readonly<Record<string, Viewport>> = { phone: PHONE, desktop: D
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
+    test.skip(!seatsTwo(game), TWO_SEAT_ONLY);
     const driver = SHELL_DRIVERS[game];
 
     Object.entries(VIEWPORTS).forEach(([name, vp]) => {

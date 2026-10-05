@@ -10,7 +10,7 @@
 // opened and who took the phone are read from the elements a player sees.
 import { expect, type Page } from '@playwright/test';
 
-import { REGISTRY, SHELL, type ShellGame } from '../../tools/games.ts';
+import { CONFORMANCE, REGISTRY, SHELL, type ShellGame } from '../../tools/games.ts';
 import { ROOM_CODE } from '../../web/shared/lib/roomCode.ts';
 import type { Viewport } from './geometry.ts';
 import { BROKER_TIMEOUT, WEBRTC_TIMEOUT } from './timeouts.ts';
@@ -28,6 +28,18 @@ export const DEFAULT_NAME = 'Ari';
  * shellConfig.ts `localNames`, else web/shared/ui/shell.ts DEFAULT_LOCAL_NAMES).
  */
 export const localNames = (game: ShellGame): Names => SHELL[game].localNames;
+/**
+ * Whether the game seats a table of two (tools/games.ts CONFORMANCE `seats.min`): the two-player
+ * harness (`players`: a host and one guest; `startLocal`: two names) and every shell spec's
+ * expectation (`WAITING_MSG`, the one `#oppName`, `resumeLabel.local`, the handoff at two seats)
+ * are written for it. A game whose smallest table is three (hearts: `seats {min 3, fixed}`, the
+ * host deals once every seat is taken) cannot be seated by this harness, so its two-seat
+ * describes skip with `TWO_SEAT_ONLY` until a three-seat harness lands (the hearts-table row).
+ */
+export const seatsTwo = (game: ShellGame): boolean => CONFORMANCE[game].seats.min <= 2;
+/** The skip reason of a two-seat shell describe on a game `seatsTwo` denies. */
+export const TWO_SEAT_ONLY =
+  'a table of three or more: the two-player shell harness cannot seat it (e2e/fixtures/shell.ts seatsTwo)';
 /** The attribute a prefilled default carries until its first tap (web/shared/ui/home.ts DEFAULT_MARK). */
 export const DEFAULT_MARK = 'data-default';
 

@@ -593,7 +593,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
       uno: ['pauses', 'home-felt'],
       flip7: [],
       hive: ['pauses', 'home-felt'],
-      hearts: ['stepper', 'seat-names'],
+      hearts: ['stepper', 'seat-names', 'home-felt'],
     });
   });
 

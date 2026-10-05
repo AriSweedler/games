@@ -25,6 +25,7 @@ import { expectPeerOptions, invitePath, openGame } from './fixtures/player.ts';
 import {
   DEFAULT_MARK,
   DEFAULT_NAME,
+  TWO_SEAT_ONLY,
   followInvite,
   hostRoom,
   hostSeesMsg,
@@ -35,11 +36,13 @@ import {
   rememberName,
   rememberP2Name,
   rename,
+  seatsTwo,
 } from './fixtures/shell.ts';
 import { expect, test } from './fixtures/two-players.ts';
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
+    test.skip(!seatsTwo(game), TWO_SEAT_ONLY);
     const spec = REGISTRY[game];
     const driver = SHELL_DRIVERS[game];
 
@@ -87,6 +90,7 @@ const HOST = 'Ann';
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
+    test.skip(!seatsTwo(game), TWO_SEAT_ONLY);
     const driver = SHELL_DRIVERS[game];
     const cells = driver.seatNames;
 
