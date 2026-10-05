@@ -10,11 +10,12 @@ import {
   act as shellAct,
   again,
   andThen as then,
+  cueStep,
   pure,
   refuse,
   step,
-  withShell,
   type Ctx,
+  type CueMachine,
   type Effect as SharedEffect,
   type GameTypes,
   type HomeSnapshot as SharedHomeSnapshot,
@@ -48,7 +49,7 @@ import {
   type PlayMode,
   type Store,
 } from '../storage.ts';
-import type { Cue } from './sound.ts';
+import { cuesBetween, type Cue } from './sound.ts';
 
 export { DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab, type PlayMode };
 
@@ -109,14 +110,6 @@ export const initialTable: Table = { curtain: null, picked: [] };
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
 const cardsOut = (view: View): number => view.counts.reduce((sum, n) => sum + n, 0);
-
-/** The cues for the change from `prev` to `next`: a card played (the scaffold's `pass` cue until the polish row names its own), the game won or lost. */
-export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
-  if (next.phase === 'gameOver' && prev.phase !== 'gameOver') {
-    return [next.winners.includes(next.seat) ? 'win' : 'lose'];
-  }
-  return cardsOut(next) < cardsOut(prev) ? ['pass'] : [];
-};
 
 /** The end's words: who won (or a draw) and how it came, for the pause and the result sheet alike. */
 export const endWords = (view: View): Pause | null => {
@@ -196,26 +189,27 @@ export const pauseFor = (prev: View | null, next: View): Pause | null => {
   }
 };
 
-/** One key per position, so a re-sent frame plays nothing. */
-const cueKey = (v: View): string =>
-  `${String(v.startedAt)}:${String(v.round)}:${String(cardsOut(v))}:${String(v.turn)}:${v.phase === 'gameOver' ? 'over' : 'on'}`;
+/**
+ * One key per position, so a re-sent frame or a repaint plays nothing: everything sound.ts
+ * `cuesBetween` reads off a view. The game and the hand (the deal), the phase (the hand's end), the
+ * seat to act and the cards out (a play, a trick gathered), the seats that have passed (a pass
+ * moves no card, so the count alone would miss another seat's choice).
+ */
+export const cueKey = (v: View): string =>
+  [v.startedAt, v.round, v.phase, v.turn, cardsOut(v), v.passed.filter(Boolean).length]
+    .map(String)
+    .join(':');
 
 /**
- * The state side of a paint: the table is the screen while a view is held; the cues come from the
- * change since `prev`, once per position, and "your turn" when an online turn lands on my seat
- * (the end's pause is the shell's, through `table.pause`).
+ * The paint's cues (the shell's `cueStep`): once per position (`cueKey`), sound.ts `cuesBetween`
+ * for the change (a card laid, a trick gathered, the points or the queen in my pile, a pass, the
+ * hand's end, the moon, the deal, the win or the loss), and "your turn" when an online turn lands
+ * on my seat; the end's pause is the shell's, through `table.pause`.
  */
-const rendered = (app: App, prev: View | null): Step => {
-  const view = app.shell.view;
-  if (view === null) return pure(app);
-  const key = cueKey(view);
-  const fresh = prev !== null && key !== app.shell.cues.key;
-  const online = app.shell.role === 'host' || app.shell.role === 'guest';
-  const myTurnNow = online && fresh && view.turn === view.seat && prev.turn !== view.seat;
-  const cues: ReadonlyArray<Cue> = fresh
-    ? [...cuesBetween(prev, view), ...(myTurnNow ? (['yourTurn'] as const) : [])]
-    : [];
-  return step(withShell(app, { cues: { key }, screen: 'tableScreen' }), ...cues.map(fx));
+const CUE_MACHINE: CueMachine<Hearts> = {
+  key: cueKey,
+  between: cuesBetween,
+  myTurn: (v) => v.turn === v.seat,
 };
 
 const reset = (table: Table, at: TableReset): Table => {
@@ -256,7 +250,7 @@ export const HEARTS: ShellConfig<Hearts> = {
   table: {
     initial: initialTable,
     reset,
-    rendered,
+    rendered: cueStep(CUE_MACHINE),
     pause: (_app, prev, view) => pauseFor(prev, view),
   },
   local: { viewer, revealer },
