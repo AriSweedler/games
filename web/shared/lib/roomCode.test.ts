@@ -34,6 +34,10 @@ import {
   HIVE_CODE_LENGTH,
   HIVE_CODE_LENGTH_ERROR,
   HIVE_PEER_PREFIX,
+  HEARTS_CODE_ALPHABET,
+  HEARTS_CODE_LENGTH,
+  HEARTS_CODE_LENGTH_ERROR,
+  HEARTS_PEER_PREFIX,
   UNO_CODE_ALPHABET,
   UNO_CODE_LENGTH,
   UNO_CODE_LENGTH_ERROR,
@@ -168,6 +172,26 @@ describe('frozen literals (byte for byte what the legacy pages hold)', () => {
     expect(peerIdFor('hive', 'KQZM')).toBe('hive-KQZM');
     expect(isWellFormedCode('hive', 'KQZM')).toBe(true);
     expect(isWellFormedCode('hive', 'KQZ1')).toBe(false);
+  });
+
+  test("hearts: gin's alphabet and length under its own broker prefix (hearts.md §3)", () => {
+    expect(HEARTS_PEER_PREFIX).toBe('hearts-');
+    expect(HEARTS_CODE_ALPHABET).toBe('ABCDEFGHJKLMNPQRSTUVWXYZ');
+    expect(HEARTS_CODE_LENGTH).toBe(4);
+    expect(HEARTS_CODE_LENGTH_ERROR).toBe('Enter the 4-letter room code.');
+    expect(ROOM_CODE.hearts).toEqual({
+      alphabet: 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+      length: 4,
+      peerPrefix: 'hearts-',
+      peerCase: 'upper',
+      lengthError: 'Enter the 4-letter room code.',
+    });
+    expect(sanitiseCode('hearts', 'ab1c-d io')).toBe('ABCD');
+    expect(validateCode('hearts', 'abcd')).toEqual(ok('ABCD'));
+    expect(validateCode('hearts', 'abc')).toEqual(err('Enter the 4-letter room code.'));
+    expect(peerIdFor('hearts', 'KQZM')).toBe('hearts-KQZM');
+    expect(isWellFormedCode('hearts', 'KQZM')).toBe(true);
+    expect(isWellFormedCode('hearts', 'KQZ1')).toBe(false);
   });
 
   test('the alphabets leave out the look-alikes and have no repeats', () => {

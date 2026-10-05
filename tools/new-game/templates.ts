@@ -1408,6 +1408,14 @@ label {
 }
 
 /* ---------- the table ---------- */
+/* The topbar (page.ts, the shared topbarHtml partial): the leave button, the names strip and the
+   icon buttons in one row. */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 /* The board slot: the game's own markup goes here (render.ts). Lit on the viewing seat's turn. */
 .board {
   min-height: 40vh;

@@ -6,7 +6,7 @@
 //   npm run new-game -- --name tally --title "Tally" --seats 2-2 --hidden-hands no
 //   node --experimental-strip-types tools/new-game.ts --name <slug> --title <Title> --seats <min>-<max> --hidden-hands yes|no [--root <dir>]
 // The skeleton is tools/new-game/templates.ts (Hive's shape with the game cut out), the registry
-// rows tools/new-game/registry.ts (anchored on Hive's rows). After the files: the composed
+// rows tools/new-game/registry.ts (anchored on Hearts' rows). After the files: the composed
 // index.html (tools/shell-markup.ts --write), the placeholder splash PNG (Hive's, until
 // tools/splash.ts renders the game's SVG), Prettier over everything it touched. tools/new-game.test.ts
 // scaffolds a throwaway game into a copy of the repo and runs the gates on it.

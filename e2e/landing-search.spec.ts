@@ -134,12 +134,12 @@ test('phone: lesser matches sit under the divider; Escape and the clear button r
     await input.focus();
     await page.setViewportSize(PHONE_KEYBOARD);
 
-    // 's': Sheshbesh is a prefix; Briscola a subsequence (the reaction game, a word start, is
-    // unlisted: tools/games.ts SOLO `listed: false`, so it is never a result).
+    // 's': Sheshbesh is a prefix; Briscola and Hearts subsequences, by title (the reaction game, a
+    // word start, is unlisted: tools/games.ts SOLO `listed: false`, so it is never a result).
     await input.pressSequentially('s');
-    await expect(page.locator('#results a.card')).toHaveCount(2);
+    await expect(page.locator('#results a.card')).toHaveCount(3);
     expect(await listing(page)).toEqual({
-      names: ['Sheshbesh', 'Briscola'],
+      names: ['Sheshbesh', 'Briscola', 'Hearts'],
       divider: 1,
     });
     await expect(page.locator('#results hr.divider')).toHaveAttribute(
