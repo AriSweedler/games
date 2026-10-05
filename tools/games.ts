@@ -947,7 +947,7 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
     seats: { min: 3, max: 4 },
     // ui/state.ts `pauseFor`: a trick that carried points (`trick`), a hand's end with its scores and the moon (`handOver`), the game's end (`over`).
     pauses: ['trick', 'handOver', 'over'],
-    cues: ['pass'],
+    cues: ['pass', 'play', 'trick', 'points', 'queen', 'moon', 'handOver', 'deal'],
     cssFloor: 60,
     hides: true,
     felt: '--felt',

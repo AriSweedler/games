@@ -792,12 +792,12 @@ const hearts: ShellDriver = {
   },
   glossary: {
     aboutTerm: 'pass',
-    aboutRule: 'turn',
-    innerFrom: 'goal',
-    innerTo: 'turn',
+    aboutRule: 'pass',
+    innerFrom: 'follow',
+    innerTo: 'lead',
     deepLink: 'goal',
-    overlayFrom: 'goal',
-    overlayTo: 'turn',
+    overlayFrom: 'first',
+    overlayTo: 'lead',
     openRulesOverTable: async (page, url, viewport) => {
       await heartsStartLocal(page, url, viewport);
       await page.locator('#rulesBtnGame').click();

@@ -573,7 +573,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
       hearts: {
         seats: { min: 3, max: 4 },
         pauses: ['trick', 'handOver', 'over'],
-        cues: ['pass'],
+        cues: ['pass', 'play', 'trick', 'points', 'queen', 'moon', 'handOver', 'deal'],
         cssFloor: 60,
         hides: true,
         felt: '--felt',
