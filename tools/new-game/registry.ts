@@ -524,7 +524,7 @@ const ${s}: ShellDriver = {
         );
         return insertAfter(
           t8,
-          "      hearts: ['stepper', 'seat-names'],\n",
+          "      hearts: ['stepper', 'seat-names', 'home-felt'],\n",
           `      ${s}: ${gapRules},\n`,
           p,
         );
