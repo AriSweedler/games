@@ -29,8 +29,9 @@ import {
 
 export const SEAT_COUNTS = [3, 4] as const;
 export type SeatCount = (typeof SEAT_COUNTS)[number];
-export const MIN_SEATS: SeatCount = 3;
-export const MAX_SEATS: SeatCount = 4;
+// Literals (not `: SeatCount`): the conformance suite reads each bound off `const X = <digits>`.
+export const MIN_SEATS = 3;
+export const MAX_SEATS = 4;
 /** The cards each seat passes before a hand (§3). */
 export const PASS_COUNT = 3;
 /** A hand that leaves a seat here or past ends the game (§6). */

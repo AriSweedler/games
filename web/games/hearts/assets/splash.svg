@@ -1,9 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <!-- Hearts's link-preview card (docs/design/link-previews.md): the name on the shared felt with
-       the one accent. TODO: the game's own drawing. tools/splash.ts renders it to
-       web/public/games/hearts/splash.png. -->
-  <rect width="1200" height="630" fill="#0f2a1c" />
-  <circle cx="300" cy="315" r="150" fill="none" stroke="#6c8cd5" stroke-width="12" />
-  <text x="560" y="340" font-family="Georgia, serif" font-size="120" font-weight="700" fill="#6c8cd5">Hearts</text>
-  <text x="564" y="410" font-family="Helvetica, Arial, sans-serif" font-size="40" fill="#e8e1cf">For two. Pass one phone, or play online.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Hearts">
+  <!-- The link-preview card (docs/design/link-previews.md §2), in Hearts's quiet theme (theme.css): the
+       shared dark felt, the word Hearts, the one accent as a rule under it, and a fan of three plain
+       cards on the right, two hearts and the queen of spades, one pip each (AGENT.md "Theme: subtle, not gaudy": one accent, the suit, the name). tools/splash.ts
+       renders it to web/public/games/hearts/splash.png. -->
+  <defs>
+    <radialGradient id="felt" cx="0.5" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#1f5a3a"/>
+      <stop offset="0.55" stop-color="#123a26"/>
+      <stop offset="1" stop-color="#0b2418"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#felt)"/>
+  <text x="96" y="300" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="160" fill="#ecebe6">Hearts</text>
+  <rect x="100" y="334" width="130" height="4" fill="#c2544f"/>
+  <text x="100" y="396" font-family="'Helvetica Neue', Arial, sans-serif" font-size="34" fill="#9a9891">Take the fewest points. Or take them all.</text>
+  <g transform="translate(940 318)">
+    <g transform="rotate(-16) translate(-82 14)">
+      <rect x="-80" y="-118" width="160" height="236" rx="14" fill="#f4f1e8" stroke="#ecebe6" stroke-width="4"/>
+      <path transform="translate(-52 -46) scale(2)" d="M0 16 C0 6 6 0 13 0 c6 0 10 4 13 9 c3-5 7-9 13-9 c7 0 13 6 13 16 c0 14-20 24-26 32 C20 40 0 30 0 16z" fill="#c2544f"/>
+    </g>
+    <g>
+      <rect x="-80" y="-118" width="160" height="236" rx="14" fill="#f4f1e8" stroke="#ecebe6" stroke-width="4"/>
+      <path transform="translate(-52 -46) scale(2)" d="M0 16 C0 6 6 0 13 0 c6 0 10 4 13 9 c3-5 7-9 13-9 c7 0 13 6 13 16 c0 14-20 24-26 32 C20 40 0 30 0 16z" fill="#c2544f"/>
+    </g>
+    <g transform="rotate(16) translate(82 14)">
+      <rect x="-80" y="-118" width="160" height="236" rx="14" fill="#f4f1e8" stroke="#ecebe6" stroke-width="4"/>
+      <text x="-58" y="-68" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="40" fill="#1c1b1f">Q</text>
+      <path transform="translate(-38 -44) scale(2.4)" d="M14 0 C14 0 10 6 6 10 C2 14 0 18 0 22 C0 28 5 32 10 32 C13 32 15 30 16 28 C17 30 19 32 22 32 C27 32 32 28 32 22 C32 18 30 14 26 10 C22 6 18 0 14 0 M13 34 L19 34 L21 44 L11 44z" fill="#1c1b1f"/>
+    </g>
+  </g>
+  <text x="98" y="580" font-family="'Helvetica Neue', Arial, sans-serif" font-size="26" fill="#ecebe6" fill-opacity="0.7" letter-spacing="1">games.sweedler.com</text>
 </svg>

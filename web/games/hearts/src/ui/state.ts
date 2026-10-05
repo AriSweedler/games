@@ -8,11 +8,14 @@
 // Play again (the shell's `again/click`). Pure: the clock and the rng come in through `Ctx`.
 import {
   act as shellAct,
+  again,
   andThen as then,
+  cueStep,
   pure,
+  refuse,
   step,
-  withShell,
   type Ctx,
+  type CueMachine,
   type Effect as SharedEffect,
   type GameTypes,
   type HomeSnapshot as SharedHomeSnapshot,
@@ -27,7 +30,16 @@ import {
 } from '../../../../shared/ui/shell.ts';
 import { shellReducer } from '../../../../shared/ui/shellReducer.ts';
 import type { SeatedRaw } from '../../../../shared/ui/seatCopy.ts';
-import { turnSeat, viewFor, type Action, type State, type View } from '../engine/view.ts';
+import { PASS_COUNT, type TrickResult } from '../engine/engine.ts';
+import { pointsOf, type Cards } from '../engine/cards.ts';
+import {
+  turnSeat,
+  viewFor,
+  type Action,
+  type Seat,
+  type State,
+  type View,
+} from '../engine/view.ts';
 import { HEARTS_SHELL, asSeat } from '../shellConfig.ts';
 import {
   DEFAULT_PLAY_MODE,
@@ -37,7 +49,7 @@ import {
   type PlayMode,
   type Store,
 } from '../storage.ts';
-import type { Cue } from './sound.ts';
+import { cuesBetween, type Cue } from './sound.ts';
 
 export { DEFAULT_PLAY_MODE, HOME_TABS, type HomeTab, type PlayMode };
 
@@ -47,18 +59,25 @@ export type Raw = SeatedRaw;
 /** `initHome` reads nothing beyond the shell's keys. */
 export type Home = Readonly<{ opts?: never }>;
 
-/** The table's own state: the curtain seat alone (the sheets, the pause and the result are the shell's, `ShellState`). */
+/** The table's own state: the curtain seat and the pass selection (the sheets, the pause and the result are the shell's, `ShellState`). */
 export type Table = Readonly<{
   /** The shell's pass-and-play curtain seat (`ShellTypes.Table`; the shell writes it from `local.viewer`). */
   curtain: HeartsSeat | null;
+  /** The cards tapped for the pass, in tap order, up to three; cleared when a new view lands. */
+  picked: Cards;
 }>;
 
 /** The seats past the shell's two: the third and the fourth (the shell's `SeatOf<Hearts>` adds its own two). */
 export type ExtraSeat = 2 | 3;
 export type HeartsSeat = 0 | 1 | ExtraSeat;
 
-/** The table's one intent: a play; the sheets (`rules/*`, `history/*`, `escape`) are the shell's intents. */
-export type TableIntent = Readonly<{ type: 'act'; action: Action }>;
+/** The table's intents: an action as the hook sends it, a card tapped (a pick in the pass, a play in the trick), Pass, and the result sheet's primary; the sheets (`rules/*`, `history/*`, `escape`) are the shell's intents. */
+export type TableIntent =
+  | Readonly<{ type: 'act'; action: Action }>
+  | Readonly<{ type: 'card/tap'; id: string }>
+  | Readonly<{ type: 'pass/click' }>
+  /** The result sheet's one primary (`#rsNextBtn`): Next hand between hands, Play again (the shell's `again`) once the game is over. */
+  | Readonly<{ type: 'next/click' }>;
 
 export type TableEffect = never;
 
@@ -86,19 +105,11 @@ export type Step = SharedStep<Hearts>;
 export type Resume = SharedResume<Hearts>;
 export type HomeSnapshot = SharedHomeSnapshot<Hearts>;
 
-export const initialTable: Table = { curtain: null };
+export const initialTable: Table = { curtain: null, picked: [] };
 
 const fx = (cue: Cue | 'tap'): Effect => ({ type: 'fx', cue });
 
 const cardsOut = (view: View): number => view.counts.reduce((sum, n) => sum + n, 0);
-
-/** The cues for the change from `prev` to `next`: a card played (the scaffold's `pass` cue until the polish row names its own), the game won or lost. */
-export const cuesBetween = (prev: View, next: View): ReadonlyArray<Cue> => {
-  if (next.phase === 'gameOver' && prev.phase !== 'gameOver') {
-    return [next.winners.includes(next.seat) ? 'win' : 'lose'];
-  }
-  return cardsOut(next) < cardsOut(prev) ? ['pass'] : [];
-};
 
 /** The end's words: who won (or a draw) and how it came, for the pause and the result sheet alike. */
 export const endWords = (view: View): Pause | null => {
@@ -106,34 +117,99 @@ export const endWords = (view: View): Pause | null => {
   const title = view.winners.includes(view.seat)
     ? 'You win!'
     : `${view.winners.map((w) => view.names[w] ?? '').join(' and ')} wins!`;
-  const scores = view.names.map((n, i) => `${n} ${String(view.scores[i] ?? 0)}`).join(', ');
-  return { title, detail: scores };
+  return { title, detail: scoreLine(view, view.scores) };
 };
 
-/** The shell's `table.pause` adapter (AGENT.md "Understand what happened before proceeding"): the pause a new view raises against the one it replaces: the end, with how it came; a cold paint raises none. */
-export const pauseFor = (prev: View | null, next: View): Pause | null =>
-  prev === null || prev.phase === 'gameOver' ? null : endWords(next);
+const nameIn = (view: View, seat: Seat): string => view.names[seat] ?? '';
 
-/** One key per position, so a re-sent frame plays nothing. */
-const cueKey = (v: View): string =>
-  `${String(v.startedAt)}:${String(v.round)}:${String(cardsOut(v))}:${String(v.turn)}:${v.phase === 'gameOver' ? 'over' : 'on'}`;
+/** "Ann 13, Bob 0, Cat 13": every seat's number in seat order. */
+export const scoreLine = (view: View, scores: ReadonlyArray<number>): string =>
+  view.names.map((n, i) => `${n} ${String(scores[i] ?? 0)}`).join(', ');
+
+/** The cards of a trick that carried points, by who played them and what each was worth: "Q♠ (13) from Bob, 5♥ (1) from Cat". */
+export const pointCards = (view: View, trick: TrickResult): string =>
+  trick.plays
+    .filter((p) => pointsOf(p.card) > 0)
+    .map((p) => `${p.card} (${String(pointsOf(p.card))}) from ${nameIn(view, p.seat)}`)
+    .join(', ');
+
+/** A trick with points, held until Continue: who took it and which cards carried the points. */
+export const trickWords = (view: View, trick: TrickResult): Pause => {
+  const who = trick.taker === view.seat ? 'You take' : `${nameIn(view, trick.taker)} takes`;
+  return {
+    title: `${who} ${String(trick.points)} ${trick.points === 1 ? 'point' : 'points'}`,
+    detail: pointCards(view, trick),
+  };
+};
+
+/** A hand's end: this hand's scores (the moon named when shot) and the totals. */
+export const handWords = (view: View): Pause => {
+  const hand = view.handScores ?? view.scores;
+  const moon = view.moon === null ? '' : `${nameIn(view, view.moon)} shot the moon! `;
+  return {
+    title: `Hand ${String(view.round)} over`,
+    detail: `${moon}This hand: ${scoreLine(view, hand)}. Totals: ${scoreLine(view, view.scores)}.`,
+  };
+};
+
+/** The three events that pause (tools/games.ts `CONFORMANCE.hearts.pauses`): a trick with points, a hand's end, the game's end. */
+export type PauseKind = 'trick' | 'handOver' | 'over';
 
 /**
- * The state side of a paint: the table is the screen while a view is held; the cues come from the
- * change since `prev`, once per position, and "your turn" when an online turn lands on my seat
- * (the end's pause is the shell's, through `table.pause`).
+ * The event a new view raises against the one it replaces, or null: the game's end; a hand's end;
+ * a trick just taken that carried points (`lastTrick`). A trick without points, a new deal and a
+ * cold paint (a resume, a reconnect) raise none.
  */
-const rendered = (app: App, prev: View | null): Step => {
-  const view = app.shell.view;
-  if (view === null) return pure(app);
-  const key = cueKey(view);
-  const fresh = prev !== null && key !== app.shell.cues.key;
-  const online = app.shell.role === 'host' || app.shell.role === 'guest';
-  const myTurnNow = online && fresh && view.turn === view.seat && prev.turn !== view.seat;
-  const cues: ReadonlyArray<Cue> = fresh
-    ? [...cuesBetween(prev, view), ...(myTurnNow ? (['yourTurn'] as const) : [])]
-    : [];
-  return step(withShell(app, { cues: { key }, screen: 'tableScreen' }), ...cues.map(fx));
+export const pauseKind = (prev: View | null, next: View): PauseKind | null => {
+  if (prev === null || prev.phase === 'gameOver') return null;
+  if (next.phase === 'gameOver') return 'over';
+  if (prev.startedAt !== next.startedAt || prev.round !== next.round) return null;
+  if (next.phase === 'handOver') return prev.phase === 'handOver' ? null : 'handOver';
+  const last = next.lastTrick;
+  if (last === null || last.points === 0 || prev.lastTrick === last) return null;
+  return 'trick';
+};
+
+/**
+ * The shell's `table.pause` adapter (AGENT.md "Understand what happened before proceeding"): what
+ * `pauseKind` names, with what to show: the end with how it came, the hand's scores and the moon,
+ * the trick's cards and who took what. Every seat of the table sees the same event, so online each
+ * phone pauses on its own.
+ */
+export const pauseFor = (prev: View | null, next: View): Pause | null => {
+  switch (pauseKind(prev, next)) {
+    case null:
+      return null;
+    case 'over':
+      return endWords(next);
+    case 'handOver':
+      return handWords(next);
+    case 'trick':
+      return next.lastTrick === null ? null : trickWords(next, next.lastTrick);
+  }
+};
+
+/**
+ * One key per position, so a re-sent frame or a repaint plays nothing: everything sound.ts
+ * `cuesBetween` reads off a view. The game and the hand (the deal), the phase (the hand's end), the
+ * seat to act and the cards out (a play, a trick gathered), the seats that have passed (a pass
+ * moves no card, so the count alone would miss another seat's choice).
+ */
+export const cueKey = (v: View): string =>
+  [v.startedAt, v.round, v.phase, v.turn, cardsOut(v), v.passed.filter(Boolean).length]
+    .map(String)
+    .join(':');
+
+/**
+ * The paint's cues (the shell's `cueStep`): once per position (`cueKey`), sound.ts `cuesBetween`
+ * for the change (a card laid, a trick gathered, the points or the queen in my pile, a pass, the
+ * hand's end, the moon, the deal, the win or the loss), and "your turn" when an online turn lands
+ * on my seat; the end's pause is the shell's, through `table.pause`.
+ */
+const CUE_MACHINE: CueMachine<Hearts> = {
+  key: cueKey,
+  between: cuesBetween,
+  myTurn: (v) => v.turn === v.seat,
 };
 
 const reset = (table: Table, at: TableReset): Table => {
@@ -147,7 +223,7 @@ const reset = (table: Table, at: TableReset): Table => {
     case 'view':
     case 'applied':
     case 'frame':
-      return table;
+      return { ...table, picked: [] };
   }
 };
 
@@ -170,11 +246,11 @@ const revealer: ShellConfig<Hearts>['local']['revealer'] = (game) => ({
 
 export const HEARTS: ShellConfig<Hearts> = {
   ...HEARTS_SHELL,
-  // The end is a pause (the shell holds it until Continue; nothing moves meanwhile); Play again is the shell's `again/click`.
+  // A pointed trick, a hand's end and the game's end are pauses (the shell holds each until Continue; nothing moves meanwhile); Next hand and Play again are the result sheet's `next/click`.
   table: {
     initial: initialTable,
     reset,
-    rendered,
+    rendered: cueStep(CUE_MACHINE),
     pause: (_app, prev, view) => pauseFor(prev, view),
   },
   local: { viewer, revealer },
@@ -183,9 +259,53 @@ export const HEARTS: ShellConfig<Hearts> = {
 /** `act(action)`: the shell's by role (the mover acts on a pass-and-play phone: `revealer`; a pause up holds it there). */
 const act = (app: App, action: Action, ctx: Ctx): Step => shellAct(app, action, ctx, HEARTS);
 
-/** A play with its tap: the table's one intent (the sheets are the shell's, reduced before this). */
+/** The pass's selection after a tap on `id`: out if it is in, in if there is room for it (`PASS_COUNT`). */
+export const togglePick = (picked: Cards, id: string): Cards =>
+  picked.includes(id)
+    ? picked.filter((c) => c !== id)
+    : picked.length < PASS_COUNT
+      ? [...picked, id]
+      : picked;
+
+/** A card tapped: in the pass it joins (or leaves) the three to pass, in play it is played. */
+const tapCard = (app: App, id: string, ctx: Ctx): Step => {
+  const view = app.shell.view;
+  if (view === null || app.shell.pause !== null) return pure(app);
+  if (view.phase === 'passing')
+    return view.myPass !== null
+      ? pure(app)
+      : pure({ ...app, table: { ...app.table, picked: togglePick(app.table.picked, id) } });
+  return act(app, { type: 'play', id }, ctx);
+};
+
+export const PICK_THREE_MSG = `Choose ${String(PASS_COUNT)} cards to pass.`;
+
+/** Pass: the three picked go to the engine (which checks them against the hand); fewer than three is a nudge. */
+const passPicked = (app: App, ctx: Ctx): Step =>
+  app.table.picked.length === PASS_COUNT
+    ? act(app, { type: 'pass', ids: app.table.picked }, ctx)
+    : refuse(app, PICK_THREE_MSG);
+
+/** The result sheet's primary: the next hand's deal between hands, the shell's Play again once the game is over. */
+const next = (app: App, ctx: Ctx): Step =>
+  app.shell.view?.phase === 'gameOver'
+    ? again(app, ctx, HEARTS)
+    : act(app, { type: 'nextHand' }, ctx);
+
+/** The table's intents, each with its tap (the sheets are the shell's, reduced before this). */
 const tableIntent = (app: App, intent: TableIntent, ctx: Ctx): Step =>
-  then(step(app, fx('tap')), (a) => act(a, intent.action, ctx));
+  then(step(app, fx('tap')), (a) => {
+    switch (intent.type) {
+      case 'act':
+        return act(a, intent.action, ctx);
+      case 'card/tap':
+        return tapCard(a, intent.id, ctx);
+      case 'pass/click':
+        return passPicked(a, ctx);
+      case 'next/click':
+        return next(a, ctx);
+    }
+  });
 
 /**
  * The boot's reducer block (web/shared/ui/shellReducer.ts): the shell's flows over `HEARTS` and

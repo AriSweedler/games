@@ -318,7 +318,8 @@ export const SHELL: Readonly<Record<ShellGame, ShellSpec>> = {
     hostAnswered: /^Connected — waiting for .+ to start$/,
     connDot: '#oppDot',
     localNames: ['Ari', 'Lavi'],
-    localFields: [],
+    // The pass-and-play stepper, three at least (the two-seat shell specs skip Hearts: e2e/fixtures/shell.ts `seatsTwo`).
+    localFields: [['localPlayersCount', '3']],
     curtainButtons: 1,
     firstCurtain: 'Pass the phone to {name}',
   },
@@ -944,25 +945,17 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
   },
   hearts: {
     seats: { min: 3, max: 4 },
-    pauses: ['over'],
-    cues: ['pass'],
-    cssFloor: 30,
+    // ui/state.ts `pauseFor`: a trick that carried points (`trick`), a hand's end with its scores and the moon (`handOver`), the game's end (`over`).
+    pauses: ['trick', 'handOver', 'over'],
+    cues: ['pass', 'play', 'trick', 'points', 'queen', 'moon', 'handOver', 'deal'],
+    cssFloor: 60,
     hides: true,
     felt: '--felt',
     gaps: [
       {
-        rule: 'stepper',
-        followUp:
-          "the scaffold seats two; the stepper is Flip 7's shape (docs/design/flip7.md §8): stepperHtml in page.ts, bindStepper in ui/home.ts, seats {min, max} in shellConfig.ts",
-      },
-      {
-        rule: 'seat-names',
-        followUp: 'one name input per seat the stepper counts, with the stepper (above)',
-      },
-      {
         rule: 'home-felt',
         followUp:
-          "the title's blue (rgb(108, 140, 213)) is 2.46:1 on the felt's first stop rgb(31, 90, 58) (2026-10-05): a lighter ink for the h1, 4.5:1 or better (hearts-polish)",
+          "the title's red (--accent) on the felt's first stop rgb(31, 90, 58) is under 4.5:1 (2026-10-05): a lighter ink for the h1 (hearts-polish)",
       },
     ],
   },

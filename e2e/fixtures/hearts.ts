@@ -8,6 +8,7 @@ import { expect, type Page } from '@playwright/test';
 
 import type { Action, View } from '../../web/games/hearts/src/engine/view.ts';
 import type { Viewport } from './geometry.ts';
+import { stepperIds } from '../../web/shared/markup/stepper.ts';
 import { reveal, startLocal } from './shell.ts';
 
 export type { View };
@@ -36,22 +37,62 @@ export const heartsSnapshot = async (page: Page): Promise<string> =>
   heartsKey(await readView(page));
 
 /**
- * Pass the phone between three names at `viewport`: the shell's start (its two inputs), the third
- * seat's input filled when it differs from the panel's default; resolves with the table up, the
- * first curtain lifted.
+ * Pass the phone between three or four names at `viewport`: the shell's start (its two inputs),
+ * the stepper stepped to the count, each further seat's input filled when it differs from the
+ * panel's default; resolves with the table up, the first curtain lifted.
  */
 export const heartsStartLocal = async (
   page: Page,
   url: string,
   viewport: Viewport,
-  names: readonly [string, string, string] = HEARTS_NAMES,
+  names: ReadonlyArray<string> = HEARTS_NAMES,
 ): Promise<void> => {
-  await startLocal(page, url, viewport, [names[0], names[1]], async (p) => {
-    const third = p.locator('#p3NameInput');
-    if ((await third.count()) > 0 && (await third.inputValue()) !== names[2])
-      await third.fill(names[2]);
+  await startLocal(page, url, viewport, [names[0] ?? '', names[1] ?? ''], async (p) => {
+    const ids = stepperIds('localPlayersCount');
+    await expect.poll(() => p.locator(`#${ids.num}`).textContent()).toBeTruthy();
+    const count = Number(await p.locator(`#${ids.num}`).textContent());
+    if (count < names.length) await p.locator(`#${ids.inc}`).click();
+    if (count > names.length) await p.locator(`#${ids.dec}`).click();
+    await Promise.all(
+      names.slice(2).map(async (name, k) => {
+        const input = p.locator(`#p${String(k + 3)}NameInput`);
+        await expect(input).toBeVisible();
+        if ((await input.inputValue()) !== name) await input.fill(name);
+      }),
+    );
   });
   await reveal(page);
+};
+
+/** The pause sheet's title while one is up, else null. */
+export const pauseTitle = async (page: Page): Promise<string | null> =>
+  (await page.locator('#pauseOverlay').isVisible())
+    ? page.locator('#pauseTitle').textContent()
+    : null;
+
+/**
+ * One move of the phone through the page's own controls: a pause up is read (Continue), a curtain
+ * up is lifted, a finished hand is left on its result sheet, else the holder's first legal action
+ * through the hook. Resolves with what it did, so a spec can count the pauses it read.
+ */
+export const heartsStep = async (
+  page: Page,
+): Promise<Readonly<{ kind: 'pause' | 'curtain' | 'act' | 'handOver'; title: string | null }>> => {
+  const title = await pauseTitle(page);
+  if (title !== null) {
+    await page.locator('#continueBtn').click();
+    await expect(page.locator('#pauseOverlay')).toBeHidden();
+    return { kind: 'pause', title };
+  }
+  if (await page.locator('#curtainOverlay').isVisible()) {
+    await reveal(page);
+    return { kind: 'curtain', title: null };
+  }
+  const view = await requireView(page);
+  if (view.phase === 'handOver' || view.phase === 'gameOver')
+    return { kind: 'handOver', title: null };
+  await heartsPlayTurn(page);
+  return { kind: 'act', title: null };
 };
 
 /** One action through the hook, as the seat holding the phone. */

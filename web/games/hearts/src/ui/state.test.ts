@@ -4,16 +4,22 @@ import { NOW, runIntents } from '../../../../../test/shared/engine-helpers.ts';
 import { mulberry32 } from '../../../../shared/lib/rng.ts';
 import { DECK } from '../engine/cards.ts';
 import type { Action, View } from '../engine/view.ts';
+import { QUEEN_OF_SPADES } from '../engine/cards.ts';
 import {
-  cuesBetween,
+  PICK_THREE_MSG,
+  cueKey,
   endWords,
+  handWords,
   handoffLabel,
   initialApp,
   pauseFor,
   reduce,
   resumeLabel,
+  togglePick,
+  trickWords,
   viewOf,
   type App,
+  type Effect,
   type Intent,
 } from './state.ts';
 
@@ -38,10 +44,48 @@ const firstLegal = (app: App): Action => {
   return first;
 };
 
-/** One action by the holder, then the curtain lifted for the next seat when it drops. */
+/** One move of the phone: a pause up is read (Continue), a finished hand is dealt on (Next hand), else the holder's first legal action; then the curtain lifted for the next seat when it drops. */
 const step = (app: App): App => {
+  if (app.shell.pause !== null) return run(app, { type: 'pause/continue' }).app;
+  if (viewOf(app)?.phase === 'handOver') return run(app, { type: 'next/click' }).app;
   const next = run(app, act(firstLegal(app))).app;
   return next.table.curtain === null ? next : run(next, reveal).app;
+};
+
+/** The apps a run passes through, `steps` long or until the game is over. */
+const trail = (app: App, steps: number): ReadonlyArray<App> =>
+  viewOf(app)?.phase === 'gameOver' || steps === 0 ? [app] : [app, ...trail(step(app), steps - 1)];
+
+/** The table's cues a reduction played: the tap (every intent taps) and `yourTurn` (pass-and-play's curtain, the shell's) left out. */
+const cuesOf = (effects: ReadonlyArray<Effect>): ReadonlyArray<string> =>
+  effects.flatMap((e) =>
+    e.type === 'fx' && e.cue !== 'tap' && e.cue !== 'yourTurn' ? [e.cue] : [],
+  );
+
+/** One move of the phone as `step`, with the views either side of it and what it played. */
+type Move = Readonly<{ prev: View; view: View; cues: ReadonlyArray<string> }>;
+const move = (app: App): Readonly<{ app: App; move: Move }> => {
+  const prev = viewOf(app);
+  const r =
+    app.shell.pause !== null
+      ? run(app, { type: 'pause/continue' })
+      : viewOf(app)?.phase === 'handOver'
+        ? run(app, { type: 'next/click' })
+        : run(app, act(firstLegal(app)));
+  const lifted = r.app.table.curtain === null ? r : run(r.app, reveal);
+  const view = viewOf(lifted.app);
+  if (prev === null || view === null) throw new Error('no view');
+  return {
+    app: lifted.app,
+    move: { prev, view, cues: cuesOf([...r.effects, ...(lifted === r ? [] : lifted.effects)]) },
+  };
+};
+
+/** Every move of a game to its end (or `steps` of it), with what each played. */
+const moves = (app: App, steps: number): ReadonlyArray<Move> => {
+  if (viewOf(app)?.phase === 'gameOver' || steps === 0) return [];
+  const m = move(app);
+  return [m.move, ...moves(m.app, steps - 1)];
 };
 
 describe('pass and play', () => {
@@ -74,20 +118,18 @@ describe('pass and play', () => {
     expect(viewOf(led.app)?.counts[view.seat]).toBe(16);
     const cues = led.effects.filter((e) => e.type === 'fx').map((e) => (e as { cue: string }).cue);
     expect(cues).toContain('tap');
-    expect(cues).toContain('pass');
+    expect(cues).toContain('play');
+    expect(cues).not.toContain('pass');
     expect(led.app.table.curtain).not.toBeNull();
   });
 
   test('the game plays through to its end on a pause the shell holds; Continue clears it; Play again deals the same seats anew', () => {
-    const play = (a: App, steps: number): App => {
-      if (viewOf(a)?.phase === 'gameOver' || steps === 0) return a;
-      return play(step(a), steps - 1);
-    };
-    const end = play(started(), 5000);
+    const apps = trail(started(), 8000);
+    const end = apps[apps.length - 1] ?? started();
     const view = viewOf(end);
     expect(view?.phase).toBe('gameOver');
     expect(Math.max(...(view?.scores ?? []))).toBeGreaterThanOrEqual(100);
-    expect(end.shell.pause?.title).toMatch(/wins!$/);
+    expect(end.shell.pause?.title).toMatch(/wins?!$/);
     const stuck = run(end, act({ type: 'playAgain' })).app;
     expect(viewOf(stuck)?.phase).toBe('gameOver');
     const cleared = run(end, { type: 'pause/continue' }).app;
@@ -97,6 +139,122 @@ describe('pass and play', () => {
     expect(viewOf(again)?.round).toBe(1);
     expect(again.shell.game?.game.names).toEqual(['Ann', 'Bob', 'Cat']);
   });
+
+  test("every trick with points and every hand's end pause with what happened, and Continue clears each; a trick without points does not pause", () => {
+    const apps = trail(started(), 8000);
+    const paused = apps.filter((a) => a.shell.pause !== null);
+    const titles = paused.map((a) => a.shell.pause?.title ?? '');
+    // The pointed tricks: who took how many, the cards in the detail.
+    const tricks = paused.filter((a) => /takes? \d+ points?$/.test(a.shell.pause?.title ?? ''));
+    expect(tricks.length).toBeGreaterThan(0);
+    tricks.forEach((a) => {
+      expect(a.shell.pause?.detail).toMatch(/ from /);
+      expect(viewOf(a)?.lastTrick?.points).toBeGreaterThan(0);
+    });
+    // Every hand's end: its scores, then the result sheet's Next hand.
+    const hands = paused.filter((a) => /^Hand \d+ over$/.test(a.shell.pause?.title ?? ''));
+    expect(hands.length).toBeGreaterThan(0);
+    expect(hands[0]?.shell.pause?.detail).toMatch(
+      /^(.* shot the moon! )?This hand: .*\. Totals: .*\.$/,
+    );
+    // A pointless trick raises none: every paused trick carried points (checked above), and the
+    // tricks that carried none went by without a pause.
+    const quiet = apps.filter(
+      (a) =>
+        a.shell.pause === null &&
+        viewOf(a)?.lastTrick !== null &&
+        viewOf(a)?.lastTrick?.points === 0,
+    );
+    expect(quiet.length).toBeGreaterThan(0);
+    // While a pause is up nothing moves; Continue clears it and the game goes on.
+    const first = paused[0];
+    if (first === undefined) throw new Error('no pause');
+    expect(run(first, act(firstLegal(first))).app.shell.game).toEqual(first.shell.game);
+    expect(run(first, { type: 'pause/continue' }).app.shell.pause).toBeNull();
+    expect(titles[titles.length - 1]).toMatch(/wins?!$/);
+  });
+
+  test('the pass through the table: three taps pick, a fourth is ignored, a tap again unpicks, Pass sends them; fewer than three is a nudge', () => {
+    const app = started();
+    const hand = viewOf(app)?.hand ?? [];
+    const [a, b, c, d] = hand;
+    if (a === undefined || b === undefined || c === undefined || d === undefined)
+      throw new Error('a short hand');
+    const nudged = run(app, { type: 'pass/click' });
+    expect(nudged.effects).toContainEqual({ type: 'toast', message: PICK_THREE_MSG, ms: null });
+    const picked = run(
+      app,
+      { type: 'card/tap', id: a },
+      { type: 'card/tap', id: b },
+      { type: 'card/tap', id: c },
+      { type: 'card/tap', id: d },
+    ).app;
+    expect(picked.table.picked).toEqual([a, b, c]);
+    expect(run(picked, { type: 'card/tap', id: b }).app.table.picked).toEqual([a, c]);
+    const passed = run(picked, { type: 'pass/click' }).app;
+    expect(passed.shell.game?.game.passes[0]).toEqual([a, b, c]);
+    expect(passed.table.picked).toEqual([]);
+    expect(passed.table.curtain).toBe(1);
+    expect(togglePick(['x', 'y', 'z'], 'w')).toEqual(['x', 'y', 'z']);
+  });
+
+  test("the cues through the table, once each: a pass, a card laid, the points or the queen in my pile, a hand's end, the deal, the end; a repaint plays nothing", () => {
+    const app = started();
+    // The first seat's pass moves no card, and is heard on every device.
+    const passed = run(app, act(firstLegal(app)));
+    expect(cuesOf(passed.effects)).toEqual(['pass']);
+    // The curtain lifted paints the same position again: nothing plays.
+    expect(cuesOf(run(passed.app, reveal).effects)).toEqual([]);
+    const all = moves(app, 8000);
+    const last = all[all.length - 1];
+    expect(last?.view.phase).toBe('gameOver');
+    // A card laid on the trick: `play`, and never the scaffold's `pass`.
+    const laid = all.filter((m) => m.view.trick.plays.length > m.prev.trick.plays.length);
+    expect(laid.length).toBeGreaterThan(0);
+    laid.forEach((m) => {
+      expect(m.cues).toEqual(['play']);
+    });
+    // A trick gathered mid-hand lands in the taker's pile, and the taker leads: the holder hears the hearts, or the queen.
+    const gathered = all.filter(
+      (m) =>
+        m.view.phase === 'playing' &&
+        m.view.lastTrick !== null &&
+        m.view.lastTrick !== m.prev.lastTrick,
+    );
+    const pointed = gathered.filter((m) => (m.view.lastTrick?.points ?? 0) > 0);
+    expect(pointed.length).toBeGreaterThan(0);
+    pointed.forEach((m) => {
+      expect(m.view.lastTrick?.taker).toBe(m.view.seat);
+      const queen = m.view.lastTrick?.plays.some((p) => p.card === QUEEN_OF_SPADES) ?? false;
+      expect(m.cues).toEqual([queen ? 'queen' : 'points']);
+    });
+    gathered
+      .filter((m) => m.view.lastTrick?.points === 0)
+      .forEach((m) => {
+        expect(m.cues).toEqual(['trick']);
+      });
+    // A hand's end: its notice, or the moon when shot; the next hand's deal.
+    const ended = all.filter((m) => m.view.phase === 'handOver' && m.prev.phase === 'playing');
+    expect(ended.length).toBeGreaterThan(0);
+    ended.forEach((m) => {
+      expect(['handOver', 'moon']).toContain(m.cues.join());
+    });
+    expect(ended.some((m) => m.cues.join() === 'handOver')).toBe(true);
+    const dealt = all.filter((m) => m.view.round !== m.prev.round);
+    expect(dealt.length).toBe(ended.length);
+    dealt.forEach((m) => {
+      expect(m.cues).toEqual(['deal']);
+    });
+    // The game's end: the holder's win or loss (after the moon, when it ended on one).
+    const end = last?.cues ?? [];
+    expect(['win', 'lose']).toContain(end[end.length - 1]);
+    // A pause read (Continue) changes no position: silent.
+    all
+      .filter((m) => m.prev === m.view)
+      .forEach((m) => {
+        expect(m.cues).toEqual([]);
+      });
+  });
 });
 
 describe('the helpers', () => {
@@ -105,15 +263,51 @@ describe('the helpers', () => {
     const v0 = viewOf(app);
     if (v0 === null) throw new Error('no view');
     const over: View = { ...v0, phase: 'gameOver', winners: [1], scores: [100, 20, 50] };
-    expect(cuesBetween(v0, over)).toEqual(['lose']);
-    expect(cuesBetween(v0, { ...over, winners: [0] })).toEqual(['win']);
-    expect(cuesBetween(v0, { ...v0, counts: [16, 17, 17] })).toEqual(['pass']);
-    expect(cuesBetween(v0, v0)).toEqual([]);
+    // The cue memory's key: what sound.ts's `cuesBetween` reads, and not the hand itself.
+    expect(cueKey(v0)).toBe(cueKey({ ...v0, hand: [], seat: 1 }));
+    expect(cueKey({ ...v0, passed: [true, false, false] })).not.toBe(cueKey(v0));
+    expect(cueKey({ ...v0, counts: [16, 17, 17] })).not.toBe(cueKey(v0));
+    expect(cueKey({ ...v0, phase: 'handOver' })).not.toBe(cueKey(v0));
+    expect(cueKey({ ...v0, round: 2 })).not.toBe(cueKey(v0));
+    expect(cueKey(over)).not.toBe(cueKey(v0));
     expect(endWords(v0)).toBeNull();
     expect(endWords(over)).toEqual({ title: 'Bob wins!', detail: 'Ann 100, Bob 20, Cat 50' });
     expect(pauseFor(v0, v0)).toBeNull();
     expect(pauseFor(null, over)).toBeNull();
     expect(pauseFor(v0, over)?.title).toBe('Bob wins!');
+    expect(pauseFor(v0, { ...v0, round: 2 })).toBeNull();
+    const trick = {
+      leader: 1,
+      taker: 2,
+      points: 14,
+      plays: [
+        { seat: 1, card: 'QS' },
+        { seat: 2, card: '5H' },
+      ],
+    };
+    expect(trickWords(v0, trick)).toEqual({
+      title: 'Cat takes 14 points',
+      detail: 'QS (13) from Bob, 5H (1) from Cat',
+    });
+    expect(trickWords({ ...v0, seat: 2 }, { ...trick, points: 1 }).title).toBe('You take 1 point');
+    expect(pauseFor(v0, { ...v0, phase: 'playing', lastTrick: trick })?.title).toBe(
+      'Cat takes 14 points',
+    );
+    expect(
+      pauseFor(v0, { ...v0, phase: 'playing', lastTrick: { ...trick, points: 0 } }),
+    ).toBeNull();
+    const handOver: View = {
+      ...v0,
+      phase: 'handOver',
+      handScores: [0, 26, 0],
+      moon: 0,
+      scores: [0, 26, 0],
+    };
+    expect(handWords(handOver).detail).toBe(
+      'Ann shot the moon! This hand: Ann 0, Bob 26, Cat 0. Totals: Ann 0, Bob 26, Cat 0.',
+    );
+    expect(pauseFor(v0, handOver)?.title).toBe('Hand 1 over');
+    expect(pauseFor(handOver, handOver)).toBeNull();
     const game = app.shell.game;
     if (game === null) throw new Error('no game');
     expect(handoffLabel(game)).toBe('Continue online: Ann hosts, Bob, Cat join by invite');

@@ -1,14 +1,20 @@
 /* Hearts's theme (docs/design/hearts.md §3). The page links web/shared/styles/tokens.css, base.css
    and shell.css before this file: the home, the waiting rooms, the sheets, the curtain and the
-   toast are the shell's rules on the shared palette, and this file adds the game's one accent, the
-   type scale the shell leaves to each theme, and the table. TODO: the accent, the board. Prettier
+   toast are the shell's rules on the shared palette, and this file adds the game's one accent (a
+   muted heart red; AGENT.md "Themes are subtle"), the type scale the shell leaves to each theme,
+   and the table: the other seats' chips in a background row, the trick in the middle, this phone's
+   seat and its hand of plain card faces (gin's glyphs over the shared pack) in the foreground. The
+   whole fits a 390x844 phone with no scroll: a hand of thirteen is two rows of 48px cards. Prettier
    formats this file. */
 :root {
   --gutter: 12px;
-  /* The one accent (AGENT.md "Theme: subtle, not gaudy"): TODO, the game's own. */
-  --accent: #6c8cd5;
-  --accent-dark: #4a66a8;
+  /* The one accent (AGENT.md "Themes are subtle"): a muted heart red, used for the lit seat, the picked card and the primary. */
+  --accent: #c9534a;
+  --accent-dark: #9b3b34;
   --emphasis: var(--accent);
+  /* The cards: every dimension derives from --card-w (gin's rule), one width for the hand and a smaller one for the trick. */
+  --card-w: 48px;
+  --trick-w: 42px;
 }
 @media (min-width: 900px) {
   :root {
@@ -86,6 +92,17 @@ label {
 }
 
 /* ---------- the table ---------- */
+#tableScreen {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px var(--gutter) 12px;
+  min-height: 100dvh;
+  box-sizing: border-box;
+}
+#tableScreen.hidden {
+  display: none;
+}
 /* The topbar (page.ts, the shared topbarHtml partial): the leave button, the names strip and the
    icon buttons in one row. */
 .topbar {
@@ -94,18 +111,219 @@ label {
   justify-content: space-between;
   gap: 8px;
 }
-/* The board slot: the game's own markup goes here (render.ts). Lit on the viewing seat's turn. */
-.board {
-  min-height: 40vh;
-  margin: 8px 0;
-  border: 1px dashed rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
+#myName {
+  font-weight: 700;
 }
-.board.turn {
+#oppName {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The hand row: the hand's number and its pass on the left, "hearts broken" on the right once a heart fell. */
+.hand-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.flag {
+  color: var(--accent);
+  font-weight: 700;
+}
+/* The board: the other seats above, the trick in the middle, my seat below, filling the screen. */
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+}
+/* The other seats: one chip each in a row, name, cards left and score. */
+.others {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+}
+.others[data-count='2'] {
+  --cols: 2;
+}
+.seat {
+  background: rgba(0, 0, 0, 0.28);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-inner);
+  padding: 6px 8px;
+  min-width: 0;
+}
+.others .seat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+/* The seat to play, lit in the accent. */
+.seat.current {
   border-color: var(--accent);
+}
+/* A seat that has chosen its pass. */
+.seat.passed .seat-name::after {
+  content: ' ✓';
+  color: var(--muted);
+}
+.seat-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.seat-cards {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.seat-cards::before {
+  content: '🂠 ';
+  font-size: 0.8em;
+}
+.seat-score {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* The trick in the middle: each card over its seat's name, the leader marked with a line in the accent. */
+.trick {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  min-height: calc(var(--trick-w) * 1.44 + 22px);
+  flex: 1;
+}
+.play {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  --card-w: var(--trick-w);
+}
+.play-name {
+  font-size: 0.72rem;
+  color: var(--muted);
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.play.lead .play-name {
+  color: var(--accent);
+  font-weight: 700;
+}
+/* My seat in the foreground: the head and the hand. */
+.seat.me {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+}
+.seat-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.seat.me .seat-name::after {
+  content: ' (you)';
+  color: var(--muted);
+  font-weight: 400;
+}
+/* The hand: the faces wrap into rows; a tap target is the card itself (48px wide, 69px tall). */
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  min-height: calc(var(--card-w) * 1.44);
+}
+.hand[data-tap='pick'] .card,
+.hand[data-tap='play'] .card {
+  cursor: pointer;
+}
+/* A card picked for the pass lifts in the accent; a card I may not play now dims. */
+.card.picked {
+  transform: translateY(-8px);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.card.dim {
+  opacity: 0.45;
+}
+.status-line {
+  text-align: center;
+  margin: 0;
+  min-height: 1.4em;
 }
 .controls {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+}
+
+/* ---------- cards (gin's glyph faces over the shared pack, web/shared/ui/cardFace.ts) ---------- */
+.card {
+  position: relative;
+  width: var(--card-w);
+  height: calc(var(--card-w) * 1.44);
+  border-radius: calc(var(--card-w) * 0.16);
+  background: #fdfdf7;
+  color: #111;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--card-w);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.card.red {
+  color: #c81e1e;
+}
+.card .rank {
+  position: absolute;
+  top: 0.05em;
+  left: 0.1em;
+  font-size: 0.3em;
+  font-weight: 800;
+  line-height: 1;
+}
+.card .rank.br {
+  top: auto;
+  left: auto;
+  bottom: 0.05em;
+  right: 0.1em;
+  transform: rotate(180deg);
+}
+.card .suit {
+  font-size: 0.52em;
+  line-height: 1;
+}
+.card.back {
+  background: var(--accent-dark);
+}
+
+/* Sideways and wide (body[data-layout], docs/design/layout-buckets.md): the cards grow and the hand stays one row. */
+body:not([data-layout='phone-upright']) #tableScreen {
+  --card-w: 56px;
+  --trick-w: 48px;
+}
+@media (min-width: 900px) {
+  #tableScreen {
+    --card-w: 64px;
+    --trick-w: 56px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
 }
