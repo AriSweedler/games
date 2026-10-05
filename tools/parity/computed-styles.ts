@@ -1238,7 +1238,8 @@ const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
     submenuShot: null,
     localModeShot: 'home: play tab, pass the phone',
     curtainShot: 'local: started, curtain up',
-    localValues: {},
+    // Three players: the stepper's hidden count, already at its default (setField leaves it).
+    localValues: { localPlayersCount: '3' },
     // Three seats at least (docs/design/hearts.md §3): the host card opens a table of three.
     hostWaiting: 'Waiting for 2 players to join',
   },
