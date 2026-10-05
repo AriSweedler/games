@@ -4,7 +4,7 @@
     <meta property="og:title" content="Hearts" />
     <meta
       property="og:description"
-      content="Hearts for two. Pass one phone, or open a table online."
+      content="Hearts for three or four. Pass one phone, or open a table online and send the link."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://games.sweedler.com/hearts/" />
@@ -16,13 +16,16 @@
     <meta name="twitter:title" content="Hearts" />
     <meta
       name="twitter:description"
-      content="Hearts for two. Pass one phone, or open a table online."
+      content="Hearts for three or four. Pass one phone, or open a table online and send the link."
     />
     <meta name="twitter:image" content="https://games.sweedler.com/hearts/splash.png" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Hearts</title>
-    <meta name="description" content="Hearts for two: pass one phone, or open a table online." />
+    <meta
+      name="description"
+      content="Hearts for three or four: pass one phone, or open a table online."
+    />
     <link rel="icon" href="../../shared/favicon.svg" type="image/svg+xml" />
     <link rel="alternate icon" href="../../shared/favicon.ico" />
     <link rel="stylesheet" href="../../shared/styles/tokens.css" />
@@ -32,11 +35,11 @@
   </head>
   <body>
     <div id="app">
-      <!-- HOME / LOBBY (docs/design/hearts.md §3): Online (the default) or Pass the phone, two players. -->
+      <!-- HOME / LOBBY (docs/design/hearts.md §3): Online (the default) or Pass the phone, three or four players. -->
       <div id="homeScreen">
         <div class="masthead">
           <h1>Hearts</h1>
-          <div class="subtitle">TODO: one line on what the game is</div>
+          <div class="subtitle">Avoid the hearts and the queen, three or four players</div>
         </div>
 
         <div id="resumeBox" class="card-box resume hidden">
@@ -70,6 +73,30 @@
             </div>
             <div class="card-box">
               <label>Open a table</label>
+              <div class="stepper" data-min="3" data-max="4">
+                <span class="stepper-label">Players</span>
+                <div class="stepper-row">
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="playersCountDec"
+                    aria-label="Fewer players"
+                    disabled
+                  >
+                    −
+                  </button>
+                  <output class="stepper-num" id="playersCountNum" aria-live="polite">3</output>
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="playersCountInc"
+                    aria-label="More players"
+                  >
+                    +
+                  </button>
+                </div>
+                <input type="hidden" id="playersCount" value="3" />
+              </div>
               <button class="btn btn-go btn-block" id="hostBtn">Open a table</button>
               <div class="empty-note left">You'll get a 4-letter room code to share.</div>
             </div>
@@ -98,7 +125,33 @@
 
           <div id="localModeContent" class="hidden">
             <div class="card-box">
-              <div class="row">
+              <div class="stepper" data-min="3" data-max="4">
+                <span class="stepper-label">Players</span>
+                <div class="stepper-row">
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="localPlayersCountDec"
+                    aria-label="Fewer players"
+                    disabled
+                  >
+                    −
+                  </button>
+                  <output class="stepper-num" id="localPlayersCountNum" aria-live="polite"
+                    >3</output
+                  >
+                  <button
+                    type="button"
+                    class="stepper-btn"
+                    id="localPlayersCountInc"
+                    aria-label="More players"
+                  >
+                    +
+                  </button>
+                </div>
+                <input type="hidden" id="localPlayersCount" value="3" />
+              </div>
+              <div class="seat-names" id="seatNames">
                 <input
                   type="text"
                   id="p1NameInput"
@@ -115,11 +168,27 @@
                   maxlength="20"
                   autocomplete="off"
                 />
+                <input
+                  type="text"
+                  id="p3NameInput"
+                  class="grow hidden"
+                  placeholder="Player 3"
+                  maxlength="20"
+                  autocomplete="off"
+                />
+                <input
+                  type="text"
+                  id="p4NameInput"
+                  class="grow hidden"
+                  placeholder="Player 4"
+                  maxlength="20"
+                  autocomplete="off"
+                />
               </div>
             </div>
             <button class="btn btn-go btn-block" id="localBtn">Start</button>
             <div class="empty-note left">
-              One phone, no internet needed. A curtain hides the table as the phone changes hands.
+              One phone, no internet needed. A curtain hides each hand as the phone changes hands.
             </div>
           </div>
         </div>
@@ -138,7 +207,7 @@
       <!-- HOST WAITING -->
       <div id="hostWaitScreen" class="hidden">
         <h1>Your table</h1>
-        <div class="subtitle">Have your opponent open this same page and enter the code</div>
+        <div class="subtitle">Have the others open this same page and enter the code</div>
         <div class="card-box centered">
           <label>Room code</label>
           <div class="room-code" id="roomCode">----</div>
@@ -146,12 +215,13 @@
         </div>
         <div class="card-box centered">
           <div id="hostWaitStatus" class="pulse muted">Opening the table…</div>
+          <ul class="seat-list" id="seatList" aria-label="Seats"></ul>
           <div class="empty-note">
-            Keep this screen open while your opponent sits down. If you switch apps, come straight
-            back and the table reconnects on its own.
+            Keep this screen open while the others sit down. If you switch apps, come straight back
+            and the table reconnects on its own.
           </div>
         </div>
-        <button class="btn btn-go btn-block hidden" id="startGameBtn">Start</button>
+        <button class="btn btn-go btn-block hidden" id="startGameBtn">Deal</button>
         <button class="btn btn-ghost btn-block" id="cancelHostBtn">Cancel</button>
       </div>
 
@@ -160,6 +230,7 @@
         <h1>Joining…</h1>
         <div class="card-box centered">
           <div id="guestWaitStatus" class="pulse muted">Connecting…</div>
+          <ul class="seat-list" id="guestSeatList" aria-label="Seats"></ul>
           <div id="guestSeatName" class="hidden">
             <label for="guestNameInput">Playing as</label>
             <div class="row">
@@ -181,9 +252,10 @@
         <button class="btn btn-ghost btn-block" id="cancelGuestBtn">Back</button>
       </div>
 
-      <!-- TABLE (docs/design/hearts.md §3): the names strip (me, the other seat and its connection),
-           the board slot (TODO: the game's own markup, painted by render.ts), the status line and
-           the controls. -->
+      <!-- TABLE (docs/design/hearts.md §3, §8): the names strip, the hand row (the hand's number and
+           its pass, hearts broken), the other seats' chips in the background (name, cards left, score,
+           the seat to play lit), the trick in the middle (the leader marked), this phone's seat and
+           hand in the foreground, Pass while the three are chosen, the status line. render.ts paints it. -->
       <div id="tableScreen" class="hidden">
         <div class="topbar">
           <div class="row tight">
@@ -206,7 +278,7 @@
           </div>
           <div class="names-strip">
             <span id="myName">You</span>
-            <span class="vs">vs</span>
+            <span class="vs">·</span>
             <span id="oppName">Opponent</span>
             <span class="conn-dot" id="oppDot"></span>
           </div>
@@ -226,12 +298,24 @@
             </button>
           </div>
         </div>
-        <div class="board" id="board" aria-label="The table"></div>
-        <p class="status-line" id="statusText" aria-live="polite"></p>
+        <div class="hand-row">
+          <span id="roundLabel">Hand 1</span>
+          <span class="flag hidden" id="heartsFlag">♥ broken</span>
+        </div>
+        <div class="board" id="board" aria-label="The table">
+          <ul class="others" id="others" data-count="2"></ul>
+          <div class="trick" id="trick" data-count="0" aria-live="off"></div>
+          <p class="status-line" id="statusText" aria-live="polite"></p>
+          <div class="seat me" id="mySeat">
+            <div class="seat-head">
+              <span class="seat-name" id="mySeatName">You</span>
+              <span class="seat-score" id="myScore" title="Score">0</span>
+            </div>
+            <div class="hand" id="hand" data-tap=""></div>
+          </div>
+        </div>
         <div class="controls">
-          <button class="btn btn-secondary grow hidden" id="passBtn">Pass</button>
-          <button class="btn btn-ghost grow hidden" id="resignBtn">Resign</button>
-          <button class="btn btn-go grow hidden" id="againBtn">Play again</button>
+          <button class="btn btn-primary grow hidden" id="passBtn" disabled>Pass 3 cards</button>
         </div>
       </div>
 
@@ -242,25 +326,25 @@
       </div>
     </div>
 
-    <!-- PASS-AND-PLAY CURTAIN: raised on every change of turn (ui/state.ts `viewer`): a seat holds something the other must not see. -->
+    <!-- PASS-AND-PLAY CURTAIN: raised on every change of actor, in the pass too (ui/state.ts `viewer`): a seat holds a hand the others must not see. -->
     <div id="curtainOverlay" class="overlay curtain hidden">
       <div class="sheet centered">
         <div class="sheet-title" id="curtainTitle">Pass the phone</div>
         <div class="sheet-sub" id="curtainSub"></div>
         <div id="curtainLast" class="empty-note"></div>
-        <button class="btn btn-primary btn-block" id="curtainBtn">Show the table</button>
+        <button class="btn btn-primary btn-block" id="curtainBtn">Show my cards</button>
         <button class="btn btn-ghost btn-block btn-sm hidden" id="curtainHandoffBtn">
           Continue online
         </button>
       </div>
     </div>
 
-    <!-- RESULT: the end over the final table, after its pause (the owner: "understand what happened before proceeding"); Play again starts anew. -->
+    <!-- RESULT: a hand ends on the scores after its pause (the owner: understand what happened before proceeding); Next hand is the host's deal, Play again the game's once a seat has reached 100. -->
     <div id="resultOverlay" class="overlay hidden">
       <div class="sheet centered">
         <div class="sheet-title" id="rsTitle">Game over</div>
-        <p class="result-note" id="rsScore"></p>
-        <button class="btn btn-go btn-block" id="rsAgainBtn">Play again</button>
+        <div class="score-list" id="rsScore"></div>
+        <button class="btn btn-go btn-block" id="rsNextBtn">Next hand</button>
         <button class="btn btn-ghost btn-block btn-sm" id="rsLeaveBtn">Leave the table</button>
       </div>
     </div>

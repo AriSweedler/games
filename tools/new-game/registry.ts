@@ -522,12 +522,7 @@ const ${s}: ShellDriver = {
           `      ${s}: {\n${conformanceRow(spec, '        ', false)}\n      },\n`,
           p,
         );
-        return insertAfter(
-          t8,
-          "      hearts: ['stepper', 'seat-names', 'home-felt'],\n",
-          `      ${s}: ${gapRules},\n`,
-          p,
-        );
+        return insertAfter(t8, "      hearts: ['home-felt'],\n", `      ${s}: ${gapRules},\n`, p);
       },
     },
     {

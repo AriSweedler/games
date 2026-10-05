@@ -814,21 +814,41 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.result-note',
     '#endgameScreen h1',
   ],
-  // Hearts (docs/design/hearts.md §3; page.ts, ui/render.ts), scaffolded: after the shell's, the
-  // names strip, the board slot, the status line and the controls. TODO: the game's own.
+  // Hearts (docs/design/hearts.md §3; page.ts, ui/render.ts): after the shell's, the home panel's
+  // stepper, then the table: the hand row, the other seats' chips, the trick, my seat and hand of
+  // card faces, Pass and the status line.
   hearts: [
     ...SHELL_SELECTORS,
     '.masthead .subtitle',
+    '.stepper',
     '.topbar',
     '.names-strip',
     '#myName',
     '#oppName',
     '#oppDot',
+    '.hand-row',
+    '.flag',
     '.board',
-    '.board.turn',
+    '.others',
+    '.others .seat',
+    '.seat.current',
+    '.seat-name',
+    '.seat-cards',
+    '.seat-score',
+    '.trick',
+    '.play',
+    '.play-name',
+    '.seat.me',
+    '.seat-head',
+    '.hand',
+    '.hand .card',
+    '.card.picked',
+    '.card.dim',
+    '.card .rank',
+    '.card .suit',
     '.status-line',
     '.controls',
-    '.controls .btn',
+    '#passBtn',
     '.result-note',
   ],
 };
@@ -2106,13 +2126,17 @@ const HEARTS_STEP = `(() => { const h = window.__hearts; const a = h.legal()[0];
 
 /**
  * Hearts (docs/design/hearts.md §3), after the shell (driveShell): the table at the start (seat 0's
- * hand, the pass to choose), seat 0's pass through the hook and the curtain for the next seat, then
- * the rules sheet over the table. TODO: the game's own screens (the trick, the hand's end, the moon).
+ * hand, the pass to choose), three cards picked, seat 0's pass through the hook and the curtain for
+ * the next seat, then the rules sheet over the table.
  */
 const driveHearts = async (page: Page, shot: Shot): Promise<void> => {
   await driveShell(page, shot, 'hearts');
   await click(page, '#curtainBtn');
   await shot('local: started');
+  await click(page, '#hand .card:nth-child(1)');
+  await click(page, '#hand .card:nth-child(2)');
+  await click(page, '#hand .card:nth-child(3)');
+  await shot('local: three picked');
   await page.evaluate(HEARTS_STEP);
   await visible(page, '#curtainOverlay');
   await click(page, '#curtainBtn');

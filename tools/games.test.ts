@@ -368,7 +368,7 @@ describe('the games registry', () => {
           hostAnswered: /^Connected — waiting for .+ to start$/,
           connDot: '#oppDot',
           localNames: ['Ari', 'Lavi'],
-          localFields: [],
+          localFields: [['localPlayersCount', '3']],
           curtainButtons: 1,
           firstCurtain: 'Pass the phone to {name}',
         },
@@ -572,9 +572,9 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
       },
       hearts: {
         seats: { min: 3, max: 4 },
-        pauses: ['over'],
+        pauses: ['trick', 'handOver', 'over'],
         cues: ['pass'],
-        cssFloor: 30,
+        cssFloor: 60,
         hides: true,
         felt: '--felt',
       },
@@ -593,7 +593,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
       uno: ['pauses', 'home-felt'],
       flip7: [],
       hive: ['pauses', 'home-felt'],
-      hearts: ['stepper', 'seat-names', 'home-felt'],
+      hearts: ['home-felt'],
     });
   });
 
