@@ -827,6 +827,26 @@ export const SUITES: Readonly<Record<Suite, SuiteSpec>> = {
     // Hive's own spec (e2e/hive.spec.ts, pass the phone through the shell page) and its describes of the shell specs (`@hive`).
     e2e: gameE2e('hive'),
   },
+  hearts: {
+    // Hearts (docs/design/hearts.md), scaffolded by tools/new-game.ts: its colocated tests. TODO: measure
+    // the engine's coverage at its landing and raise the row.
+    unit: ['web/games/hearts/**/*.test.ts'],
+    standalone: [],
+    browser: false,
+    needsBuild: false,
+    coverage: {
+      include: ['web/games/hearts/src/**/*.ts'],
+      thresholds: {
+        'web/games/hearts/src/engine/**': {
+          lines: 80,
+          functions: 80,
+          statements: 80,
+          branches: 70,
+        },
+      },
+    },
+    e2e: gameE2e('hearts'),
+  },
   site: {
     unit: [
       // Which theme.css declares which token, across all three games.
@@ -1056,6 +1076,7 @@ export const RULES: ReadonlyArray<Rule> = [
       e2eJob('uno'),
       e2eJob('flip7'),
       e2eJob('hive'),
+      e2eJob('hearts'),
     ],
     why: "the shared shell specs: a describe per shell game, each run by that game's e2e job through its tag",
   },
@@ -1094,6 +1115,7 @@ export const RULES: ReadonlyArray<Rule> = [
   ...gameRules('uno'),
   ...gameRules('flip7'),
   ...gameRules('hive'),
+  ...gameRules('hearts'),
   // An engine-only game (ENGINE_ONLY): no page, so nothing of it is built or smoked.
   ...(ENGINE_ONLY as ReadonlyArray<GameSuite>).map((game): Rule => ({
     globs: [`web/games/${game}/**`],

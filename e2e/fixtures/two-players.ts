@@ -40,6 +40,7 @@ const DRIVERS: Readonly<Record<OnlineGame, Driver>> = {
   uno: shellDriver('uno'),
   flip7: shellDriver('flip7'),
   hive: shellDriver('hive'),
+  hearts: shellDriver('hearts'),
 };
 
 type Fixtures = { project: Project; player: Player; phone: Player; players: Players };

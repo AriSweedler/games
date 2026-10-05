@@ -22,6 +22,7 @@ import { FIDICE_PAGE } from '../web/games/fidice/page.ts';
 import { FLIP7_PAGE } from '../web/games/flip7/page.ts';
 import { GIN_PAGE } from '../web/games/gin-rummy/page.ts';
 import { HIVE_PAGE } from '../web/games/hive/page.ts';
+import { HEARTS_PAGE } from '../web/games/hearts/page.ts';
 import { UNO_PAGE } from '../web/games/uno/page.ts';
 import {
   PARTIALS,
@@ -51,6 +52,7 @@ export const PAGES: Readonly<Record<ShellGame, ShellPage>> = {
   uno: UNO_PAGE,
   flip7: FLIP7_PAGE,
   hive: HIVE_PAGE,
+  hearts: HEARTS_PAGE,
 };
 
 /** The six partials as committed. */

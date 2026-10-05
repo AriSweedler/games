@@ -37,6 +37,7 @@ test('a shell row applies to every shell game (fidice among them since M5 of fid
   expect(ownersOf('uno')).toEqual(['uno', 'shared', 'shell']);
   expect(ownersOf('flip7')).toEqual(['flip7', 'shared', 'shell']);
   expect(ownersOf('hive')).toEqual(['hive', 'shared', 'shell']);
+  expect(ownersOf('hearts')).toEqual(['hearts', 'shared', 'shell']);
   expect(scoped('gin-rummy')).toEqual(['gin-rummy', 'shared', 'shell', 'shell']);
   expect(scoped('backgammon')).toEqual(['shared', 'shell', 'shell']);
   // The `on off` row names gin's and backgammon's themes alone: briscola's and fidice's pages get
@@ -52,6 +53,7 @@ test('a shell row applies to every shell game (fidice among them since M5 of fid
     'uno',
     'flip7',
     'hive',
+    'hearts',
     'shared',
     'shell',
   ]);

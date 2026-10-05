@@ -6,7 +6,8 @@
 import { err, ok, type Result } from './result.ts';
 import type { Rng } from './rng.ts';
 
-export type Game = 'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'uno' | 'flip7' | 'hive';
+export type Game =
+  'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'uno' | 'flip7' | 'hive' | 'hearts';
 
 export type RoomCodeSpec = Readonly<{
   /** Characters a generated code is drawn from. */
@@ -58,6 +59,11 @@ export const HIVE_PEER_PREFIX = 'hive-';
 export const HIVE_CODE_ALPHABET = GIN_CODE_ALPHABET;
 export const HIVE_CODE_LENGTH = GIN_CODE_LENGTH;
 export const HIVE_CODE_LENGTH_ERROR = GIN_CODE_LENGTH_ERROR;
+// Hearts (docs/design/hearts.md §3): gin's alphabet and length again, under its own prefix.
+export const HEARTS_PEER_PREFIX = 'hearts-';
+export const HEARTS_CODE_ALPHABET = GIN_CODE_ALPHABET;
+export const HEARTS_CODE_LENGTH = GIN_CODE_LENGTH;
+export const HEARTS_CODE_LENGTH_ERROR = GIN_CODE_LENGTH_ERROR;
 
 export const ROOM_CODE: Readonly<Record<Game, RoomCodeSpec>> = {
   'gin-rummy': {
@@ -109,6 +115,13 @@ export const ROOM_CODE: Readonly<Record<Game, RoomCodeSpec>> = {
     peerCase: 'upper',
     lengthError: HIVE_CODE_LENGTH_ERROR,
   },
+  hearts: {
+    alphabet: HEARTS_CODE_ALPHABET,
+    length: HEARTS_CODE_LENGTH,
+    peerPrefix: HEARTS_PEER_PREFIX,
+    peerCase: 'upper',
+    lengthError: HEARTS_CODE_LENGTH_ERROR,
+  },
 };
 
 /** A fresh code: `length` draws from `alphabet`, exactly as the legacy `genCode`/`randomCode`. */
@@ -157,6 +170,11 @@ const TYPED_CODE: Readonly<Record<Game, (raw: string) => string>> = {
       .toUpperCase()
       .replace(/[^A-Z]/g, '')
       .slice(0, HIVE_CODE_LENGTH),
+  hearts: (raw) =>
+    raw
+      .toUpperCase()
+      .replace(/[^A-Z]/g, '')
+      .slice(0, HEARTS_CODE_LENGTH),
 };
 
 export const sanitiseCode = (game: Game, raw: string): string => TYPED_CODE[game](raw);

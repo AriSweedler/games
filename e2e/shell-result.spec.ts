@@ -88,6 +88,14 @@ const ROUTES: Readonly<Record<ShellGame, (page: Page) => Promise<string>>> = {
     expect((await hiveView(page)).game.result).toMatchObject({ kind: 'win', by: 'resign' });
     return 'rsLeaveBtn';
   },
+  hearts: async (page) => {
+    await revealIf(page, 'hearts');
+    // Seat 0 resigns on its first turn: the result sheet over the table, Leave the table on it.
+    await page.locator('#resignBtn').click();
+    await expect(page.locator('#resultOverlay')).toBeVisible();
+    await expect(page.locator('#rsTitle')).toHaveText(`${DEFAULT_NAMES[1]} wins!`);
+    return 'rsLeaveBtn';
+  },
   uno: async (page) => {
     await reveal(page);
     // Ann holds one red card over a red pile: the one play goes out, the result sheet over the table.

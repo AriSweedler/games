@@ -814,6 +814,23 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.result-note',
     '#endgameScreen h1',
   ],
+  // Hearts (docs/design/hearts.md §3; page.ts, ui/render.ts), scaffolded: after the shell's, the
+  // names strip, the board slot, the status line and the controls. TODO: the game's own.
+  hearts: [
+    ...SHELL_SELECTORS,
+    '.masthead .subtitle',
+    '.topbar',
+    '.names-strip',
+    '#myName',
+    '#oppName',
+    '#oppDot',
+    '.board',
+    '.board.turn',
+    '.status-line',
+    '.controls',
+    '.controls .btn',
+    '.result-note',
+  ],
 };
 
 // ---- the golden --------------------------------------------------------------------------------------
@@ -1193,6 +1210,12 @@ const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
     // No curtain: driveHive shoots the table it returns to.
     curtainShot: null,
     // Two players, no field beyond the names.
+    localValues: {},
+  },
+  hearts: {
+    submenuShot: null,
+    localModeShot: 'home: play tab, pass the phone',
+    curtainShot: 'local: started, curtain up',
     localValues: {},
   },
 };
@@ -2074,6 +2097,26 @@ const driveHive = async (page: Page, shot: Shot): Promise<void> => {
   await shot('home: after the game');
 };
 
+/**
+ * Hearts (docs/design/hearts.md §3), after the shell (driveShell): the table at the start, a pass,
+ * then the rules sheet over the table. TODO: the game's own screens.
+ */
+const driveHearts = async (page: Page, shot: Shot): Promise<void> => {
+  await driveShell(page, shot, 'hearts');
+  await click(page, '#curtainBtn');
+  await shot('local: started');
+  await click(page, '#passBtn');
+  await visible(page, '#curtainOverlay');
+  await click(page, '#curtainBtn');
+  await shot('local: after a pass');
+  await click(page, '#rulesBtnGame');
+  await shot('table: rules sheet');
+  await page.keyboard.press('Escape');
+  await click(page, '#leaveBtn');
+  await visible(page, '#homeScreen');
+  await shot('home: after the game');
+};
+
 /** A game's walk; fidice's takes the page's URL to reopen it on its shell path. */
 type Driver = (page: Page, shot: Shot, url: string) => Promise<void>;
 
@@ -2085,6 +2128,7 @@ const DRIVERS: Readonly<Record<Game, Driver>> = {
   uno: driveUno,
   flip7: driveFlip7,
   hive: driveHive,
+  hearts: driveHearts,
 };
 
 // ---- the harness -------------------------------------------------------------------------------------

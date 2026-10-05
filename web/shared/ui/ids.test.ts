@@ -12,6 +12,7 @@ describe('SHELL_IDS', () => {
       'uno',
       'flip7',
       'hive',
+      'hearts',
     ]);
     expect(new Set(SHELL_IDS).size).toBe(SHELL_IDS.length);
     SHELL_IDS.forEach((id) => {

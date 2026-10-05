@@ -62,6 +62,7 @@ describe('the three formats over a table of diffs', () => {
       'uno=false',
       'flip7=false',
       'hive=false',
+      'hearts=false',
       'site=true',
       'harness=true',
       'e2e-gin=true',
@@ -72,6 +73,7 @@ describe('the three formats over a table of diffs', () => {
       'e2e-uno=false',
       'e2e-flip7=false',
       'e2e-hive=false',
+      'e2e-hearts=false',
       'e2e-site=true',
       'games=["gin"]',
       'e2e-games=["gin"]',
@@ -80,8 +82,8 @@ describe('the three formats over a table of diffs', () => {
     expect(formatGithub(everything).split('\n')).toEqual([
       ...JOBS.map((job) => `${job}=true`),
       // Hive's engine has no page yet (ENGINE_ONLY): the unit list carries it, the e2e list not.
-      'games=["gin","fidice","backgammon","briscola","rps","uno","flip7","hive"]',
-      'e2e-games=["gin","fidice","backgammon","briscola","rps","uno","flip7","hive"]',
+      'games=["gin","fidice","backgammon","briscola","rps","uno","flip7","hive","hearts"]',
+      'e2e-games=["gin","fidice","backgammon","briscola","rps","uno","flip7","hive","hearts"]',
       'everything=true',
     ]);
     expect(formatGithub(docsOnly).split('\n')).toEqual([
@@ -150,6 +152,7 @@ describe('the three formats over a table of diffs', () => {
         uno: false,
         flip7: false,
         hive: false,
+        hearts: false,
         site: true,
         harness: true,
         'e2e-gin': true,
@@ -160,6 +163,7 @@ describe('the three formats over a table of diffs', () => {
         'e2e-uno': false,
         'e2e-flip7': false,
         'e2e-hive': false,
+        'e2e-hearts': false,
         'e2e-site': true,
       },
       games: ['gin'],

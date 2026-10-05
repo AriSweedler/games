@@ -48,6 +48,7 @@ const GAMES: ReadonlyArray<Game> = [
   'uno',
   'flip7',
   'hive',
+  'hearts',
 ];
 
 describe('frozen literals (byte for byte what the legacy pages hold)', () => {

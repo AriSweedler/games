@@ -9,6 +9,7 @@ import { STORAGE_KEYS as FIDICE_KEYS } from '../web/games/fidice/src/storage.ts'
 import { STORAGE_KEYS as FLIP7_KEYS } from '../web/games/flip7/src/storage.ts';
 import { STORAGE_KEYS as GIN_KEYS } from '../web/games/gin-rummy/src/storage.ts';
 import { STORAGE_KEYS as HIVE_KEYS } from '../web/games/hive/src/storage.ts';
+import { STORAGE_KEYS as HEARTS_KEYS } from '../web/games/hearts/src/storage.ts';
 import { STORAGE_KEYS as UNO_KEYS } from '../web/games/uno/src/storage.ts';
 import {
   ALIASES,
@@ -38,6 +39,7 @@ describe('the games registry', () => {
       'uno',
       'flip7',
       'hive',
+      'hearts',
     ]);
     expect(Object.keys(REGISTRY)).toEqual(GAMES);
     expect(LEGACY_GAMES).toEqual(['gin-rummy', 'fidice']);
@@ -330,6 +332,47 @@ describe('the games registry', () => {
           firstCurtain: null,
         },
       },
+      hearts: {
+        title: 'Hearts',
+        hook: 'window.__hearts',
+        suite: 'hearts',
+        specs: ['**/hearts.spec.ts'],
+        storage: { saveKey: 'heartsMP_v1', prefix: 'hearts_' },
+        debug: 0,
+        pageShape: {
+          ids: [
+            'app',
+            'homeScreen',
+            'hostWaitScreen',
+            'guestWaitScreen',
+            'tableScreen',
+            'endgameScreen',
+            'board',
+            'statusText',
+            'resultOverlay',
+            'toast',
+            'guestSeatName',
+            'guestNameInput',
+            'guestRenameBtn',
+            'guestNameNote',
+          ],
+          rulesSlots: true,
+        },
+        contractFloors: { ts: 0, markup: 30 },
+        shell: {
+          heading: 'Hearts',
+          shareTitle: 'Hearts',
+          tabs: ['Play', 'Rules', 'About'],
+          modes: ['Online', 'Pass the phone'],
+          hostFields: [],
+          hostAnswered: /^Connected — waiting for .+ to start$/,
+          connDot: '#oppDot',
+          localNames: ['Ari', 'Lavi'],
+          localFields: [],
+          curtainButtons: 1,
+          firstCurtain: 'Pass the phone to {name}',
+        },
+      },
     });
   });
 
@@ -345,6 +388,7 @@ describe('the games registry', () => {
       'uno',
       'flip7',
       'hive',
+      'hearts',
     ]);
     SHELL_GAMES.forEach((game) => {
       expect(REGISTRY[game].shell).toBe(SHELL[game]);
@@ -373,6 +417,7 @@ describe('the games registry', () => {
     pin(REGISTRY.uno.storage, UNO_KEYS);
     pin(REGISTRY.flip7.storage, FLIP7_KEYS);
     pin(REGISTRY.hive.storage, HIVE_KEYS);
+    pin(REGISTRY.hearts.storage, HEARTS_KEYS);
   });
 
   test('pins every page title, read off the rows', () => {
@@ -383,6 +428,7 @@ describe('the games registry', () => {
       backgammon: 'Sheshbesh — backgammon',
       briscola: 'Briscola — cards',
       hive: 'Hive',
+      hearts: 'Hearts',
       rps: 'Rock Paper Scissors',
       uno: 'UNO',
       flip7: 'Flip 7',
@@ -429,6 +475,7 @@ describe('the games registry', () => {
       uno: 'window.__uno',
       flip7: 'window.__flip7',
       hive: 'window.__hive',
+      hearts: 'window.__hearts',
       'ui-sandbox': 'window.__uiSandbox',
     });
   });
@@ -442,6 +489,7 @@ describe('the games registry', () => {
       'games/uno/',
       'games/flip7/',
       'games/hive/',
+      'games/hearts/',
     ]);
     expect(LANDING_HREFS).not.toContain('games/rps/');
   });
@@ -522,6 +570,14 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
         hides: false,
         felt: '--felt',
       },
+      hearts: {
+        seats: { min: 3, max: 4 },
+        pauses: ['over'],
+        cues: ['pass'],
+        cssFloor: 30,
+        hides: true,
+        felt: '--felt',
+      },
     });
   });
 
@@ -537,6 +593,7 @@ describe('the conformance declarations (docs/design/game-conformance.md)', () =>
       uno: ['pauses', 'home-felt'],
       flip7: [],
       hive: ['pauses', 'home-felt'],
+      hearts: ['stepper', 'seat-names'],
     });
   });
 
