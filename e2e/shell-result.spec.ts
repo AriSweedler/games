@@ -27,7 +27,14 @@ import { flip7RigBust } from './fixtures/flip7.ts';
 import { PHONE } from './fixtures/geometry.ts';
 import { requireView as hiveView } from './fixtures/hive.ts';
 import { gamePath } from './fixtures/player.ts';
-import { DEFAULT_NAMES, reveal, revealIf, startLocal } from './fixtures/shell.ts';
+import {
+  DEFAULT_NAMES,
+  TWO_SEAT_ONLY,
+  reveal,
+  revealIf,
+  seatsTwo,
+  startLocal,
+} from './fixtures/shell.ts';
 import { expect, test } from './fixtures/two-players.ts';
 import { requireView as unoView, unoPosition, unoSetup } from './fixtures/uno.ts';
 
@@ -88,6 +95,14 @@ const ROUTES: Readonly<Record<ShellGame, (page: Page) => Promise<string>>> = {
     expect((await hiveView(page)).game.result).toMatchObject({ kind: 'win', by: 'resign' });
     return 'rsLeaveBtn';
   },
+  hearts: async (page) => {
+    await revealIf(page, 'hearts');
+    // Seat 0 resigns on its first turn: the result sheet over the table, Leave the table on it.
+    await page.locator('#resignBtn').click();
+    await expect(page.locator('#resultOverlay')).toBeVisible();
+    await expect(page.locator('#rsTitle')).toHaveText(`${DEFAULT_NAMES[1]} wins!`);
+    return 'rsLeaveBtn';
+  },
   uno: async (page) => {
     await reveal(page);
     // Ann holds one red card over a red pile: the one play goes out, the result sheet over the table.
@@ -115,6 +130,7 @@ const ROUTES: Readonly<Record<ShellGame, (page: Page) => Promise<string>>> = {
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
+    test.skip(!seatsTwo(game), TWO_SEAT_ONLY);
     test('Leave the table from the finished game: the home comes back with no sheet over it and answers a tap', async ({
       player,
       project,

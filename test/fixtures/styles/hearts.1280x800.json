@@ -1,0 +1,403 @@
+{
+  "game": "hearts",
+  "viewport": "1280x800",
+  "properties": ["background-color", "background-image", "border-color", "border-radius", "border-style", "border-width", "box-shadow", "color", "display", "font-family", "font-size", "font-weight", "gap", "letter-spacing", "margin", "opacity", "padding", "text-transform", "visibility"],
+  "tokens": {
+    "--accent": "#6c8cd5",
+    "--accent-dark": "#4a66a8",
+    "--bg": "#0f2318",
+    "--card": "#163526",
+    "--card-2": "#1c4030",
+    "--curtain-scrim": "#0b2418",
+    "--danger": "#f87171",
+    "--emphasis": "#6c8cd5",
+    "--felt": "radial-gradient(ellipse at 50% 30%, #1f5a3a 0%, #123a26 55%, #0b2418 100%)",
+    "--fill": "#1c4030",
+    "--fill-hover": "rgba(255, 255, 255, 0.07)",
+    "--font-body": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    "--font-display": "ui-monospace, Menlo, monospace",
+    "--frame-band": "6px",
+    "--frame-color": "#6c8cd5",
+    "--frame-corner": "max(0px, 0px, 0px)",
+    "--frame-corner-bl": "max(0px, 0px, 0px)",
+    "--frame-corner-br": "max(0px, 0px, 0px)",
+    "--frame-corner-tl": "max(0px, 0px, 0px)",
+    "--frame-corner-tr": "max(0px, 0px, 0px)",
+    "--frame-gap": "4px",
+    "--frame-hairline": "transparent",
+    "--frame-hairline-w": "1px",
+    "--frame-inset-bottom": "0px",
+    "--frame-inset-left": "0px",
+    "--frame-inset-right": "0px",
+    "--frame-inset-top": "0px",
+    "--go": "#c2d06d",
+    "--go-text": "#10281a",
+    "--gold": "#fbbf24",
+    "--gutter": "16px",
+    "--ink-hover": "#f2fdf6",
+    "--ink-on-bar": "#9cc9ac",
+    "--ink-on-fill": "#f2fdf6",
+    "--muted": "#9cc9ac",
+    "--radius": "18px",
+    "--radius-control": "14px",
+    "--radius-inner": "12px",
+    "--radius-tab": "10px",
+    "--shadow-shell": "0 4px 14px rgba(0, 0, 0, 0.25)",
+    "--surface-bar": "rgba(0, 0, 0, 0.22)",
+    "--surface-shell": "#163526",
+    "--text": "#f2fdf6"
+  },
+  "values": ["#0b2418", "#0f2318", "#10281a", "#163526", "#1c4030", "#4a66a8", "#6c8cd5", "#9cc9ac", "#c2d06d", "#f2fdf6", "#f87171", "#fbbf24", "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif", "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", "0", "0 4px 14px rgba(0, 0, 0, 0.25)", "0.4", "0.7488px", "0px", "0px 0px 0px 0px", "0px 0px 0px 14.4px", "0px 0px 12px 0px", "0px 0px 14px 14px", "0px 0px 16px 0px", "0px auto 0px auto", "1", "1.408px", "10px", "10px 0px 0px 0px", "10px 12px", "11px 6px", "12.48px", "12px", "12px 0px 0px 0px", "12px 16px", "13.3333px", "13px 14px", "14.4px", "14.72px", "14px", "14px 18px", "15.2px", "16.8px", "16px", "16px 0px 16px 0px", "17.6px", "18px", "1px", "1px 6px", "21.6px", "22px 18px", "24px", "2px", "35.2px", "400", "48px", "4px", "4px 0px 14px 0px", "4px 0px 16px 0px", "4px 0px 2px 0px", "50%", "6px", "6px 0px 10px 0px", "6px 0px 14px 0px", "700", "8px", "8px 0px 0px 0px", "8px 0px 8px 0px", "9.6px", "9px 6px", "Arial", "block", "dashed", "flex", "hidden", "inline", "inline-block", "inline-flex", "linear-gradient(135deg, rgb(108, 140, 213), rgb(74, 102, 168))", "list-item", "max(0px, 0px, 0px)", "none", "normal", "radial-gradient(at 50% 30%, rgb(31, 90, 58) 0%, rgb(18, 58, 38) 55%, rgb(11, 36, 24) 100%)", "radial-gradient(ellipse at 50% 30%, #1f5a3a 0%, #123a26 55%, #0b2418 100%)", "rgb(108, 140, 213)", "rgb(108, 140, 213) 0px -2px 0px 0px inset", "rgb(11, 36, 24)", "rgb(13, 36, 24)", "rgb(156, 201, 172)", "rgb(16, 40, 26)", "rgb(194, 208, 109)", "rgb(22, 53, 38)", "rgb(242, 253, 246)", "rgb(255, 255, 255)", "rgb(28, 64, 48)", "rgb(74, 102, 168)", "rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0.22)", "rgba(0, 0, 0, 0.25) 0px 4px 14px 0px", "rgba(255, 255, 255, 0.05)", "rgba(255, 255, 255, 0.07)", "rgba(255, 255, 255, 0.12)", "rgba(255, 255, 255, 0.15)", "solid", "transparent", "ui-monospace, Menlo, monospace", "uppercase", "visible"],
+  "styles": {
+    "0224b40e4086": {
+      "v": [98, 81, 93, 39, 81, 18, 81, 93, 73, 12, 43, 54, 61, 82, 58, 25, 56, 81, 108],
+      "vars": {}
+    },
+    "0776ce9cf66f": {
+      "v": [97, 81, 89, 18, 81, 18, 81, 89, 71, 12, 43, 54, 82, 82, 63, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "0cb0538788db": {
+      "v": [97, 81, 85, 18, 81, 18, 81, 85, 75, 12, 38, 64, 82, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "0ea5dd865e90": {
+      "v": [97, 81, 89, 18, 81, 18, 81, 89, 71, 12, 41, 54, 82, 82, 57, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "103a08450129": {
+      "v": [92, 81, 100, 46, 104, 47, 99, 93, 81, 12, 43, 54, 82, 82, 21, 25, 43, 81, 108],
+      "vars": {}
+    },
+    "12ac03ce0e77": {
+      "v": [97, 83, 93, 18, 81, 18, 81, 93, 71, 12, 43, 54, 82, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "1850dc08dffd": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 73, 12, 43, 54, 61, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "1b6ec4248397": {
+      "v": [96, 81, 93, 60, 81, 18, 81, 93, 81, 12, 43, 54, 82, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "1ee605f7ac4f": {
+      "v": [95, 81, 93, 39, 81, 18, 81, 93, 81, 70, 43, 64, 61, 82, 19, 25, 40, 81, 108],
+      "vars": {}
+    },
+    "1ef944750a70": {
+      "v": [97, 81, 89, 18, 81, 18, 81, 89, 71, 12, 43, 54, 82, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "255894a88c10": {
+      "v": [89, 81, 93, 60, 81, 18, 81, 93, 71, 12, 43, 54, 82, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "2e5136819d11": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 73, 12, 43, 54, 82, 82, 24, 25, 43, 81, 108],
+      "vars": {}
+    },
+    "3351cd603b3d": {
+      "v": [97, 81, 103, 32, 72, 47, 81, 93, 71, 12, 43, 54, 82, 82, 67, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "39b33494ba68": {
+      "v": [97, 81, 85, 18, 81, 18, 81, 85, 71, 12, 53, 64, 82, 26, 28, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "3ed09e590be7": {
+      "v": [97, 81, 85, 18, 81, 18, 81, 85, 71, 106, 55, 54, 82, 37, 62, 25, 20, 81, 108],
+      "vars": {}
+    },
+    "560cd8955db6": {
+      "v": [95, 81, 93, 39, 81, 18, 81, 93, 81, 70, 43, 64, 61, 82, 19, 16, 40, 81, 108],
+      "vars": {}
+    },
+    "5c47d3f6c648": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 71, 12, 49, 54, 82, 82, 59, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "5cdacfe102a2": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 73, 12, 43, 54, 27, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "5cfa0938c007": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 81, 12, 43, 54, 82, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "6eaff85d5b58": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 73, 12, 43, 54, 65, 82, 33, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "712212c90dcc": {
+      "v": [97, 81, 103, 39, 104, 47, 81, 89, 77, 70, 43, 64, 61, 82, 19, 25, 40, 81, 108],
+      "vars": {}
+    },
+    "726133fdc88d": {
+      "v": [87, 81, 93, 18, 81, 18, 81, 93, 81, 12, 43, 54, 82, 82, 19, 25, 43, 81, 108],
+      "vars": {}
+    },
+    "7407ac703f44": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 71, 12, 43, 54, 82, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "772a90eea22e": {
+      "v": [97, 81, 93, 39, 81, 18, 81, 93, 71, 12, 43, 64, 82, 82, 19, 14, 34, 81, 108],
+      "vars": {}
+    },
+    "776fbbcaefad": {
+      "v": [88, 81, 102, 39, 104, 47, 81, 93, 71, 106, 51, 54, 82, 68, 19, 25, 36, 107, 108],
+      "vars": {}
+    },
+    "7cc729596378": {
+      "v": [98, 81, 93, 22, 81, 18, 81, 93, 73, 12, 43, 54, 61, 82, 23, 25, 56, 81, 108],
+      "vars": {}
+    },
+    "7f104576a785": {
+      "v": [95, 81, 93, 27, 81, 18, 86, 93, 71, 70, 35, 64, 82, 82, 19, 25, 30, 81, 108],
+      "vars": {}
+    },
+    "7fc864def4dc": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 71, 12, 43, 54, 82, 82, 44, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "8b6108b19c44": {
+      "v": [91, 81, 90, 39, 81, 18, 81, 90, 77, 70, 45, 64, 61, 82, 19, 25, 40, 81, 108],
+      "vars": {}
+    },
+    "95b1def0c99a": {
+      "v": [97, 81, 89, 27, 81, 18, 81, 89, 71, 70, 35, 64, 82, 82, 19, 25, 69, 81, 108],
+      "vars": {}
+    },
+    "97a3f27b29e6": {
+      "v": [88, 81, 102, 39, 104, 47, 81, 89, 76, 70, 42, 54, 82, 82, 19, 25, 36, 81, 108],
+      "vars": {}
+    },
+    "9a1567457b82": {
+      "v": [92, 81, 93, 32, 81, 18, 81, 93, 73, 12, 43, 54, 52, 82, 19, 14, 56, 81, 74],
+      "vars": {}
+    },
+    "a94e618a0779": {
+      "v": [95, 81, 93, 27, 81, 18, 81, 93, 71, 70, 35, 64, 82, 82, 19, 25, 69, 81, 108],
+      "vars": {}
+    },
+    "ad08c31f7472": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 73, 12, 43, 54, 65, 82, 66, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "b01e6e50465f": {
+      "v": [97, 81, 85, 32, 72, 47, 81, 93, 71, 12, 43, 54, 82, 82, 67, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "b6087c126b83": {
+      "v": [97, 81, 89, 27, 81, 18, 81, 89, 71, 70, 35, 64, 82, 82, 19, 25, 30, 81, 108],
+      "vars": {}
+    },
+    "b648a1f6db29": {
+      "v": [97, 83, 93, 18, 81, 18, 81, 93, 71, 12, 43, 54, 82, 82, 19, 25, 18, 81, 108],
+      "vars": {
+        "--accent": 6,
+        "--accent-dark": 5,
+        "--bg": 1,
+        "--card": 3,
+        "--card-2": 4,
+        "--curtain-scrim": 0,
+        "--danger": 10,
+        "--emphasis": 6,
+        "--felt": 84,
+        "--fill": 4,
+        "--fill-hover": 101,
+        "--font-body": 13,
+        "--font-display": 106,
+        "--frame-band": 61,
+        "--frame-color": 6,
+        "--frame-corner": 80,
+        "--frame-corner-bl": 80,
+        "--frame-corner-br": 80,
+        "--frame-corner-tl": 80,
+        "--frame-corner-tr": 80,
+        "--frame-gap": 56,
+        "--frame-hairline": 105,
+        "--frame-hairline-w": 47,
+        "--frame-inset-bottom": 18,
+        "--frame-inset-left": 18,
+        "--frame-inset-right": 18,
+        "--frame-inset-top": 18,
+        "--go": 8,
+        "--go-text": 2,
+        "--gold": 11,
+        "--gutter": 43,
+        "--ink-hover": 9,
+        "--ink-on-bar": 7,
+        "--ink-on-fill": 9,
+        "--muted": 7,
+        "--radius": 46,
+        "--radius-control": 39,
+        "--radius-inner": 32,
+        "--radius-tab": 27,
+        "--shadow-shell": 15,
+        "--surface-bar": 98,
+        "--surface-shell": 3,
+        "--text": 9
+      }
+    },
+    "bb5cee839088": {
+      "v": [95, 81, 93, 32, 81, 18, 81, 93, 71, 70, 45, 54, 82, 82, 19, 25, 48, 81, 108],
+      "vars": {}
+    },
+    "bb88fb9a35d1": {
+      "v": [92, 81, 93, 18, 81, 18, 81, 93, 71, 12, 43, 54, 82, 82, 19, 25, 50, 81, 108],
+      "vars": {}
+    },
+    "bcda8798ec0a": {
+      "v": [87, 81, 93, 18, 81, 18, 81, 93, 73, 12, 43, 54, 82, 82, 19, 25, 43, 81, 108],
+      "vars": {}
+    },
+    "be2741105364": {
+      "v": [97, 78, 94, 39, 81, 18, 81, 94, 77, 70, 45, 64, 61, 82, 19, 25, 40, 81, 108],
+      "vars": {}
+    },
+    "bf883886d0d3": {
+      "v": [97, 81, 89, 18, 81, 18, 81, 89, 71, 12, 31, 64, 82, 17, 19, 25, 18, 107, 108],
+      "vars": {}
+    },
+    "cfbb9aea27e4": {
+      "v": [97, 81, 93, 18, 81, 18, 81, 93, 73, 12, 43, 54, 65, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "d51325e1a513": {
+      "v": [95, 81, 93, 39, 81, 18, 81, 93, 77, 70, 43, 64, 61, 82, 19, 25, 29, 81, 108],
+      "vars": {}
+    },
+    "d5488b784151": {
+      "v": [97, 81, 89, 18, 81, 18, 81, 89, 71, 12, 43, 54, 82, 82, 21, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "de911429a486": {
+      "v": [97, 81, 93, 32, 81, 18, 81, 93, 79, 12, 38, 54, 82, 82, 19, 25, 18, 81, 108],
+      "vars": {}
+    },
+    "e593635f949c": {
+      "v": [88, 81, 102, 39, 104, 47, 81, 93, 76, 70, 42, 54, 82, 82, 19, 25, 36, 81, 108],
+      "vars": {}
+    }
+  },
+  "screens": [
+    {
+      "name": "01 home: play tab, online",
+      "changes": {
+        "#app": "2e5136819d11",
+        "#myName": "7407ac703f44",
+        "#oppDot": "255894a88c10",
+        "#oppName": "7407ac703f44",
+        "#tableScreen": "5cfa0938c007",
+        "#toast": "772a90eea22e",
+        ".badge": null,
+        ".badge.dim": null,
+        ".board": "3351cd603b3d",
+        ".board.turn": null,
+        ".btn": "be2741105364",
+        ".btn-ghost": "712212c90dcc",
+        ".btn-go": "8b6108b19c44",
+        ".btn-primary": "be2741105364",
+        ".btn-secondary": "d51325e1a513",
+        ".btn-sm": "d51325e1a513",
+        ".btn:disabled": null,
+        ".card-box": "103a08450129",
+        ".chip": null,
+        ".code-input": "776fbbcaefad",
+        ".conn-dot": "255894a88c10",
+        ".conn-dot.on": null,
+        ".controls": "ad08c31f7472",
+        ".controls .btn": "1ee605f7ac4f",
+        ".empty-note": "1ef944750a70",
+        ".icon-btn": "bb5cee839088",
+        ".masthead .subtitle": "0ea5dd865e90",
+        ".mode-btn": "a94e618a0779",
+        ".mode-btn.active": "a94e618a0779",
+        ".mode-switch": "7cc729596378",
+        ".names-strip": "1850dc08dffd",
+        ".opp-strip": null,
+        ".overlay": "726133fdc88d",
+        ".pulse": "1ef944750a70",
+        ".result-note": "0776ce9cf66f",
+        ".room-code": "3ed09e590be7",
+        ".row": "5cdacfe102a2",
+        ".rules-list": "6eaff85d5b58",
+        ".rules-list li": "de911429a486",
+        ".rules-list li strong": "0cb0538788db",
+        ".sheet": "bb88fb9a35d1",
+        ".sheet-sub": "d5488b784151",
+        ".sheet-title": "5c47d3f6c648",
+        ".status-line": "7fc864def4dc",
+        ".tab-btn": "7f104576a785",
+        ".tab-btn.active": "7f104576a785",
+        ".tab-submenu": "9a1567457b82",
+        ".tabbar": "0224b40e4086",
+        ".topbar": "cfbb9aea27e4",
+        ":root": "b648a1f6db29",
+        "body": "12ac03ce0e77",
+        "h1": "39b33494ba68",
+        "input[type=\"text\"]": "97a3f27b29e6",
+        "label": "bf883886d0d3"
+      }
+    },
+    {
+      "name": "02 home: rules tab",
+      "changes": {
+        ".tab-btn": "b6087c126b83"
+      }
+    },
+    {
+      "name": "03 home: about tab",
+      "changes": {}
+    },
+    {
+      "name": "04 host: waiting for the opponent",
+      "changes": {
+        ".tab-btn": "7f104576a785",
+        "input[type=\"text\"]": "e593635f949c"
+      }
+    },
+    {
+      "name": "05 home: play tab, pass the phone",
+      "changes": {
+        ".mode-btn": "95b1def0c99a"
+      }
+    },
+    {
+      "name": "06 local: started, curtain up",
+      "changes": {
+        "#oppDot": "1b6ec4248397",
+        "#tableScreen": "7407ac703f44",
+        ".board": "b01e6e50465f",
+        ".board.turn": "b01e6e50465f",
+        ".btn:disabled": "560cd8955db6",
+        ".conn-dot": "1b6ec4248397",
+        ".conn-dot.on": "1b6ec4248397",
+        ".controls .btn": "560cd8955db6",
+        ".overlay": "bcda8798ec0a"
+      }
+    },
+    {
+      "name": "07 local: started",
+      "changes": {
+        ".overlay": "726133fdc88d"
+      }
+    },
+    {
+      "name": "08 local: after a pass",
+      "changes": {}
+    },
+    {
+      "name": "09 table: rules sheet",
+      "changes": {}
+    },
+    {
+      "name": "10 home: after the game",
+      "changes": {
+        "#tableScreen": "5cfa0938c007"
+      }
+    }
+  ]
+}

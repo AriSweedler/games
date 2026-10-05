@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Hearts's link-preview card (docs/design/link-previews.md): the name on the shared felt with
+       the one accent. TODO: the game's own drawing. tools/splash.ts renders it to
+       web/public/games/hearts/splash.png. -->
+  <rect width="1200" height="630" fill="#0f2a1c" />
+  <circle cx="300" cy="315" r="150" fill="none" stroke="#6c8cd5" stroke-width="12" />
+  <text x="560" y="340" font-family="Georgia, serif" font-size="120" font-weight="700" fill="#6c8cd5">Hearts</text>
+  <text x="564" y="410" font-family="Helvetica, Arial, sans-serif" font-size="40" fill="#e8e1cf">For two. Pass one phone, or play online.</text>
+</svg>

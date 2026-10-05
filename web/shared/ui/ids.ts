@@ -16,6 +16,7 @@ export const SHELL_GAMES: ReadonlyArray<Game> = [
   'uno',
   'flip7',
   'hive',
+  'hearts',
 ];
 
 export const SHELL_IDS: ReadonlyArray<string> = [

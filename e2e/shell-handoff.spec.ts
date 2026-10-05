@@ -22,6 +22,7 @@ import { gamePath, gameSearch, invitePath } from './fixtures/player.ts';
 import {
   DEFAULT_NAMES,
   INVITE_COPIED_MSG,
+  TWO_SEAT_ONLY,
   curtainTitle,
   expectCurtainUp,
   hasCurtain,
@@ -31,6 +32,7 @@ import {
   resumeLabel,
   revealIf,
   roomOpen,
+  seatsTwo,
   startLocal,
   takeOffer,
   unhostedCode,
@@ -100,6 +102,7 @@ const cancelAndResume = async (
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
+    test.skip(!seatsTwo(game), TWO_SEAT_ONLY);
     const shell = SHELL[game];
     const driver = SHELL_DRIVERS[game];
 

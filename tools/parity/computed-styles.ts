@@ -814,6 +814,23 @@ export const SELECTORS: Readonly<Record<Game, ReadonlyArray<string>>> = {
     '.result-note',
     '#endgameScreen h1',
   ],
+  // Hearts (docs/design/hearts.md §3; page.ts, ui/render.ts), scaffolded: after the shell's, the
+  // names strip, the board slot, the status line and the controls. TODO: the game's own.
+  hearts: [
+    ...SHELL_SELECTORS,
+    '.masthead .subtitle',
+    '.topbar',
+    '.names-strip',
+    '#myName',
+    '#oppName',
+    '#oppDot',
+    '.board',
+    '.board.turn',
+    '.status-line',
+    '.controls',
+    '.controls .btn',
+    '.result-note',
+  ],
 };
 
 // ---- the golden --------------------------------------------------------------------------------------
@@ -1144,6 +1161,8 @@ type ShellDrive = Readonly<{
   curtainShot: string | null;
   /** By id: SHELL[game].localFields names the fields, this gives each its value. */
   localValues: Readonly<Record<string, string>>;
+  /** The host's open room line when the table seats more than two (seatCopy.ts `waiting`); absent, the two-seat shell line. */
+  hostWaiting?: string;
 }>;
 
 const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
@@ -1195,6 +1214,14 @@ const SHELL_DRIVE: Readonly<Record<ShellGame, ShellDrive>> = {
     // Two players, no field beyond the names.
     localValues: {},
   },
+  hearts: {
+    submenuShot: null,
+    localModeShot: 'home: play tab, pass the phone',
+    curtainShot: 'local: started, curtain up',
+    localValues: {},
+    // Three seats at least (docs/design/hearts.md §3): the host card opens a table of three.
+    hostWaiting: 'Waiting for 2 players to join',
+  },
 };
 
 /** An input is filled; a select has its option chosen; a field already at the value is left (UNO's stepper keeps its count in a hidden input). */
@@ -1243,7 +1270,7 @@ const driveShell = async (page: Page, shot: Shot, game: ShellGame): Promise<void
   await visible(page, '#hostWaitScreen');
   await page
     .locator('#hostWaitStatus')
-    .filter({ hasText: 'Waiting for your opponent to join' })
+    .filter({ hasText: drive.hostWaiting ?? 'Waiting for your opponent to join' })
     .waitFor();
   await shot(`${prefix}host: waiting for the opponent`);
   await click(page, '#cancelHostBtn');
@@ -2074,6 +2101,30 @@ const driveHive = async (page: Page, shot: Shot): Promise<void> => {
   await shot('home: after the game');
 };
 
+/** Hearts' seat holding the phone plays its first legal action through the hook (`__hearts.legal()` -> `__hearts.act(a)`): in the passing phase, the pass. */
+const HEARTS_STEP = `(() => { const h = window.__hearts; const a = h.legal()[0]; if (a) h.act(a); })()`;
+
+/**
+ * Hearts (docs/design/hearts.md §3), after the shell (driveShell): the table at the start (seat 0's
+ * hand, the pass to choose), seat 0's pass through the hook and the curtain for the next seat, then
+ * the rules sheet over the table. TODO: the game's own screens (the trick, the hand's end, the moon).
+ */
+const driveHearts = async (page: Page, shot: Shot): Promise<void> => {
+  await driveShell(page, shot, 'hearts');
+  await click(page, '#curtainBtn');
+  await shot('local: started');
+  await page.evaluate(HEARTS_STEP);
+  await visible(page, '#curtainOverlay');
+  await click(page, '#curtainBtn');
+  await shot('local: after a pass');
+  await click(page, '#rulesBtnGame');
+  await shot('table: rules sheet');
+  await page.keyboard.press('Escape');
+  await click(page, '#leaveBtn');
+  await visible(page, '#homeScreen');
+  await shot('home: after the game');
+};
+
 /** A game's walk; fidice's takes the page's URL to reopen it on its shell path. */
 type Driver = (page: Page, shot: Shot, url: string) => Promise<void>;
 
@@ -2085,6 +2136,7 @@ const DRIVERS: Readonly<Record<Game, Driver>> = {
   uno: driveUno,
   flip7: driveFlip7,
   hive: driveHive,
+  hearts: driveHearts,
 };
 
 // ---- the harness -------------------------------------------------------------------------------------

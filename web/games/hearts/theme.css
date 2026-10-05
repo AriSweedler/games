@@ -1,0 +1,111 @@
+/* Hearts's theme (docs/design/hearts.md §3). The page links web/shared/styles/tokens.css, base.css
+   and shell.css before this file: the home, the waiting rooms, the sheets, the curtain and the
+   toast are the shell's rules on the shared palette, and this file adds the game's one accent, the
+   type scale the shell leaves to each theme, and the table. TODO: the accent, the board. Prettier
+   formats this file. */
+:root {
+  --gutter: 12px;
+  /* The one accent (AGENT.md "Theme: subtle, not gaudy"): TODO, the game's own. */
+  --accent: #6c8cd5;
+  --accent-dark: #4a66a8;
+  --emphasis: var(--accent);
+}
+@media (min-width: 900px) {
+  :root {
+    --gutter: 16px;
+  }
+}
+
+/* ---------- the shell's type scale ---------- */
+html,
+body {
+  background: var(--felt);
+}
+.card-box {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff;
+}
+.btn-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+h1 {
+  font-size: 2.2rem;
+  line-height: 1.1;
+  margin: 10px 0 0;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.masthead {
+  margin: 4px 0 14px;
+}
+.subtitle {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin: 4px 0 14px;
+}
+.card-box.centered,
+.centered {
+  text-align: center;
+}
+input[type='text'] {
+  padding: 13px 14px;
+  background: #0d2418;
+  font-size: 1.05rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-height: 48px;
+}
+label {
+  display: block;
+  letter-spacing: 0.06em;
+}
+.row.between {
+  justify-content: space-between;
+}
+.muted {
+  color: var(--muted);
+}
+.room-code {
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  margin: 6px 0 10px;
+}
+.tab-btn,
+.mode-btn {
+  min-height: 44px;
+  cursor: pointer;
+}
+.tab-btn.active {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.rules-list li {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+/* ---------- the table ---------- */
+/* The topbar (page.ts, the shared topbarHtml partial): the leave button, the names strip and the
+   icon buttons in one row. */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+/* The board slot: the game's own markup goes here (render.ts). Lit on the viewing seat's turn. */
+.board {
+  min-height: 40vh;
+  margin: 8px 0;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+}
+.board.turn {
+  border-color: var(--accent);
+}
+.controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}

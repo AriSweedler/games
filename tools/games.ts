@@ -22,7 +22,7 @@ export type { Game };
  * below until its page row adds one.
  */
 export type GameSuite =
-  'gin' | 'fidice' | 'backgammon' | 'briscola' | 'rps' | 'uno' | 'flip7' | 'hive';
+  'gin' | 'fidice' | 'backgammon' | 'briscola' | 'rps' | 'uno' | 'flip7' | 'hive' | 'hearts';
 
 /**
  * The tool pages (docs/design/ui-sandbox.md): built and smoked like a game (a folder under
@@ -169,7 +169,7 @@ export type ShellSpec = Readonly<{
  * e2e/fixtures/online-games.ts, is a type error. GAMES order.
  */
 export type ShellGame =
-  'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'uno' | 'flip7' | 'hive';
+  'gin-rummy' | 'fidice' | 'backgammon' | 'briscola' | 'uno' | 'flip7' | 'hive' | 'hearts';
 export const SHELL_GAMES: ReadonlyArray<ShellGame> = [
   'gin-rummy',
   'fidice',
@@ -178,6 +178,7 @@ export const SHELL_GAMES: ReadonlyArray<ShellGame> = [
   'uno',
   'flip7',
   'hive',
+  'hearts',
 ];
 
 /** One shell row per shell game; REGISTRY carries each as its `shell`. */
@@ -307,6 +308,19 @@ export const SHELL: Readonly<Record<ShellGame, ShellSpec>> = {
     // first, and the handoff is the table's 🌐 (#handoffBtn) throughout.
     curtainButtons: 0,
     firstCurtain: null,
+  },
+  hearts: {
+    heading: 'Hearts',
+    shareTitle: 'Hearts',
+    tabs: ['Play', 'Rules', 'About'],
+    modes: ['Online', 'Pass the phone'],
+    hostFields: [],
+    hostAnswered: /^Connected — waiting for .+ to start$/,
+    connDot: '#oppDot',
+    localNames: ['Ari', 'Lavi'],
+    localFields: [],
+    curtainButtons: 1,
+    firstCurtain: 'Pass the phone to {name}',
   },
 };
 
@@ -547,6 +561,35 @@ export const REGISTRY: Readonly<Record<Game, GameSpec>> = {
     },
     contractFloors: { ts: 20, markup: 30 },
     shell: SHELL.hive,
+  },
+  hearts: {
+    title: 'Hearts',
+    hook: 'window.__hearts',
+    suite: 'hearts',
+    specs: ['**/hearts.spec.ts'],
+    storage: { saveKey: 'heartsMP_v1', prefix: 'hearts_' },
+    debug: 0,
+    pageShape: {
+      ids: [
+        'app',
+        'homeScreen',
+        'hostWaitScreen',
+        'guestWaitScreen',
+        'tableScreen',
+        'endgameScreen',
+        'board',
+        'statusText',
+        'resultOverlay',
+        'toast',
+        'guestSeatName',
+        'guestNameInput',
+        'guestRenameBtn',
+        'guestNameNote',
+      ],
+      rulesSlots: true,
+    },
+    contractFloors: { ts: 0, markup: 30 },
+    shell: SHELL.hearts,
   },
 };
 
@@ -896,6 +939,30 @@ export const CONFORMANCE: Readonly<Record<ShellGame, ConformanceSpec>> = {
         rule: 'home-felt',
         followUp:
           "the title's amber (--accent #d9a441) is 3.62:1 on the felt's first stop (2026-10-02): a lighter amber for the h1, 4.5:1 or better",
+      },
+    ],
+  },
+  hearts: {
+    seats: { min: 3, max: 4 },
+    pauses: ['over'],
+    cues: ['pass'],
+    cssFloor: 30,
+    hides: true,
+    felt: '--felt',
+    gaps: [
+      {
+        rule: 'stepper',
+        followUp:
+          "the scaffold seats two; the stepper is Flip 7's shape (docs/design/flip7.md §8): stepperHtml in page.ts, bindStepper in ui/home.ts, seats {min, max} in shellConfig.ts",
+      },
+      {
+        rule: 'seat-names',
+        followUp: 'one name input per seat the stepper counts, with the stepper (above)',
+      },
+      {
+        rule: 'home-felt',
+        followUp:
+          "the title's blue (rgb(108, 140, 213)) is 2.46:1 on the felt's first stop rgb(31, 90, 58) (2026-10-05): a lighter ink for the h1, 4.5:1 or better (hearts-polish)",
       },
     ],
   },

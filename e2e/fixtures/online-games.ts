@@ -43,6 +43,13 @@ import {
   hiveSnapshot,
   hiveStartLocal,
 } from './hive.ts';
+import {
+  requireView as requireHearts,
+  heartsKey,
+  heartsPlayTurn,
+  heartsSnapshot,
+  heartsStartLocal,
+} from './hearts.ts';
 import { invitePath, newPlayer, openGame, type GameHooks, type Player } from './player.ts';
 import {
   DEFAULT_NAMES,
@@ -737,6 +744,67 @@ const hive: ShellDriver = {
   },
 };
 
+/**
+ * Hearts (docs/design/hearts.md §3), a two-seat shell game scaffolded by tools/new-game.ts: the host
+ * starts from the waiting room and both tables come up; the whole game through `window.__hearts.view()`.
+ * The curtain rises on every turn in pass and play.
+ */
+const hearts: ShellDriver = {
+  ...shellOnline,
+  curtainSub: () => '',
+  seatNames: {
+    me: '#myName',
+    meText: (name) => name,
+    seated: '#guestSeatName',
+  },
+  start: async (host, guest) => {
+    await hostStarts(host, guest);
+    await expect(host.locator('#curtainOverlay')).toBeHidden();
+    await expect(guest.locator('#curtainOverlay')).toBeHidden();
+  },
+  snapshot: heartsSnapshot,
+  agree: async (host, guest) => {
+    const table = heartsKey(await requireHearts(host));
+    await expect.poll(() => heartsSnapshot(guest)).toBe(table);
+    return table;
+  },
+  expectOpening: async (host, guest) => {
+    const opening = await requireHearts(host);
+    expect(opening).toMatchObject({ seat: 0, game: { turn: 0, turns: 0, result: null } });
+    expect(opening.names).toEqual([...ONLINE_NAMES]);
+    await expect.poll(() => heartsSnapshot(guest)).toBe(heartsKey(opening));
+    const theirs = await requireHearts(guest);
+    expect(theirs).toMatchObject({ seat: 1, game: { turn: 0 }, legal: [] });
+    await expect(host.locator('#passBtn')).toBeVisible();
+    await expect(guest.locator('#passBtn')).toBeHidden();
+  },
+  hostSave: { seatCount: 2, game: { game: { turn: 0 } } },
+  localSave: { game: { game: { turn: 0 } } },
+  table: '#board',
+  curtainOffer: {
+    title:
+      "the offer is the table's: after a pass the next seat lifts the curtain and takes it from the table",
+    toCurtain: async (page) => {
+      await heartsPlayTurn(page);
+      await reveal(page);
+    },
+    take: (page) => takeOffer(page, 'hearts'),
+  },
+  glossary: {
+    aboutTerm: 'pass',
+    aboutRule: 'turn',
+    innerFrom: 'goal',
+    innerTo: 'turn',
+    deepLink: 'goal',
+    overlayFrom: 'goal',
+    overlayTo: 'turn',
+    openRulesOverTable: async (page, url, viewport) => {
+      await heartsStartLocal(page, url, viewport);
+      await page.locator('#rulesBtnGame').click();
+    },
+  },
+};
+
 /** Every game's row, in GAMES order. */
 export const SHELL_DRIVERS: Readonly<Record<ShellGame, ShellDriver>> = {
   'gin-rummy': gin,
@@ -746,6 +814,7 @@ export const SHELL_DRIVERS: Readonly<Record<ShellGame, ShellDriver>> = {
   uno,
   flip7,
   hive,
+  hearts,
 };
 
 /**

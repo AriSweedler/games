@@ -4,7 +4,7 @@
 // the suite row and the rules of tools/ci/suites.ts, the two package.json scripts, the tsconfig
 // include, the shell-markup PAGES row, the e2e drivers, the page-only spec, the computed-style
 // selectors and drive, the landing card and the README row, and the pin tests (step 8) that spell
-// each list by hand. Every edit anchors on the newest game's row (Hive's), so a row that moved
+// each list by hand. Every edit anchors on the newest game's row (Hearts'), so a row that moved
 // fails loudly here rather than landing somewhere else. Pure: text in, text out; the CLI reads and
 // writes the files.
 import { namesOf, type NewGameSpec } from './spec.ts';
@@ -68,7 +68,7 @@ export const listItemAfter = (
   if (!lines.some((line) => line.trim() === anchorLine))
     throw new Error(`${path}: no list line ${JSON.stringify(anchorLine)}`);
   // A list item: the next line is another item or the list's close; a tuple's row (`['glob',
-  // 'hive', { … }]` in tools/ci/suites.test.ts) is followed by `{` and is left alone.
+  // 'hearts', { … }]` in tools/ci/suites.test.ts) is followed by `{` and is left alone.
   const isItem = (i: number): boolean => {
     const next =
       lines
@@ -90,11 +90,20 @@ export const replaceAll = (text: string, from: string, to: string, path = ''): s
   return text.split(from).join(to);
 };
 
-/** `'hive',` as a list item at any depth, followed by the new game's at the same depth. */
-const listItemAfterHive = (text: string, item: string, path: string): string =>
-  listItemAfter(text, "'hive',", `${item},`, path);
+/** `'hearts',` as a list item at any depth, followed by the new game's at the same depth. */
+const listItemAfterHearts = (text: string, item: string, path: string): string =>
+  listItemAfter(text, "'hearts',", `${item},`, path);
 
-const GAMES_IN_ORDER = ['gin-rummy', 'fidice', 'backgammon', 'briscola', 'uno', 'flip7', 'hive'];
+const GAMES_IN_ORDER = [
+  'gin-rummy',
+  'fidice',
+  'backgammon',
+  'briscola',
+  'uno',
+  'flip7',
+  'hive',
+  'hearts',
+];
 
 /** The SHELL row of tools/games.ts, and the same text the games.test.ts pin spells inline. */
 const shellRow = (spec: NewGameSpec, indent: string): string => {
@@ -198,20 +207,20 @@ export const registryEdits = (spec: NewGameSpec): ReadonlyArray<Edit> => {
         const t1 = t.replace(union[0], `export type Game =${union[1] ?? ''} | '${s}';`);
         const t2 = insertAfter(
           t1,
-          'export const HIVE_CODE_LENGTH_ERROR = GIN_CODE_LENGTH_ERROR;\n',
+          'export const HEARTS_CODE_LENGTH_ERROR = GIN_CODE_LENGTH_ERROR;\n',
           `// ${n.title} (docs/design/${s}.md §3): gin's alphabet and length again, under its own prefix.\nexport const ${n.upper}_PEER_PREFIX = '${s}-';\nexport const ${n.upper}_CODE_ALPHABET = GIN_CODE_ALPHABET;\nexport const ${n.upper}_CODE_LENGTH = GIN_CODE_LENGTH;\nexport const ${n.upper}_CODE_LENGTH_ERROR = GIN_CODE_LENGTH_ERROR;\n`,
           p,
         );
         const t3 = insertAfterBlock(
           t2,
-          '  hive: {\n    alphabet: HIVE_CODE_ALPHABET,',
+          '  hearts: {\n    alphabet: HEARTS_CODE_ALPHABET,',
           '\n  },\n',
           `  ${s}: {\n    alphabet: ${n.upper}_CODE_ALPHABET,\n    length: ${n.upper}_CODE_LENGTH,\n    peerPrefix: ${n.upper}_PEER_PREFIX,\n    peerCase: 'upper',\n    lengthError: ${n.upper}_CODE_LENGTH_ERROR,\n  },\n`,
           p,
         );
         return insertAfter(
           t3,
-          '      .slice(0, HIVE_CODE_LENGTH),\n',
+          '      .slice(0, HEARTS_CODE_LENGTH),\n',
           `  ${s}: (raw) =>\n    raw\n      .toUpperCase()\n      .replace(/[^A-Z]/g, '')\n      .slice(0, ${n.upper}_CODE_LENGTH),\n`,
           p,
         );
@@ -219,7 +228,7 @@ export const registryEdits = (spec: NewGameSpec): ReadonlyArray<Edit> => {
     },
     {
       path: 'web/shared/ui/ids.ts',
-      apply: (t) => listItemAfterHive(t, `'${s}'`, 'web/shared/ui/ids.ts'),
+      apply: (t) => listItemAfterHearts(t, `'${s}'`, 'web/shared/ui/ids.ts'),
     },
     {
       path: 'tools/games.ts',
@@ -235,24 +244,24 @@ export const registryEdits = (spec: NewGameSpec): ReadonlyArray<Edit> => {
             shellGame[0],
             `export type ShellGame =\n  ${(shellGame[1] ?? '').trim()} | '${s}';`,
           );
-        const t2 = listItemAfterHive(t1, `'${s}'`, p);
+        const t2 = listItemAfterHearts(t1, `'${s}'`, p);
         const t3 = insertAfterBlock(
           t2,
-          "  hive: {\n    heading: 'Hive',",
+          "  hearts: {\n    heading: 'Hearts',",
           '\n  },\n',
           `  ${s}: {\n${shellRow(spec, '    ')}\n  },\n`,
           p,
         );
         const t4 = insertAfterBlock(
           t3,
-          "  hive: {\n    title: 'Hive',",
+          "  hearts: {\n    title: 'Hearts',",
           '\n  },\n',
           `  ${s}: {\n${registryRow(spec, '    ', `SHELL.${s}`)}\n  },\n`,
           p,
         );
         return insertAfterBlock(
           t4,
-          '  hive: {\n    seats: TWO_SEATS,',
+          '  hearts: {\n    seats: { min: 3, max: 4 },',
           '\n  },\n',
           `  ${s}: {\n${conformanceRow(spec, '    ', true)}\n  },\n`,
           p,
@@ -269,8 +278,8 @@ export const registryEdits = (spec: NewGameSpec): ReadonlyArray<Edit> => {
           `  ${s}: {\n    // ${n.title} (docs/design/${s}.md), scaffolded by tools/new-game.ts: its colocated tests. TODO: measure\n    // the engine's coverage at its landing and raise the row.\n    unit: ['web/games/${s}/**/*.test.ts'],\n    standalone: [],\n    browser: false,\n    needsBuild: false,\n    coverage: {\n      include: ['web/games/${s}/src/**/*.ts'],\n      thresholds: {\n        'web/games/${s}/src/engine/**': { lines: 80, functions: 80, statements: 80, branches: 70 },\n      },\n    },\n    e2e: gameE2e('${s}'),\n  },\n`,
           p,
         );
-        const t2 = insertAfter(t1, "      e2eJob('hive'),\n", `      e2eJob('${s}'),\n`, p);
-        return insertAfter(t2, "  ...gameRules('hive'),\n", `  ...gameRules('${s}'),\n`, p);
+        const t2 = insertAfter(t1, "      e2eJob('hearts'),\n", `      e2eJob('${s}'),\n`, p);
+        return insertAfter(t2, "  ...gameRules('hearts'),\n", `  ...gameRules('${s}'),\n`, p);
       },
     },
     {
@@ -279,13 +288,13 @@ export const registryEdits = (spec: NewGameSpec): ReadonlyArray<Edit> => {
         const p = 'package.json';
         const t1 = insertAfter(
           t,
-          '    "test:hive": "VITEST_SUITE=hive vitest run --project hive",\n',
+          '    "test:hearts": "VITEST_SUITE=hearts vitest run --project hearts",\n',
           `    "test:${s}": "VITEST_SUITE=${s} vitest run --project ${s}",\n`,
           p,
         );
         return insertAfter(
           t1,
-          '    "test:e2e:hive": "E2E_SUITE=hive npm run test:e2e",\n',
+          '    "test:e2e:hearts": "E2E_SUITE=hearts npm run test:e2e",\n',
           `    "test:e2e:${s}": "E2E_SUITE=${s} npm run test:e2e",\n`,
           p,
         );
@@ -296,7 +305,7 @@ export const registryEdits = (spec: NewGameSpec): ReadonlyArray<Edit> => {
       apply: (t) =>
         insertAfter(
           t,
-          '    "web/games/hive/src/**/*.ts",\n',
+          '    "web/games/hearts/src/**/*.ts",\n',
           `    "web/games/${s}/src/**/*.ts",\n`,
           'tsconfig.node.json',
         ),
@@ -307,11 +316,11 @@ export const registryEdits = (spec: NewGameSpec): ReadonlyArray<Edit> => {
         const p = 'tools/shell-markup.ts';
         const t1 = insertAfter(
           t,
-          "import { HIVE_PAGE } from '../web/games/hive/page.ts';\n",
+          "import { HEARTS_PAGE } from '../web/games/hearts/page.ts';\n",
           `import { ${n.upper}_PAGE } from '../web/games/${s}/page.ts';\n`,
           p,
         );
-        return insertAfter(t1, '  hive: HIVE_PAGE,\n', `  ${s}: ${n.upper}_PAGE,\n`, p);
+        return insertAfter(t1, '  hearts: HEARTS_PAGE,\n', `  ${s}: ${n.upper}_PAGE,\n`, p);
       },
     },
     {
@@ -319,7 +328,7 @@ export const registryEdits = (spec: NewGameSpec): ReadonlyArray<Edit> => {
       apply: (t) =>
         insertAfter(
           t,
-          "  hive: shellDriver('hive'),\n",
+          "  hearts: shellDriver('hearts'),\n",
           `  ${s}: shellDriver('${s}'),\n`,
           'e2e/fixtures/two-players.ts',
         ),
@@ -330,7 +339,7 @@ export const registryEdits = (spec: NewGameSpec): ReadonlyArray<Edit> => {
         const p = 'e2e/fixtures/online-games.ts';
         const t1 = insertAfter(
           t,
-          "} from './hive.ts';\n",
+          "} from './hearts.ts';\n",
           `import {\n  requireView as require${n.pascal},\n  ${s}Key,\n  ${s}PlayTurn,\n  ${s}Snapshot,\n  ${s}StartLocal,\n} from './${s}.ts';\n`,
           p,
         );
@@ -400,7 +409,10 @@ const ${s}: ShellDriver = {
 
 `;
         const t2 = insertBefore(t1, "/** Every game's row, in GAMES order. */", driver, p);
-        return insertAfter(t2, '  hive,\n};', '', p).replace('  hive,\n};', `  hive,\n  ${s},\n};`);
+        return insertAfter(t2, '  hearts,\n};', '', p).replace(
+          '  hearts,\n};',
+          `  hearts,\n  ${s},\n};`,
+        );
       },
     },
     {
@@ -408,7 +420,7 @@ const ${s}: ShellDriver = {
       apply: (t) =>
         insertAfterBlock(
           t,
-          "  hive: async (page) => {\n    await revealIf(page, 'hive');",
+          "  hearts: async (page) => {\n    await revealIf(page, 'hearts');",
           '\n  },\n',
           `  ${s}: async (page) => {\n    await revealIf(page, '${s}');\n    // Seat 0 resigns on its first turn: the result sheet over the table, Leave the table on it.\n    await page.locator('#resignBtn').click();\n    await expect(page.locator('#resultOverlay')).toBeVisible();\n    await expect(page.locator('#rsTitle')).toHaveText(\`\${DEFAULT_NAMES[1]} wins!\`);\n    return 'rsLeaveBtn';\n  },\n`,
           'e2e/shell-result.spec.ts',
@@ -419,7 +431,7 @@ const ${s}: ShellDriver = {
       apply: (t) =>
         insertAfter(
           t,
-          "  '**/hive.spec.ts',\n",
+          "  '**/hearts.spec.ts',\n",
           `  // ${n.title} pass-and-play: a game through the shell page, about the page alone.\n  '**/${s}.spec.ts',\n`,
           'e2e/fixtures/site.ts',
         ),
@@ -430,14 +442,14 @@ const ${s}: ShellDriver = {
         const p = 'tools/parity/computed-styles.ts';
         const t1 = insertAfterBlock(
           t,
-          '  hive: [\n    ...SHELL_SELECTORS,',
+          '  hearts: [\n    ...SHELL_SELECTORS,',
           '\n  ],\n',
           `  // ${n.title} (docs/design/${s}.md §3; page.ts, ui/render.ts), scaffolded: after the shell's, the\n  // names strip, the board slot, the status line and the controls. TODO: the game's own.\n  ${s}: [\n    ...SHELL_SELECTORS,\n    '.masthead .subtitle',\n    '.topbar',\n    '.names-strip',\n    '#myName',\n    '#oppName',\n    '#oppDot',\n    '.board',\n    '.board.turn',\n    '.status-line',\n    '.controls',\n    '.controls .btn',\n    '.result-note',\n  ],\n`,
           p,
         );
         const t2 = insertAfterBlock(
           t1,
-          '  hive: {\n    submenuShot: null,',
+          '  hearts: {\n    submenuShot: null,',
           '\n  },\n',
           `  ${s}: {\n    submenuShot: null,\n    localModeShot: 'home: play tab, pass the phone',\n    curtainShot: ${spec.hidden ? "'local: started, curtain up'" : 'null'},\n    localValues: {},\n  },\n`,
           p,
@@ -448,14 +460,14 @@ const ${s}: ShellDriver = {
           `/**\n * ${n.title} (docs/design/${s}.md §3), after the shell (driveShell): the table at the start, a pass,\n * then the rules sheet over the table. TODO: the game's own screens.\n */\nconst drive${n.pascal} = async (page: Page, shot: Shot): Promise<void> => {\n  await driveShell(page, shot, '${s}');\n  ${spec.hidden ? "await click(page, '#curtainBtn');\n  " : ''}await shot('local: started');\n  await click(page, '#passBtn');\n  ${spec.hidden ? "await visible(page, '#curtainOverlay');\n  await click(page, '#curtainBtn');\n  " : ''}await shot('local: after a pass');\n  await click(page, '#rulesBtnGame');\n  await shot('table: rules sheet');\n  await page.keyboard.press('Escape');\n  await click(page, '#leaveBtn');\n  await visible(page, '#homeScreen');\n  await shot('home: after the game');\n};\n\n`,
           p,
         );
-        return insertAfter(t3, '  hive: driveHive,\n', `  ${s}: drive${n.pascal},\n`, p);
+        return insertAfter(t3, '  hearts: driveHearts,\n', `  ${s}: drive${n.pascal},\n`, p);
       },
     },
     {
       path: 'web/index.html',
       apply: (t) => {
-        const line = /^.*href="games\/hive\/".*\n/m.exec(t);
-        if (line === null) throw new Error('web/index.html: no hive card');
+        const line = /^.*href="games\/hearts\/".*\n/m.exec(t);
+        if (line === null) throw new Error('web/index.html: no hearts card');
         const card = `    <a class="card" href="games/${s}/"><h2><span class="glyph" aria-hidden="true">🎮</span> <span class="name">${n.title.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span></h2></a>\n`;
         return insertAfter(t, line[0], card, 'web/index.html');
       },
@@ -463,8 +475,8 @@ const ${s}: ShellDriver = {
     {
       path: 'README.md',
       apply: (t) => {
-        const line = /^\| Hive .*\n/m.exec(t);
-        if (line === null) throw new Error('README.md: no Hive row');
+        const line = /^\| Hearts .*\n/m.exec(t);
+        if (line === null) throw new Error('README.md: no Hearts row');
         const pad = (text: string, width: number): string => text.padEnd(width);
         const row = `| ${pad(n.title, 28)} | ${pad(`https://arisweedler.github.io/games/games/${s}/`, 53)} | ${pad(`https://games.sweedler.com/${s}/`, 80)} | ${pad(`\`web/games/${s}/\``, 23)} |\n`;
         return insertAfter(t, line[0], row, 'README.md');
@@ -477,42 +489,42 @@ const ${s}: ShellDriver = {
         const p = 'tools/games.test.ts';
         const t1 = insertAfter(
           t,
-          "import { STORAGE_KEYS as HIVE_KEYS } from '../web/games/hive/src/storage.ts';\n",
+          "import { STORAGE_KEYS as HEARTS_KEYS } from '../web/games/hearts/src/storage.ts';\n",
           `import { STORAGE_KEYS as ${n.upper}_KEYS } from '../web/games/${s}/src/storage.ts';\n`,
           p,
         );
-        const t2 = listItemAfterHive(t1, `'${s}'`, p);
+        const t2 = listItemAfterHearts(t1, `'${s}'`, p);
         const t3 = insertAfterBlock(
           t2,
-          "      hive: {\n        title: 'Hive',",
+          "      hearts: {\n        title: 'Hearts',",
           '\n      },\n',
           `      ${s}: {\n${registryRow(spec, '        ', `{\n${shellRow(spec, '          ')}\n        }`)}\n      },\n`,
           p,
         );
         const t4 = insertAfter(
           t3,
-          '    pin(REGISTRY.hive.storage, HIVE_KEYS);\n',
+          '    pin(REGISTRY.hearts.storage, HEARTS_KEYS);\n',
           `    pin(REGISTRY.${s}.storage, ${n.upper}_KEYS);\n`,
           p,
         );
-        const t5 = insertAfter(t4, "      hive: 'Hive',\n", `      ${s}: '${title}',\n`, p);
+        const t5 = insertAfter(t4, "      hearts: 'Hearts',\n", `      ${s}: '${title}',\n`, p);
         const t6 = insertAfter(
           t5,
-          "      hive: 'window.__hive',\n",
+          "      hearts: 'window.__hearts',\n",
           `      ${s}: 'window.${n.hook}',\n`,
           p,
         );
-        const t7 = insertAfter(t6, "      'games/hive/',\n", `      'games/${s}/',\n`, p);
+        const t7 = insertAfter(t6, "      'games/hearts/',\n", `      'games/${s}/',\n`, p);
         const t8 = insertAfterBlock(
           t7,
-          '      hive: {\n        seats: { min: 2, max: 2 },',
+          '      hearts: {\n        seats: { min: 3, max: 4 },',
           '\n      },\n',
           `      ${s}: {\n${conformanceRow(spec, '        ', false)}\n      },\n`,
           p,
         );
         return insertAfter(
           t8,
-          "      hive: ['pauses', 'home-felt'],\n",
+          "      hearts: ['stepper', 'seat-names', 'home-felt'],\n",
           `      ${s}: ${gapRules},\n`,
           p,
         );
@@ -522,36 +534,31 @@ const ${s}: ShellDriver = {
       path: 'tools/ci/suites.test.ts',
       apply: (t) => {
         const p = 'tools/ci/suites.test.ts';
-        const t1 = listItemAfterHive(t, `'${s}'`, p);
-        const t2 = listItemAfter(t1, "'e2e-hive',", `'e2e-${s}',`, p);
-        // The one-line job lists of the change table, and every other game's `otherTags`.
-        // (Hive's own-spec row, `['e2e-hive']` alone, and a solo page's empty `otherTags` stay.)
-        const t3 = replaceAll(
-          t2,
-          "'e2e-flip7', 'e2e-hive']",
-          `'e2e-flip7', 'e2e-hive', 'e2e-${s}']`,
-          p,
-        ).replace(
-          /otherTags: \[([^\]]+)\]/g,
-          (_m, inner: string) => `otherTags: [${inner}, '@${s}']`,
+        const t1 = listItemAfterHearts(t, `'${s}'`, p);
+        const t2 = listItemAfter(t1, "'e2e-hearts',", `'e2e-${s}',`, p);
+        // Every other game's `otherTags`, one line or wrapped (the tail keeps a wrapped list's
+        // trailing comma and indent); a solo page's empty `otherTags: []` has no item and stays.
+        const t3 = t2.replace(
+          /otherTags: \[([^\]]+?)(,?\s*)\]/g,
+          (_m, inner: string, tail: string) => `otherTags: [${inner}, '@${s}'${tail}]`,
         );
         // The coverage pins: the row the suite's threshold adds, and its include glob.
         const t4 = insertAfter(
           t3,
-          "    'web/games/hive/src/engine/**',\n    'hive',\n    { lines: 95, functions: 95, statements: 95, branches: 90 },\n  ],\n",
+          "    'web/games/hearts/src/engine/**',\n    'hearts',\n    { lines: 80, functions: 80, statements: 80, branches: 70 },\n  ],\n",
           `  [\n    'web/games/${s}/src/engine/**',\n    '${s}',\n    { lines: 80, functions: 80, statements: 80, branches: 70 },\n  ],\n`,
           p,
         );
         const t5 = insertAfter(
           t4,
-          "  'web/games/hive/src/**/*.ts',\n",
+          "  'web/games/hearts/src/**/*.ts',\n",
           `  'web/games/${s}/src/**/*.ts',\n`,
           p,
         );
         const others = GAMES_IN_ORDER.map((g) => `'@${g}'`).join(', ');
         return insertAfterBlock(
           t5,
-          '    expect(SUITES.hive.e2e).toStrictEqual({',
+          '    expect(SUITES.hearts.e2e).toStrictEqual({',
           '\n    });\n',
           `    expect(SUITES.${s}.e2e).toStrictEqual({\n      files: ['**/${s}.spec.ts', '**/shell-*.spec.ts'],\n      tag: '@${s}',\n      otherTags: [${others}],\n    });\n`,
           p,
@@ -562,29 +569,29 @@ const ${s}: ShellDriver = {
       path: 'tools/ci/affected.test.ts',
       apply: (t) => {
         const p = 'tools/ci/affected.test.ts';
-        const t1 = listItemAfter(t, "'hive=false',", `'${s}=false',`, p);
-        const t2 = listItemAfter(t1, "'e2e-hive=false',", `'e2e-${s}=false',`, p);
-        const t3 = replaceAll(t2, '"hive"]', `"hive","${s}"]`, p);
-        const t4 = listItemAfter(t3, 'hive: false,', `${s}: false,`, p);
-        return listItemAfter(t4, "'e2e-hive': false,", `'e2e-${s}': false,`, p);
+        const t1 = listItemAfter(t, "'hearts=false',", `'${s}=false',`, p);
+        const t2 = listItemAfter(t1, "'e2e-hearts=false',", `'e2e-${s}=false',`, p);
+        const t3 = replaceAll(t2, '"hearts"]', `"hearts","${s}"]`, p);
+        const t4 = listItemAfter(t3, 'hearts: false,', `${s}: false,`, p);
+        return listItemAfter(t4, "'e2e-hearts': false,", `'e2e-${s}': false,`, p);
       },
     },
     {
       path: 'web/shared/lib/roomCode.test.ts',
-      apply: (t) => listItemAfterHive(t, `'${s}'`, 'web/shared/lib/roomCode.test.ts'),
+      apply: (t) => listItemAfterHearts(t, `'${s}'`, 'web/shared/lib/roomCode.test.ts'),
     },
     {
       path: 'web/shared/ui/ids.test.ts',
-      apply: (t) => listItemAfterHive(t, `'${s}'`, 'web/shared/ui/ids.test.ts'),
+      apply: (t) => listItemAfterHearts(t, `'${s}'`, 'web/shared/ui/ids.test.ts'),
     },
     {
       path: 'test/dist/classes.test.ts',
       apply: (t) => {
         const p = 'test/dist/classes.test.ts';
-        const t1 = listItemAfterHive(t, `'${s}'`, p);
+        const t1 = listItemAfterHearts(t, `'${s}'`, p);
         return insertAfter(
           t1,
-          "  expect(ownersOf('hive')).toEqual(['hive', 'shared', 'shell']);\n",
+          "  expect(ownersOf('hearts')).toEqual(['hearts', 'shared', 'shell']);\n",
           `  expect(ownersOf('${s}')).toEqual(['${s}', 'shared', 'shell']);\n`,
           p,
         );

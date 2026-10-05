@@ -11,11 +11,13 @@ import { gamePath, invitePath } from './fixtures/player.ts';
 import {
   DEFAULT_NAMES,
   ONLINE_NAMES,
+  TWO_SEAT_ONLY,
   expectCurtainUp,
   joinedMsg,
   readSave,
   reopenedMsg,
   resumeLabel,
+  seatsTwo,
   startLocal,
 } from './fixtures/shell.ts';
 import { SHELL_DRIVERS, connect } from './fixtures/online-games.ts';
@@ -26,6 +28,7 @@ const [HOST, GUEST] = ONLINE_NAMES;
 
 SHELL_GAMES.forEach((game) => {
   test.describe(game, { tag: `@${game}` }, () => {
+    test.skip(!seatsTwo(game), TWO_SEAT_ONLY);
     const shell = SHELL[game];
     const driver = SHELL_DRIVERS[game];
 
